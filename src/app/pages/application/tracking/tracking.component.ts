@@ -56,14 +56,11 @@ export class TrackingComponent implements AfterViewInit {
         const windowHeight = window.innerHeight;
         const newTableHeight = windowHeight - filterHeight - 300;
 
-        console.log('filterHeight', filterHeight);
-        console.log('newTableHeight', newTableHeight);
-
         this.tableContainerRef.nativeElement.style.height = `${newTableHeight}px`;
       }
     });
   }
-  
+
   STORAGE_KEY: string = 'trackingFiterSettings';
   STORAGE_SORTCOLUMN_KEY: string = 'trackingFiterSortColumn';
   STORAGE_CLICKED_KEY: string = 'candidateclickedRowIndexes';
