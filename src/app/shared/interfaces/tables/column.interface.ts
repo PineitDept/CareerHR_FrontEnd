@@ -1,0 +1,23 @@
+export interface Column {
+  header: string;           // Displayed column header name
+  field: string;           // Field name to map with row data
+  type?: 'text' | 'badge' | 'number' | 'select' | 'button' | 'date' | 'list' | 'icon' | 'expandable'; // Column type
+  width?: string;
+  minWidth?: string;
+  maxWidth?: string;
+  align?: 'left' | 'center' | 'right';        // Alignment of the column
+  wrapText?: boolean;       // Allow text to wrap
+  mainColumn?: string;
+  subColumn?: string;
+
+  // Type-specific properties
+  options?: string[];       // Options for select type
+  buttonText?: string;      // Button label (if type is button)
+  onClick?: (row: any) => void; // Callback when button is clicked
+
+  // Sortable
+  sortable?: boolean;
+  sortDirection?: 'asc' | 'desc' | null; 
+}
+
+export type Columns = Column[];

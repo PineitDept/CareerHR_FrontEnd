@@ -1,0 +1,182 @@
+/* ทำให้หัวตาราง sticky */
+table thead tr {
+  position: sticky;
+  top: 0;
+  background-color: #7f1d1d;
+  z-index: 10;
+}
+
+/* ให้หัวมุมมน */
+table thead tr th:first-child {
+  border-top-left-radius: 8px; /* ปรับค่าตามต้องการ */
+}
+table thead tr th:last-child {
+  border-top-right-radius: 8px;
+}
+
+/* Base table styling */
+.column-header, .table-cell {
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transform-origin: left center;
+  overflow: hidden;
+}
+
+/* Main columns - always visible */
+.column-header.main-column,
+.table-cell.main-column {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Sub-column header styling */
+.column-header.sub-column {
+  @apply tw-bg-red-950;
+  position: relative;
+}
+
+/* FIXED: Expanded state with proper width transition */
+.column-header.sub-column.expanded,
+.table-cell.sub-column.expanded {
+  opacity: 1;
+  visibility: visible;
+  transform: scaleX(1);
+  width: var(--expanded-width, 150px) !important;
+  min-width: var(--expanded-min-width, 120px) !important;
+  max-width: var(--expanded-max-width, 200px) !important;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  border-right-width: 1px;
+}
+
+/* FIXED: Collapsed state with zero width */
+.column-header.sub-column.collapsed,
+.table-cell.sub-column.collapsed {
+  opacity: 0;
+  visibility: hidden;
+  transform: scaleX(0);
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  padding-left: 0;
+  padding-right: 0;
+  border-right-width: 0;
+  margin: 0;
+}
+
+/* Header content animation */
+.header-content {
+  transition: opacity 0.3s ease 0.1s;
+  white-space: nowrap;
+}
+
+.collapsed .header-content {
+  opacity: 0;
+  transition-delay: 0s;
+}
+
+.expanded .header-content {
+  opacity: 1;
+  transition-delay: 0.1s;
+}
+
+/* Cell content animation */
+.cell-content {
+  transition: opacity 0.3s ease 0.1s, transform 0.3s ease 0.1s;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.collapsed .cell-content {
+  opacity: 0;
+  transform: scale(0.9);
+  transition-delay: 0s;
+}
+
+.expanded .cell-content {
+  opacity: 1;
+  transform: scale(1);
+  transition-delay: 0.1s;
+}
+
+/* Wrap text columns */
+.table-cell.wrap-text .cell-content,
+.column-header.wrap-text .header-content {
+  white-space: normal;
+  word-wrap: break-word;
+}
+
+/* Selected row styling */
+.selected-row {
+  @apply tw-bg-red-50 tw-ring-2 tw-ring-red-200;
+}
+
+/* Toggle button improvements */
+.toggle-btn {
+  opacity: 0.8;
+}
+
+.toggle-btn:hover {
+  opacity: 1;
+}
+
+/* Dropdown animations */
+@keyframes fadeIn {
+  from { 
+    opacity: 0; 
+    transform: translateY(-8px) scale(0.95); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0) scale(1); 
+  }
+}
+
+.tw-animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Responsive enhancements */
+@media (max-width: 768px) {
+  .column-header.sub-column.expanded,
+  .table-cell.sub-column.expanded {
+    --expanded-width: 100px;
+    --expanded-min-width: 80px;
+    --expanded-max-width: 120px;
+  }
+  
+  .dropdown-overlay {
+    max-width: calc(100vw - 2rem);
+  }
+}
+
+/* Performance optimizations */
+.column-header.sub-column,
+.table-cell.sub-column {
+  will-change: width, opacity, transform;
+  backface-visibility: hidden;
+}
+
+/* Accessibility - reduce motion */
+@media (prefers-reduced-motion: reduce) {
+  .column-header,
+  .table-cell,
+  .cell-content,
+  .header-content,
+  .toggle-btn svg {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* FIXED: Force layout recalculation for smooth transitions */
+.column-header.sub-column,
+.table-cell.sub-column {
+  contain: layout style paint;
+}
+
+/* Ensure smooth font rendering during animations */
+.column-header,
+.table-cell {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

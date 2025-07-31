@@ -1,0 +1,102 @@
+<h2 class="tw-text-center head-r28 tw-mb-8 tw-text-white">
+  Login to Fix Asset Management
+</h2>
+
+<!-- Card -->
+<div class="tw-bg-white/5 tw-rounded-lg tw-shadow-md tw-w-full tw-p-8 tw-text-white">
+  <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+    <!-- Employee ID -->
+    <div class="tw-mb-5">
+      <label class="tw-block tw-mb-2">Employee ID</label>
+      <div class="tw-relative">
+        <input
+          type="text"
+          placeholder="Employee ID"
+          formControlName="employeeId"
+          [ngClass]="{
+            'tw-border-red-600 focus:tw-ring-red-500': isInvalid('employeeId'),
+            'tw-border-gray-700': !isInvalid('employeeId')
+          }"
+          class="tw-w-full tw-bg-white/10 tw-border tw-px-10 tw-py-2 tw-rounded tw-text-white tw-placeholder-gray-400" />
+        <span class="tw-absolute tw-left-3 tw-top-1.5">
+          <app-icon name="user" [size]="18" fill="#E9ECEF"></app-icon>
+        </span>
+      </div>
+      <div *ngIf="isInvalid('employeeId')" class="tw-text-red-500 tw-text-sm tw-mt-1">
+        Employee ID is required
+      </div>
+    </div>
+
+    <!-- Password -->
+    <div class="tw-mb-5">
+      <div class="tw-flex tw-justify-between">
+        <label class="tw-block tw-mb-2">Password</label>
+        <div class="tw-text-sm text-dark-red tw-mb-2 hover:tw-underline tw-cursor-pointer" (click)="openAlertDialog()">
+          Forgot Password?
+        </div>
+      </div>
+      <div class="tw-relative">
+        <input
+          [type]="passwordVisible ? 'text' : 'password'"
+          placeholder="Password"
+          formControlName="password"
+          [ngClass]="{
+            'tw-border-red-600 focus:tw-ring-red-500': isInvalid('password'),
+            'tw-border-gray-700': !isInvalid('password')
+          }"
+          class="tw-w-full tw-bg-white/10 tw-border tw-px-10 tw-py-2 tw-rounded tw-text-white tw-placeholder-gray-400" />
+        <span class="tw-absolute tw-left-3 tw-top-1.5">
+          <app-icon name="locked" [size]="18" fill="#E9ECEF"></app-icon>
+        </span>
+        <span
+          class="tw-absolute tw-right-3 tw-top-1.5 tw-cursor-pointer"
+          (click)="togglePasswordVisibility()"
+        >
+          <app-icon
+            *ngIf="!passwordVisible"
+            name="eye-off"
+            [size]="18"
+            fill="#E9ECEF"
+          ></app-icon>
+          <app-icon
+            *ngIf="passwordVisible"
+            name="eye"
+            [size]="21"
+            fill="#E9ECEF"
+          ></app-icon>
+        </span>
+      </div>
+      <div *ngIf="isInvalid('password')" class="tw-text-red-500 tw-text-sm tw-mt-1">
+        Password is required
+      </div>
+    </div>
+
+    <!-- Remember Me -->
+    <div class="tw-mb-5">
+      <label class="tw-inline-flex tw-items-center">
+        <input
+          type="checkbox"
+          formControlName="rememberMe"
+          class="tw-form-checkbox tw-accent-[#AA0000]"
+        />
+        <span class="tw-ml-2">Remember Me</span>
+      </label>
+    </div>
+
+    <!-- Button -->
+    <button
+      type="submit"
+      class="tw-w-full bg-dark-red hover:tw-bg-[#930000] tw-py-2 tw-rounded tw-font-medium"
+    >
+      Log In
+    </button>
+
+    <!-- Sign Up -->
+    <div class="tw-text-center tw-text-sm tw-text-white tw-mt-5">
+      Do not have an account?
+      <span class="text-dark-red hover:tw-underline tw-cursor-pointer" (click)="openAlertDialog()">
+        Sign Up
+      </span>
+    </div>
+  </form>
+</div>

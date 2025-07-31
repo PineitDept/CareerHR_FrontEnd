@@ -1,0 +1,22 @@
+<!-- icon.component.html -->
+<div [class]="extraClass" [style.width.px]="size" [style.height.px]="size">
+  <!-- Loading state -->
+  <div *ngIf="isLoading" 
+       class="animate-pulse bg-gray-200 rounded" 
+       [style.width.px]="size" 
+       [style.height.px]="size">
+  </div>
+  
+  <!-- Error state - show a default box or nothing -->
+  <div *ngIf="hasError && !isLoading" 
+       class="bg-gray-100 border border-gray-300 rounded flex items-center justify-center text-gray-400 text-xs"
+       [style.width.px]="size" 
+       [style.height.px]="size">
+    ?
+  </div>
+  
+  <!-- Loaded icon -->
+  <div *ngIf="svgHtml && !isLoading && !hasError" 
+       [innerHTML]="svgHtml">
+  </div>
+</div>

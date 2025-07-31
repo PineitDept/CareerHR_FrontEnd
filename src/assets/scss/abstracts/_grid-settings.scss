@@ -1,0 +1,32 @@
+$grid-settings: (
+  mobile-s: (
+    width: 320px,
+    columns: 4,
+    gutter: 16px,
+    offset: 16px
+  ),
+  mobile: (
+    width: 375px,
+    columns: 4,
+    gutter: 16px,
+    offset: 16px
+  ),
+  small: (
+    width: 480px,
+    columns: 4,
+    gutter: 16px,
+    offset: 16px
+  ),
+  tablet: (
+    width: 768px,
+    columns: 8,
+    gutter: 24px,
+    offset: 24px
+  ),
+  desktop: (
+    width: 1440px,
+    columns: 12,
+    gutter: 24px,
+    offset: 24px
+  )
+);

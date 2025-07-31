@@ -1,0 +1,91 @@
+<nav
+  [style.width]="sidebarWidth"
+  class="tw-h-full tw-bg-[#121212] tw-text-white tw-flex tw-flex-col tw-justify-between tw-py-4 text-xs tw-overflow-hidden tw-transition-[width] tw-duration-300 tw-ease-in-out relative"
+>
+  <!-- Toggle and Back -->
+  <div class="tw-flex tw-gap-x-2 tw-px-4 tw-h-10">
+    <div class="tw-cursor-pointer hover:tw-text-[#AA0000]" (click)="toggleSidebar()">
+      <app-icon name="dashboard-square" [size]="24" />
+    </div>
+    <div
+      *ngIf="activeMainMenu && isExpanded"
+      class="tw-cursor-pointer hover:tw-text-[#AA0000]"
+      (click)="backToMainMenu()"
+    >
+      <app-icon name="chevron-left" [size]="20" />
+    </div>
+  </div>
+
+  <!-- Menu Area: Main & Sub menu switch -->
+  <div class="tw-relative tw-flex-1 tw-mt-3">
+    <!-- Main Menu -->
+    <ul
+      [ngClass]="{
+        'tw-opacity-100 tw-translate-x-0 pointer-events-auto': !activeMainMenu,
+        'tw-opacity-0 -tw-translate-x-2 pointer-events-none': activeMainMenu
+      }"
+      class="tw-absolute tw-top-0 tw-left-0 tw-w-full tw-transition-all tw-duration-300 tw-space-y-6 tw-px-4"
+    >
+      <li
+        *ngFor="let item of mainMenu"
+        class="tw-flex tw-items-center tw-gap-x-2 tw-cursor-pointer hover:tw-text-[#AA0000]"
+        [ngClass]="{ 'tw-text-[#AA0000]': isRouteActive(item.label.toLowerCase()) }"
+        (click)="onMainMenuClick(item.label)"
+      >
+        <app-icon [name]="item.icon" [size]="20" />
+        <span [class]="menuLabelClass">{{ item.label }}</span>
+      </li>
+    </ul>
+
+    <!-- Sub Menu -->
+    <ul
+      [ngClass]="{
+        'tw-opacity-100 tw-translate-x-0 pointer-events-auto': activeMainMenu,
+        'tw-opacity-0 tw-translate-x-2 pointer-events-none': !activeMainMenu
+      }"
+      class="tw-absolute tw-top-0 tw-left-0 tw-w-full tw-transition-all tw-duration-300 tw-space-y-4 tw-px-4"
+    >
+      <li *ngFor="let item of subMenus[activeMainMenu]">
+        <!-- If there are no children → navigate on click -->
+        <div
+          class="tw-flex tw-items-center tw-gap-x-2 tw-cursor-pointer hover:tw-text-[#AA0000]"
+          [ngClass]="{ 'tw-text-[#AA0000]': isRouteActive(item.path ?? '') }"
+          (click)="item.children ? toggleNested(item.label) : navigateToSubPagePath(item.path!)"
+        >
+          <app-icon [name]="item.icon" [size]="20" />
+          <span [class]="menuLabelClass">{{ item.label }}</span>
+        </div>
+
+        <!-- Nested menu -->
+        <div
+          *ngIf="item.children && expandedNestedMenus.has(item.label)"
+          class="tw-bg-[#1E1E1E] tw-rounded-sm tw-border-l-[4px] tw-border-[#AA0000] tw-mt-1"
+        >
+          <ul class="tw-space-y-1 tw-py-2">
+            <li
+              *ngFor="let child of item.children"
+              class="tw-flex tw-items-center tw-gap-x-2 tw-cursor-pointer hover:tw-text-[#AA0000] tw-pl-6 tw-pr-4 tw-py-1"
+              [ngClass]="{ 'tw-text-[#AA0000]': isRouteActive(child.path ?? '') }"
+              (click)="navigateToSubPagePath(child.path!)"
+            >
+              <app-icon [name]="child.icon" [size]="16" />
+              <span [class]="menuLabelClass">{{ child.label }}</span>
+            </li>
+          </ul>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Bottom Menu -->
+  <ul class="tw-space-y-6 tw-px-4 tw-mt-6">
+    <li
+      *ngFor="let item of bottomMenu"
+      class="tw-flex tw-items-center tw-gap-x-2 tw-cursor-pointer hover:tw-text-[#AA0000]"
+      (click)="item.label === 'Logout' ? logout() : null"
+    >
+      <app-icon [name]="item.icon" [size]="20" />
+      <span [class]="menuLabelClass">{{ item.label }}</span>
+    </li>
+  </ul>
+</nav>

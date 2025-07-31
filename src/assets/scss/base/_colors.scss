@@ -1,0 +1,102 @@
+@use 'abstracts/colors' as *;
+
+$color-map: (
+  // Grayscale
+  black: $black,
+  gray-dark-1: $gray-dark-1,
+  gray-dark-2: $gray-dark-2,
+  gray-dark-3: $gray-dark-3,
+  gray-dark-4: $gray-dark-4,
+  gray-light-1: $gray-light-1,
+  gray-light-2: $gray-light-2,
+  gray-light-3: $gray-light-3,
+  gray-light-4: $gray-light-4,
+  gray-light-5: $gray-light-5,
+  white: $white,
+
+  // Red–Orange–Yellow
+  maroon: $maroon,
+  maroon-1: $maroon-1,
+  red-blood: $red-blood,
+  dark-red: $dark-red,
+  blossom-red: $blossom-red,
+  torch-red: $torch-red,
+  tomato: $tomato,
+  red: $red,
+  strong-orange: $strong-orange,
+  tawny-orange: $tawny-orange,
+  orange: $orange,
+  pale-orange: $pale-orange,
+  yellow: $yellow,
+  lemon: $lemon,
+  canary: $canary,
+
+  // Green
+  verdun-green: $verdun-green,
+  citrus: $citrus,
+  olive-green: $olive-green,
+  darkest-green: $darkest-green,
+  green-haze: $green-haze,
+  dark-green: $dark-green,
+  fruit-salad: $fruit-salad,
+  limeade: $limeade,
+  bright-aquamarine: $bright-aquamarine,
+  aquamarine: $aquamarine,
+  spring-green: $spring-green,
+  green: $green,
+  screaming-green: $screaming-green,
+  bright-green: $bright-green,
+  green-yellow: $green-yellow,
+  lime: $lime,
+  mint: $mint,
+
+  // Blue–Cyan
+  navy-blue: $navy-blue,
+  dark-blue: $dark-blue,
+  rich-blue: $rich-blue,
+  cobalt: $cobalt,
+  blue: $blue,
+  denim-blue: $denim-blue,
+  azure: $azure,
+  electric-indigo: $electric-indigo,
+  neon-blue: $neon-blue,
+  maya-blue: $maya-blue,
+  cyan: $cyan,
+  baby-blue: $baby-blue,
+  pale-blue: $pale-blue,
+  sherpa-blue: $sherpa-blue,
+  persian-green: $persian-green,
+  tradewinds-blue: $tradewinds-blue,
+
+  // Purple–Pink
+  tyrian-purple: $tyrian-purple,
+  lipstick: $lipstick,
+  dark-magenta: $dark-magenta,
+  tapestry-purple: $tapestry-purple,
+  violet: $violet,
+  pale-violet: $pale-violet,
+  purple: $purple,
+  lavender: $lavender,
+  pink: $pink,
+  brilliant-rose: $brilliant-rose,
+  magenta: $magenta,
+  flamingo: $flamingo,
+  rose: $rose,
+  lilac: $lilac
+);
+
+@each $name, $hex in $color-map {
+  .text-#{$name} {
+    --text-color: #{$hex};
+    color: var(--text-color);
+  }
+
+  .fill-#{$name} {
+    --icon-color: #{$hex};
+    fill: var(--icon-color);
+  }
+
+  .bg-#{$name} {
+    background-color: #{$hex};
+  }
+}

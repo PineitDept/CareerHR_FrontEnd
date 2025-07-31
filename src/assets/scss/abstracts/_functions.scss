@@ -1,0 +1,20 @@
+@use 'typography' as *;
+
+// Function to retrieve values from the typography map
+@function get-typography($key, $index) {
+  @return nth(map-get($typography-map, $key), $index);
+}
+
+// Example: get-typography('hero-b48', 1) → font-size
+//            get-typography('hero-b48', 2) → font-weight
+//            get-typography('hero-b48', 3) → line-height
+
+// Function to get font-weight from a name
+@function get-weight($name) {
+  @return map-get($weights, $name);
+}
+
+// Function to convert px to rem
+@function rem($px, $base: 16) {
+  @return ($px / $base) * 1rem;
+}

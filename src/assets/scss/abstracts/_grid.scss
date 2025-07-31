@@ -1,0 +1,53 @@
+@use 'grid-settings' as *;
+@use 'breakpoints' as *;
+
+.container {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 16px;
+  padding-right: 16px;
+
+  @each $bp, $config in $grid-settings {
+    @media (min-width: map-get($breakpoints, $bp)) {
+      max-width: map-get($config, width);
+      padding-left: map-get($config, offset);
+      padding-right: map-get($config, offset);
+    }
+  }
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+// Generate .col-[breakpoint]-[1..n]
+@each $bp, $config in $grid-settings {
+  $cols: map-get($config, columns);
+  $gutter: map-get($config, gutter);
+  $offset: map-get($config, offset);
+
+  @media (min-width: map-get($breakpoints, $bp)) {
+    .row {
+      margin-left: calc($gutter / -2);
+      margin-right: calc($gutter / -2);
+    }
+
+    [class*="col-#{$bp}-"] {
+      padding-left: calc($gutter / 2);
+      padding-right: calc($gutter / 2);
+    }
+
+    @for $i from 1 through $cols {
+      .col-#{$bp}-#{$i} {
+        flex: 0 0 #{percentage($i / $cols)};
+        max-width: #{percentage($i / $cols)};
+      }
+
+      .offset-#{$bp}-#{$i} {
+        margin-left: #{percentage($i / $cols)};
+      }
+    }
+  }
+}

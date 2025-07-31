@@ -1,0 +1,134 @@
+<div
+  #wrapper
+  [ngClass]="{
+    'tw-items-center tw-justify-between': !isNarrow,
+    'tw-flex-col tw-items-start tw-gap-4': isNarrow
+  }"
+  class="tw-flex bg-gray-light-4 tw-px-6 tw-py-6"
+>
+  <h2 class="tw-text-[#660708] tw-text-[28px] tw-font-bold">
+    {{ headerName }}
+  </h2>
+
+  <div *ngIf="headerType === 'search'" class="tw-flex tw-items-center tw-gap-4 text-gray-dark-4">
+    <!-- <span class="tw-text-sm">Search By</span> -->
+
+    <!-- Dropdown: Search By -->
+    <div class="tw-relative tw-w-[180px] desktop:tw-w-[200px] dropdown-container-by">
+      <button
+        (click)="toggleDropdown('by')"
+        class="
+          tw-w-full tw-flex tw-justify-between tw-items-center
+          tw-bg-gray-light-4 tw-border tw-border-[#ADB5BD] tw-rounded-[8px]
+          tw-px-4 tw-py-2 tw-text-sm tw-text-[#495057] tw-outline-none tw-gap-2
+        "
+        [ngClass]="{
+          'tw-text-[#ADB5BD]': searchForm.searchBy === '',
+          'tw-text-[#495057]': searchForm.searchBy !== ''
+        }"
+      >
+        {{ searchForm.searchBy || 'Search By' }}
+        <app-icon name="chevron-down" [size]="14" class="tw-text-[#495057]" />
+      </button>
+      <ul
+        *ngIf="isDropdownOpenBy"
+        class="tw-absolute tw-bg-white tw-border tw-rounded-md tw-shadow-lg tw-w-full tw-z-10 tw-mt-1"
+      >
+        <li
+          *ngFor="let option of searchByOptions"
+          (click)="selectOption('by', option)"
+          class="tw-px-4 tw-py-2 tw-cursor-pointer hover:tw-bg-gray-100 tw-text-sm tw-text-[#495057]"
+        >
+          {{ option }}
+        </li>
+      </ul>
+    </div>
+
+    <!-- Input: Search Value -->
+    <div class="tw-relative desktop:tw-w-[200px]">
+      <!-- <ng-container *ngIf="isTextInput; else dropdownSearch"> -->
+        <input
+          [(ngModel)]="searchForm.searchValue"
+          placeholder="Search Value..."
+          [disabled]="!searchForm.searchBy"
+          [ngClass]="{
+            'tw-bg-[#DEE2E6] tw-text-[#ADB5BD] tw-cursor-not-allowed': !searchForm.searchBy,
+            'tw-text-[#495057]': searchForm.searchBy
+          }"
+          class="tw-w-full tw-rounded-[8px] tw-border tw-border-[#ADB5BD] tw-px-4 tw-py-2 tw-text-sm tw-outline-none placeholder:tw-text-[#ADB5BD] tw-text-[#495057]"
+        />
+      <!-- </ng-container> -->
+      <!-- <ng-template #dropdownSearch>
+        <button
+          (click)="toggleDropdown('value')"
+          [disabled]="!searchForm.searchBy"
+          class="
+            tw-w-full tw-flex tw-justify-between tw-items-center
+            tw-bg-gray-light-4 tw-border tw-border-[#ADB5BD] tw-rounded-[8px]
+            tw-px-4 tw-py-2 tw-text-sm tw-outline-none tw-gap-2
+          "
+          [ngClass]="{
+            'tw-text-[#ADB5BD]': selectedSearchValue === 'Select or Search Value',
+            'tw-text-[#495057]': selectedSearchValue !== 'Select or Search Value'
+          }"
+        >
+          {{ selectedSearchValue }}
+          <app-icon name="chevron-down" [size]="14" class="tw-text-[#495057]" />
+        </button>
+
+        <ul
+          *ngIf="isDropdownOpenValue"
+          class="tw-absolute tw-bg-white tw-border tw-rounded-md tw-shadow-lg tw-w-full tw-z-10 tw-mt-1"
+        >
+          <li class="tw-px-4 tw-py-2">
+            <input
+              type="text"
+              [(ngModel)]="searchValueFilter"
+              placeholder="Search..."
+              class="tw-w-full tw-border tw-border-[#ADB5BD] tw-rounded tw-px-2 tw-py-1 tw-text-sm tw-outline-none tw-text-[#495057]"
+            />
+          </li>
+          <li
+            *ngFor="let option of searchValueOptionsFiltered"
+            (click)="selectOption('value', option)"
+            class="tw-px-4 tw-py-2 tw-cursor-pointer hover:tw-bg-gray-100 tw-text-sm tw-text-[#495057]"
+          >
+            {{ option }}
+          </li>
+        </ul>
+      </ng-template> -->
+    </div>
+
+    <!-- Buttons -->
+    <button
+      class="tw-rounded-[8px] tw-border tw-border-[#ADB5BD] tw-text-sm tw-px-6 tw-py-2"
+      (click)="onClearClick()"
+      [disabled]="
+        !searchForm.searchBy
+      "
+      [ngClass]="{
+        'tw-opacity-50 tw-cursor-not-allowed':
+          !searchForm.searchBy,
+        'hover:tw-bg-[#DEE2E6]':
+          searchForm.searchBy
+      }"
+    >
+      Clear
+    </button>
+    <button
+      class="tw-rounded-[8px] tw-border tw-border-[#ADB5BD] tw-text-sm tw-text-white tw-bg-[#660708] tw-px-6 tw-py-2 tw-outline-none tw-transition-colors"
+      (click)="onSearchClick()"
+      [disabled]="
+        !searchForm.searchBy || !searchForm.searchValue.trim()
+      "
+      [ngClass]="{
+        'tw-opacity-50 tw-cursor-not-allowed':
+          !searchForm.searchBy || !searchForm.searchValue.trim(),
+        'hover:tw-bg-[#4e0506] hover:tw-shadow-md':
+          searchForm.searchBy && searchForm.searchValue.trim()
+      }"
+    >
+      Search
+    </button>
+  </div>
+</div>

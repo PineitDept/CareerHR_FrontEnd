@@ -1,0 +1,89 @@
+<div class="tw-flex tw-flex-wrap tw-justify-between tw-items-center tw-gap-4 tw-px-6 tw-py-6 tw-bg-white">
+
+  <!-- Left Section -->
+  <div class="tw-flex tw-gap-4">
+
+    <!-- Back Button -->
+    <button
+      *ngIf="filterDynamicButton"
+      (click)="onBackClick()"
+      class="tw-flex tw-items-center tw-gap-2 tw-bg-transparent tw-text-[#212529] tw-rounded tw-px-2 tw-py-1 tw-text-base tw-font-semibold"
+    >
+      <app-icon name="chevron-left" [size]="16" />
+      <span>Back</span>
+    </button>
+
+    <!-- Year Dropdown -->
+    <div class="tw-relative dropdown" #yearDropdown *ngIf="!filterDynamicButton">
+      <button (click)="toggleDropdown('year')"
+        class="tw-bg-black tw-text-white tw-rounded tw-px-4 tw-py-2 tw-text-base tw-flex tw-items-center tw-gap-2">
+        {{ selectedYear }}
+        <app-icon name="chevron-down" [size]="16" />
+      </button>
+      <ul *ngIf="isYearOpen"
+        class="tw-absolute tw-bg-white tw-shadow-md tw-rounded tw-mt-1 tw-z-20 tw-w-full tw-min-w-[100px]">
+        <li *ngFor="let y of years" (click)="selectOption('year', y)"
+          class="tw-px-4 tw-py-2 tw-text-base tw-cursor-pointer hover:tw-bg-gray-100">
+          {{ y }}
+        </li>
+      </ul>
+    </div>
+
+    <!-- Month Dropdown -->
+    <div class="tw-relative dropdown" #monthDropdown *ngIf="!filterDynamicButton">
+      <button (click)="toggleDropdown('month')"
+        class="tw-bg-black tw-text-white tw-rounded tw-px-4 tw-py-2 tw-text-base tw-flex tw-items-center tw-gap-2">
+        {{ selectedMonth }}
+        <app-icon name="chevron-down" [size]="16" />
+      </button>
+      <ul *ngIf="isMonthOpen"
+        class="tw-absolute tw-bg-white tw-shadow-md tw-rounded tw-mt-1 tw-z-20 tw-w-full tw-min-w-[100px]">
+        <li *ngFor="let m of months" (click)="selectOption('month', m)"
+          class="tw-px-4 tw-py-2 tw-text-base tw-cursor-pointer hover:tw-bg-gray-100">
+          {{ m }}
+        </li>
+      </ul>
+    </div>
+
+    <!-- All List Button -->
+    <button
+      class="tw-bg-[#660708] tw-text-white tw-rounded tw-px-4 tw-py-2 tw-text-base"
+      (click)="onAllListClick()"
+      *ngIf="!filterDynamicButton"
+    >
+      All List
+    </button>
+  </div>
+
+  <!-- Right Section -->
+  <div class="tw-flex tw-gap-4">
+
+    <!-- Company Toggle Buttons -->
+    <div class="tw-flex" *ngIf="!filterDynamicButton && filterOurCompany">
+      <ng-container *ngFor="let company of ourCompany">
+        <button
+          [ngClass]="{
+            'tw-bg-[#660708] !tw-text-white': selectedCompany === company,
+            'tw-bg-[#930000] tw-text-white': selectedCompany !== company
+          }"
+          class="tw-px-4 tw-py-2 tw-text-base"
+          (click)="selectOption('company', company)"
+        >
+          {{ company }}
+        </button>
+      </ng-container>
+    </div>
+
+    <!-- Dynamic Buttons -->
+    <ng-container *ngFor="let btn of actionButtons">
+      <button
+        [ngStyle]="{ 'background-color': btn.color || '#0A84FF' }"
+        class="tw-text-white tw-rounded tw-px-4 tw-py-2 tw-text-base disabled:tw-opacity-50 disabled:tw-cursor-not-allowed"
+        (click)="onActionButtonClick(btn.key)"
+        [disabled]="disabledKeys.includes(btn.key) || ((btn.key === 'submit' || btn.key === 'register') && (!(selectedRows.length)))"
+      >
+        {{ btn.label }}
+      </button>
+    </ng-container>
+  </div>
+</div>

@@ -1,0 +1,83 @@
+<!-- alert-dialog.component.html -->
+<div class="tw-text-black">
+  <div class="tw-text-lg tw-font-semibold tw-px-6 tw-pt-4 tw-pb-3">
+    {{ data.title || 'Alert' }}
+  </div>
+
+  <div class="tw-border-t tw-border-gray-300"></div>
+
+  <ng-container *ngIf="data.selectedRows?.length">
+
+    <!-- Table -->
+    <div class="tw-max-h-[300px] tw-overflow-y-auto">
+      <!-- <app-tables
+        [columns]="data.columns ?? []"
+        [rows]="data.selectedRows ?? []"
+        [showCheckbox]="false"
+      ></app-tables> -->
+    </div>
+
+    <!-- Dropdown PO Type -->
+    <div class="tw-px-6 tw-pt-6" *ngIf="data.poType?.length">
+      <label class="tw-block tw-text-base tw-font-medium tw-text-gray-700 tw-mb-1">
+        Purchase Order Type
+      </label>
+      <div class="tw-relative tw-w-1/2 dropdown-container-po" #poDropdownContainer>
+        <button #poDropdownButton
+          (click)="toggleDropdown('po')"
+          class="tw-w-full tw-flex tw-justify-between tw-items-center
+                tw-bg-gray-light-4 tw-border tw-border-[#ADB5BD] tw-rounded-[8px]
+                tw-px-4 tw-py-2 tw-text-base tw-text-[#495057] tw-outline-none tw-gap-2"
+          [ngClass]="{
+            'tw-text-[#ADB5BD]': !selectedPOType,
+            'tw-text-[#495057]': selectedPOType
+          }"
+        >
+          {{ selectedPOType || 'Select PO Type' }}
+          <app-icon name="chevron-down" [size]="14" class="tw-text-[#495057]" />
+        </button>
+        <ul
+          *ngIf="isDropdownOpenPO"
+          class="tw-fixed tw-bg-white tw-border tw-rounded-md tw-shadow-lg tw-z-[1000]"
+          [style.top.px]="dropdownTop"
+          [style.left.px]="dropdownLeft"
+          [style.width.px]="dropdownWidth"
+        >
+          <li
+            *ngFor="let option of data.poType"
+            (click)="selectOption('po', option)"
+            class="tw-px-4 tw-py-2 tw-cursor-pointer hover:tw-bg-gray-100 tw-text-base tw-text-[#495057]"
+          >
+            {{ option }}
+          </li>
+        </ul>
+      </div>
+    </div>
+  </ng-container>
+  <div class="tw-text-base tw-text-gray-700 tw-px-6 tw-py-6">
+    <p>{{ data.message }}</p>
+    <ng-container *ngIf="!data.confirm">
+      <p class="tw-mt-2"><span class="tw-font-semibold">Tel:</span> 02-705-5900</p>
+      <p><span class="tw-font-semibold">Email:</span> account&#64;pinepacific.com</p>
+    </ng-container>
+  </div>
+
+  <div class="tw-border-t tw-border-gray-300"></div>
+
+  <div class="tw-text-right tw-px-6 tw-pt-3 tw-pb-3">
+    <button
+      *ngIf="data.confirm"
+      class="tw-bg-gray-200 hover:tw-bg-gray-300 tw-text-black tw-font-medium tw-py-1.5 tw-px-5 tw-rounded tw-mr-2"
+      (click)="onCancel()"
+    >
+      Cancel
+    </button>
+    <button
+      class="tw-bg-[#930000] hover:tw-bg-[#7a0000] tw-text-white tw-font-medium tw-py-1.5 tw-px-6 tw-rounded"
+      (click)="onConfirm()"
+    >
+      {{ data.confirm ? 'Confirm' : 'OK' }}
+    </button>
+  </div>
+</div>
+

@@ -1,0 +1,29 @@
+@use 'typography' as *;
+@use 'functions' as *;
+
+// Mixin: reusable font style
+@mixin sarabun-style($weight, $style: normal) {
+  font-family: $font-family;
+  font-weight: $weight;
+  font-style: $style;
+}
+
+// Loop: .sarabun-[weight]
+@each $name, $weight in $weights {
+  .sarabun-#{$name} {
+    @include sarabun-style($weight);
+  }
+
+  .sarabun-#{$name}-italic {
+    @include sarabun-style($weight, italic);
+  }
+}
+
+// Loop: .hero-b48, .body-r16, etc.
+@each $key, $props in $typography-map {
+  .#{$key} {
+    font-size: get-typography($key, 1);     // Use function
+    @include sarabun-style(get-typography($key, 2));
+    line-height: get-typography($key, 3);
+  }
+}

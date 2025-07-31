@@ -1,0 +1,82 @@
+@use 'abstracts/typography' as *;
+@use 'abstracts/functions' as *;
+@use 'abstracts/breakpoints' as *;
+
+// 1. Normalize box model
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+// 2. Reset margin/padding
+html, body, h1, h2, h3, h4, h5, h6, p, ul, ol, figure, blockquote, dl, dd {
+  margin: 0;
+  padding: 0;
+}
+
+// 3. Remove list styles
+ul, ol {
+  list-style: none;
+}
+
+// 4. Remove link underline, inherit color
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+// 5. Set body defaults
+body {
+  font-family: $font-family;
+  font-weight: get-weight(regular);
+  line-height: 1.5;
+  background-color: #fff;
+  color: #111;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+// 6. Set image and media defaults
+img, picture, video, canvas, svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+// 7. Form element resets (safe)
+button, textarea, select, input {
+  font: inherit;
+  margin: 0;
+  padding: 0;
+  color: inherit;
+  background: none;
+  // border: none;
+  outline: none;
+}
+
+// 8. Button behavior reset
+button {
+  cursor: pointer;
+  background-color: transparent;
+}
+
+// 9. Remove default quote style
+blockquote, q {
+  quotes: none;
+
+  &::before,
+  &::after {
+    content: none;
+  }
+}
+
+// 10. Responsive typography scale base
+html {
+  font-size: 100%; // = 16px (used by rem() function)
+}
+
+// 11. Responsive line-height adjustments
+@media (min-width: map-get($breakpoints, tablet)) {
+  body {
+    line-height: 1.6;
+  }
+}

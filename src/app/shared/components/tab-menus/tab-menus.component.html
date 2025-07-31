@@ -1,0 +1,26 @@
+<div #wrapperRef class="tw-flex tw-gap-4 tw-px-6 tw-py-6 tw-bg-white">
+  <ng-container *ngFor="let tab of tabs">
+    <button
+      (click)="selectTab(tab.key)"
+      [ngClass]="[
+        selectedTab === tab.key
+          ? 'tw-bg-[#660708] tw-text-white'
+          : 'tw-bg-[#E9ECEF] tw-text-black',
+        isCompact
+          ? 'tw-px-8 tw-py-2'
+          : 'tw-px-8 tw-py-3'
+      ]"
+      [ngStyle]="{
+        'box-shadow': '0px 4px 4px rgba(0, 0, 0, 0.22)',
+        'transform': selectedTab === tab.key ? 'scaleY(1.03)' : 'scaleY(1)',
+        'transform-origin': 'top',
+        'transition': 'all 250ms ease'
+      }"
+      class="tw-flex tw-items-center tw-gap-2 tw-rounded-[8px] tw-border tw-border-[#DEE2E6] tw-text-lg"
+    >
+      <app-icon name="star-fat" [size]="16" />
+      {{ tab.label }} ({{ tab.count }})
+    </button>
+  </ng-container>
+</div>
+

@@ -1,0 +1,21 @@
+<div class="tw-fixed tw-top-0 tw-left-0 tw-right-0 tw-h-20 tw-z-50">
+  <app-header-main></app-header-main>
+</div>
+
+<div class="tw-flex tw-pt-20 tw-h-screen">
+  <!-- Sidebar -->
+  <div
+    [style.width]="sidebar?.sidebarWidth"
+    class="tw-fixed tw-top-20 tw-left-0 tw-h-[calc(100vh-5rem)] tw-z-40 tw-transition-[width] tw-duration-300 tw-ease-in-out"
+  >
+    <app-sidebar #sidebar></app-sidebar>
+  </div>
+
+  <!-- Content -->
+  <div
+    [style.marginLeft]="sidebar?.sidebarWidth"
+    class="tw-w-full tw-overflow-y-auto tw-h-[calc(100vh-5rem)]  tw-transition-[margin] tw-duration-300 tw-ease-in-out"
+  >
+    <router-outlet></router-outlet>
+  </div>
+</div>

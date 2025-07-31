@@ -1,0 +1,14 @@
+/* You can add global styles to this file, and also import other style files */
+@use 'abstracts/index' as *;
+@use 'base/index' as *;
+@use 'layout/index' as *;
+@use 'components/index' as *;
+@use 'pages/index' as *;
+@use 'themes/index' as *;
+@use 'vendors/index' as *;
+
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+

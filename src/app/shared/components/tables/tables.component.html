@@ -1,0 +1,206 @@
+<!-- expandable-table.component.html -->
+<div #tableWrapper class="tw-relative tw-px-6 tw-py-6 tw-bg-white">
+  <div class="tw-rounded-md tw-shadow-sm tw-border tw-border-gray-200">
+    <table class="tw-table-auto tw-w-full tw-text-sm tw-text-left tw-border-collapse">
+      <thead>
+        <tr class="tw-bg-red-900 tw-text-white">
+          <!-- Checkbox Column -->
+          <th class="tw-w-[36px] tw-px-1 tw-py-2" *ngIf="showCheckbox">
+            <div class="tw-flex tw-text-center tw-align-middle">
+              <input #selectAllCheckbox type="checkbox" [checked]="allSelected" (click)="$event.preventDefault()"
+                (mousedown)="onHeaderCheckboxClick($event)"
+                class="tw-accent-red-800 tw-w-5 tw-h-5 tw-mx-auto tw-cursor-pointer disabled:tw-cursor-not-allowed"
+                [disabled]="rows.length === 0" />
+            </div>
+          </th>
+
+          <!-- Dynamic Columns with Smooth Animation -->
+          <ng-container *ngFor="let column of columns; trackBy: trackByColumn">
+            <th class="column-header tw-px-2 tw-py-2 tw-text-center tw-relative tw-whitespace-nowrap"
+              [class.main-column]="column.mainColumn" [class.sub-column]="column.subColumn"
+              [class.wrap-text]="column.wrapText" [class.expanded]="!column.subColumn || isSubColumnVisible(column)"
+              [class.collapsed]="column.subColumn && !isSubColumnVisible(column)" [style.width]="getColumnWidth(column)"
+              [style.min-width]="getColumnMinWidth(column)" [style.max-width]="getColumnMaxWidth(column)"
+              (click)="onColumnClick(column)">
+
+              <div class="header-content tw-flex tw-items-center tw-justify-center tw-gap-2">
+                <!-- Sub-column indicator -->
+                <span *ngIf="column.subColumn" class="tw-text-red-300 tw-font-mono tw-text-xs tw-opacity-75">└</span>
+
+                <!-- Column header text -->
+                <span class="column-header-text tw-font-medium tw-truncate">{{ column.header }}</span>
+                <!-- Sort Icon -->
+                <app-icon *ngIf="column.sortable" [name]="
+                sortStates[column.field] === 'asc'
+                  ? 'sort-down'
+                  : sortStates[column.field] === 'desc'
+                  ? 'sort-up'
+                  : 'sort'
+              " [size]="12" fill="currentColor">
+                </app-icon>
+                <!-- Toggle button for main columns -->
+                <button *ngIf="column.mainColumn && hasSubColumns(column.mainColumn)"
+                  class="toggle-btn tw-ml-1 tw-p-1 tw-rounded tw-transition-all tw-duration-200 hover:tw-bg-red-800 tw-flex-shrink-0"
+                  (click)="$event.stopPropagation(); toggleExpandRow(column.mainColumn, $event)" type="button"
+                  [attr.aria-expanded]="expandedMainColumns.has(column.mainColumn)"
+                  [attr.aria-label]="'Toggle ' + column.header + ' sub-columns'">
+                  <app-icon name="sliders-horizontal-square" [size]="24" fill="currentColor"
+                    [extraClass]="'tw-transition-transform tw-duration-300 tw-ease-in-out ' + (expandedMainColumns.has(column.mainColumn) ? 'tw-rotate-180' : '')">
+                  </app-icon>
+                </button>
+              </div>
+            </th>
+          </ng-container>
+        </tr>
+      </thead>
+
+      <!-- Table Body -->
+      <tbody *ngIf="rows.length > 0; else noData">
+        <tr *ngFor="let row of rows; let i = index; trackBy: trackByRow"
+          class="table-row tw-transition-colors tw-duration-200 tw-cursor-pointer" [class.tw-bg-white]="!splitRows"
+          [class.tw-bg-gray-50]="splitRows && i % 2 === 0" [class.tw-bg-gray-100]="splitRows && i % 2 === 1"
+          [class.hover:tw-bg-gray-200]="true" [class.tw-border-b]="i < rows.length - 1 && !splitRows"
+          [class.selected-row]="selectedRows.has(i)" 
+          [class.tw-bg-yellow-50]="clickedRows.has(row.id.toString())"
+          (click)="onRowClick(row, $event)">
+
+          <!-- Checkbox Cell -->
+          <td class="tw-w-[36px] tw-px-1 tw-py-2" *ngIf="showCheckbox">
+            <div class="tw-flex tw-text-center tw-align-middle">
+              <input type="checkbox" [checked]="selectedRows.has(i)" (change)="toggleSelectRow(i)"
+                (click)="$event.stopPropagation()"
+                class="tw-accent-red-800 tw-w-5 tw-h-5 tw-mx-auto tw-cursor-pointer" />
+            </div>
+          </td>
+
+          <!-- Dynamic Data Cells -->
+          <ng-container *ngFor="let column of columns; trackBy: trackByColumn">
+            <td class="table-cell tw-px-2 tw-py-2 tw-align-top tw-border-r tw-border-gray-300"
+              [class.main-column]="column.mainColumn" [class.sub-column]="column.subColumn"
+              [class.wrap-text]="column.wrapText" [class.expanded]="!column.subColumn || isSubColumnVisible(column)"
+              [class.collapsed]="column.subColumn && !isSubColumnVisible(column)" [style.width]="getColumnWidth(column)"
+              [style.min-width]="getColumnMinWidth(column)" [style.max-width]="getColumnMaxWidth(column)"
+              [style.text-align]="column.align || 'left'">
+              <!-- Cell Content with Type Switching -->
+              <div class="cell-content">
+                <ng-container [ngSwitch]="column.type || 'text'">
+
+                  <!-- Text Content -->
+                  <span *ngSwitchCase="'text'" class="tw-text-gray-800">
+                    {{ getCellValue(row, column.field) }}
+                  </span>
+
+                  <!-- Expandable Content -->
+                  <div *ngSwitchCase="'expandable'" class="tw-text-gray-800">
+                    <span>{{ getCellValue(row, column.field) }}</span>
+                  </div>
+
+                  <!-- Badge Content -->
+                  <span *ngSwitchCase="'badge'"
+                    class="tw-inline-flex tw-items-center tw-justify-center tw-rounded-lg tw-px-2.5 tw-py-1 tw-text-xs tw-font-medium tw-ring-1 tw-ring-inset tw-transition-all tw-duration-200 tw-max-w-full tw-whitespace-nowrap tw-overflow-hidden tw-text-ellipsis"
+                    [ngClass]="getCellValue(row, column.field)?.class || ['tw-bg-gray-100', 'tw-text-gray-800', 'tw-ring-gray-300']">
+                    {{ getCellValue(row, column.field)?.label || 'Badge' }}
+                  </span>
+
+
+                  <!-- Number Content -->
+                  <span *ngSwitchCase="'number'" class="tw-text-gray-800 tw-font-mono">
+                    {{ getCellValue(row, column.field) | number: '1.0-2' }}
+                  </span>
+
+                  <!-- Select Dropdown -->
+                  <div *ngSwitchCase="'select'" class="tw-relative tw-max-w-[135px]">
+                    <button
+                      class="dropdown-button tw-bg-white tw-border tw-border-gray-300 tw-rounded-md tw-px-3 tw-py-1 tw-w-full tw-text-sm tw-flex tw-items-center tw-justify-between tw-truncate tw-transition-all tw-duration-200 hover:tw-border-gray-400 focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-red-500 focus:tw-border-red-500"
+                      [id]="'dropdown-button-' + i + '-' + column.field"
+                      (click)="toggleDropdown(i, column.field, $event)"
+                      [attr.aria-expanded]="isDropdownOpen(i, column.field)">
+                      <span class="tw-text-left tw-w-full tw-truncate"
+                        [class.tw-text-gray-400]="!getCellValue(row, column.field)">
+                        {{ getCellValue(row, column.field) || 'Select' }}
+                      </span>
+                      <app-icon name="chevron-down" [size]="16" fill="currentColor"
+                        [extraClass]="'tw-ml-2 tw-flex-shrink-0 tw-transition-transform tw-duration-200 ' + (isDropdownOpen(i, column.field) ? 'tw-rotate-180' : '')">
+                      </app-icon>
+                    </button>
+                  </div>
+
+                  <!-- Button Content -->
+                  <button *ngSwitchCase="'button'"
+                    class="tw-text-white tw-px-3 tw-py-1 tw-rounded tw-font-medium tw-transition-all tw-duration-200 tw-min-w-[80px] disabled:tw-bg-gray-300 disabled:tw-cursor-not-allowed"
+                    [disabled]="!row.POType" (click)="onButtonClick(column, row, $event)" [ngClass]="{
+                      'tw-bg-blue-500 hover:tw-bg-blue-600': column.buttonText === 'Submit',
+                      'tw-bg-purple-700 hover:tw-bg-purple-800': column.buttonText === 'Register',
+                      'tw-bg-gray-500 hover:tw-bg-gray-600': !column.buttonText || (column.buttonText !== 'Submit' && column.buttonText !== 'Register')
+                    }">
+                    {{ column.buttonText || 'Click' }}
+                  </button>
+
+                  <!-- Date Content -->
+                  <span *ngSwitchCase="'date'" class="tw-text-gray-800">
+                    {{ getCellValue(row, column.field) | date: 'dd/MM/yyyy':'UTC' }}
+                  </span>
+
+                  <!-- List Content -->
+                  <div *ngSwitchCase="'list'" class="tw-text-gray-800">
+                    <ul class="tw-list-none tw-space-y-1">
+                      <li *ngFor="let item of getCellValue(row, column.field); let idx = index" class="tw-text-sm">
+                        {{ idx + 1 }}. {{ item }}
+                      </li>
+                    </ul>
+                  </div>
+
+                  <!-- Icon Content -->
+                  <div *ngSwitchCase="'icon'" class="tw-flex tw-justify-center tw-items-center">
+                    <app-icon [name]="getCellValue(row, column.field)?.icon || 'default'"
+                      [size]="getCellValue(row, column.field)?.size || 20"
+                      [fill]="getCellValue(row, column.field)?.fill || 'currentColor'"
+                      [extraClass]="getCellValue(row, column.field)?.extraClass || '' + 'tw-transition-colors tw-duration-200'">
+                    </app-icon>                    
+                  </div>
+
+                </ng-container>
+              </div>
+            </td>
+          </ng-container>
+        </tr>
+      </tbody>
+
+      <!-- No Data Template -->
+      <ng-template #noData>
+        <tbody>
+          <tr>
+            <td [attr.colspan]="getVisibleColumnCount()" class="tw-text-center tw-py-8 tw-text-gray-500">
+              <div class="tw-flex tw-flex-col tw-items-center tw-gap-3">
+                <app-icon name="xmark" [size]="48" fill="currentColor" extraClass="tw-text-gray-300">
+                </app-icon>
+                <span class="tw-text-lg tw-font-medium">No data available</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </ng-template>
+    </table>
+  </div>
+
+  <!-- Enhanced Floating Dropdown Overlay -->
+  <div *ngIf="dropdownOverlay"
+    class="dropdown-overlay tw-absolute tw-bg-white tw-shadow-xl tw-rounded-lg tw-z-[9999] tw-max-h-[300px] tw-overflow-y-auto tw-min-w-[135px] tw-border tw-border-gray-200 tw-animate-fade-in"
+    [ngStyle]="{
+      top: dropdownOverlay.y + 'px',
+      left: dropdownOverlay.x + 'px',
+      width: dropdownOverlay.width + 'px'
+    }">
+    <ul class="tw-py-1">
+      <li *ngFor="let opt of dropdownOverlay.options; trackBy: trackByOption"
+        (click)="selectDropdownOption(dropdownOverlay.rowIndex, dropdownOverlay.field, opt)"
+        class="tw-px-4 tw-py-2 tw-text-sm tw-cursor-pointer tw-transition-colors tw-duration-150 hover:tw-bg-gray-100 tw-flex tw-items-center tw-justify-between"
+        [class.tw-bg-red-50]="getCellValue(rows[dropdownOverlay.rowIndex], dropdownOverlay.field) === opt">
+        <span>{{ opt }}</span>
+        <app-icon *ngIf="getCellValue(rows[dropdownOverlay.rowIndex], dropdownOverlay.field) === opt" name="check"
+          [size]="16" fill="currentColor" extraClass="tw-text-red-600">
+        </app-icon>
+      </li>
+    </ul>
+  </div>
+</div>

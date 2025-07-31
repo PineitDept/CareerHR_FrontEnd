@@ -1,0 +1,120 @@
+<div class="tw-flex tw-gap-6 tw-overflow-x-auto tw-scrollbar-hide tw-py-4 tw-px-2">
+  @for (group of items; track group.groupKey) {
+    <div class="tw-min-w-72 tw-max-w-80 tw-group">
+      <!-- Card Container -->
+      <div class="tw-bg-white tw-rounded-2xl tw-shadow-lg tw-border tw-border-gray-100 
+                  tw-transition-all tw-duration-500 tw-ease-out
+                  hover:tw-shadow-xl hover:tw--translate-y-1 hover:tw-border-blue-200">
+        
+        <!-- Header -->
+        <div class="tw-relative tw-overflow-hidden tw-rounded-t-2xl tw-bg-gradient-to-r tw-from-blue-50 tw-to-indigo-50">
+          <div class="tw-flex tw-justify-between tw-items-center tw-p-5 tw-cursor-pointer
+                      tw-transition-all tw-duration-300 hover:tw-bg-gradient-to-r hover:tw-from-blue-100 hover:tw-to-indigo-100"
+               (click)="toggleGroup(group.groupKey)">
+            
+            <div class="tw-flex tw-items-center tw-gap-3">
+              <h3 class="tw-font-bold tw-text-gray-800 tw-text-lg tw-leading-tight">
+                {{ group.groupLabel }}
+              </h3>
+              
+              <!-- Badge for selected count -->
+              @if (getCheckedCount(group.groupKey) > 0) {
+                <span class="tw-inline-flex tw-items-center tw-px-2.5 tw-py-1 tw-rounded-full 
+                           tw-text-xs tw-font-semibold tw-bg-blue-500 tw-text-white
+                           tw-animate-pulse">
+                  {{ getCheckedCount(group.groupKey) }}
+                </span>
+              }
+            </div>
+            
+            <!-- Toggle Icon -->
+            <div class="tw-flex tw-items-center tw-justify-center tw-w-8 tw-h-8 
+                        tw-rounded-full tw-bg-white tw-shadow-md
+                        tw-transition-all tw-duration-300 tw-ease-out
+                        group-hover:tw-bg-blue-50 group-hover:tw-shadow-lg">
+              <app-icon 
+                name="chevron-down" 
+                [size]="20" 
+                fill="currentColor"
+                [extraClass]="'tw-transition-transform tw-duration-500 tw-ease-out tw-text-gray-600 ' + 
+                            (isExpanded(group.groupKey) ? 'tw-rotate-180' : 'tw-rotate-0')">
+              </app-icon>
+            </div>
+          </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="tw-overflow-hidden">
+          @if (isExpanded(group.groupKey)) {
+            <div class="tw-p-5 tw-space-y-3 tw-animate-in tw-slide-in-from-top-2 tw-fade-in tw-duration-500">
+              @for (option of group.options; track option.key; let i = $index) {
+                <label class="tw-group/option tw-flex tw-items-center tw-gap-3 tw-cursor-pointer 
+                           tw-p-3 tw-rounded-xl tw-transition-all tw-duration-300 tw-ease-out
+                           hover:tw-bg-gradient-to-r hover:tw-from-gray-50 hover:tw-to-blue-50
+                           hover:tw-shadow-sm hover:tw--translate-y-0.5"
+                       [style.animation-delay]="i * 50 + 'ms'">
+                  
+                  <!-- Custom Checkbox -->
+                  <div class="tw-relative tw-flex tw-items-center">
+                    <input
+                      type="checkbox"
+                      class="tw-sr-only tw-peer"
+                      [checked]="isChecked(group.groupKey, option.key)"
+                      (change)="toggleOption(group.groupKey, option.key)"
+                    />
+                    
+                    <!-- Checkbox Visual -->
+                    <div class="tw-w-5 tw-h-5 tw-border-2 tw-border-gray-300 tw-rounded-md 
+                               tw-transition-all tw-duration-300 tw-ease-out
+                               tw-peer-checked:tw-bg-blue-500 tw-peer-checked:tw-border-blue-500
+                               tw-peer-checked:tw-scale-110
+                               group-hover/option:tw-border-blue-400 group-hover/option:tw-shadow-sm">
+                      
+                      <!-- Checkmark -->
+                      <svg class="tw-w-3 tw-h-3 tw-text-white tw-absolute tw-top-0.5 tw-left-0.5
+                                 tw-opacity-0 tw-scale-0 tw-transition-all tw-duration-300 tw-ease-out
+                                 tw-peer-checked:tw-opacity-100 tw-peer-checked:tw-scale-100"
+                           fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" 
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" 
+                              clip-rule="evenodd"/>
+                      </svg>
+                    </div>
+                  </div>
+                  
+                  <!-- Label -->
+                  <span class="tw-text-gray-700 tw-font-medium tw-leading-relaxed 
+                             tw-transition-colors tw-duration-300
+                             group-hover/option:tw-text-gray-900 tw-peer-checked:tw-text-blue-700">
+                    {{ option.label }}
+                  </span>
+                </label>
+              } @empty {
+                <div class="tw-flex tw-flex-col tw-items-center tw-justify-center tw-py-8 tw-text-center">
+                  <div class="tw-w-12 tw-h-12 tw-bg-gray-100 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-mb-3">
+                    <svg class="tw-w-6 tw-h-6 tw-text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                            d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2 2v-5m16 0h-2M4 13h2"/>
+                    </svg>
+                  </div>
+                  <p class="tw-text-gray-500 tw-text-sm tw-font-medium">ไม่มีตัวเลือก</p>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  } @empty {
+    <div class="tw-flex tw-flex-col tw-items-center tw-justify-center tw-w-full tw-py-16 tw-text-center">
+      <div class="tw-w-20 tw-h-20 tw-bg-gray-100 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-mb-4">
+        <svg class="tw-w-10 tw-h-10 tw-text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+        </svg>
+      </div>
+      <h3 class="tw-text-gray-600 tw-text-lg tw-font-semibold tw-mb-2">ไม่มีตัวกรอง</h3>
+      <p class="tw-text-gray-500 tw-text-sm">ยังไม่มีตัวเลือกการกรองที่พร้อมใช้งาน</p>
+    </div>
+  }
+</div>
