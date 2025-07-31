@@ -15,6 +15,14 @@
             <h3 class="tw-font-bold tw-text-gray-900 tw-text-sm tw-leading-tight">
               {{ group.groupLabel }}
             </h3>
+              <!-- Badge for selected count -->
+              @if (getCheckedCount(group.groupKey) > 0) {
+                <span class="tw-inline-flex tw-items-center tw-px-2.5 tw-py-1 tw-rounded-full 
+                           tw-text-xs tw-font-semibold bg-azure tw-text-white
+                           tw-animate-pulse">
+                  {{ getCheckedCount(group.groupKey) }}
+                </span>
+              }
           </div>
 
           <!-- Toggle Icon -->
@@ -45,12 +53,12 @@
               <!-- Checkbox Visual -->
               <div class="tw-w-4 tw-h-4 tw-border tw-border-gray-300 tw-rounded 
                                tw-transition-all tw-duration-200 tw-ease-out
-                               tw-peer-checked:tw-bg-blue-500 tw-peer-checked:tw-border-blue-500
+                               tw-peer-checked:bg-azure tw-peer-checked:tw-border-azure
                                tw-peer-checked:tw-scale-105
-                               group-hover/option:tw-border-blue-400
-                               tw-peer-focus:tw-ring-2 tw-peer-focus:tw-ring-blue-500 tw-peer-focus:tw-ring-offset-2">
+                               group-hover/option:tw-border-azure
+                               tw-peer-focus:tw-ring-2 tw-peer-focus:tw-ring-azure tw-peer-focus:tw-ring-offset-2">
 
-                <div class="tw-w-3 tw-h-3 tw-bg-blue-400 tw-absolute tw-top-0.5 tw-left-0.5
+                <div class="tw-w-3 tw-h-3 bg-azure tw-absolute tw-top-0.5 tw-left-0.5
                                  tw-rounded 
                                  tw-transition-all tw-duration-200 tw-ease-out"
                   [class.tw-opacity-100]="isChecked(group.groupKey, option.key)"
@@ -62,7 +70,7 @@
 
             <!-- Label -->
             <span class="tw-text-sm tw-font-normal tw-leading-relaxed 
-         tw-transition-colors tw-duration-200" [class.tw-text-blue-700]="isChecked(group.groupKey, option.key)"
+         tw-transition-colors tw-duration-200" [class.text-azure]="isChecked(group.groupKey, option.key)"
               [class.tw-font-medium]="isChecked(group.groupKey, option.key)"
               [class.tw-text-gray-700]="!isChecked(group.groupKey, option.key)"
               [class.group-hover\:tw-text-gray-900]="!isChecked(group.groupKey, option.key)">
