@@ -9,15 +9,27 @@
   <app-tab-menus [tabs]="tabMenus" [activeTab]="activeTab" (tabChanged)="onTabChanged($event)"></app-tab-menus>
 </div> -->
 
-
-  <app-filter-check-box #filter [items]="filterItems" [config]="filterConfig" (selected)="onFiltersSelected($event)">
-  </app-filter-check-box>
-
+<div #filter>
+<app-filter-check-box
+  [items]="filterItems"
+  [config]="filterConfig"
+  (selected)="onFiltersSelected($event)">
+</app-filter-check-box>
+</div>
 
 <app-loading></app-loading>
 
-<div #tableContainer class="tw-h-[calc(100vh-600px)] tw-overflow-y-auto " (scroll)="onScroll($event)">
-  <app-tables [columns]="columns" [rows]="rows" [resetKey]="tableResetKey" [splitRows]="false" [showCheckbox]="false"
-    [preClickedRowIds]="preClickedIds" (rowClicked)="onRowClick($event)" (columnClicked)="onColumnClick($event)"
-    (listClickedRows)="onClickedRowsChanged($event)"></app-tables>
+
+<div #tableContainer class="tw-overflow-y-auto" (scroll)="onScroll($event)">
+  <app-tables
+    [columns]="columns"
+    [rows]="rows"
+    [resetKey]="tableResetKey"
+    [splitRows]="false"
+    [showCheckbox]="false"
+    [preClickedRowIds]="preClickedIds"
+    (rowClicked)="onRowClick($event)"
+    (columnClicked)="onColumnClick($event)"
+    (listClickedRows)="onClickedRowsChanged($event)">
+  </app-tables>
 </div>

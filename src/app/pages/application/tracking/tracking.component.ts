@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, HostListener, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { ApplicationService } from '../../../services/application/application.service';
 import { ICandidateFilterRequest } from '../../../interfaces/Application/application.interface';
@@ -11,16 +11,17 @@ import { FilterConfig, GroupedCheckboxOption } from '../../../shared/components/
   styleUrl: './tracking.component.scss'
 })
 
-
-
-export class TrackingComponent {
+export class TrackingComponent implements AfterViewInit {
+  private resizeObserver!: ResizeObserver;
   constructor(
     private router: Router,
     private applicationService: ApplicationService,
   ) {
 
   }
-  
+  @ViewChild('filter', { static: false }) filterRef!: ElementRef;
+  @ViewChild('tableContainer', { static: false }) tableContainerRef!: ElementRef;
+
   isLoading: boolean = false;
   trackingFiterRequest: ICandidateFilterRequest = {
     page: 1,
@@ -28,7 +29,41 @@ export class TrackingComponent {
   };
   searchForm = { searchBy: '', searchValue: '' };
   searchByOptions: string[] = ['Application ID', 'Application Name', 'University'];
+  filterHeight: number = 0;
 
+  ngAfterViewInit(): void {
+    this.updateTableHeight();
+
+    // ใช้ ResizeObserver สังเกต #filter
+    if (this.filterRef?.nativeElement) {
+      this.resizeObserver = new ResizeObserver(() => {
+        this.updateTableHeight();
+      });
+      this.resizeObserver.observe(this.filterRef.nativeElement);
+    }
+  }
+
+  ngOnDestroy(): void {
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+    }
+  }
+
+  updateTableHeight(): void {
+    requestAnimationFrame(() => {
+      if (this.filterRef?.nativeElement && this.tableContainerRef?.nativeElement) {
+        const filterHeight = this.filterRef.nativeElement.offsetHeight;
+        const windowHeight = window.innerHeight;
+        const newTableHeight = windowHeight - filterHeight - 300;
+
+        console.log('filterHeight', filterHeight);
+        console.log('newTableHeight', newTableHeight);
+
+        this.tableContainerRef.nativeElement.style.height = `${newTableHeight}px`;
+      }
+    });
+  }
+  
   STORAGE_KEY: string = 'trackingFiterSettings';
   STORAGE_SORTCOLUMN_KEY: string = 'trackingFiterSortColumn';
   STORAGE_CLICKED_KEY: string = 'candidateclickedRowIndexes';
@@ -64,8 +99,8 @@ export class TrackingComponent {
   filterDateRange: { month: string; year: string } = { month: '', year: '' };
   preClickedIds: string[] = [];
 
- filterItems: GroupedCheckboxOption[] = [
-      {
+  filterItems: GroupedCheckboxOption[] = [
+    {
       groupKey: 'applied',
       groupLabel: 'Applied',
       options: [
@@ -127,30 +162,14 @@ export class TrackingComponent {
   filterConfig: FilterConfig = {
     // Option 1: Expand all groups by default
     expandAllByDefault: true,
-
-    // Option 2: Configure specific groups (alternative to expandAllByDefault)
-    // groupExpansionConfig: {
-    //   'categories': true,
-    //   'brands': false,
-    //   'priceRange': true,
-    //   'rating': false
-    // },
-
     // Animation duration (optional)
     animationDuration: 300
   };
 
   onFiltersSelected(filters: Record<string, string[]>) {
     console.log('Selected filters:', filters);
-    // Handle the selected filters
-    // Example output:
-    // {
-    //   'categories': ['electronics', 'clothing'],
-    //   'brands': ['apple'],
-    //   'priceRange': ['1000-5000'],
-    //   'rating': ['4stars', '5stars']
-    // }
   }
+
   ngOnInit() {
     const saved = localStorage.getItem(this.STORAGE_KEY);
     if (saved) {
