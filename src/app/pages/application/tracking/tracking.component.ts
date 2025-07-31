@@ -20,6 +20,7 @@ export class TrackingComponent {
   ) {
 
   }
+  
   isLoading: boolean = false;
   trackingFiterRequest: ICandidateFilterRequest = {
     page: 1,
@@ -64,43 +65,60 @@ export class TrackingComponent {
   preClickedIds: string[] = [];
 
  filterItems: GroupedCheckboxOption[] = [
-    {
-      groupKey: 'categories',
-      groupLabel: 'หมวดหมู่สินค้า',
+      {
+      groupKey: 'applied',
+      groupLabel: 'Applied',
       options: [
-        { key: 'electronics', label: 'อิเล็กทรอนิกส์' },
-        { key: 'clothing', label: 'เสื้อผ้า' },
-        { key: 'books', label: 'หนังสือ' },
-        { key: 'home', label: 'ของใช้ในบ้าน' }
+        { key: 'received', label: 'Received (20,000)' }
       ]
     },
     {
-      groupKey: 'brands',
-      groupLabel: 'แบรนด์',
+      groupKey: 'screened',
+      groupLabel: 'Screened',
       options: [
-        { key: 'apple', label: 'Apple' },
-        { key: 'samsung', label: 'Samsung' },
-        { key: 'nike', label: 'Nike' },
-        { key: 'adidas', label: 'Adidas' }
+        { key: 'accept', label: 'Accept (3,000)' },
+        { key: 'decline', label: 'Decline (3,000)' },
+        { key: 'on-hold', label: 'On Hold (3,000)' }
       ]
     },
     {
-      groupKey: 'priceRange',
-      groupLabel: 'ช่วงราคา',
+      groupKey: 'interview1',
+      groupLabel: 'Interview 1',
       options: [
-        { key: '0-1000', label: '0 - 1,000 บาท' },
-        { key: '1000-5000', label: '1,000 - 5,000 บาท' },
-        { key: '5000-10000', label: '5,000 - 10,000 บาท' },
-        { key: '10000+', label: 'มากกว่า 10,000 บาท' }
+        { key: 'pending', label: 'Pending' },
+        { key: 'scheduled', label: 'Scheduled' },
+        { key: 'no-show', label: 'No-Show' },
+        { key: 'accept', label: 'Accept' },
+        { key: 'decline', label: 'Decline' }
       ]
     },
     {
-      groupKey: 'rating',
-      groupLabel: 'คะแนนรีวิว',
+      groupKey: 'interview2',
+      groupLabel: 'Interview 2',
       options: [
-        { key: '5stars', label: '5 ดาว' },
-        { key: '4stars', label: '4 ดาวขึ้นไป' },
-        { key: '3stars', label: '3 ดาวขึ้นไป' }
+        { key: 'pending', label: 'Pending' },
+        { key: 'scheduled', label: 'Scheduled' },
+        { key: 'no-show', label: 'No-Show' },
+        { key: 'accept', label: 'Accept' },
+        { key: 'decline', label: 'Decline' }
+      ]
+    },
+    {
+      groupKey: 'offered',
+      groupLabel: 'Offered',
+      options: [
+        { key: 'pending', label: 'Pending' },
+        { key: 'accept', label: 'Accept' },
+        { key: 'decline', label: 'Decline' }
+      ]
+    },
+    {
+      groupKey: 'hired',
+      groupLabel: 'Hired',
+      options: [
+        { key: 'onboarded', label: 'Onboarded' },
+        { key: 'no-show', label: 'No-Show' },
+        { key: 'decline', label: 'Decline' }
       ]
     }
   ];

@@ -1,4 +1,4 @@
-// Custom scrollbar styles
+// Custom scrollbar styles สำหรับ Tailwind
 .tw-scrollbar-hide {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -8,7 +8,7 @@
   }
 }
 
-// Custom animations for smooth transitions
+// Custom animations สำหรับ smooth transitions
 @keyframes slideInFromTop {
   from {
     opacity: 0;
@@ -40,25 +40,25 @@
   }
 }
 
-// Custom utility classes for enhanced animations
+// Custom utility classes สำหรับ enhanced animations
 .tw-animate-in {
-  animation: slideInFromTop 0.5s ease-out, fadeIn 0.5s ease-out;
+  animation: slideInFromTop 0.3s ease-out, fadeIn 0.3s ease-out;
 }
 
 .tw-slide-in-from-top-2 {
-  animation: slideInFromTop 0.5s ease-out;
+  animation: slideInFromTop 0.3s ease-out;
 }
 
 .tw-fade-in {
-  animation: fadeIn 0.5s ease-out;
+  animation: fadeIn 0.3s ease-out;
 }
 
 // Enhanced hover effects
-.tw-group:hover .tw-shadow-lg {
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+.tw-group:hover .tw-shadow-md {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
-// Custom focus styles for accessibility
+// Custom focus styles สำหรับ accessibility
 input[type="checkbox"]:focus + div {
   @apply tw-ring-2 tw-ring-blue-500 tw-ring-offset-2;
 }
@@ -76,15 +76,41 @@ input[type="checkbox"]:focus + div {
 // Card elevation on hover
 .tw-group:hover > div {
   transform: translateY(-2px);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
-// Staggered animation for options
-// @for $i from 1 through 10 {
-//   .tw-group/option:nth-child(#{$i}) {
-//     animation-delay: #{$i * 50}ms;
-//   }
-// }
+// Staggered animation สำหรับ options
+@for $i from 1 through 10 {
+  .tw-group\/option:nth-child(#{$i}) {
+    animation-delay: #{$i * 30}ms;
+    opacity: 0;
+    animation: slideInFromTop 0.3s ease-out forwards;
+  }
+}
+
+// Custom scrollbar สำหรับ horizontal scroll
+:host ::ng-deep .tw-overflow-x-auto {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+
+  &::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+
+    &:hover {
+      background: #94a3b8;
+    }
+  }
+}
 
 // Mobile responsiveness
 @media (max-width: 768px) {
@@ -97,13 +123,13 @@ input[type="checkbox"]:focus + div {
   }
 }
 
-// Dark mode support (if needed)
+// Dark mode support (ถ้าต้องการ)
 @media (prefers-color-scheme: dark) {
   .tw-bg-white {
     @apply tw-bg-gray-800;
   }
   
-  .tw-text-gray-800 {
+  .tw-text-gray-900 {
     @apply tw-text-gray-100;
   }
   
@@ -111,7 +137,36 @@ input[type="checkbox"]:focus + div {
     @apply tw-text-gray-300;
   }
   
+  .tw-border-gray-200 {
+    @apply tw-border-gray-700;
+  }
+  
   .tw-border-gray-100 {
     @apply tw-border-gray-700;
   }
+}
+
+// เพิ่ม smooth transitions สำหรับทุก element
+* {
+  transition-property: color, background-color, border-color, transform, box-shadow, opacity;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+// Enhanced checkbox animations
+.tw-peer:checked + .tw-w-4 {
+  animation: scaleIn 0.2s ease-out;
+}
+
+// Pulse animation สำหรับ badge
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.tw-animate-pulse {
+  animation: pulse 2s infinite;
 }
