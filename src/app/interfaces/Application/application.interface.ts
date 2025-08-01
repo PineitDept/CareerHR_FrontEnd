@@ -43,11 +43,28 @@ export interface ICandidateFilterRequest {
   grade?: string;
   universityId?: number;
   position?: string;
-  page: number ;
+  page: number;
   pageSize?: number;
   totalItems?: number;
   totalPages?: number;
   hasNextPage?: boolean;
   hasPreviousPage?: boolean;
   sortFields?: string;
+}
+
+export interface ICandidateTrackingFilterRequest {
+    status?: string;
+  year?: string;
+  month?: string;
+  grade?: string;
+  search?: string;
+ interview1?: number[];
+  interview2?: number[];
+  offer?: number[];
+  hired?: number[];
+  page: number;
+  pageSize?: number;
+  sortFields?: string;
+  hasNextPage?: boolean;
+  hasPreviousPage?: boolean;
 }

@@ -1,7 +1,7 @@
 import { AfterViewInit, Component, ElementRef, HostListener, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { ApplicationService } from '../../../services/application/application.service';
-import { ICandidateFilterRequest } from '../../../interfaces/Application/application.interface';
+import { ICandidateTrackingFilterRequest } from '../../../interfaces/Application/application.interface';
 import { Columns } from '../../../shared/interfaces/tables/column.interface';
 import { FilterConfig, GroupedCheckboxOption } from '../../../shared/components/filter-check-box/filter-check-box.component';
 
@@ -23,9 +23,9 @@ export class TrackingComponent implements AfterViewInit {
   @ViewChild('tableContainer', { static: false }) tableContainerRef!: ElementRef;
 
   isLoading: boolean = false;
-  trackingFiterRequest: ICandidateFilterRequest = {
+  trackingFiterRequest: ICandidateTrackingFilterRequest = {
     page: 1,
-    pageSize: 30
+    pageSize: 30,
   };
   searchForm = { searchBy: '', searchValue: '' };
   searchByOptions: string[] = ['Application ID', 'Application Name', 'University'];
@@ -108,49 +108,52 @@ export class TrackingComponent implements AfterViewInit {
       groupKey: 'screened',
       groupLabel: 'Screened',
       options: [
+        { key: 'pending', label: 'Pending (3,000)' },
         { key: 'accept', label: 'Accept (3,000)' },
         { key: 'decline', label: 'Decline (3,000)' },
-        { key: 'on-hold', label: 'On Hold (3,000)' }
+        { key: 'hold', label: 'On Hold (3,000)' }
       ]
     },
     {
       groupKey: 'interview1',
       groupLabel: 'Interview 1',
       options: [
-        { key: 'pending', label: 'Pending' },
-        { key: 'scheduled', label: 'Scheduled' },
-        { key: 'no-show', label: 'No-Show' },
-        { key: 'accept', label: 'Accept' },
-        { key: 'decline', label: 'Decline' }
+        { key: '12', label: 'Pending' },
+        { key: '15', label: 'Scheduled' },
+        { key: '23', label: 'No-Show (PINE)' },
+        { key: '25', label: 'No-Show (Candidate)' },
+        { key: '21', label: 'Accept' },
+        { key: '22', label: 'Decline' }
       ]
     },
     {
       groupKey: 'interview2',
       groupLabel: 'Interview 2',
       options: [
-        { key: 'pending', label: 'Pending' },
-        { key: 'scheduled', label: 'Scheduled' },
-        { key: 'no-show', label: 'No-Show' },
-        { key: 'accept', label: 'Accept' },
-        { key: 'decline', label: 'Decline' }
+       { key: '12', label: 'Pending' },
+        { key: '15', label: 'Scheduled' },
+        { key: '23', label: 'No-Show (PINE)' },
+        { key: '25', label: 'No-Show (Candidate)' },
+        { key: '21', label: 'Accept' },
+        { key: '22', label: 'Decline' }
       ]
     },
     {
       groupKey: 'offered',
       groupLabel: 'Offered',
       options: [
-        { key: 'pending', label: 'Pending' },
-        { key: 'accept', label: 'Accept' },
-        { key: 'decline', label: 'Decline' }
+        { key: '12', label: 'Pending' },
+        { key: '41', label: 'Accept' },
+        { key: '44', label: 'Decline' }
       ]
     },
     {
       groupKey: 'hired',
       groupLabel: 'Hired',
       options: [
-        { key: 'onboarded', label: 'Onboarded' },
-        { key: 'no-show', label: 'No-Show' },
-        { key: 'decline', label: 'Decline' }
+        { key: '41', label: 'Onboarded' },
+        { key: '25', label: 'No-Show' },
+        { key: '44', label: 'Decline' }
       ]
     }
   ];
@@ -165,14 +168,46 @@ export class TrackingComponent implements AfterViewInit {
 
   onFiltersSelected(filters: Record<string, string[]>) {
     console.log('Selected filters:', filters);
+
+    // === Set Status (only if valid) ===
+    const screened = filters['screened']?.[0];
+    if (['accept', 'decline', 'hold'].includes(screened)) {
+      this.trackingFiterRequest.status = screened;
+    } else {
+      delete this.trackingFiterRequest.status;
+    }
+
+    const parseToIntArray = (values?: string[]) =>
+      values?.map(v => parseInt(v)).filter(v => !isNaN(v)) ?? [];
+
+    this.trackingFiterRequest.interview1 = filters['interview1']?.length
+      ? parseToIntArray(filters['interview1'])
+      : undefined;
+
+    this.trackingFiterRequest.interview2 = filters['interview2']?.length
+      ? parseToIntArray(filters['interview2'])
+      : undefined;
+
+    this.trackingFiterRequest.offer = filters['offered']?.length
+      ? parseToIntArray(filters['offered'])
+      : undefined;
+
+    this.trackingFiterRequest.hired = filters['hired']?.length
+      ? parseToIntArray(filters['hired'])
+      : undefined;
+
+    // Reset page & fetch
+    this.trackingFiterRequest.page = 1;
+    this.fetchListTracking();
   }
 
   ngOnInit() {
     const saved = localStorage.getItem(this.STORAGE_KEY);
     if (saved) {
       this.trackingFiterRequest = JSON.parse(saved);
-      this.activeTab = this.trackingFiterRequest.statusGroup || '';
-      this.filterDateRange.month = this.trackingFiterRequest.month || '';
+      // this.filterDateRange.month = this.trackingFiterRequest.month || '';
+      this.filterDateRange.month = '7';
+      this.trackingFiterRequest.month = '7';
       this.filterDateRange.year = this.trackingFiterRequest.year || '';
     }
     const savedClickedRowIds = localStorage.getItem(this.STORAGE_CLICKED_KEY);
@@ -192,14 +227,14 @@ export class TrackingComponent implements AfterViewInit {
     }
     this.trackingFiterRequest.page = 1;
     this.saveFiltersToStorage(this.STORAGE_KEY, JSON.stringify(this.trackingFiterRequest));
-    await this.scrollTableToTop('tw-h-[calc(100vh-370px)]');
+    await this.scrollTableToTop();
     await this.fetchListTracking();
   }
   async onClearSearch() {
     this.trackingFiterRequest.search = null as any;
     this.trackingFiterRequest.page = 1;
     this.saveFiltersToStorage(this.STORAGE_KEY, JSON.stringify(this.trackingFiterRequest));
-    await this.scrollTableToTop('tw-h-[calc(100vh-370px)]');
+    await this.scrollTableToTop();
     await this.fetchListTracking();
   }
 
@@ -214,26 +249,16 @@ export class TrackingComponent implements AfterViewInit {
     this.trackingFiterRequest.month = mounth;
     this.trackingFiterRequest.year = year;
     this.saveFiltersToStorage(this.STORAGE_KEY, JSON.stringify(this.trackingFiterRequest));
-    await this.scrollTableToTop('tw-h-[calc(100vh-370px)]');
+    await this.scrollTableToTop();
     await this.fetchListTracking();
   }
 
-  async onTabChanged(tab: string) {
-    this.trackingFiterRequest.status = tab;
-    this.trackingFiterRequest.page = 1;
-    this.saveFiltersToStorage(this.STORAGE_KEY, JSON.stringify(this.trackingFiterRequest));
-    await this.scrollTableToTop('tw-h-[calc(100vh-370px)]');
-    await this.fetchListTracking();
-  }
-  onRowClick(row: any) {
-    console.log('Row clicked:', row);
-  }
 
   async onColumnClick(column: string) {
     this.trackingFiterRequest.sortFields = column;
     this.trackingFiterRequest.page = 1;
     this.saveFiltersToStorage(this.STORAGE_KEY, JSON.stringify(this.trackingFiterRequest));
-    await this.scrollTableToTop('tw-h-[calc(100vh-370px)]');
+    await this.scrollTableToTop();
     await this.fetchListTracking();
   }
   onScroll(event: any): void {
@@ -247,10 +272,14 @@ export class TrackingComponent implements AfterViewInit {
       }
     }
   }
+  onRowClick(row: any) {
+    console.log('Row clicked:', row);
+  }
 
-  scrollTableToTop(className = 'tw-h-[calc(100vh-370px)]') {
-    const el = document.getElementsByClassName(className)[0];
-    if (el) el.scrollTop = 0;
+  scrollTableToTop() {
+    if (this.tableContainerRef?.nativeElement) {
+      this.tableContainerRef.nativeElement.scrollTop = 0;
+    }
   }
 
   rows: any[] = [];
@@ -305,13 +334,14 @@ export class TrackingComponent implements AfterViewInit {
   mapStatusIdToIcon(id: number): { icon: string; fill?: string; size?: string, extraClass?: string } | null {
     const map: Record<number, { icon: string; fill?: string; size?: string, extraClass?: string }> = {
       12: { icon: 'check-circle-solid', extraClass: 'fill-gray-light-1', size: '25' },           // Pending
-      13: { icon: 'check-circle-solid', fill: 'skyblue', size: '25' }, // Scheduled
-      14: { icon: 'xmark-circle-solid', fill: 'red', size: '25' },               // No-Show
-      20: { icon: 'check-circle-solid', fill: 'orange', size: '25' },   // On Hold
-      21: { icon: 'check-circle-solid', fill: 'green', size: '25' },    // Accept
-      22: { icon: 'xmark-circle-solid', fill: 'red', size: '25' },          // Decline
-      30: { icon: 'check-circle-solid', fill: 'green', size: '25' },    // Onboarded
-      31: { icon: 'xmark-circle-solid', fill: 'red', size: '25' },               // Hired No-show
+      15: { icon: 'check-circle-solid', fill: 'skyblue', size: '25' }, // Scheduled
+      20: { icon: 'check-circle-solid', fill: 'orange', size: '25' },  // On Hold
+      21: { icon: 'check-circle-solid', fill: 'green', size: '25' },   // Accept
+      22: { icon: 'xmark-circle-solid', fill: 'red', size: '25' },     // Decline
+      23: { icon: 'xmark-circle-solid', fill: 'purple', size: '25' },  // NO SHOW PINE
+      25: { icon: 'xmark-circle-solid', fill: 'lime', size: '25' },    // NO SHOW Candidate
+      41: { icon: 'check-circle-solid', fill: 'green', size: '25' },   // Onboarded
+      44: { icon: 'xmark-circle-solid', fill: 'red', size: '25' },     // declined onboard
     };
 
     return map[id] || map[12];
