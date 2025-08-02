@@ -39,7 +39,7 @@ export class FilterComponent {
   ourCompany = ['All', 'PPC', 'PMC', 'PIM'];
 
   selectedYear = String(this.currentYear);
-  selectedMonth = this.allMonths[this.currentMonth];
+  selectedMonth = 'All';
   selectedCompany = 'All';
 
   isYearOpen = false;
@@ -54,8 +54,6 @@ export class FilterComponent {
 
   ngOnInit() {
     this.emitDateRange();
-    this.selectedYear = this.filterDateRange.year || String(this.currentYear);
-    this.selectedMonth = this.allMonths[Number(this.filterDateRange.month) - 1] || this.allMonths[this.currentMonth];
   }
 
   onBackClick() {
