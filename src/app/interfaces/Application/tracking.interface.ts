@@ -1,3 +1,5 @@
+import { IconConfig } from './application.interface';
+
 export interface CandidateTrackStatus {
   id?: number;
   status?: string;
@@ -18,6 +20,26 @@ export interface CandidateTracking {
   interview2: CandidateTrackStatus;
   offer: CandidateTrackStatus;
   hired: CandidateTrackStatus;
+  lastUpdate?: string;
+}
+
+export interface TrackingRow {
+  id:string;
+  submitDate?: string;
+  userID: string;
+  fullName: string;
+  fullNameTH: string;
+  gradeCandidate: string;
+  gpa?: number;
+  university: string;
+  uniID?: number;
+  position: string[];
+  applied: IconConfig;
+  statusCSD: IconConfig;
+  interview1: IconConfig;
+  interview2: IconConfig;
+  offer: IconConfig;
+  hired: IconConfig;
   lastUpdate?: string;
 }
 

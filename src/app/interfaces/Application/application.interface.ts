@@ -17,12 +17,12 @@ export interface ICandidateFilterRequest {
 }
 
 export interface ICandidateTrackingFilterRequest {
-    status?: string;
+  status?: string;
   year?: string;
   month?: string;
   grade?: string;
   search?: string;
- interview1?: number[];
+  interview1?: number[];
   interview2?: number[];
   offer?: number[];
   hired?: number[];
@@ -72,15 +72,15 @@ export interface ScreeningRow {
   readonly eqScore: number;
   readonly ethicsScore: number;
   readonly totalBonus: number;
-  readonly employeeAction : string;
-  readonly screening : BadgeConfig;
+  readonly employeeAction: string;
+  readonly screening: BadgeConfig;
 }
-
 
 export interface IconConfig {
   readonly icon: string;
-  readonly fill: string;
-  readonly size: string;
+  readonly fill?: string;
+  readonly size?: string;
+  readonly extraClass?: string;
 }
 
 export interface BadgeConfig {
@@ -89,8 +89,8 @@ export interface BadgeConfig {
 }
 
 export interface DateRange {
-  readonly month: string;
-  readonly year: string;
+   month: string;
+   year: string;
 }
 
 export interface SearchForm {
@@ -109,7 +109,6 @@ export interface CandidatePagedResult<T> {
   readonly totalItems: number;
   readonly statusGroupCount: StatusGroupCount;
   readonly items: readonly T[];
-
 }
 
 export interface ICandidateWithPositionsDto {

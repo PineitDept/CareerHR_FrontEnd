@@ -1,108 +1,188 @@
-import { AfterViewInit, Component, ElementRef, HostListener, ViewChild } from '@angular/core';
-import { Router } from '@angular/router';
-import { ApplicationService } from '../../../services/application/application.service';
-import { ICandidateTrackingFilterRequest } from '../../../interfaces/Application/application.interface';
+// tracking.component.ts
+import {
+  Component,
+  ChangeDetectionStrategy,
+  AfterViewInit,
+  ElementRef,
+  ViewChild,
+  OnDestroy,
+  signal,
+  computed,
+} from '@angular/core';
+import { Observable, tap, catchError, EMPTY, map } from 'rxjs';
+
+import { BaseApplicationComponent } from '../../../shared/base/base-application.component';
+import {
+  ICandidateFilterRequest,
+  ICandidateWithPositionsDto,
+  IPositionDto,
+  TabMenu,
+  ICandidateTrackingFilterRequest,
+} from '../../../interfaces/Application/application.interface';
 import { Columns } from '../../../shared/interfaces/tables/column.interface';
-import { FilterConfig, GroupedCheckboxOption } from '../../../shared/components/filter-check-box/filter-check-box.component';
+import {
+  FilterConfig,
+  GroupedCheckboxOption,
+} from '../../../shared/components/filter-check-box/filter-check-box.component';
+import { TrackingRow } from '../../../interfaces/Application/tracking.interface';
+
+// Component-specific Configuration
+const TRACKING_CONFIG = {
+  STORAGE_KEYS: {
+    FILTER_SETTINGS: 'trackingFiterSettings',
+    CLICKED_ROWS: 'trackingClickedRowIndexes',
+    SORT_CONFIG: 'trackingSortConfig',
+  },
+} as const;
+
+// Status ID to Icon mapping
+const STATUS_ICON_MAP: Record<
+  number,
+  { icon: string; fill?: string; size?: string; extraClass?: string }
+> = {
+  12: {
+    icon: 'check-circle-solid',
+    extraClass: 'fill-gray-light-1',
+    size: '25',
+  }, // Pending
+  15: { icon: 'check-circle-solid', fill: 'skyblue', size: '25' }, // Scheduled
+  20: { icon: 'check-circle-solid', fill: 'orange', size: '25' }, // On Hold
+  21: { icon: 'check-circle-solid', fill: 'green', size: '25' }, // Accept
+  22: { icon: 'xmark-circle-solid', fill: 'red', size: '25' }, // Decline
+  23: { icon: 'xmark-circle-solid', fill: 'purple', size: '25' }, // NO SHOW PINE
+  25: { icon: 'xmark-circle-solid', fill: 'lime', size: '25' }, // NO SHOW Candidate
+  41: { icon: 'check-circle-solid', fill: 'green', size: '25' }, // Onboarded
+  44: { icon: 'xmark-circle-solid', fill: 'red', size: '25' }, // Declined onboard
+};
 
 @Component({
   selector: 'app-tracking',
   templateUrl: './tracking.component.html',
-  styleUrl: './tracking.component.scss'
+  styleUrl: './tracking.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-
-export class TrackingComponent implements AfterViewInit {
-  private resizeObserver!: ResizeObserver;
-  constructor(
-    private router: Router,
-    private applicationService: ApplicationService,
-  ) {
-
-  }
+export class TrackingComponent
+  extends BaseApplicationComponent
+  implements AfterViewInit, OnDestroy
+{
+  // Additional ViewChild for tracking-specific functionality
   @ViewChild('filter', { static: false }) filterRef!: ElementRef;
-  @ViewChild('tableContainer', { static: false }) tableContainerRef!: ElementRef;
 
-  isLoading: boolean = false;
-  trackingFiterRequest: ICandidateTrackingFilterRequest = {
-    page: 1,
-    pageSize: 30,
-  };
-  searchForm = { searchBy: '', searchValue: '' };
-  searchByOptions: string[] = ['Application ID', 'Application Name', 'University'];
-  filterHeight: number = 0;
-
-  ngAfterViewInit(): void {
-    this.updateTableHeight();
-
-    // ใช้ ResizeObserver สังเกต #filter
-    if (this.filterRef?.nativeElement) {
-      this.resizeObserver = new ResizeObserver(() => {
-        this.updateTableHeight();
-      });
-      this.resizeObserver.observe(this.filterRef.nativeElement);
-    }
-  }
-
-  ngOnDestroy(): void {
-    if (this.resizeObserver) {
-      this.resizeObserver.disconnect();
-    }
-  }
-
-  updateTableHeight(): void {
-    requestAnimationFrame(() => {
-      if (this.filterRef?.nativeElement && this.tableContainerRef?.nativeElement) {
-        const filterHeight = this.filterRef.nativeElement.offsetHeight;
-        const windowHeight = window.innerHeight;
-        const newTableHeight = windowHeight - filterHeight - 300;
-
-        this.tableContainerRef.nativeElement.style.height = `${newTableHeight}px`;
-      }
+  // Tracking-specific state
+  private readonly trackingFilterRequest =
+    signal<ICandidateTrackingFilterRequest>({
+      page: 1,
+      pageSize: 30,
     });
-  }
+  private readonly filterHeight = signal<number>(0);
+  private resizeObserver!: ResizeObserver;
 
-  STORAGE_KEY: string = 'trackingFiterSettings';
-  STORAGE_SORTCOLUMN_KEY: string = 'trackingFiterSortColumn';
-  STORAGE_CLICKED_KEY: string = 'candidateclickedRowIndexes';
+  // Computed properties for tracking
+  readonly currentTrackingFilter = computed(() => this.trackingFilterRequest());
 
-  tableResetKey = 0;
+  // Table Configuration
+  readonly columns: Columns = [
+    {
+      header: 'Submit Date',
+      field: 'submitDate',
+      type: 'date',
+      align: 'center',
+      sortable: true,
+    },
+    {
+      header: 'Applicant ID',
+      field: 'userID',
+      type: 'text',
+      align: 'center',
+      sortable: true,
+    },
+    {
+      header: 'Applicant Name',
+      field: 'fullName',
+      type: 'text',
+      sortable: true,
+    },
+    {
+      header: 'Job Position',
+      field: 'position',
+      type: 'list',
+      maxWidth: '400px',
+      wrapText: true,
+    },
+    {
+      header: 'University',
+      field: 'university',
+      type: 'text',
+      maxWidth: '400px',
+      wrapText: true,
+      sortable: true,
+    },
+    {
+      header: 'GPA',
+      field: 'gpa',
+      type: 'text',
+      align: 'center',
+      sortable: true,
+    },
+    {
+      header: 'Grade',
+      field: 'gradeCandidate',
+      type: 'text',
+      align: 'center',
+      maxWidth: '20px',
+      sortable: true,
+    },
+    {
+      header: 'Applied',
+      field: 'applied',
+      type: 'icon',
+      align: 'center',
+    },
+    {
+      header: 'Screen',
+      field: 'statusCSD',
+      type: 'icon',
+      align: 'center',
+    },
+    {
+      header: 'Interview1',
+      field: 'interview1',
+      type: 'icon',
+      align: 'center',
+    },
+    {
+      header: 'Interview2',
+      field: 'interview2',
+      type: 'icon',
+      align: 'center',
+    },
+    {
+      header: 'Offered',
+      field: 'offer',
+      type: 'icon',
+      align: 'center',
+    },
+    {
+      header: 'Hired',
+      field: 'hired',
+      type: 'icon',
+      align: 'center',
+    },
+    {
+      header: 'Last Update',
+      field: 'lastUpdate',
+      type: 'date',
+      align: 'center',
+      sortable: true,
+    },
+  ] as const;
 
-  tabMenus = [
-    { key: '', label: 'All Applications', count: 0 },
-    { key: 'pending', label: 'Pending', count: 0 },
-    { key: 'accept', label: 'Accepted', count: 0 },
-    { key: 'decline', label: 'Declined', count: 0 },
-    { key: 'hold', label: 'On Hold', count: 0 },
-  ];
-  activeTab: string = this.tabMenus[0].key;
-
-  columns: Columns = [
-    { header: 'Submit Date', field: 'submitDate', type: 'date', align: 'center', sortable: true },
-    { header: 'Applicant ID', field: 'userID', type: 'text', align: 'center', sortable: true },
-    { header: 'Applicant Name', field: 'fullName', type: 'text', sortable: true },
-    { header: 'Job Position', field: 'position', type: 'list', maxWidth: '400px', wrapText: true },
-    { header: 'University', field: 'university', type: 'text', maxWidth: '400px', wrapText: true, sortable: true },
-    { header: 'GPA', field: 'gpa', type: 'text', align: 'center', sortable: true },
-    { header: 'Grade', field: 'gradeCandidate', type: 'text', align: 'center', maxWidth: '20px', sortable: true },
-    { header: 'Applied', field: 'applied', type: 'icon', align: 'center' },
-    { header: 'Screen', field: 'statusCSD', type: 'icon', align: 'center' },
-    { header: 'Interview1', field: 'interview1', type: 'icon', align: 'center' },
-    { header: 'Interview2', field: 'interview2', type: 'icon', align: 'center' },
-    { header: 'Offered', field: 'offer', type: 'icon', align: 'center' },
-    { header: 'Hired', field: 'hired', type: 'icon', align: 'center' },
-    { header: 'Last Update', field: 'lastUpdate', type: 'date', align: 'center', sortable: true },
-  ];
-
-  filterDateRange: { month: string; year: string } = { month: '', year: '' };
-  preClickedIds: string[] = [];
-
-  filterItems: GroupedCheckboxOption[] = [
+  // Filter configuration for tracking
+  readonly filterItems: GroupedCheckboxOption[] = [
     {
       groupKey: 'applied',
       groupLabel: 'Applied',
-      options: [
-        { key: 'received', label: 'Received (20,000)' }
-      ]
+      options: [{ key: 'received', label: 'Received (20,000)' }],
     },
     {
       groupKey: 'screened',
@@ -111,8 +191,8 @@ export class TrackingComponent implements AfterViewInit {
         { key: 'pending', label: 'Pending (3,000)' },
         { key: 'accept', label: 'Accept (3,000)' },
         { key: 'decline', label: 'Decline (3,000)' },
-        { key: 'hold', label: 'On Hold (3,000)' }
-      ]
+        { key: 'hold', label: 'On Hold (3,000)' },
+      ],
     },
     {
       groupKey: 'interview1',
@@ -123,20 +203,20 @@ export class TrackingComponent implements AfterViewInit {
         { key: '23', label: 'No-Show (PINE)' },
         { key: '25', label: 'No-Show (Candidate)' },
         { key: '21', label: 'Accept' },
-        { key: '22', label: 'Decline' }
-      ]
+        { key: '22', label: 'Decline' },
+      ],
     },
     {
       groupKey: 'interview2',
       groupLabel: 'Interview 2',
       options: [
-       { key: '12', label: 'Pending' },
+        { key: '12', label: 'Pending' },
         { key: '15', label: 'Scheduled' },
         { key: '23', label: 'No-Show (PINE)' },
         { key: '25', label: 'No-Show (Candidate)' },
         { key: '21', label: 'Accept' },
-        { key: '22', label: 'Decline' }
-      ]
+        { key: '22', label: 'Decline' },
+      ],
     },
     {
       groupKey: 'offered',
@@ -144,8 +224,8 @@ export class TrackingComponent implements AfterViewInit {
       options: [
         { key: '12', label: 'Pending' },
         { key: '41', label: 'Accept' },
-        { key: '44', label: 'Decline' }
-      ]
+        { key: '44', label: 'Decline' },
+      ],
     },
     {
       groupKey: 'hired',
@@ -153,203 +233,217 @@ export class TrackingComponent implements AfterViewInit {
       options: [
         { key: '41', label: 'Onboarded' },
         { key: '25', label: 'No-Show' },
-        { key: '44', label: 'Decline' }
-      ]
-    }
+        { key: '44', label: 'Decline' },
+      ],
+    },
   ];
 
-  // Configuration options
-  filterConfig: FilterConfig = {
-    // Option 1: Expand all groups by default
+  readonly filterConfig: FilterConfig = {
     expandAllByDefault: true,
-    // Animation duration (optional)
-    animationDuration: 300
+    animationDuration: 300,
   };
 
-  onFiltersSelected(filters: Record<string, string[]>) {
-    console.log('Selected filters:', filters);
+  // Abstract method implementations
+  protected getStorageKeys() {
+    return TRACKING_CONFIG.STORAGE_KEYS;
+  }
 
-    // === Set Status (only if valid) ===
+  protected createInitialFilter(): ICandidateFilterRequest {
+    return {
+      page: 1,
+      pageSize: 30,
+      month: '7', // Set default month
+    };
+  }
+
+  protected createInitialTabs(): TabMenu[] {
+    return [
+      { key: '', label: 'All Applications', count: 0 },
+      { key: 'pending', label: 'Pending', count: 0 },
+      { key: 'accept', label: 'Accepted', count: 0 },
+      { key: 'decline', label: 'Declined', count: 0 },
+      { key: 'hold', label: 'On Hold', count: 0 },
+    ];
+  }
+
+  protected transformApiDataToRows(
+    items: readonly ICandidateWithPositionsDto[]
+  ): TrackingRow[] {
+    return items.map((item) => this.transformSingleItem(item));
+  }
+
+  // Override for tracking-specific data fetching
+  protected override fetchData(
+    filter: ICandidateFilterRequest,
+    append: boolean
+  ): Observable<void> {
+    if (this.isLoading()) return EMPTY;
+
+    this.loadingState.set(true);
+    this.filterRequest.set(filter);
+
+    // Convert to tracking filter request
+    const trackingFilter: ICandidateTrackingFilterRequest = {
+      ...filter,
+      ...this.trackingFilterRequest(),
+    };
+
+    return this.applicationService.getTrackingApplications(trackingFilter).pipe(
+      tap((response: any) => this.handleApiResponse(response, append)),
+      tap(() => this.persistFilterState()),
+      catchError((error: any) => this.handleApiError(error)),
+      tap(() => this.loadingState.set(false)),
+      map(() => void 0)
+    );
+  }
+
+  // Lifecycle hooks
+  ngAfterViewInit(): void {
+    super.ngOnInit();
+    this.updateTableHeight();
+    this.setupResizeObserver();
+  }
+
+  override ngOnDestroy(): void {
+    super.ngOnDestroy();
+    this.disconnectResizeObserver();
+  }
+
+  // Tracking-specific methods
+  onFiltersSelected(filters: Record<string, string[]>): void {
+    const currentTrackingFilter = this.trackingFilterRequest();
+
+    // Update tracking filter
+    const updatedTrackingFilter: ICandidateTrackingFilterRequest = {
+      ...currentTrackingFilter,
+      page: 1,
+    };
+
+    // Handle status (screened)
     const screened = filters['screened']?.[0];
     if (['accept', 'decline', 'hold'].includes(screened)) {
-      this.trackingFiterRequest.status = screened;
+      updatedTrackingFilter.status = screened;
     } else {
-      delete this.trackingFiterRequest.status;
+      delete updatedTrackingFilter.status;
     }
 
+    // Helper function for parsing arrays
     const parseToIntArray = (values?: string[]) =>
-      values?.map(v => parseInt(v)).filter(v => !isNaN(v)) ?? [];
+      values?.map((v) => parseInt(v)).filter((v) => !isNaN(v)) ?? [];
 
-    this.trackingFiterRequest.interview1 = filters['interview1']?.length
+    // Update tracking-specific filters
+    updatedTrackingFilter.interview1 = filters['interview1']?.length
       ? parseToIntArray(filters['interview1'])
       : undefined;
 
-    this.trackingFiterRequest.interview2 = filters['interview2']?.length
+    updatedTrackingFilter.interview2 = filters['interview2']?.length
       ? parseToIntArray(filters['interview2'])
       : undefined;
 
-    this.trackingFiterRequest.offer = filters['offered']?.length
+    updatedTrackingFilter.offer = filters['offered']?.length
       ? parseToIntArray(filters['offered'])
       : undefined;
 
-    this.trackingFiterRequest.hired = filters['hired']?.length
+    updatedTrackingFilter.hired = filters['hired']?.length
       ? parseToIntArray(filters['hired'])
       : undefined;
 
-    // Reset page & fetch
-    this.trackingFiterRequest.page = 1;
-    this.fetchListTracking();
+    this.trackingFilterRequest.set(updatedTrackingFilter);
+    this.resetPagination();
+    this.fetchData(this.filterRequest(), false).subscribe();
   }
 
-  ngOnInit() {
-    const saved = localStorage.getItem(this.STORAGE_KEY);
-    if (saved) {
-      this.trackingFiterRequest = JSON.parse(saved);
-      // this.filterDateRange.month = this.trackingFiterRequest.month || '';
-      this.filterDateRange.month = '7';
-      this.trackingFiterRequest.month = '7';
-      this.filterDateRange.year = this.trackingFiterRequest.year || '';
-    }
-    const savedClickedRowIds = localStorage.getItem(this.STORAGE_CLICKED_KEY);
-    this.preClickedIds = savedClickedRowIds ? JSON.parse(savedClickedRowIds) : [];
-    this.fetchListTracking();
+  // Private methods
+  private transformSingleItem(item: any): TrackingRow {
+    return {
+      id: item.userID.toString(),
+      submitDate: item.submitDate || '',
+      userID: item.userID.toString(),
+      fullName: item.fullName,
+      fullNameTH: item.fullNameTH,
+      position: item.positions?.map((pos: any) => pos.namePosition) || [],
+      university: item.university,
+      gpa: item.gpa?.toString() || '',
+      gradeCandidate: item.gradeCandidate,
+      applied: this.mapStatusIdToIcon(21) || STATUS_ICON_MAP[12],
+      statusCSD: this.mapStatusIdToIcon(item.statusCSD) || STATUS_ICON_MAP[12],
+      interview1:
+        this.mapStatusIdToIcon(item.interview1?.id) || STATUS_ICON_MAP[12],
+      interview2:
+        this.mapStatusIdToIcon(item.interview2?.id) || STATUS_ICON_MAP[12],
+      offer: this.mapStatusIdToIcon(item.offer?.id) || STATUS_ICON_MAP[12],
+      hired: this.mapStatusIdToIcon(item.hired?.id) || STATUS_ICON_MAP[12],
+      lastUpdate: item.lastUpdate,
+    };
   }
 
-  saveFiltersToStorage(key_storage: string, value_storage: string) {
-    localStorage.setItem(key_storage, value_storage);
+  private mapStatusIdToIcon(
+    id: number
+  ): {
+    icon: string;
+    fill?: string;
+    size?: string;
+    extraClass?: string;
+  } | null {
+    return STATUS_ICON_MAP[id] || STATUS_ICON_MAP[12];
   }
 
-  async onSearch(form: { searchBy: string; searchValue: string }) {
-    const useSearch: string[] = ['Application ID', 'Application Name', 'University'];
-
-    if (useSearch.includes(form.searchBy)) {
-      this.trackingFiterRequest.search = form.searchValue;
-    }
-    this.trackingFiterRequest.page = 1;
-    this.saveFiltersToStorage(this.STORAGE_KEY, JSON.stringify(this.trackingFiterRequest));
-    await this.scrollTableToTop();
-    await this.fetchListTracking();
-  }
-  async onClearSearch() {
-    this.trackingFiterRequest.search = null as any;
-    this.trackingFiterRequest.page = 1;
-    this.saveFiltersToStorage(this.STORAGE_KEY, JSON.stringify(this.trackingFiterRequest));
-    await this.scrollTableToTop();
-    await this.fetchListTracking();
-  }
-
-  async onDateRangeSelected(event: { startDate: string; endDate: string }) {
-    const startDatemounth: string = event.startDate.substring(5, 7);
-    const endDatemounth: string = event.endDate.substring(5, 7);
-
-    const mounth: string = startDatemounth === endDatemounth ? endDatemounth : '';
-    const year: string = event.endDate.substring(0, 4);
-
-    this.trackingFiterRequest.page = 1;
-    this.trackingFiterRequest.month = mounth;
-    this.trackingFiterRequest.year = year;
-    this.saveFiltersToStorage(this.STORAGE_KEY, JSON.stringify(this.trackingFiterRequest));
-    await this.scrollTableToTop();
-    await this.fetchListTracking();
-  }
-
-
-  async onColumnClick(column: string) {
-    this.trackingFiterRequest.sortFields = column;
-    this.trackingFiterRequest.page = 1;
-    this.saveFiltersToStorage(this.STORAGE_KEY, JSON.stringify(this.trackingFiterRequest));
-    await this.scrollTableToTop();
-    await this.fetchListTracking();
-  }
-  onScroll(event: any): void {
-    const element = event.target;
-    // เช็คว่า scroll ถึงล่างสุดหรือยัง
-    if (element.scrollHeight - element.scrollTop < element.clientHeight + 2) {
-      if (this.trackingFiterRequest.hasNextPage && !this.isLoading) {
-        this.trackingFiterRequest.page++;
-        this.saveFiltersToStorage(this.STORAGE_KEY, JSON.stringify(this.trackingFiterRequest));
-        this.fetchListTracking(true); // true = append
-      }
-    }
-  }
-  onRowClick(row: any) {
-    console.log('Row clicked:', row);
-  }
-
-  scrollTableToTop() {
-    if (this.tableContainerRef?.nativeElement) {
-      this.tableContainerRef.nativeElement.scrollTop = 0;
+  private setupResizeObserver(): void {
+    if (this.filterRef?.nativeElement) {
+      this.resizeObserver = new ResizeObserver(() => {
+        this.updateTableHeight();
+      });
+      this.resizeObserver.observe(this.filterRef.nativeElement);
     }
   }
 
-  rows: any[] = [];
-  fetchListTracking(append: boolean = false): void {
-    if (this.isLoading) return;
-    this.isLoading = true;
-    console.log('this.trackingFiterRequest : ', this.trackingFiterRequest);
-    this.applicationService.getTrackingApplications(this.trackingFiterRequest).subscribe({
-      next: (res) => {
-        console.log('res : ', res);
-        this.trackingFiterRequest.page = res.page;
-        this.trackingFiterRequest.hasNextPage = res.hasNextPage;
+  private disconnectResizeObserver(): void {
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+    }
+  }
 
-        this.tabMenus.forEach(menu => {
-          if (menu.key === '') {
-            // All Applications → ใช้ totalItems แทน
-            menu.count = res.totalItems;
-          } else {
-            // ใช้ statusGroupCount จาก API
-            menu.count = res.statusCounts?.[menu.key] ?? 0;
-          }
-        });
+  private updateTableHeight(): void {
+    requestAnimationFrame(() => {
+      if (this.filterRef?.nativeElement && this.tableContainer?.nativeElement) {
+        const filterHeight = this.filterRef.nativeElement.offsetHeight;
+        const windowHeight = window.innerHeight;
+        const newTableHeight = windowHeight - filterHeight - 300;
 
-        const newRows = res.items.map((item: any) => {
-          return {
-            id: item.userID,
-            submitDate: item.submitDate,
-            userID: item.userID,
-            fullName: item.fullName,
-            position: [...item.positions].map((position: any) => position.namePosition),
-            university: item.university,
-            gpa: item.gpa,
-            gradeCandidate: item.gradeCandidate,
-            applied: this.mapStatusIdToIcon(21),
-            statusCSD: this.mapStatusIdToIcon(item.statusCSD),
-            interview1: this.mapStatusIdToIcon(item.interview1.id),
-            interview2: this.mapStatusIdToIcon(item.interview2.id),
-            offer: this.mapStatusIdToIcon(item.offer.id),
-            hired: this.mapStatusIdToIcon(item.hired.id),
-            lastUpdate: item.lastUpdate
-          };
-        });
-        this.rows = append ? [...this.rows, ...newRows] : newRows;
-        this.isLoading = false;
-      },
-      error: (err) => {
-        console.error('Error fetching candidates:', err);
-        this.isLoading = false;
+        this.tableContainer.nativeElement.style.height = `${newTableHeight}px`;
+        this.filterHeight.set(filterHeight);
       }
     });
   }
-  mapStatusIdToIcon(id: number): { icon: string; fill?: string; size?: string, extraClass?: string } | null {
-    const map: Record<number, { icon: string; fill?: string; size?: string, extraClass?: string }> = {
-      12: { icon: 'check-circle-solid', extraClass: 'fill-gray-light-1', size: '25' },           // Pending
-      15: { icon: 'check-circle-solid', fill: 'skyblue', size: '25' }, // Scheduled
-      20: { icon: 'check-circle-solid', fill: 'orange', size: '25' },  // On Hold
-      21: { icon: 'check-circle-solid', fill: 'green', size: '25' },   // Accept
-      22: { icon: 'xmark-circle-solid', fill: 'red', size: '25' },     // Decline
-      23: { icon: 'xmark-circle-solid', fill: 'purple', size: '25' },  // NO SHOW PINE
-      25: { icon: 'xmark-circle-solid', fill: 'lime', size: '25' },    // NO SHOW Candidate
-      41: { icon: 'check-circle-solid', fill: 'green', size: '25' },   // Onboarded
-      44: { icon: 'xmark-circle-solid', fill: 'red', size: '25' },     // declined onboard
-    };
 
-    return map[id] || map[12];
+  // Override persistence methods to handle tracking-specific data
+  protected override loadPersistedState(): void {
+    super.loadPersistedState();
+
+    // Set default month if not already set
+    const currentFilter = this.filterRequest();
+    if (!currentFilter.month) {
+      this.filterDateRange.month = '7';
+      this.trackingFilterRequest.update((filter) => ({
+        ...filter,
+        month: '7',
+      }));
+    }
   }
 
-  onClickedRowsChanged(clickedRowIds: Set<string>) {
-    const arr = Array.from(clickedRowIds);
-    this.saveFiltersToStorage(this.STORAGE_CLICKED_KEY, JSON.stringify(arr));
-    console.log('clickedRowIds', clickedRowIds);
+  // Helper method for creating pipe operators (extracted for reusability)
+  private createDataPipeOperators(append: boolean): Observable<void> {
+    const trackingFilter: ICandidateTrackingFilterRequest = {
+      ...this.filterRequest(),
+      ...this.trackingFilterRequest(),
+    };
+
+    return this.applicationService.getTrackingApplications(trackingFilter).pipe(
+      tap((response: any) => this.handleApiResponse(response, append)),
+      tap(() => this.persistFilterState()),
+      catchError((error: any) => this.handleApiError(error)),
+      tap(() => this.loadingState.set(false)),
+      map(() => void 0)
+    );
   }
 }
