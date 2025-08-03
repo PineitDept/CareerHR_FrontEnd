@@ -13,9 +13,21 @@ import {
   OnInit,
   AfterViewInit,
   AfterViewChecked,
-  ChangeDetectionStrategy
+  OnChanges,
+  ChangeDetectionStrategy,
+  Signal,
+  effect,
+  DestroyRef,
+  inject,
+  OnDestroy,
+  signal,
+  input,
 } from '@angular/core';
 import { Column } from '../../interfaces/tables/column.interface';
+
+export type SortState = {
+  [field: string]: 'asc' | 'desc' | null;
+};
 
 interface DropdownOverlay {
   visible: boolean;
@@ -31,39 +43,64 @@ interface DropdownOverlay {
   selector: 'app-tables',
   templateUrl: './tables.component.html',
   styleUrls: ['./tables.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class TablesComponent implements OnInit, AfterViewInit, AfterViewChecked {
-  @Input() columns: Column[] = [];
-  @Input() rows: any[] = [];
-  @Input() showCheckbox: boolean = true;
-  @Input() resetKey: number = 0;
+export class TablesComponent
+  implements OnInit, OnChanges, AfterViewInit, AfterViewChecked, OnDestroy
+{
+  rows = input<any[]>([]);  
+  resetKey = input<number>(0);
+  preClickedRowIds = input<string[]>([]);
+  sortStates = input<SortState>({});
+
+ @Input() showCheckbox: boolean = true;
   @Input() splitRows: boolean = true;
-  @Input() preClickedRowIds: string[] = [];
+  @Input() columns: Column[] = [];
 
   @Output() selectionChanged = new EventEmitter<any[]>();
   @Output() rowClicked = new EventEmitter<any>();
   @Output() listClickedRows = new EventEmitter<Set<string>>();
+  @Output() columnClicked = new EventEmitter<SortState>();
 
-  @Output() columnClicked = new EventEmitter<string>();
-
+  sortedColumns: string[] = [];
   clickedRows: Set<string> = new Set();
   selectedRows: Set<number> = new Set();
   allSelected: boolean = false;
   expandedMainColumns = new Set<string>();
   dropdownOverlay: DropdownOverlay | null = null;
 
-  @ViewChild('selectAllCheckbox') selectAllCheckbox!: ElementRef<HTMLInputElement>;
-  @ViewChild('tableWrapper', { static: true }) tableWrapperRef!: ElementRef<HTMLDivElement>;
+  @ViewChild('selectAllCheckbox')
+  selectAllCheckbox!: ElementRef<HTMLInputElement>;
+  @ViewChild('tableWrapper', { static: true })
+  tableWrapperRef!: ElementRef<HTMLDivElement>;
 
-  constructor(private cdr: ChangeDetectorRef) { }
+  private destroyRef = inject(DestroyRef);
 
-  sortStates: { [field: string]: 'asc' | 'desc' | null } = {};
-  sortedColumns: string[] = [];
+  constructor(private cdr: ChangeDetectorRef) {
+    // ใช้ effect เพื่อ watch การเปลี่ยนแปลงของ rows signal
+    effect(() => {
+      const currentRows = this.rows();
 
+      // อัพเดต selection state เมื่อ rows เปลี่ยน
+      this.updateAllSelectedState();
+
+      // ถ้า selectedRows มีค่าที่เกินจำนวน rows ปัจจุบัน ให้ลบออก
+      if (currentRows && currentRows.length > 0) {
+        const validIndices = new Set<number>();
+        this.selectedRows.forEach((index) => {
+          if (index < currentRows.length) {
+            validIndices.add(index);
+          }
+        });
+        this.selectedRows = validIndices;
+      }
+
+      this.cdr.detectChanges();
+    });
+  }
 
   ngOnInit() {
-    this.preClickedRowIds.forEach(id => this.clickedRows.add(id));
+    this.preClickedRowIds().forEach((id) => this.clickedRows.add(id));
     this.updateAllSelectedState();
   }
 
@@ -85,6 +122,19 @@ export class TablesComponent implements OnInit, AfterViewInit, AfterViewChecked 
     }
   }
 
+  ngOnDestroy() {
+    // cleanup จะถูกจัดการโดย DestroyRef อัตโนมัติ
+  }
+
+  // Helper method สำหรับเข้าถึง rows signal
+  get rowsValue(): any[] {
+    return this.rows();
+  }
+
+  get sortStateValue(): SortState {
+    return this.sortStates();
+  }
+
   // FIXED: Column Management with Proper Width Calculation
   toggleExpandRow(mainColumn: string, event?: Event): void {
     event?.stopPropagation();
@@ -100,11 +150,13 @@ export class TablesComponent implements OnInit, AfterViewInit, AfterViewChecked 
   }
 
   isSubColumnVisible(column: Column): boolean {
-    return column.subColumn ? this.expandedMainColumns.has(column.subColumn) : true;
+    return column.subColumn
+      ? this.expandedMainColumns.has(column.subColumn)
+      : true;
   }
 
   hasSubColumns(mainColumn: string): boolean {
-    return this.columns.some(col => col.subColumn === mainColumn);
+    return this.columns.some((col) => col.subColumn === mainColumn);
   }
 
   // FIXED: Improved Column Width Calculation
@@ -131,12 +183,14 @@ export class TablesComponent implements OnInit, AfterViewInit, AfterViewChecked 
 
   // Selection Management
   private updateAllSelectedState(): void {
-    this.allSelected = this.rows.length > 0 && this.selectedRows.size === this.rows.length;
+    const currentRows = this.rowsValue;
+    this.allSelected =
+      currentRows.length > 0 && this.selectedRows.size === currentRows.length;
   }
 
   onHeaderCheckboxClick(event: MouseEvent) {
     const checkbox = this.selectAllCheckbox.nativeElement;
-    const total = this.rows.length;
+    const total = this.rowsValue.length;
     const selected = this.selectedRows.size;
 
     if (checkbox.indeterminate || selected < total) {
@@ -153,7 +207,7 @@ export class TablesComponent implements OnInit, AfterViewInit, AfterViewChecked 
     this.selectedRows.clear();
 
     if (select) {
-      this.rows.forEach((_, i) => this.selectedRows.add(i));
+      this.rowsValue.forEach((_, i) => this.selectedRows.add(i));
     }
 
     this.emitSelection();
@@ -167,49 +221,49 @@ export class TablesComponent implements OnInit, AfterViewInit, AfterViewChecked 
       this.selectedRows.add(index);
     }
 
-    this.allSelected = this.selectedRows.size === this.rows.length;
+    this.allSelected = this.selectedRows.size === this.rowsValue.length;
     this.emitSelection();
     this.cdr.detectChanges();
   }
 
   emitSelection() {
-    const selected = Array.from(this.selectedRows).map((i) => this.rows[i]);
+    const currentRows = this.rowsValue;
+    const selected = Array.from(this.selectedRows).map((i) => currentRows[i]);
     this.selectionChanged.emit(selected);
   }
 
   updateIndeterminateState() {
     if (this.selectAllCheckbox) {
       const checkbox = this.selectAllCheckbox.nativeElement;
-      const total = this.rows.length;
+      const total = this.rowsValue.length;
       const selected = this.selectedRows.size;
 
       checkbox.indeterminate = selected > 0 && selected < total;
     }
   }
+
   onColumnClick(column: any): void {
     if (!column.sortable) return;
 
     const field = column.field;
-    const current = this.sortStates[field];
+    const current = this.sortStateValue[field];
 
     // วนค่าจาก null -> asc -> desc -> null
-    const next: 'asc' | 'desc' | null = current === 'asc' ? 'desc' : current === 'desc' ? null : 'asc';
-    this.sortStates[field] = next;
+    const next: 'asc' | 'desc' | null =
+      current === 'asc' ? 'desc' : current === 'desc' ? null : 'asc';
+    this.sortStateValue[field] = next;
 
     if (next === null) {
       // ลบ field ออกจากลำดับการ sort
-      this.sortedColumns = this.sortedColumns.filter(f => f !== field);
+      this.sortedColumns = this.sortedColumns.filter((f) => f !== field);
     } else {
       if (!this.sortedColumns.includes(field)) {
         this.sortedColumns.push(field);
       }
     }
-    // แปลงเป็น string เพื่อส่งไป API
-    const sortFields = this.sortedColumns.map(c => `${c}:${this.sortStates[c]}`).join(',');
 
-    this.columnClicked.emit(sortFields);
+    this.columnClicked.emit(this.sortStateValue);
   }
-
 
   // Event Handlers
   onRowClick(row: any, event: MouseEvent) {
@@ -226,13 +280,14 @@ export class TablesComponent implements OnInit, AfterViewInit, AfterViewChecked 
     }
 
     if (row?.id) {
-    this.clickedRows.add(String(row.id)); // ป้องกันไว้เป็น string
-    this.listClickedRows.emit(this.clickedRows);
-  }
+      this.clickedRows.add(String(row.id)); // ป้องกันไว้เป็น string
+      this.listClickedRows.emit(this.clickedRows);
+    }
 
     this.rowClicked.emit(row);
     this.cdr.detectChanges();
   }
+
   onButtonClick(column: Column, row: any, event: Event): void {
     event.stopPropagation();
     if (column.onClick) {
@@ -249,7 +304,9 @@ export class TablesComponent implements OnInit, AfterViewInit, AfterViewChecked 
       return;
     }
 
-    const buttonEl = document.getElementById(`dropdown-button-${rowIndex}-${field}`);
+    const buttonEl = document.getElementById(
+      `dropdown-button-${rowIndex}-${field}`
+    );
     const wrapperEl = this.tableWrapperRef?.nativeElement;
 
     if (!buttonEl || !wrapperEl) return;
@@ -274,12 +331,17 @@ export class TablesComponent implements OnInit, AfterViewInit, AfterViewChecked 
   }
 
   isDropdownOpen(rowIndex: number, field: string): boolean {
-    return this.dropdownOverlay?.rowIndex === rowIndex &&
-      this.dropdownOverlay?.field === field;
+    return (
+      this.dropdownOverlay?.rowIndex === rowIndex &&
+      this.dropdownOverlay?.field === field
+    );
   }
 
   selectDropdownOption(rowIndex: number, field: string, value: string) {
-    this.rows[rowIndex][field] = value;
+    const currentRows = this.rowsValue;
+    if (currentRows[rowIndex]) {
+      currentRows[rowIndex][field] = value;
+    }
     this.dropdownOverlay = null;
     this.cdr.detectChanges();
   }
@@ -302,22 +364,12 @@ export class TablesComponent implements OnInit, AfterViewInit, AfterViewChecked 
   }
 
   getVisibleColumnCount(): number {
-    let count = this.columns.filter(col =>
-      !col.subColumn || this.isSubColumnVisible(col)
+    let count = this.columns.filter(
+      (col) => !col.subColumn || this.isSubColumnVisible(col)
     ).length;
 
     if (this.showCheckbox) count += 1;
     return count;
-  }
-
-  getIconPath(iconName: string): string {
-    const icons: Record<string, string> = {
-      'check': 'M20,6 9,17 4,12',
-      'close': 'M18,6 6,18 M6,6 18,18',
-      'edit': 'M11,4 h6a2,2 0 0,1 2,2 v14a2,2 0 0,1 -2,2 H7a2,2 0 0,1 -2,-2 V6a2,2 0 0,1 2,-2 h4',
-      'delete': 'M3,6 h18 M8,6 V4a2,2 0 0,1 2,-2 h4a2,2 0 0,1 2,2 v2'
-    };
-    return icons[iconName] || icons['check'];
   }
 
   // TrackBy Functions for Performance

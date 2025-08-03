@@ -10,17 +10,15 @@
 </div> -->
 
 <div #filter>
-<app-filter-check-box
-  [items]="filterItems"
-  [config]="filterConfig"
-  (selected)="onFiltersSelected($event)">
-</app-filter-check-box>
+  <app-filter-check-box [items]="filterItems" [config]="filterConfig" (selected)="onFiltersSelected($event)">
+  </app-filter-check-box>
 </div>
 
 <app-loading></app-loading>
 
-<div #tableContainer class="tw-overflow-y-auto tw-transition-all  tw-duration-500 tw-ease-in-out" (scroll)="onScroll($event)">
-  <app-tables
+<div #tableContainer class="tw-overflow-y-auto tw-transition-all  tw-duration-500 tw-ease-in-out"
+  (scroll)="onScroll($event)">
+  <!-- <app-tables
     [columns]="columns"
     [rows]="rows"
     [resetKey]="tableResetKey"
@@ -30,5 +28,5 @@
     (rowClicked)="onRowClick($event)"
     (columnClicked)="onColumnClick($event)"
     (listClickedRows)="onClickedRowsChanged($event)">
-  </app-tables>
+  </app-tables> -->
 </div>
