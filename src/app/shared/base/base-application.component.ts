@@ -125,11 +125,11 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
   }
 
   // Public Event Handlers
-  async onSearch(form: SearchForm): Promise<void> {
+  onSearch(form: SearchForm): void {
     this.searchSubject.next(form);
   }
 
-  async onClearSearch(): Promise<void> {
+  onClearSearch(): void {
     this.searchForm = { searchBy: '', searchValue: '' };
     this.searchSubject.next(this.searchForm);
   }
@@ -143,7 +143,7 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
     this.dateRangeSubject.next(dateRange);
   }
 
-  async onTabChanged(tab: string): Promise<void> {
+  onTabChanged(tab: string): void {
     this.tabChangeSubject.next(tab);
   }
 
