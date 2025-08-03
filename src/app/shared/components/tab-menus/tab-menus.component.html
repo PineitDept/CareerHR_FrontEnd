@@ -1,5 +1,5 @@
 <div #wrapperRef class="tw-flex tw-gap-4 tw-px-6 tw-py-6 tw-bg-white">
-  <ng-container *ngFor="let tab of tabs">
+  <ng-container *ngFor="let tab of tabsValue">
     <button
       (click)="selectTab(tab.key)"
       [ngClass]="[
@@ -23,4 +23,3 @@
     </button>
   </ng-container>
 </div>
-
