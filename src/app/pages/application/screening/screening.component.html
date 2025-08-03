@@ -10,26 +10,34 @@
 </div>
 
 <app-filter
-[filterDateRange]="filterDateRange"
+  [filterDateRange]="filterDateRange"
   (dateRangeSelected)="onDateRangeSelected($event)"
 ></app-filter>
 
-<!-- <div class="tw-flex tw-justify-center tw-items-center ">
-    <app-tab-menus [tabs]="tabMenus" [activeTab]="activeTab" (tabChanged)="onTabChanged($event)"></app-tab-menus>
-</div> -->
+<div class="tw-flex tw-justify-center tw-items-center">
+  <app-tab-menus
+    [tabs]="tabMenus"
+    [activeTab]="activeTab"
+    (tabChanged)="onTabChanged($event)"
+  ></app-tab-menus>
+</div>
 
 <app-loading></app-loading>
 
-<div #tableContainer class="tw-h-[calc(100vh-370px)] tw-overflow-y-auto " (scroll)="onScroll($event)">
-  <!-- <app-tables
+<div
+  #tableContainer
+  class="tw-h-[calc(100vh-370px)] tw-overflow-y-auto"
+  (scroll)="onScroll($event)"
+>
+  <app-tables
     [columns]="columns"
-    [rows]="rows"
-    [resetKey]="tableResetKey"
+    [rows]="rows()"
+    [resetKey]="resetCounter()"
     [splitRows]="false"
-    [showCheckbox] = "false"
-    [preClickedRowIds]="preClickedIds"
+    [showCheckbox]="false"
+    [sortStates]="currentSort()"
     (rowClicked)="onRowClick($event)"
     (columnClicked)="onColumnClick($event)"
     (listClickedRows)="onClickedRowsChanged($event)"
-  ></app-tables> -->
+  ></app-tables>
 </div>

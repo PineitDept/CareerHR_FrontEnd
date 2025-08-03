@@ -57,6 +57,25 @@ export interface ApplicationRow {
   readonly totalBonus: number;
   readonly submitStatusLabel: BadgeConfig;
 }
+export interface ScreeningRow {
+  readonly id: string;
+  readonly submitDate: string;
+  readonly userID: string;
+  readonly fullName: string;
+  readonly position: string[];
+  readonly university: string;
+  readonly gpa: string;
+  readonly gradeCandidate: string;
+  readonly totalCandidatePoint: string;
+  readonly bdPoint: number;
+  readonly gpaScore: number;
+  readonly eqScore: number;
+  readonly ethicsScore: number;
+  readonly totalBonus: number;
+  readonly employeeAction : string;
+  readonly screening : BadgeConfig;
+}
+
 
 export interface IconConfig {
   readonly icon: string;
@@ -90,6 +109,7 @@ export interface CandidatePagedResult<T> {
   readonly totalItems: number;
   readonly statusGroupCount: StatusGroupCount;
   readonly items: readonly T[];
+
 }
 
 export interface ICandidateWithPositionsDto {
