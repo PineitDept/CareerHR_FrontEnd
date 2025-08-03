@@ -24,6 +24,7 @@ import {
   catchError,
   EMPTY,
   map,
+  exhaustMap,
 } from 'rxjs';
 
 import { ApplicationService } from '../../services/application/application.service';
@@ -243,14 +244,13 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
       .subscribe();
   }
 
+ 
   protected setupScrollStream(): void {
-    this.scrollSubject
-      .pipe(
-        debounceTime(100),
-        tap((event) => this.handleInfiniteScroll(event)),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe();
+    this.scrollSubject.pipe(
+      debounceTime(100),
+      exhaustMap((event) => this.handleInfiniteScroll(event)), 
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe();
   }
 
   // Protected Stream Handlers
@@ -274,17 +274,19 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
     return this.fetchData(updatedFilter, false);
   }
 
-  protected handleInfiniteScroll(event: Event): void {
+  protected handleInfiniteScroll(event: Event): Observable<void> {
     const element = event.target as HTMLElement;
-    if (!this.canLoadMore(element)) return;
+    if (!this.canLoadMore(element)) return EMPTY;
 
     const currentFilter = this.filterRequest();
     if (currentFilter.hasNextPage && !this.isLoading()) {
       const updatedFilter = { ...currentFilter, page: currentFilter.page + 1 };
-      this.fetchData(updatedFilter, true).subscribe();
+      return this.fetchData(updatedFilter, true);
     }
+    
+    return EMPTY;
   }
-
+  
   // Protected Data Fetching
   protected fetchData(
     filter: ICandidateFilterRequest,
@@ -300,7 +302,7 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
       tap(() => this.persistFilterState()),
       catchError((error) => this.handleApiError(error)),
       tap(() => this.loadingState.set(false)),
-      map(() => void 0)
+      map(() => void 0) //เปลี่ยนเป็น: Observable<void>
     );
   }
 
