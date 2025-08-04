@@ -2,6 +2,7 @@
 import {
   Component,
   ChangeDetectionStrategy,
+  computed,
 } from '@angular/core';
 
 import { BaseApplicationComponent } from '../../../shared/base/base-application.component';
@@ -174,6 +175,7 @@ export class ScreeningComponent extends BaseApplicationComponent {
   ): ScreeningRow[] {
     return items.map((item) => this.transformSingleItem(item));
   }
+  
 
   // Override tab change behavior for screening-specific logic
   protected override updateFilterForTab(tab: string): ICandidateFilterRequest {
@@ -187,12 +189,13 @@ export class ScreeningComponent extends BaseApplicationComponent {
         tab.key === ''
           ? response.totalItems
           : this.safeGetStatusCount(
-            response.statusCounts,
+            response.statusGroupCount,
             tab.key
           ),
     }));
     this.tabMenusData.set(updatedTabs);
   }
+   override readonly activeTab = computed(() => this.filterRequest().status || '');
 
   private transformSingleItem(
     item: ICandidateWithPositionsDto

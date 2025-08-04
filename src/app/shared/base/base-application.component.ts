@@ -145,6 +145,7 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
   }
 
   onTabChanged(tab: string): void {
+    console.log('Tab changed:', tab);
     this.tabChangeSubject.next(tab);
   }
 
