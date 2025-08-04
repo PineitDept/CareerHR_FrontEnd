@@ -93,7 +93,7 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
   readonly isLoading = computed(() => this.loadingState());
   readonly rows = computed(() => this.rowsData());
   readonly tabMenus = computed(() => this.tabMenusData());
-  readonly activeTab = computed(() => this.filterRequest().statusGroup || '');
+  activeTab = signal(this.filterRequest().statusGroup || '');
   readonly currentSort = computed(() => this.sortConfig());
 
   readonly resetCounter = signal<number>(0);
@@ -227,6 +227,7 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
       .pipe(
         distinctUntilChanged(),
         tap(() => this.resetPagination()),
+        tap((tab) => this.activeTab.set(tab)),
         switchMap((tab) => this.handleTabChange(tab)),
         takeUntilDestroyed(this.destroyRef)
       )
@@ -244,11 +245,11 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
       .subscribe();
   }
 
- 
+
   protected setupScrollStream(): void {
     this.scrollSubject.pipe(
       debounceTime(100),
-      exhaustMap((event) => this.handleInfiniteScroll(event)), 
+      exhaustMap((event) => this.handleInfiniteScroll(event)),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe();
   }
@@ -283,10 +284,10 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
       const updatedFilter = { ...currentFilter, page: currentFilter.page + 1 };
       return this.fetchData(updatedFilter, true);
     }
-    
+
     return EMPTY;
   }
-  
+
   // Protected Data Fetching
   protected fetchData(
     filter: ICandidateFilterRequest,
@@ -339,9 +340,9 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
         tab.key === ''
           ? response.totalItems
           : this.safeGetStatusCount(
-              response.statusGroupCount,
-              tab.key
-            ),
+            response.statusGroupCount,
+            tab.key
+          ),
     }));
     this.tabMenusData.set(updatedTabs);
   }
