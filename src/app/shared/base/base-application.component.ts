@@ -25,6 +25,7 @@ import {
   EMPTY,
   map,
   exhaustMap,
+  skip,
 } from 'rxjs';
 
 import { ApplicationService } from '../../services/application/application.service';
@@ -197,6 +198,7 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
   protected setupSearchStream(): void {
     this.searchSubject
       .pipe(
+        skip(1),
         debounceTime(BASE_CONFIG.DEBOUNCE_TIME),
         distinctUntilChanged(
           (prev, curr) =>
@@ -213,6 +215,7 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
   protected setupDateRangeStream(): void {
     this.dateRangeSubject
       .pipe(
+        skip(1),
         distinctUntilChanged(
           (prev, curr) => prev.month === curr.month && prev.year === curr.year
         ),
@@ -226,6 +229,7 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
   protected setupTabChangeStream(): void {
     this.tabChangeSubject
       .pipe(
+        skip(1),
         distinctUntilChanged(),
         tap(() => this.resetPagination()),
         switchMap((tab) => this.handleTabChange(tab)),
@@ -237,6 +241,7 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
   protected setupColumnSortStream(): void {
     this.columnSortSubject
       .pipe(
+        skip(1),
         distinctUntilChanged(),
         tap(() => this.resetPagination()),
         switchMap((column) => this.handleColumnSort(column)),
