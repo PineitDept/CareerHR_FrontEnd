@@ -336,13 +336,7 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
   protected updateTabCounts(response: ApiResponse): void {
     const updatedTabs = this.tabMenusData().map((tab) => ({
       ...tab,
-      count:
-        tab.key === ''
-          ? response.totalItems
-          : this.safeGetStatusCount(
-              response.statusGroupCount,
-              tab.key
-            ),
+      count: this.safeGetStatusCount(response.statusGroupCount,tab.key),
     }));
     this.tabMenusData.set(updatedTabs);
   }

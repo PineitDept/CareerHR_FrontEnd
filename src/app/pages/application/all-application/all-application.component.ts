@@ -164,7 +164,7 @@ export class AllApplicationComponent extends BaseApplicationComponent {
 
   protected createInitialTabs(): TabMenu[] {
     return [
-      { key: '', label: 'All Applications', count: 0 },
+      { key: 'total', label: 'All Applications', count: 0 },
       { key: 'new', label: 'New Applications', count: 0 },
       { key: 'over3', label: 'Over 3 Days', count: 0 },
       { key: 'overweek', label: 'Over 1 Week', count: 0 },

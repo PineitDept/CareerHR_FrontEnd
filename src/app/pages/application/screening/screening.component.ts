@@ -162,7 +162,7 @@ export class ScreeningComponent extends BaseApplicationComponent {
 
   protected createInitialTabs(): TabMenu[] {
     return [
-      { key: '', label: 'All Applications', count: 0 },
+      { key: 'total', label: 'All Applications', count: 0 },
       { key: 'pending', label: 'Pending', count: 0 },
       { key: 'accept', label: 'Accepted', count: 0 },
       { key: 'decline', label: 'Declined', count: 0 },
@@ -185,16 +185,11 @@ export class ScreeningComponent extends BaseApplicationComponent {
   protected override updateTabCounts(response: ApiResponse): void {
     const updatedTabs = this.tabMenusData().map((tab) => ({
       ...tab,
-      count:
-        tab.key === ''
-          ? response.totalItems
-          : this.safeGetStatusCount(
-            response.statusGroupCount,
-            tab.key
-          ),
+      count:this.safeGetStatusCount(response.statusCounts,tab.key),
     }));
     this.tabMenusData.set(updatedTabs);
   }
+
    override readonly activeTab = computed(() => this.filterRequest().status || '');
 
   private transformSingleItem(
