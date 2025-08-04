@@ -13,8 +13,7 @@ import {
   Signal,
   effect,
   DestroyRef,
-  inject,
-  input
+  inject
 } from '@angular/core';
 import { SidebarService } from '../../services/sidebar/sidebar.service';
 import { Subject, takeUntil } from 'rxjs';
@@ -26,8 +25,8 @@ import { TabMenu } from '../../../interfaces/Application/application.interface';
   styleUrl: './tab-menus.component.scss'
 })
 export class TabMenusComponent implements OnInit, AfterViewInit, OnDestroy {
-  tabs = input<TabMenu[]>([]);  
-  activeTab = input<string>('');
+  @Input({ required: true }) tabs!: Signal<TabMenu[]>;
+  @Input() activeTab!: Signal<string>;
   @Output() tabChanged = new EventEmitter<string>();
 
   @ViewChild('wrapperRef') wrapperRef!: ElementRef<HTMLDivElement>; 
@@ -64,7 +63,8 @@ export class TabMenusComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnInit() {
-    console.log('Tabs:', this.tabs());
+    // เรียก effect แล้ว ไม่จำเป็นต้องมี logic เพิ่ม
+    // effect จะจัดการ initialization ให้
   }
 
   ngAfterViewInit() {
@@ -110,14 +110,14 @@ export class TabMenusComponent implements OnInit, AfterViewInit, OnDestroy {
     this.tabChanged.emit(tab);
   }
 
-  // // Helper method สำหรับใช้ใน template
-  // get tabsValue(): TabMenu[] {
-  //   return this.tabs();
-  // }
+  // Helper method สำหรับใช้ใน template
+  get tabsValue(): TabMenu[] {
+    return this.tabs();
+  }
 
-  // get activeTabValue(): string {
-  //   return this.activeTab();
-  // }
+  get activeTabValue(): string {
+    return this.activeTab();
+  }
 
   ngOnDestroy() {
     this.destroy$.next();
