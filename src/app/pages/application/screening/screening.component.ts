@@ -6,6 +6,7 @@ import {
 
 import { BaseApplicationComponent } from '../../../shared/base/base-application.component';
 import {
+  ApiResponse,
   ICandidateFilterRequest,
   ICandidateWithPositionsDto,
   IPositionDto,
@@ -34,116 +35,116 @@ export class ScreeningComponent extends BaseApplicationComponent {
 
   // Table Configuration
   readonly columns: Columns = [
-    { 
-      header: 'Screening', 
-      field: 'screening', 
-      type: 'badge', 
-      align: 'center' 
+    {
+      header: 'Screening',
+      field: 'screening',
+      type: 'badge',
+      align: 'center'
     },
-    { 
-      header: 'Submit Date', 
-      field: 'submitDate', 
-      type: 'date', 
-      align: 'center', 
-      sortable: true 
+    {
+      header: 'Submit Date',
+      field: 'submitDate',
+      type: 'date',
+      align: 'center',
+      sortable: true
     },
-    { 
-      header: 'Applicant ID', 
-      field: 'userID', 
-      type: 'text', 
-      align: 'center', 
-      sortable: true 
+    {
+      header: 'Applicant ID',
+      field: 'userID',
+      type: 'text',
+      align: 'center',
+      sortable: true
     },
-    { 
-      header: 'Applicant Name', 
-      field: 'fullName', 
-      type: 'text', 
-      sortable: true 
+    {
+      header: 'Applicant Name',
+      field: 'fullName',
+      type: 'text',
+      sortable: true
     },
-    { 
-      header: 'Job Position', 
-      field: 'position', 
-      type: 'list', 
-      maxWidth: '400px', 
-      wrapText: true 
+    {
+      header: 'Job Position',
+      field: 'position',
+      type: 'list',
+      maxWidth: '400px',
+      wrapText: true
     },
-    { 
-      header: 'University', 
-      field: 'university', 
-      type: 'text', 
-      maxWidth: '400px', 
-      wrapText: true, 
-      sortable: true 
+    {
+      header: 'University',
+      field: 'university',
+      type: 'text',
+      maxWidth: '400px',
+      wrapText: true,
+      sortable: true
     },
-    { 
-      header: 'GPA', 
-      field: 'gpa', 
-      type: 'text', 
-      align: 'center', 
-      sortable: true 
+    {
+      header: 'GPA',
+      field: 'gpa',
+      type: 'text',
+      align: 'center',
+      sortable: true
     },
-    { 
-      header: 'Grade', 
-      field: 'gradeCandidate', 
-      type: 'text', 
-      align: 'center', 
-      maxWidth: '20px', 
-      sortable: true 
+    {
+      header: 'Grade',
+      field: 'gradeCandidate',
+      type: 'text',
+      align: 'center',
+      maxWidth: '20px',
+      sortable: true
     },
-    { 
-      header: 'Total Score', 
-      field: 'totalCandidatePoint', 
-      type: 'expandable', 
-      align: 'right', 
-      mainColumn: 'totalCandidatePoint', 
-      sortable: true 
+    {
+      header: 'Total Score',
+      field: 'totalCandidatePoint',
+      type: 'expandable',
+      align: 'right',
+      mainColumn: 'totalCandidatePoint',
+      sortable: true
     },
-    { 
-      header: 'Education (1 Point)', 
-      field: 'bdPoint', 
-      type: 'text', 
-      align: 'right', 
-      subColumn: 'totalCandidatePoint', 
-      sortable: true 
+    {
+      header: 'Education (1 Point)',
+      field: 'bdPoint',
+      type: 'text',
+      align: 'right',
+      subColumn: 'totalCandidatePoint',
+      sortable: true
     },
-    { 
-      header: 'GPA (1 Point)', 
-      field: 'gpaScore', 
-      type: 'text', 
-      align: 'right', 
-      subColumn: 'totalCandidatePoint', 
-      sortable: true 
+    {
+      header: 'GPA (1 Point)',
+      field: 'gpaScore',
+      type: 'text',
+      align: 'right',
+      subColumn: 'totalCandidatePoint',
+      sortable: true
     },
-    { 
-      header: 'Test EQ (1 Point)', 
-      field: 'eqScore', 
-      type: 'text', 
-      align: 'right', 
-      subColumn: 'totalCandidatePoint', 
-      sortable: true 
+    {
+      header: 'Test EQ (1 Point)',
+      field: 'eqScore',
+      type: 'text',
+      align: 'right',
+      subColumn: 'totalCandidatePoint',
+      sortable: true
     },
-    { 
-      header: 'Test Ethics (1 Point)', 
-      field: 'ethicsScore', 
-      type: 'text', 
-      align: 'right', 
-      subColumn: 'totalCandidatePoint', 
-      sortable: true 
+    {
+      header: 'Test Ethics (1 Point)',
+      field: 'ethicsScore',
+      type: 'text',
+      align: 'right',
+      subColumn: 'totalCandidatePoint',
+      sortable: true
     },
-    { 
-      header: 'Bonus', 
-      field: 'totalBonus', 
-      type: 'text', 
-      align: 'right', 
-      sortable: true 
-    },   
-    { 
-      header: 'Screen By', 
-      field: 'employeeAction', 
-      type: 'text', 
-      align: 'center', 
-      sortable: true 
-    },   
+    {
+      header: 'Bonus',
+      field: 'totalBonus',
+      type: 'text',
+      align: 'right',
+      sortable: true
+    },
+    {
+      header: 'Screen By',
+      field: 'employeeAction',
+      type: 'text',
+      align: 'center',
+      sortable: true
+    },
   ] as const;
 
   // Abstract method implementations
@@ -178,6 +179,19 @@ export class ScreeningComponent extends BaseApplicationComponent {
   protected override updateFilterForTab(tab: string): ICandidateFilterRequest {
     const currentFilter = this.filterRequest();
     return { ...currentFilter, status: tab, page: 1 };
+  }
+  protected override updateTabCounts(response: ApiResponse): void {
+    const updatedTabs = this.tabMenusData().map((tab) => ({
+      ...tab,
+      count:
+        tab.key === ''
+          ? response.totalItems
+          : this.safeGetStatusCount(
+            response.statusCounts,
+            tab.key
+          ),
+    }));
+    this.tabMenusData.set(updatedTabs);
   }
 
   private transformSingleItem(

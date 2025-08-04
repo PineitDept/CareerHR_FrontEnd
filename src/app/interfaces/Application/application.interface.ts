@@ -108,7 +108,12 @@ export interface CandidatePagedResult<T> {
   readonly hasNextPage: boolean;
   readonly totalItems: number;
   readonly statusGroupCount: StatusGroupCount;
+  readonly statusCounts: statusCounts;
   readonly items: readonly T[];
+}
+
+export interface statusCounts {
+  [key: string]: number | undefined;
 }
 
 export interface ICandidateWithPositionsDto {

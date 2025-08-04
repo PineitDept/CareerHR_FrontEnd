@@ -339,7 +339,7 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
         tab.key === ''
           ? response.totalItems
           : this.safeGetStatusCount(
-              response.statusGroupCount || response.statusGroupCount,
+              response.statusGroupCount,
               tab.key
             ),
     }));
