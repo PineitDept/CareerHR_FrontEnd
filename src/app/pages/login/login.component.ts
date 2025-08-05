@@ -53,8 +53,8 @@ export class LoginComponent {
       autoFocus: false,
       disableClose: true,
       data: {
-        title: 'Please contact the Accounting Department',
-        message: `For new registration or password reset, please contact our Accounting Department for assistance.`,
+        title: 'Please contact the Human Resources Department',
+        message: `For new registration or password reset, please contact our Human Resources Department for assistance.`,
         confirm: false
       }
     });
