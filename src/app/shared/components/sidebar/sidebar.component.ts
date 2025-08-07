@@ -25,6 +25,9 @@ export class SidebarComponent {
   activeMainMenu = '';
   expandedNestedMenus: Set<string> = new Set();
 
+  adminSettingSubMenu: string = '';
+  dataSettingSubMenu: string = '';
+
   constructor(
     public router: Router,
     private loginService: LoginService,
@@ -63,40 +66,51 @@ export class SidebarComponent {
     });
   }
 
- setActiveMenuFromUrl(url: string) {
-  for (const main of this.mainMenu) {
-    const subMenu = this.subMenus[main.label];
-    if (!subMenu) continue;
+  setActiveMenuFromUrl(url: string) {
+    if (url.startsWith('/admin-setting/permissions')) {
+      this.activeMainMenu = 'Admin Setting';
+      return;
+    }
 
-    for (const item of subMenu) {
-      // ตรวจ path หลัก
-      if (item.path && url.startsWith('/' + item.path)) {
-        this.activeMainMenu = main.label;
-        return;
-      }
+    for (const main of this.mainMenu) {
+      const subMenu = this.subMenus[main.label];
+      if (!subMenu) continue;
 
-      // ตรวจ nested path
-      if (item.children) {
-        for (const child of item.children) {
-          if (child.path && url.startsWith('/' + child.path)) {
-            this.activeMainMenu = main.label;
-            return;
+      for (const item of subMenu) {
+        // ตรวจ path หลัก
+        if (item.path && url.startsWith('/' + item.path)) {
+          this.activeMainMenu = main.label;
+          return;
+        }
+
+        // ตรวจ nested path
+        if (item.children) {
+          for (const child of item.children) {
+            if (child.path && url.startsWith('/' + child.path)) {
+              this.activeMainMenu = main.label;
+              return;
+            }
           }
         }
       }
     }
+
+    // ถ้าไม่ match อะไรเลย
+    this.activeMainMenu = '';
   }
 
-  // ถ้าไม่ match อะไรเลย
-  this.activeMainMenu = '';
-}
   isRouteActive(path: string): boolean {
     return this.router.url.startsWith(`/${path}`);
   }
 
   onMainMenuClick(label: string) {
-    this.activeMainMenu = label;
-    this.expandMenuIfChildActive()
+    if (label === 'Admin Setting') {
+      this.activeMainMenu = label;
+      this.adminSettingSubMenu = '';
+    } else {
+      this.activeMainMenu = label;
+    }
+    this.expandMenuIfChildActive();
   }
 
   expandMenuIfChildActive() {
@@ -116,6 +130,9 @@ export class SidebarComponent {
 
   navigateToSubPagePath(fullPath: string) {
     const pathSegments = fullPath.split('/');
+    if (this.activeMainMenu === 'Admin Setting' && fullPath.startsWith('data-setting/')) {
+      this.adminSettingSubMenu = 'Data Setting';
+    }
     this.router.navigate(pathSegments);
   }
 
@@ -129,13 +146,36 @@ export class SidebarComponent {
 
   backToMainMenu() {
     this.activeMainMenu = '';
+    this.adminSettingSubMenu = ''; // รีเซ็ตเมื่อกลับไปที่ Main Menu
+    this.dataSettingSubMenu = ''; // รีเซ็ตเมื่อกลับไปที่ Main Menu
     this.expandedNestedMenus.clear();
   }
 
+  backToSubMenu() {
+    if (this.dataSettingSubMenu) {
+      this.dataSettingSubMenu = '';
+    } else {
+      this.adminSettingSubMenu = '';
+    }
+    this.expandedNestedMenus.clear();
+    this.expandMenuIfChildActive();
+  }
+
   toggleNested(menu: string) {
-    this.expandedNestedMenus.has(menu)
-      ? this.expandedNestedMenus.delete(menu)
-      : this.expandedNestedMenus.add(menu);
+    if (this.expandedNestedMenus.has(menu)) {
+      this.expandedNestedMenus.delete(menu);
+    } else {
+      this.expandedNestedMenus.add(menu);
+
+      if (this.activeMainMenu === 'Admin Setting') {
+        if (menu === 'Data Setting') {
+          this.adminSettingSubMenu = 'Data Setting';
+          this.dataSettingSubMenu = ''; // รีเซ็ตค่า dataSettingSubMenu เมื่อกลับไปยัง Data Setting
+        } else if (menu === 'Application') {
+          this.dataSettingSubMenu = 'Application';  // กำหนดว่า Application ถูกเลือก
+        }
+      }
+    }
   }
 
   get isCollapsed(): boolean {
@@ -227,15 +267,28 @@ export class SidebarComponent {
 
   }
 
+  get dataSettingChildren(): MenuItem[] {
+    const adminSetting = this.subMenus['Admin Setting'];
+    const dataSetting = adminSetting?.find(item => item.label === 'Data Setting');
+    return dataSetting?.children ?? [];
+  }
+
+  get applicationSettingChildren(): MenuItem[] {
+    const adminSetting = this.subMenus['Admin Setting'];
+    const dataSetting = adminSetting?.find(item => item.label === 'Data Setting');
+    const applicationMenu = dataSetting?.children?.find(item => item.label === 'Application');
+    return applicationMenu?.children ?? [];
+  }
+
   // Menu Data
   mainMenu: MenuItem[] = [
     { label: 'Manpower', icon: 'user' },
-    { label: 'Applications Form', icon: 'dollar-circle' },
+    { label: 'Applications Form', icon: 'hand-taking-user' },
     // { label: 'Tools', icon: 'box-archive' },
   ];
 
   bottomMenu: MenuItem[] = [
-    // { label: 'Admin Setting', icon: 'gear' },
+    { label: 'Admin Setting', icon: 'gear' },
     { label: 'Logout', icon: 'exit' },
   ];
 
@@ -249,6 +302,54 @@ export class SidebarComponent {
       { label: 'All Applications', icon: 'notebook', path: 'applications/all-applications' },
       { label: 'Application Screening', icon: 'search-plus', path: 'applications/screening' },
       { label: 'Application Tracking', icon: 'route', path: 'applications/tracking' },
+    ],
+    'Admin Setting': [
+      {
+        label: 'Permissions',
+        icon: 'shield',
+        children: [
+          { label: 'User Candidates', icon: 'star-fat', path: 'admin-setting/permissions/user-candidates' },
+          { label: 'User Web', icon: 'user-multiple', path: 'admin-setting/permissions/user-web' },
+          { label: 'Management User', icon: 'crown', path: 'admin-setting/permissions/management-user' },
+        ]
+      },
+      {
+        label: 'Data Setting',
+        icon: 'sliders-horizontal-square',
+        children: [
+          {
+            label: 'Manpower',
+            icon: 'user',
+            children: [
+              { label: 'Job Position', icon: 'target-user', path: 'data-setting/manpower/job-position' },
+              { label: 'Reason Request', icon: 'pen-to-square', path: 'data-setting/manpower/reason-request' },
+            ]
+          },
+          {
+            label: 'Application',
+            icon: 'hand-taking-user',
+            children: [
+              { label: 'Web Policy', icon: 'bookmark', path: 'data-setting/application/web-policy' },
+              { label: 'General Benefits', icon: 'star-fat-half', path: 'data-setting/application/general-benefits' },
+              { label: 'Special Benefits', icon: 'badge-decagram-percent', path: 'data-setting/application/special-benefits' },
+              { label: 'University', icon: 'graduation-cap', path: 'data-setting/application/university' },
+              { label: 'Computer Skills', icon: 'code', path: 'data-setting/application/computer-skills' },
+              { label: 'Language Skills', icon: 'bulb', path: 'data-setting/application/language-skills' },
+              { label: 'Reason', icon: 'menu-cheesburger', path: 'data-setting/application/reason' },
+              { label: 'Application Question', icon: 'file-question', path: 'data-setting/application/application-question' },
+              {
+                label: 'Email',
+                icon: 'mail',
+                children: [
+                  { label: 'Email Template', icon: 'text-paragraph', path: 'data-setting/application/email/email-template' },
+                  { label: 'Email Attribute', icon: 'clipboard', path: 'data-setting/application/email/email-attribute' }
+                ]
+              },
+              { label: 'Score', icon: 'bar-chart', path: 'data-setting/application/score' },
+            ]
+          }
+        ]
+      }
     ],
   };
 }
