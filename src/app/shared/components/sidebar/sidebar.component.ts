@@ -72,6 +72,25 @@ export class SidebarComponent {
       return;
     }
 
+    if (url.startsWith('/admin-setting/data-setting')) {
+      this.activeMainMenu = 'Admin Setting';
+      this.adminSettingSubMenu = 'Data Setting';
+      this.expandedNestedMenus.add('Data Setting'); // ขยาย Data Setting
+
+      // ตรวจสอบเส้นทางของ Manpower และ Application ใน Data Setting
+      if (url.startsWith('/admin-setting/data-setting/manpower')) {
+        this.expandedNestedMenus.add('Manpower');  // ขยาย Manpower
+      } else if (url.startsWith('/admin-setting/data-setting/application')) {
+        this.dataSettingSubMenu = 'Application';
+        this.expandedNestedMenus.add('Application');  // ขยาย Application
+
+        if (url.startsWith('/admin-setting/data-setting/application/email')) {
+          this.expandedNestedMenus.add('Email');  // ขยาย Email
+        }
+      }
+      return;
+    }
+
     for (const main of this.mainMenu) {
       const subMenu = this.subMenus[main.label];
       if (!subMenu) continue;
@@ -103,6 +122,28 @@ export class SidebarComponent {
     return this.router.url.startsWith(`/${path}`);
   }
 
+  isAdminSettingActive(): boolean {
+    const currentUrl = this.router.url;
+
+    // เช็คว่า URL เริ่มต้นด้วย '/admin-setting' หรือไม่
+    if (currentUrl.startsWith('/admin-setting')) {
+      return true;
+    }
+
+    // ตรวจสอบว่า Data Setting หรือ sub-menu ของมันถูก active อยู่
+    const dataSettingMenu = this.subMenus['Admin Setting'].find(menu => menu.label === 'Data Setting');
+    if (dataSettingMenu && dataSettingMenu.children) {
+      // ตรวจสอบ path ของ children ว่ามี path ใดที่ตรงกับ URL ปัจจุบัน
+      const isDataSettingActive = dataSettingMenu.children.some(child => currentUrl.startsWith('/' + child.path));
+      if (isDataSettingActive) {
+        return true;
+      }
+    }
+
+    return false;
+}
+
+
   onMainMenuClick(label: string) {
     if (label === 'Admin Setting') {
       this.activeMainMenu = label;
@@ -117,6 +158,21 @@ export class SidebarComponent {
     const subMenu = this.subMenus[this.activeMainMenu];
     if (!subMenu) return;
 
+    // ตรวจสอบว่า path ของ Manpower ถูกเปิดอยู่หรือไม่
+    const isManpowerActive = this.isRouteActive('admin-setting/data-setting/manpower');
+    const isApplicationActive = this.isRouteActive('admin-setting/data-setting/application');
+    const isEmailActive = this.isRouteActive('admin-setting/data-setting/application/email');
+
+    // ถ้า path ของ Manpower หรือ Application ถูกเปิดอยู่ เราก็ขยายเมนูที่เกี่ยวข้อง
+    if (isManpowerActive) {
+      this.expandedNestedMenus.add('Manpower');
+    } else if (isApplicationActive) {
+      this.expandedNestedMenus.add('Application');
+      if (isEmailActive) {
+        this.expandedNestedMenus.add('Email');
+      }
+    }
+
     for (const item of subMenu) {
       if (item.children) {
         for (const child of item.children) {
@@ -130,9 +186,6 @@ export class SidebarComponent {
 
   navigateToSubPagePath(fullPath: string) {
     const pathSegments = fullPath.split('/');
-    if (this.activeMainMenu === 'Admin Setting' && fullPath.startsWith('data-setting/')) {
-      this.adminSettingSubMenu = 'Data Setting';
-    }
     this.router.navigate(pathSegments);
   }
 
@@ -282,8 +335,8 @@ export class SidebarComponent {
 
   // Menu Data
   mainMenu: MenuItem[] = [
-    { label: 'Manpower', icon: 'user' },
-    { label: 'Applications Form', icon: 'hand-taking-user' },
+    { label: 'Manpower', icon: 'user', path: 'manpower' },
+    { label: 'Applications Form', icon: 'hand-taking-user', path: 'applications' },
     // { label: 'Tools', icon: 'box-archive' },
   ];
 
@@ -321,31 +374,31 @@ export class SidebarComponent {
             label: 'Manpower',
             icon: 'user',
             children: [
-              { label: 'Job Position', icon: 'target-user', path: 'data-setting/manpower/job-position' },
-              { label: 'Reason Request', icon: 'pen-to-square', path: 'data-setting/manpower/reason-request' },
+              { label: 'Job Position', icon: 'target-user', path: 'admin-setting/data-setting/manpower/job-position' },
+              { label: 'Reason Request', icon: 'pen-to-square', path: 'admin-setting/data-setting/manpower/reason-request' },
             ]
           },
           {
             label: 'Application',
             icon: 'hand-taking-user',
             children: [
-              { label: 'Web Policy', icon: 'bookmark', path: 'data-setting/application/web-policy' },
-              { label: 'General Benefits', icon: 'star-fat-half', path: 'data-setting/application/general-benefits' },
-              { label: 'Special Benefits', icon: 'badge-decagram-percent', path: 'data-setting/application/special-benefits' },
-              { label: 'University', icon: 'graduation-cap', path: 'data-setting/application/university' },
-              { label: 'Computer Skills', icon: 'code', path: 'data-setting/application/computer-skills' },
-              { label: 'Language Skills', icon: 'bulb', path: 'data-setting/application/language-skills' },
-              { label: 'Reason', icon: 'menu-cheesburger', path: 'data-setting/application/reason' },
-              { label: 'Application Question', icon: 'file-question', path: 'data-setting/application/application-question' },
+              { label: 'Web Policy', icon: 'bookmark', path: 'admin-setting/data-setting/application/web-policy' },
+              { label: 'General Benefits', icon: 'star-fat-half', path: 'admin-setting/data-setting/application/general-benefits' },
+              { label: 'Special Benefits', icon: 'badge-decagram-percent', path: 'admin-setting/data-setting/application/special-benefits' },
+              { label: 'University', icon: 'graduation-cap', path: 'admin-setting/data-setting/application/university' },
+              { label: 'Computer Skills', icon: 'code', path: 'admin-setting/data-setting/application/computer-skills' },
+              { label: 'Language Skills', icon: 'bulb', path: 'admin-setting/data-setting/application/language-skills' },
+              { label: 'Reason', icon: 'menu-cheesburger', path: 'admin-setting/data-setting/application/reason' },
+              { label: 'Application Question', icon: 'file-question', path: 'admin-setting/data-setting/application/application-question' },
               {
                 label: 'Email',
                 icon: 'mail',
                 children: [
-                  { label: 'Email Template', icon: 'text-paragraph', path: 'data-setting/application/email/email-template' },
-                  { label: 'Email Attribute', icon: 'clipboard', path: 'data-setting/application/email/email-attribute' }
+                  { label: 'Email Template', icon: 'text-paragraph', path: 'admin-setting/data-setting/application/email/email-template' },
+                  { label: 'Email Attribute', icon: 'clipboard', path: 'admin-setting/data-setting/application/email/email-attribute' }
                 ]
               },
-              { label: 'Score', icon: 'bar-chart', path: 'data-setting/application/score' },
+              { label: 'Score', icon: 'bar-chart', path: 'admin-setting/data-setting/application/score' },
             ]
           }
         ]
