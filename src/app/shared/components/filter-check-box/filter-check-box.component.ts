@@ -41,13 +41,20 @@ export class FilterCheckBoxComponent implements OnInit {
     }
   }
 
-toggleGroup(groupKey: string) {
-  const shouldExpand = !this.expandedGroups.has(groupKey);
+// toggleGroup(groupKey: string) {
+//   const shouldExpand = !this.expandedGroups.has(groupKey);
 
-  this.expandedGroups.clear(); // ยุบทั้งหมดก่อน
-  if (shouldExpand) {
-    // ขยายทั้งหมด
-    this.items.forEach(item => this.expandedGroups.add(item.groupKey));
+//   this.expandedGroups.clear(); // ยุบทั้งหมดก่อน
+//   if (shouldExpand) {
+//     // ขยายทั้งหมด
+//     this.items.forEach(item => this.expandedGroups.add(item.groupKey));
+//   }
+// }
+toggleGroup(groupKey: string) {
+  if (this.expandedGroups.has(groupKey)) {
+    this.expandedGroups.delete(groupKey); // ถ้าเปิดอยู่ให้หุบ
+  } else {
+    this.expandedGroups.add(groupKey); // ถ้ายังไม่เปิดให้เปิด
   }
 }
 

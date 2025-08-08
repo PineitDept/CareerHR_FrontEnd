@@ -59,9 +59,9 @@
 }
 
 // Custom focus styles สำหรับ accessibility
-input[type="checkbox"]:focus + div {
-  @apply tw-ring-2 tw-ring-blue-500 tw-ring-offset-2;
-}
+// input[type="checkbox"]:focus + div {
+//   @apply tw-ring-2 tw-ring-blue-500 tw-ring-offset-2;
+// }
 
 // Smooth gradient transitions
 .tw-bg-gradient-to-r {
@@ -124,27 +124,27 @@ input[type="checkbox"]:focus + div {
 }
 
 // Dark mode support (ถ้าต้องการ)
-@media (prefers-color-scheme: dark) {
-  .tw-bg-white {
-    @apply tw-bg-gray-800;
-  }
+// @media (prefers-color-scheme: dark) {
+//   .tw-bg-white {
+//     @apply tw-bg-gray-800;
+//   }
   
-  .tw-text-gray-900 {
-    @apply tw-text-gray-100;
-  }
+//   .tw-text-gray-900 {
+//     @apply tw-text-gray-100;
+//   }
   
-  .tw-text-gray-700 {
-    @apply tw-text-gray-300;
-  }
+//   .tw-text-gray-700 {
+//     @apply tw-text-gray-300;
+//   }
   
-  .tw-border-gray-200 {
-    @apply tw-border-gray-700;
-  }
+//   .tw-border-gray-200 {
+//     @apply tw-border-gray-700;
+//   }
   
-  .tw-border-gray-100 {
-    @apply tw-border-gray-700;
-  }
-}
+//   .tw-border-gray-100 {
+//     @apply tw-border-gray-700;
+//   }
+// }
 
 // เพิ่ม smooth transitions สำหรับทุก element
 * {

@@ -1,18 +1,19 @@
-<div class="tw-flex tw-justify-center tw-gap-4 tw-overflow-x-auto tw-scrollbar-hide tw-py-4 tw-px-2">
+<div class="tw-flex tw-gap-4 tw-overflow-x-auto tw-scrollbar-hide tw-py-4 tw-mx-6">
   @for (group of items; track group.groupKey) {
-  <div class=" tw-w-[240px] tw-group">
+  <div class="tw-group tw-flex-1 tw-min-w-[200px]">
     <!-- Card Container -->
-    <div class="tw-bg-white tw-rounded-lg tw-shadow-sm tw-border tw-h-full tw-border-gray-200 
+    <div class="tw-bg-white tw-rounded-lg tw-shadow-sm tw-border tw-border-gray-200 
                   tw-transition-all tw-duration-300 tw-ease-out
-                  hover:tw-shadow-md hover:tw--translate-y-0.5">
+                  hover:tw-shadow-md hover:tw--translate-y-0.5b"
+          [ngClass]="expandedGroups.has(group.groupKey) ? 'tw-h-full' : 'tw-h-auto'">
 
       <!-- Header -->
-      <div class="tw-relative tw-overflow-hidden tw-rounded-t-lg tw-bg-white tw-border-b tw-border-gray-100">
-        <div class="tw-flex tw-justify-between tw-items-center tw-p-4 tw-cursor-pointer
+      <div class="tw-relative tw-overflow-hidden tw-rounded-t-lg tw-bg-white tw-rounded-lg">
+        <div class="tw-flex tw-justify-between tw-items-center tw-px-6 tw-py-4 tw-cursor-pointer
                       tw-transition-all tw-duration-200 hover:tw-bg-gray-50" (click)="toggleGroup(group.groupKey)">
 
           <div class="tw-flex tw-items-center tw-gap-3">
-            <h3 class="tw-font-bold tw-text-gray-900 tw-text-sm tw-leading-tight">
+            <h3 class="tw-font-bold tw-text-dark-900 tw-text-lg tw-leading-tight">
               {{ group.groupLabel }}
             </h3>
               <!-- Badge for selected count -->
@@ -36,14 +37,14 @@
       </div>
 
       <!-- Content Area -->
-      <div class="tw-overflow-hidden tw-transition-all tw-duration-300 tw-ease-out"
+      <div class="tw-overflow-hidden tw-transition-all tw-animate-in tw-slide-in-from-top-2 tw-fade-in tw-duration-300"
         [class.tw-max-h-0]="!isExpanded(group.groupKey)" [class.tw-max-h-96]="isExpanded(group.groupKey)">
         @if (isExpanded(group.groupKey)) {
-        <div class="tw-p-3 tw-space-y-1 tw-animate-in tw-slide-in-from-top-2 tw-fade-in tw-duration-300">
+        <div class="tw-space-y-1">
           @for (option of group.options; track option.key; let i = $index) {
           <label class="tw-group/option tw-flex tw-items-center tw-gap-3 tw-cursor-pointer 
-                           tw-p-2 tw-rounded-md tw-transition-all tw-duration-200 tw-ease-out
-                           hover:tw-bg-gray-50" [style.animation-delay]="i * 30 + 'ms'">
+                           tw-px-6 tw-py-4 tw-transition-all tw-duration-200 tw-ease-out
+                           hover:tw-bg-gray-50 tw-border-t tw-border-[#E5E5E5] last:tw-rounded-b-md !tw-mt-[0px]" [style.animation-delay]="i * 30 + 'ms'">
 
             <!-- Custom Checkbox -->
             <div class="tw-relative tw-flex tw-items-center">
@@ -52,19 +53,24 @@
 
               <!-- Checkbox Visual -->
               <div class="tw-w-4 tw-h-4 tw-border tw-border-gray-300 tw-rounded 
-                               tw-transition-all tw-duration-200 tw-ease-out
-                               tw-peer-checked:bg-azure tw-peer-checked:tw-border-azure
-                               tw-peer-checked:tw-scale-105
-                               group-hover/option:tw-border-azure
-                               tw-peer-focus:tw-ring-2 tw-peer-focus:tw-ring-azure tw-peer-focus:tw-ring-offset-2">
+                               tw-transition-all tw-duration-200 tw-ease-out tw-overflow-hidden tw-relative">
 
-                <div class="tw-w-3 tw-h-3 bg-azure tw-absolute tw-top-0.5 tw-left-0.5
+                <!-- <div class="tw-w-3 tw-h-3 bg-azure tw-absolute tw-top-0.5 tw-left-0.5
                                  tw-rounded 
                                  tw-transition-all tw-duration-200 tw-ease-out"
                   [class.tw-opacity-100]="isChecked(group.groupKey, option.key)"
                   [class.tw-scale-100]="isChecked(group.groupKey, option.key)"
                   [class.tw-opacity-0]="!isChecked(group.groupKey, option.key)"
-                  [class.tw-scale-0]="!isChecked(group.groupKey, option.key)"></div>
+                  [class.tw-scale-0]="!isChecked(group.groupKey, option.key)"></div> -->
+                <div class="tw-w-full tw-h-full tw-absolute tw-rounded-[2px]
+                            tw-flex tw-items-end tw-justify-center tw-text-white
+                            tw-transition-all tw-duration-200 tw-ease-out bg-azure"
+                    [class.tw-opacity-100]="isChecked(group.groupKey, option.key)"
+                    [class.tw-scale-100]="isChecked(group.groupKey, option.key)"
+                    [class.tw-opacity-0]="!isChecked(group.groupKey, option.key)"
+                    [class.tw-scale-0]="!isChecked(group.groupKey, option.key)">
+                  <app-icon name="check" [size]="14" fill="#fff"></app-icon>
+                </div>
               </div>
             </div>
 
