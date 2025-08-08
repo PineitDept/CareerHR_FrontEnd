@@ -245,12 +245,13 @@ export class SidebarComponent {
     if (!this.isExpanded) {
       width = '60px';
     } else {
-      const screenWidth = window.innerWidth;
-      if (screenWidth >= 1280) {
-        width = '240px';
-      } else {
-        width = '190px';
-      }
+      width = '240px';
+      // const screenWidth = window.innerWidth;
+      // if (screenWidth >= 1280) {
+      //   width = '240px';
+      // } else {
+      //   width = '190px';
+      // }
     }
 
     this.sidebarService.setSidebarWidth(width);

@@ -17,7 +17,7 @@
     <ul *ngIf="!activeMainMenu && !adminSettingSubMenu"
       class="tw-absolute tw-top-0 tw-left-0 tw-w-full tw-transition-all tw-duration-300">
       <li *ngFor="let item of mainMenu"
-        class="tw-flex tw-items-center tw-gap-x-2 tw-mb-2 tw-cursor-pointer tw-border-l-[4px] hover:tw-border-l-[4px] hover:tw-border-[#AA0000] tw-pl-2 tw-py-2 hover:tw-bg-white/10"
+        class="tw-flex tw-items-center tw-gap-x-2 tw-mb-2 tw-cursor-pointer tw-border-l-[4px] hover:tw-border-l-[4px] hover:tw-border-[#AA0000] tw-pl-4 tw-py-2 hover:tw-bg-white/10"
         [ngClass]="{
           'tw-border-[#AA0000] tw-bg-white/25': isRouteActive(item.path ?? ''),
           'tw-border-transparent': !isRouteActive(item.path ?? '')
@@ -33,7 +33,7 @@
     <ng-container *ngIf="activeMainMenu && activeMainMenu !== 'Admin Setting'">
       <ul class="tw-absolute tw-top-0 tw-left-0 tw-w-full tw-transition-all tw-duration-300">
         <li *ngFor="let item of subMenus[activeMainMenu]" class="tw-mb-2">
-          <div class="tw-flex tw-items-center tw-gap-x-2 tw-cursor-pointer tw-border-l-[4px] hover:tw-border-l-[4px] hover:tw-border-[#AA0000] tw-pl-2 tw-py-2 hover:tw-bg-white/10"
+          <div class="tw-flex tw-items-center tw-gap-x-2 tw-cursor-pointer tw-border-l-[4px] hover:tw-border-l-[4px] hover:tw-border-[#AA0000] tw-pl-4 tw-py-2 hover:tw-bg-white/10"
             [ngClass]="{
               'tw-border-[#AA0000] tw-bg-white/25': isRouteActive(item.path ?? ''),
               'tw-border-transparent': !isRouteActive(item.path ?? ''),
@@ -67,7 +67,7 @@
       <ul class="tw-absolute tw-top-0 tw-left-0 tw-w-full tw-transition-all tw-duration-300">
         <li *ngFor="let item of subMenus['Admin Setting']" class="tw-mb-2">
           <div
-            class="tw-flex tw-items-center tw-gap-x-2 tw-cursor-pointer tw-border-l-[4px] hover:tw-border-l-[4px] hover:tw-border-[#AA0000] tw-pl-2 tw-py-2 hover:tw-bg-white/10"
+            class="tw-flex tw-items-center tw-gap-x-2 tw-cursor-pointer tw-border-l-[4px] hover:tw-border-l-[4px] hover:tw-border-[#AA0000] tw-pl-4 tw-py-2 hover:tw-bg-white/10"
             [ngClass]="{
               'tw-border-[#AA0000] tw-bg-white/25': item.label === 'Data Setting' && isRouteActive('admin-setting/data-setting'),
               'tw-border-transparent': !(item.label === 'Data Setting' && isRouteActive('admin-setting/data-setting')),
@@ -102,7 +102,7 @@
       <ul class="tw-absolute tw-top-0 tw-left-0 tw-w-full tw-transition-all tw-duration-300">
         <li *ngFor="let group of dataSettingChildren" class="tw-mb-2">
           <div
-            class="tw-flex tw-items-center tw-gap-x-2 tw-cursor-pointer tw-border-l-[4px] hover:tw-border-l-[4px] hover:tw-border-[#AA0000] tw-pl-2 tw-py-2 hover:tw-bg-white/10"
+            class="tw-flex tw-items-center tw-gap-x-2 tw-cursor-pointer tw-border-l-[4px] hover:tw-border-l-[4px] hover:tw-border-[#AA0000] tw-pl-4 tw-py-2 hover:tw-bg-white/10"
             [ngClass]="{
               'tw-border-[#AA0000] tw-bg-white/25': group.label === 'Application' && isRouteActive('admin-setting/data-setting/application'),
               'tw-border-transparent': !(group.label === 'Application' && isRouteActive('admin-setting/data-setting/application')),
@@ -134,7 +134,7 @@
       <ul class="tw-absolute tw-top-0 tw-left-0 tw-w-full tw-transition-all tw-duration-300">
         <li *ngFor="let group of applicationSettingChildren" class="tw-mb-2">
           <div
-            class="tw-flex tw-items-center tw-gap-x-2 tw-cursor-pointer tw-border-l-[4px] hover:tw-border-l-[4px] hover:tw-border-[#AA0000] tw-pl-2 tw-py-2 hover:tw-bg-white/10"
+            class="tw-flex tw-items-center tw-gap-x-2 tw-cursor-pointer tw-border-l-[4px] hover:tw-border-l-[4px] hover:tw-border-[#AA0000] tw-pl-4 tw-py-2 hover:tw-bg-white/10"
             [ngClass]="{
               'tw-border-[#AA0000] tw-bg-white/25':
                 (group.label !== 'Email' && !isRouteActive('admin-setting/data-setting/application/email')) &&
@@ -173,7 +173,7 @@
   <ul class="tw-mt-6">
     <ng-container *ngFor="let item of bottomMenu">
       <li *ngIf="!(activeMainMenu === 'Admin Setting' || adminSettingSubMenu) || item.label !== 'Admin Setting'"
-        class="tw-flex tw-items-center tw-mb-2 tw-gap-x-2 tw-cursor-pointer tw-border-l-[4px] hover:tw-border-l-[4px] hover:tw-border-[#AA0000] tw-pl-2 tw-py-2 hover:tw-bg-white/10"
+        class="tw-flex tw-items-center tw-mb-2 tw-gap-x-2 tw-cursor-pointer tw-border-l-[4px] hover:tw-border-l-[4px] hover:tw-border-[#AA0000] tw-pl-4 tw-py-2 hover:tw-bg-white/10"
         [ngClass]="{
           'tw-border-[#AA0000] tw-bg-white/25': item.label === 'Admin Setting' && isAdminSettingActive(),
           'tw-border-transparent': !(item.label === 'Admin Setting' && isAdminSettingActive()),
