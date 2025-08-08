@@ -1,5 +1,5 @@
 <!-- expandable-table.component.html -->
-<div #tableWrapper class="tw-relative tw-px-6 tw-py-6 tw-bg-white">
+<div #tableWrapper class="tw-relative tw-px-6 tw-py-6 tw-pr-2 tw-bg-white tw-w-fit tw-min-w-full" [ngClass]="rowsValue.length > 0 ? 'tw-pr-2' : 'tw-pr-6'">
   <div class="tw-rounded-md tw-shadow-sm tw-border tw-border-gray-200">
     <table class="tw-table-auto tw-w-full tw-text-sm tw-text-left tw-border-collapse">
       <thead>
@@ -75,19 +75,31 @@
 
           <!-- Dynamic Data Cells -->
           <ng-container *ngFor="let column of columns; trackBy: trackByColumn">
-            <td class="table-cell tw-px-2 tw-py-2 tw-align-top tw-border-r tw-border-gray-300"
+            <td class="table-cell tw-px-2 tw-py-2 tw-align-middle"
               [class.main-column]="column.mainColumn" [class.sub-column]="column.subColumn"
               [class.wrap-text]="column.wrapText" [class.expanded]="!column.subColumn || isSubColumnVisible(column)"
               [class.collapsed]="column.subColumn && !isSubColumnVisible(column)" [style.width]="getColumnWidth(column)"
               [style.min-width]="getColumnMinWidth(column)" [style.max-width]="getColumnMaxWidth(column)"
-              [style.text-align]="column.align || 'left'">
+              [style.text-align]="column.align || 'left'"
+              [ngClass]="column.type === 'icon' && !column.sortable ? getBackgroundClass(getCellValue(row, column.field)?.fill) : ''">
               <!-- Cell Content with Type Switching -->
               <div class="cell-content">
                 <ng-container [ngSwitch]="column.type || 'text'">
 
                   <!-- Text Content -->
                   <span *ngSwitchCase="'text'" class="tw-text-gray-800">
-                    {{ getCellValue(row, column.field) }}
+                    <!-- {{ getCellValue(row, column.field) }} -->
+
+                    <ng-container *ngIf="editingRowId === row.id; else viewMode" >
+                      <input
+                        type="text"
+                        class="tw-border tw-border-gray-300 tw-rounded tw-px-2 tw-py-1 tw-w-full"
+                        [(ngModel)]="row[column.field]"
+                        (click)="$event.stopPropagation()" />
+                    </ng-container>
+                    <ng-template #viewMode>
+                      {{ getCellValue(row, column.field) }}
+                    </ng-template>
                   </span>
 
                   <!-- Expandable Content -->
@@ -139,14 +151,17 @@
                   <span *ngSwitchCase="'date'" class="tw-text-gray-800">
                     {{ getCellValue(row, column.field) | date: 'dd/MM/yyyy':'UTC' }}
                   </span>
+                  <span *ngSwitchCase="'dateWithTime'" class="tw-text-gray-800">
+                    {{ getCellValue(row, column.field) | date: 'dd/MM/yyyy HH:mm':'UTC' }}
+                  </span>
 
                   <!-- List Content -->
                   <div *ngSwitchCase="'list'" class="tw-text-gray-800">
-                    <ul class="tw-list-none tw-space-y-1">
+                    <ol class="tw-list-decimal tw-pl-4 tw-space-y-1">
                       <li *ngFor="let item of getCellValue(row, column.field); let idx = index" class="tw-text-sm">
-                        {{ idx + 1 }}. {{ item }}
+                        {{ item }}
                       </li>
-                    </ul>
+                    </ol>
                   </div>
 
                   <!-- Icon Content -->
@@ -156,6 +171,56 @@
                       [fill]="getCellValue(row, column.field)?.fill || 'currentColor'"
                       [extraClass]="getCellValue(row, column.field)?.extraClass || '' + 'tw-transition-colors tw-duration-200'">
                     </app-icon>                    
+                  </div>
+
+                  <!-- toggle Content -->
+                  <div *ngSwitchCase="'toggle'" class="tw-text-gray-800">
+                    <label class="tw-inline-flex tw-items-center tw-cursor-pointer" (click)="$event.stopPropagation()">
+                      <input type="checkbox" value="" class="tw-sr-only tw-peer" [checked]="row.activeStatus" (click)="onToggleChange($event, row)">
+                      <div class="tw-relative tw-w-11 tw-h-6 peer-checked:tw-bg-[#00AA00] tw-bg-gray-200 tw-rounded-full tw-peer peer-checked:after:tw-translate-x-full rtl:peer-checked:after:tw--translate-x-full tw-border-white after:tw-content-[''] after:tw-absolute after:tw-top-[2px] after:tw-start-[2px] after:tw-bg-white after:tw-rounded-full after:tw-h-5 after:tw-w-5 after:tw-transition-all"></div>
+                    </label>
+                  </div>
+
+                  <!-- text link Content -->
+                  <div *ngSwitchCase="'textlink'" class="tw-text-gray-800 tw-flex tw-justify-center tw-gap-4"
+                    (click)="$event.stopPropagation()">
+                    <a *ngIf="column.textlinkActions?.includes('view')" href="javascript:void(0)"
+                      class="tw-text-[#5500FF] hover:tw-text-[#5f31bb] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
+                      (click)="onClickView($event, row)">
+                      <app-icon name="eye" [size]="20"></app-icon> <span>View</span>
+                    </a>
+                  
+                    <a *ngIf="column.textlinkActions?.includes('edit-topopup')" href="javascript:void(0)"
+                      class="tw-text-[#D97706] hover:tw-text-[#a7671e] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
+                      (click)="onClickEditDialog($event, row)">
+                      <app-icon name="pen-to-square" [size]="20"></app-icon> <span>Edit</span>
+                    </a>
+                  
+                    <a *ngIf="column.textlinkActions?.includes('edit-inrow') && editingRowId !== row.id"
+                      class="tw-text-[#D97706] hover:tw-text-[#a7671e] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
+                      (click)="onClickEdit($event, row)">
+                      <app-icon name="pen-to-square" [size]="20"></app-icon> <span>Edit</span>
+                    </a>
+                  
+                    <ng-container *ngIf="editingRowId === row.id && editRow">
+                      <a href="javascript:void(0)"
+                        class="tw-text-[#00AA00] hover:tw-text-[#148014] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
+                        (click)="onClickSave($event, row)">
+                        <app-icon name="file-plus-circle" [size]="20"></app-icon> <span>Save</span>
+                      </a>
+                    
+                      <a href="javascript:void(0)"
+                        class="tw-text-[#6C757D] hover:tw-text-[#404447] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
+                        (click)="onClickCancel($event, row)">
+                        <app-icon name="xmark" [size]="20"></app-icon> <span>Cancel</span>
+                      </a>
+                    </ng-container>
+                  
+                    <a *ngIf="column.textlinkActions?.includes('delete') && !editRow" href="javascript:void(0)"
+                      class="tw-text-[#F00] hover:tw-text-[#AA0000] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
+                      (click)="onClickDelete($event, row)">
+                      <app-icon name="trash" [size]="20"></app-icon> <span>Delete</span>
+                    </a>
                   </div>
 
                 </ng-container>
@@ -170,10 +235,10 @@
         <tbody>
           <tr>
             <td [attr.colspan]="getVisibleColumnCount()" class="tw-text-center tw-py-8 tw-text-gray-500">
-              <div class="tw-flex tw-flex-col tw-items-center tw-gap-3">
-                <app-icon name="xmark" [size]="48" fill="currentColor" extraClass="tw-text-gray-300">
+              <div class="tw-flex tw-flex-row tw-justify-center tw-items-center tw-gap-3">
+                <app-icon name="xmark-circle" [size]="32" fill="currentColor" extraClass="tw-text-gray-300">
                 </app-icon>
-                <span class="tw-text-lg tw-font-medium">No data available</span>
+                <span class="tw-text-base tw-font-medium">No data available</span>
               </div>
             </td>
           </tr>

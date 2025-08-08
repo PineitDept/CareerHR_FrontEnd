@@ -14,6 +14,7 @@ import { AlertDialogComponent } from './components/dialogs/alert-dialog/alert-di
 import { LoadingComponent } from './components/loading/loading.component';
 import { MultiSelectDropdownComponent } from './components/multi-select-dropdown/multi-select-dropdown.component';
 import { FilterCheckBoxComponent } from './components/filter-check-box/filter-check-box.component';
+import { FormDialogComponent } from './components/dialogs/form-dialog/form-dialog.component';
 // import { PurchaseOrderDetailsFormComponent } from './components/forms/purchase-order-details-form/purchase-order-details-form.component';
 
 @NgModule({
@@ -29,6 +30,7 @@ import { FilterCheckBoxComponent } from './components/filter-check-box/filter-ch
     LoadingComponent,
     MultiSelectDropdownComponent,
     FilterCheckBoxComponent,
+    FormDialogComponent,
     // PurchaseOrderDetailsFormComponent
   ],
   imports: [
@@ -47,7 +49,8 @@ import { FilterCheckBoxComponent } from './components/filter-check-box/filter-ch
     AlertDialogComponent,
     LoadingComponent,
     MultiSelectDropdownComponent,
-    FilterCheckBoxComponent
+    FilterCheckBoxComponent,
+    FormDialogComponent,
     // PurchaseOrderDetailsFormComponent
   ]
 })

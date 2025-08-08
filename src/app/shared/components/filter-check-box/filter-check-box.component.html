@@ -9,11 +9,11 @@
 
       <!-- Header -->
       <div class="tw-relative tw-overflow-hidden tw-rounded-t-lg tw-bg-white tw-rounded-lg">
-        <div class="tw-flex tw-justify-between tw-items-center tw-px-6 tw-py-4 tw-cursor-pointer
+        <div class="tw-flex tw-justify-between tw-items-center tw-px-4 tw-py-2 tw-cursor-pointer
                       tw-transition-all tw-duration-200 hover:tw-bg-gray-50" (click)="toggleGroup(group.groupKey)">
 
           <div class="tw-flex tw-items-center tw-gap-3">
-            <h3 class="tw-font-bold tw-text-dark-900 tw-text-lg tw-leading-tight">
+            <h3 class="tw-font-bold tw-text-dark-900 tw-text-base tw-leading-tight">
               {{ group.groupLabel }}
             </h3>
               <!-- Badge for selected count -->
@@ -43,7 +43,7 @@
         <div class="tw-space-y-1">
           @for (option of group.options; track option.key; let i = $index) {
           <label class="tw-group/option tw-flex tw-items-center tw-gap-3 tw-cursor-pointer 
-                           tw-px-6 tw-py-4 tw-transition-all tw-duration-200 tw-ease-out
+                           tw-px-4 tw-py-2 tw-transition-all tw-duration-200 tw-ease-out
                            hover:tw-bg-gray-50 tw-border-t tw-border-[#E5E5E5] last:tw-rounded-b-md !tw-mt-[0px]" [style.animation-delay]="i * 30 + 'ms'">
 
             <!-- Custom Checkbox -->

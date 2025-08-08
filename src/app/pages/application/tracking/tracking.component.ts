@@ -40,17 +40,13 @@ const STATUS_ICON_MAP: Record<
   number,
   { icon: string; fill?: string; size?: string; extraClass?: string }
 > = {
-  12: {
-    icon: 'check-circle-solid',
-    extraClass: 'fill-gray-light-1',
-    size: '25',
-  }, // Pending
+  12: {icon: 'minus-circle-solid', extraClass: 'fill-gray-light-1', size: '25'}, // Pending
   15: { icon: 'check-circle-solid', fill: 'skyblue', size: '25' }, // Scheduled
-  20: { icon: 'check-circle-solid', fill: 'orange', size: '25' }, // On Hold
+  20: { icon: 'onhold-solid', fill: 'orange', size: '25' }, // On Hold
   21: { icon: 'check-circle-solid', fill: 'green', size: '25' }, // Accept
   22: { icon: 'xmark-circle-solid', fill: 'red', size: '25' }, // Decline
-  23: { icon: 'xmark-circle-solid', fill: 'purple', size: '25' }, // NO SHOW PINE
-  25: { icon: 'xmark-circle-solid', fill: 'lime', size: '25' }, // NO SHOW Candidate
+  23: { icon: 'xmark-circle-solid', fill: 'purple', size: '25' }, // NO SHOW PINE (นัดสัมภาษณ์แล้ว candidate ติดต่อไม่ได้)
+  25: { icon: 'xmark-circle-solid', fill: 'pink', extraClass: 'fill-pink', size: '25' }, // NO SHOW Candidate (นัดสัมภาษณ์แล้ว candidate ยกเลิกการสัมภาษณ์)
   41: { icon: 'check-circle-solid', fill: 'green', size: '25' }, // Onboarded
   44: { icon: 'xmark-circle-solid', fill: 'red', size: '25' }, // Declined onboard
 };
@@ -106,14 +102,18 @@ export class TrackingComponent
       header: 'Job Position',
       field: 'position',
       type: 'list',
-      maxWidth: '400px',
+      // maxWidth: '400px',
+      minWidth: '264px',
+      width: '16%',
       wrapText: true,
     },
     {
       header: 'University',
       field: 'university',
       type: 'text',
-      maxWidth: '400px',
+      // maxWidth: '400px',
+      minWidth: '264px',
+      width: '16%',
       wrapText: true,
       sortable: true,
     },
