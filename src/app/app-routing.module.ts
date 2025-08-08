@@ -34,9 +34,13 @@ const routes: Routes = [
         path: 'index',
         component: IndexComponent
       },
-        {
+      {
         path: 'applications',
         loadChildren: () => import('./pages/application/application.module').then(m => m.ApplicationModule)
+      },
+      {
+        path: 'admin-setting',
+        loadChildren: () => import('./pages/admin-setting/admin-setting.module').then(m => m.AdminSettingModule)
       },
     ]
   },
