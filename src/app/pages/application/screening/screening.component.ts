@@ -16,6 +16,8 @@ import {
 } from '../../../interfaces/Application/application.interface';
 import { Columns } from '../../../shared/interfaces/tables/column.interface';
 import { createStatusBadge } from '../../../utils/application/badge-utils';
+import { FormDialogComponent } from '../../../shared/components/dialogs/form-dialog/form-dialog.component';
+import { MatDialog } from '@angular/material/dialog';
 
 // Component-specific Configuration
 const SCREENING_CONFIG = {
@@ -33,6 +35,9 @@ const SCREENING_CONFIG = {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ScreeningComponent extends BaseApplicationComponent {
+  constructor(private dialog: MatDialog) {
+    super();
+  }
 
   // Table Configuration
   readonly columns: Columns = [
@@ -66,14 +71,18 @@ export class ScreeningComponent extends BaseApplicationComponent {
       header: 'Job Position',
       field: 'position',
       type: 'list',
-      maxWidth: '400px',
+      // maxWidth: '400px',
+      minWidth: '264px',
+      width: '16%',
       wrapText: true
     },
     {
       header: 'University',
       field: 'university',
       type: 'text',
-      maxWidth: '400px',
+      // maxWidth: '400px',
+      minWidth: '264px',
+      width: '16%',
       wrapText: true,
       sortable: true
     },
@@ -147,6 +156,50 @@ export class ScreeningComponent extends BaseApplicationComponent {
       sortable: true
     },
   ] as const;
+
+  defaultFilterButtons = () => ([
+    { label: 'Add', key: 'add', color: '#00AAFF' },
+  ]);
+
+  filterButtons = this.defaultFilterButtons();
+
+  onFilterButtonClick(key: string) {
+    switch (key) {
+      case 'add':
+        console.log('Add button clicked');
+        Promise.resolve().then(() => {
+          const container = document.querySelector('.cdk-overlay-container');
+          container?.classList.add('dimmed-overlay');
+        });
+    
+        const dialogRef = this.dialog.open(FormDialogComponent, {
+          width: '496px',
+          panelClass: 'custom-dialog-container',
+          autoFocus: false,
+          disableClose: true,
+          data: {
+            title: 'Add User Web',
+            message: 'Employee ID',
+            labelInput: ['Employee ID', 'Username', 'Password', 'Confirm Password'],
+            valInput: ["", "", "", ""],
+            confirm: true,
+            isEditMode: false,
+          }
+        });
+    
+        dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+          const container = document.querySelector('.cdk-overlay-container');
+          container?.classList.remove('dimmed-overlay');
+    
+          if (confirmed) {
+            // console.log(`Applicant ID: ${row.userID}, Old Status: ${this.activeStatus}`);
+            console.log('Add User')
+          }
+        });
+
+        break;
+    }
+  }
 
   // Abstract method implementations
   protected getStorageKeys() {

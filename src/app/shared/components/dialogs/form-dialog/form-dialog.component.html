@@ -1,0 +1,71 @@
+<div class="tw-text-black">
+  <div class="tw-text-lg tw-font-semibold tw-px-6 tw-pt-4 tw-pb-3">
+    {{ data.title || 'Alert' }}
+  </div>
+
+  <div class="tw-border-t tw-border-[#E3E3E3]"></div>
+
+  <form [formGroup]="inputForm" (ngSubmit)="onConfirm()">
+    <div formArrayName="inputs" class="tw-text-base tw-text-gray-700 tw-px-6 tw-py-6 tw-pt-[14px]" (click)="$event.stopPropagation()">
+      <ng-container *ngFor="let label of data.labelInput; let i = index">
+        <p class="tw-font-bold tw-mt-[10px] tw-block">
+          {{ label }} <span class="text-red" *ngIf="isRequired(i)">*</span>
+        </p>
+
+        <div class="tw-relative tw-block">
+          <input
+            [formControlName]="i"
+            [type]="getInputType(i, label)"
+            class="tw-mt-[10px] tw-rounded-lg tw-border-[1px] tw-border-[#ADB5BD] tw-mx-auto tw-w-full tw-h-9 focus:tw-border-[2px] tw-p-2 disabled:tw-bg-[#ebebeb] disabled:tw-opacity-40 disabled:tw-pointer-events-none"
+            [disabled]="isDisabled(i, label)"
+            [ngClass]="getInputClass(i)"
+            required
+          />
+
+          <span
+            class="tw-absolute tw-right-3 tw-top-[13px]"
+            *ngIf="label.toLowerCase().includes('password')"
+            (click)="togglePasswordVisibility(i)"
+            [class.tw-opacity-40]="inputControls.at(i).disabled"
+          >
+            <app-icon *ngIf="!isPasswordVisible(i)" name="eye-off" [size]="18" fill="#333"></app-icon>
+            <app-icon *ngIf="isPasswordVisible(i)" name="eye" [size]="21" fill="#333"></app-icon>
+          </span>
+        </div>
+
+        <div *ngIf="isInvalid(i)" class="tw-text-red-500 tw-text-sm tw-mt-1">
+          <ng-container *ngIf="inputControls.at(i)?.errors?.['required']">
+            {{ label }} is required
+          </ng-container>
+          <ng-container *ngIf="inputControls.at(i)?.errors?.['notMatch']">
+            Passwords do not match
+          </ng-container>
+        </div>
+
+        <a *ngIf="shouldShowResetPassword(label)"
+          href="javascript:void(0)"
+          class="tw-text-[#660708] tw-text-base tw-font-semibold tw-text-right hover:tw-underline tw-mt-[10px] tw-block"
+          (click)="onResetPassword()"
+        >
+          Reset password
+        </a>
+      </ng-container>
+    </div>
+
+    <div class="tw-border-t tw-border-[#E3E3E3]"></div>
+
+    <div class="tw-text-right tw-px-6 tw-pt-3 tw-pb-3">
+      <button *ngIf="data.confirm" type="button"
+        class="tw-bg-gray-200 hover:tw-bg-gray-300 tw-text-black tw-font-medium tw-py-1.5 tw-px-5 tw-rounded-lg tw-mr-2"
+        (click)="onCancel()">
+        Cancel
+      </button>
+      <button type="submit"
+        class="tw-text-white tw-font-medium tw-py-1.5 tw-px-6 tw-rounded-lg disabled:tw-opacity-40"
+        [disabled]="inputForm.invalid"
+        [ngClass]="data.confirm ? 'tw-bg-[#00AA55] hover:tw-bg-[#02934a] disabled:hover:tw-bg-[#00AA55]' : 'tw-bg-[#930000] hover:tw-bg-[#7a0000] disabled:hover:tw-bg-[#930000]'">
+        {{ data.confirm ? 'Confirm' : 'OK' }}
+      </button>
+    </div>
+  </form>
+</div>

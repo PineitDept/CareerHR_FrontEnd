@@ -4,7 +4,7 @@
     {{ data.title || 'Alert' }}
   </div>
 
-  <div class="tw-border-t tw-border-gray-300"></div>
+  <div class="tw-border-t tw-border-[#E3E3E3]"></div>
 
   <ng-container *ngIf="data.selectedRows?.length">
 
@@ -73,8 +73,9 @@
       Cancel
     </button>
     <button
-      class="tw-bg-[#930000] hover:tw-bg-[#7a0000] tw-text-white tw-font-medium tw-py-1.5 tw-px-6 tw-rounded"
+      class="tw-text-white tw-font-medium tw-py-1.5 tw-px-6 tw-rounded"
       (click)="onConfirm()"
+      [ngClass]="data.confirm ? 'tw-bg-[#00AA55] hover:tw-bg-[#02934a]' : 'tw-bg-[#930000] hover:tw-bg-[#7a0000]'"
     >
       {{ data.confirm ? 'Confirm' : 'OK' }}
     </button>

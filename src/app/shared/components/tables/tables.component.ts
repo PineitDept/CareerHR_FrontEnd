@@ -24,6 +24,11 @@ import {
   input,
 } from '@angular/core';
 import { Column } from '../../interfaces/tables/column.interface';
+import { MatDialog } from '@angular/material/dialog';
+import { AlertDialogComponent } from '../dialogs/alert-dialog/alert-dialog.component';
+import { FormDialogComponent } from '../dialogs/form-dialog/form-dialog.component';
+import { ApplicationService } from '../../../services/application/application.service';
+import { FormDialogData } from '../../interfaces/dialog/dialog.interface';
 
 export type SortState = {
   [field: string]: 'asc' | 'desc' | null;
@@ -68,6 +73,11 @@ export class TablesComponent
   allSelected: boolean = false;
   expandedMainColumns = new Set<string>();
   dropdownOverlay: DropdownOverlay | null = null;
+  activeStatus: boolean = false;
+  colField: string = '';
+  editingRowId: string | number | null = null;
+  editedValue: string = '';
+  editRow: boolean = false;
 
   @ViewChild('selectAllCheckbox')
   selectAllCheckbox!: ElementRef<HTMLInputElement>;
@@ -75,8 +85,12 @@ export class TablesComponent
   tableWrapperRef!: ElementRef<HTMLDivElement>;
 
   private destroyRef = inject(DestroyRef);
+  protected readonly applicationService = inject(ApplicationService);
 
-  constructor(private cdr: ChangeDetectorRef) {
+  constructor(
+    private cdr: ChangeDetectorRef, 
+    private dialog: MatDialog,
+  ) {
     // ใช้ effect เพื่อ watch การเปลี่ยนแปลงของ rows signal
     effect(() => {
       const currentRows = this.rows();
@@ -360,16 +374,186 @@ export class TablesComponent
 
   // Utility Methods
   getCellValue(row: any, field: string): any {
+    if (field === '__index') {
+      const index = this.rowsValue.findIndex(r => r === row);
+      return index >= 0 ? index + 1 : '';
+    }
+
     return field.split('.').reduce((obj, key) => obj?.[key], row);
   }
 
   getVisibleColumnCount(): number {
-    let count = this.columns.filter(
-      (col) => !col.subColumn || this.isSubColumnVisible(col)
-    ).length;
+    // let count = this.columns.filter(
+    //   (col) => !col.subColumn || this.isSubColumnVisible(col)
+    // ).length;
 
-    if (this.showCheckbox) count += 1;
-    return count;
+    // if (this.showCheckbox) count += 1;
+    // return count;
+    
+    return this.columns.length;
+  }
+
+  getBackgroundClass(fill?: string): string {
+    const classMap: Record<string, string> = {
+      red: 'tw-bg-red-500/10',
+      green: 'tw-bg-green-500/10',
+      orange: 'tw-bg-orange-500/10',
+      purple: 'tw-bg-purple-500/10',
+      lime: 'tw-bg-lime-500/10',
+      skyblue: 'tw-bg-sky-500/10',
+      pink: 'tw-bg-pink-500/10',
+    };
+
+    return classMap[fill?.toLowerCase() ?? ''] || 'tw-bg-[#e5e7eb66]';
+  }
+
+  onToggleChange(event: Event, row: any): void {
+    event.stopPropagation(); 
+
+    Promise.resolve().then(() => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.add('dimmed-overlay');
+    });
+
+    const checkbox = event.target as HTMLInputElement;
+    const targetStatus = checkbox.checked;
+
+    checkbox.checked = !targetStatus;
+
+    const dialogRef = this.dialog.open(AlertDialogComponent, {
+      width: '496px',
+      panelClass: 'custom-dialog-container',
+      autoFocus: false,
+      disableClose: true,
+      data: {
+        title: 'Confirmation',
+        message: 'Are you sure you want to change the status of this item?',
+        confirm: true
+      }
+    });
+
+    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.remove('dimmed-overlay');
+
+      if (confirmed) {
+        console.log(`Applicant ID: ${row.id}, Old Status: ${this.activeStatus}`);
+
+        this.activeStatus = targetStatus;
+        checkbox.checked = this.activeStatus;
+
+        console.log(`Applicant ID: ${row.id}, New Status: ${this.activeStatus}`);
+
+        // this.applicationService.updateStatus(row.id, targetStatus).subscribe({
+        //   next: (response) => {
+        //     row.activeStatus = targetStatus;
+        //     checkbox.checked = row.activeStatus;
+        //     console.log(`Status updated successfully for ID ${row.id}`);
+        //   },
+        //   error: (error) => {
+        //     console.error(`Failed to update status for ID ${row.id}:`, error);
+        //   }
+        // });
+      }
+    });
+  }
+
+  // textlin on click
+  onClickView(event: Event, row: any): void {
+    event.stopPropagation();
+    console.log('View', row);
+  }
+
+  onClickEditDialog(event: Event, row: any): void {
+    event.stopPropagation(); 
+
+    Promise.resolve().then(() => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.add('dimmed-overlay');
+    });
+
+    const dialogRef = this.dialog.open(FormDialogComponent, {
+      width: '496px',
+      panelClass: 'custom-dialog-container',
+      autoFocus: false,
+      disableClose: true,
+      data: {
+        title: 'Edit User Web',
+        message: 'Employee ID',
+        labelInput: ['Employee ID', 'Username', 'Password', 'Confirm Password'],
+        valInput: [row.userID, row.fullName, '1234', '1234'],
+        // valInput: [row.userID, row.fullName, '', ''],
+        confirm: true,
+        isEditMode: true,
+      }
+    });
+
+    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.remove('dimmed-overlay');
+
+      if (confirmed) {
+        console.log(`Applicant ID: ${row.userID}, Old Status: ${this.activeStatus}`);
+      }
+    });
+
+    console.log('Edit open popup', row);
+  }
+
+  onClickEdit(event: Event, row: any): void {
+    event.stopPropagation(); 
+    this.editingRowId = row.id;
+    // this.editedValue = row[this.colField];
+
+    this.editRow = true;
+    console.log('Edit inline', row);
+  }
+
+  onClickSave(event: Event, row: any): void {
+    event.stopPropagation(); 
+
+    Promise.resolve().then(() => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.add('dimmed-overlay');
+    });
+
+    const dialogRef = this.dialog.open(AlertDialogComponent, {
+      width: '496px',
+      panelClass: 'custom-dialog-container',
+      autoFocus: false,
+      disableClose: true,
+      data: {
+        title: 'Confirmation',
+        message: 'Are you sure you want to change the status of this item?',
+        confirm: true
+      }
+    });
+
+    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.remove('dimmed-overlay');
+
+      if (confirmed) {
+        this.editingRowId = null;
+        this.editRow = false;
+        this.cdr.detectChanges();
+
+        console.log('Saved and exited edit mode.');
+      }
+    });
+  }
+
+  onClickCancel(event: Event, row: any): void {
+    event.stopPropagation();
+    this.editingRowId = null;
+    // this.editedValue = '';
+    this.editRow = false;
+    console.log('Cancelled edit');
+  }
+
+  onClickDelete(event: Event, row: any): void {
+    event.stopPropagation();
+    console.log('Delete', row);
   }
 
   // TrackBy Functions for Performance

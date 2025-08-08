@@ -133,7 +133,12 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
 
   onClearSearch(): void {
     this.searchForm = { searchBy: '', searchValue: '' };
-    this.searchSubject.next(this.searchForm);
+    // this.searchSubject.next(this.searchForm);
+    const forceTriggerSearch = {
+      ...(this.searchForm as any),
+      __marker: Date.now()
+    };
+    this.searchSubject.next(forceTriggerSearch);
   }
 
   async onDateRangeSelected(event: {
