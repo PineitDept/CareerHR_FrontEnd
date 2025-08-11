@@ -82,11 +82,11 @@ export class FilterComponent {
     if (type === 'year') {
       this.selectedYear = value;
       this.months = this.getMonthsByYear(value);
-      if (value !== String(this.currentYear)) {
+      // if (value !== String(this.currentYear)) {
         this.selectedMonth = 'All';
-      } else {
-        this.selectedMonth = this.allMonths[this.currentMonth];
-      }
+      // } else {
+      //   this.selectedMonth = this.allMonths[this.currentMonth];
+      // }
       this.isYearOpen = false;
     } else if (type === 'month') {
       this.selectedMonth = value;

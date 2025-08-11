@@ -11,6 +11,7 @@ import { WebPolicyComponent } from './pages/data-setting/application/web-policy/
 import { GeneralBenefitsComponent } from './pages/data-setting/application/general-benefits/general-benefits.component';
 import { EmailTemplateComponent } from './pages/data-setting/application/email/email-template/email-template.component';
 import { EmailAttributeComponent } from './pages/data-setting/application/email/email-attribute/email-attribute.component';
+import { SharedModule } from '../../shared/shared.module';
 
 @NgModule({
   declarations: [
@@ -27,7 +28,8 @@ import { EmailAttributeComponent } from './pages/data-setting/application/email/
   ],
   imports: [
     CommonModule,
-    AdminSettingRoutingModule
+    AdminSettingRoutingModule,
+    SharedModule
   ]
 })
 export class AdminSettingModule { }
