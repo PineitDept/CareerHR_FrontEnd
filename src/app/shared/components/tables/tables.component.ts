@@ -53,19 +53,20 @@ interface DropdownOverlay {
 export class TablesComponent
   implements OnInit, OnChanges, AfterViewInit, AfterViewChecked, OnDestroy
 {
-  rows = input<any[]>([]);  
+  rows = input<any[]>([]);
   resetKey = input<number>(0);
   preClickedRowIds = input<string[]>([]);
   sortStates = input<SortState>({});
 
- @Input() showCheckbox: boolean = true;
+  @Input() showCheckbox: boolean = true;
   @Input() splitRows: boolean = true;
   @Input() columns: Column[] = [];
+  @Input() enableRowClick: boolean = true;
 
   @Output() selectionChanged = new EventEmitter<any[]>();
   @Output() rowClicked = new EventEmitter<any>();
   @Output() listClickedRows = new EventEmitter<Set<string>>();
-  @Output() columnClicked = new EventEmitter<SortState>();
+  @Output() columnClicked = new EventEmitter<{ state: SortState; order: string[] }>();
 
   sortedColumns: string[] = [];
   clickedRows: Set<string> = new Set();
@@ -88,7 +89,7 @@ export class TablesComponent
   protected readonly applicationService = inject(ApplicationService);
 
   constructor(
-    private cdr: ChangeDetectorRef, 
+    private cdr: ChangeDetectorRef,
     private dialog: MatDialog,
   ) {
     // ใช้ effect เพื่อ watch การเปลี่ยนแปลงของ rows signal
@@ -132,6 +133,12 @@ export class TablesComponent
       this.allSelected = false;
       this.updateIndeterminateState();
       this.emitSelection();
+
+      this.sortedColumns = [];
+      const s = this.sortStateValue;
+      Object.keys(s).forEach(k => (s[k] = null));
+      this.columnClicked.emit({ state: s, order: [] });
+
       this.cdr.detectChanges();
     }
   }
@@ -276,11 +283,14 @@ export class TablesComponent
       }
     }
 
-    this.columnClicked.emit(this.sortStateValue);
+    console.log('Sort state updated:', { state: this.sortStateValue, order: [...this.sortedColumns] });
+    this.columnClicked.emit({ state: this.sortStateValue, order: [...this.sortedColumns] });
   }
 
   // Event Handlers
   onRowClick(row: any, event: MouseEvent) {
+    if (!this.enableRowClick) return;
+
     const target = event.target as HTMLElement;
     const tagName = target.tagName.toLowerCase();
 
@@ -389,7 +399,7 @@ export class TablesComponent
 
     // if (this.showCheckbox) count += 1;
     // return count;
-    
+
     return this.columns.length;
   }
 
@@ -408,7 +418,7 @@ export class TablesComponent
   }
 
   onToggleChange(event: Event, row: any): void {
-    event.stopPropagation(); 
+    event.stopPropagation();
 
     Promise.resolve().then(() => {
       const container = document.querySelector('.cdk-overlay-container');
@@ -465,7 +475,7 @@ export class TablesComponent
   }
 
   onClickEditDialog(event: Event, row: any): void {
-    event.stopPropagation(); 
+    event.stopPropagation();
 
     Promise.resolve().then(() => {
       const container = document.querySelector('.cdk-overlay-container');
@@ -501,7 +511,7 @@ export class TablesComponent
   }
 
   onClickEdit(event: Event, row: any): void {
-    event.stopPropagation(); 
+    event.stopPropagation();
     this.editingRowId = row.id;
     // this.editedValue = row[this.colField];
 
@@ -510,7 +520,7 @@ export class TablesComponent
   }
 
   onClickSave(event: Event, row: any): void {
-    event.stopPropagation(); 
+    event.stopPropagation();
 
     Promise.resolve().then(() => {
       const container = document.querySelector('.cdk-overlay-container');
