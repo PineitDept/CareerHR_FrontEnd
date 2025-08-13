@@ -160,11 +160,12 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
     // Override in child components for specific logic
   }
 
-  async onColumnClick(sortState: SortState): Promise<void> {
-    const filteredSortState = Object.keys(sortState)
-      .filter((key) => sortState[key] !== null)
+  async onColumnClick(payload: { state: SortState; order: string[] }): Promise<void> {
+    const { state, order } = payload;
+    const filteredSortState = Object.keys(state)
+      .filter((key) => state[key] !== null)
       .reduce((acc, key) => {
-        acc[key] = sortState[key];
+        acc[key] = state[key];
         return acc;
       }, {} as SortState);
 
@@ -255,11 +256,11 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
       .subscribe();
   }
 
- 
+
   protected setupScrollStream(): void {
     this.scrollSubject.pipe(
       debounceTime(100),
-      exhaustMap((event) => this.handleInfiniteScroll(event)), 
+      exhaustMap((event) => this.handleInfiniteScroll(event)),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe();
   }
@@ -294,10 +295,10 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
       const updatedFilter = { ...currentFilter, page: currentFilter.page + 1 };
       return this.fetchData(updatedFilter, true);
     }
-    
+
     return EMPTY;
   }
-  
+
   // Protected Data Fetching
   protected fetchData(
     filter: ICandidateFilterRequest,
