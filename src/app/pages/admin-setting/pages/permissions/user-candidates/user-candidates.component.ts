@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, HostListener } from '@angular/core';
 import { createStatusIcon, defaultColumns, defaultFilterButtons, defaultSearchByOptions, defaultSearchForm } from '../../../../../constants/admin-setting/user-candidates.constants';
 import { UserCandidatesUtils } from '../../../../../utils/admin-setting/user-candidates-utils';
 import { UserCandidatesService } from '../../../../../services/admin-setting/user-candidates/user-candidates.service';
@@ -19,6 +19,7 @@ export class UserCandidatesComponent {
   filterButtons = defaultFilterButtons();
   startDate = '';
   endDate = '';
+  dateRangeInitialized = false;
 
   rows: any[] = [];
   columns = defaultColumns();
@@ -30,13 +31,28 @@ export class UserCandidatesComponent {
   sortFields: string[] = [];
   tableResetKey = 0;
 
+  suppressNextSortFetch = false;
+
+  private isPageUnloading = false;
+
   constructor(
     private userCandidatesService: UserCandidatesService,
     private loadingService: LoadingService,
   ) {}
 
+  ngOnInit() {
+    const saved = UserCandidatesUtils.getSavedSearchForm();
+    if (saved) {
+      this.searchForm = saved;
+      this.queryParams = { [saved.searchBy]: saved.searchValue };
+    } else {
+      this.searchForm = defaultSearchForm();
+    }
+  }
+
   onSearch(form: { searchBy: string; searchValue: string }) {
     console.log('called from onSearch', { form });
+    console.log('searchForm onSearch', this.searchForm);
     UserCandidatesUtils.onSearch(
       form,
       (append, queryParams) =>
@@ -49,6 +65,7 @@ export class UserCandidatesComponent {
 
   onClearSearch() {
     console.log('called from onClearSearch');
+    console.log('searchForm onClearSearch', this.searchForm);
     UserCandidatesUtils.onClearSearch(
       (append, queryParams) =>
         this.fetchUserCandidates(this.startDate, this.endDate, queryParams, append),
@@ -61,26 +78,45 @@ export class UserCandidatesComponent {
 
   onDateRangeSelected(range: { startDate: string; endDate: string }) {
     console.log('called from onDateRangeSelected', { range })
+    console.log('searchForm onDateRangeSelected', this.searchForm);
 
     this.startDate = range.startDate;
     this.endDate = range.endDate;
 
+    const saved = UserCandidatesUtils.getSavedSearchForm();
+    const isFirstFire = !this.dateRangeInitialized;
+    this.dateRangeInitialized = true;
+
+    const shouldClearForm = !(isFirstFire && !!saved);
+
+    const clearFn = () => {
+      if (shouldClearForm) {
+        this.searchForm = { searchBy: '', searchValue: '' };
+        this.queryParams = {};
+        try { sessionStorage.removeItem('searchForm'); } catch {}
+      }
+    };
+
     UserCandidatesUtils.onDateRangeSelected(
-      (start, end) => {
-        this.startDate = start;
-        this.endDate = end;
-      },
+      (_start, _end) => {},
       () => this.fetchUserCandidates(this.startDate, this.endDate, this.queryParams),
-      () => (this.searchForm = { searchBy: '', searchValue: '' }),
+      clearFn,
       () => this.scrollTableToTop(),
       this.clearSort
     );
   }
 
   onColumnClicked(payload: { state: { [f: string]: 'asc'|'desc'|null }, order: string[] }) {
+    if (this.suppressNextSortFetch) {
+      const hasActiveSort = payload.order.some(f => payload.state[f] === 'asc' || payload.state[f] === 'desc');
+      this.suppressNextSortFetch = false; // consume the flag every time
+      if (!hasActiveSort) return; // fake event from reset → do not fetch
+       // if there is a real sort, continue (user clicked)
+    }
+
     UserCandidatesUtils.onColumnClicked(
       payload.state,
-      payload.order,                                           // <<— ส่งลำดับ
+      payload.order,                                           // <<— send the order
       (sf) => this.sortFields = sf,
       () => this.fetchUserCandidates(this.startDate, this.endDate, this.queryParams, false),
       () => this.scrollTableToTop()
@@ -90,6 +126,7 @@ export class UserCandidatesComponent {
   private clearSort = () => {
     this.sortFields = [];
     this.tableResetKey++;
+    this.suppressNextSortFetch = true;
   };
 
   fetchUserCandidates(startDate: string, endDate: string, queryParams: any, append = false) {
@@ -157,5 +194,18 @@ export class UserCandidatesComponent {
     console.log('Button clicked: Export Excel');
     const filename = `User-Candidates_${dayjs(this.startDate).format('YYYY-MM-DD')}_to_${dayjs(this.endDate).format('YYYY-MM-DD')}.xlsx`;
     UserCandidatesUtils.onExportClicked(this.columns, this.rows, filename);
+  }
+
+  @HostListener('window:beforeunload')
+  onBeforeUnload() {
+    // Case for reload/closing tab (SPA navigation will not trigger this)
+    this.isPageUnloading = true;
+  }
+
+  ngOnDestroy(): void {
+    // If not a reload (i.e., navigating within the app), clear the search form
+    if (!this.isPageUnloading) {
+      sessionStorage.removeItem(UserCandidatesUtils.STORAGE_KEY);
+    }
   }
 }
