@@ -67,6 +67,9 @@ export class TablesComponent
   @Output() rowClicked = new EventEmitter<any>();
   @Output() listClickedRows = new EventEmitter<Set<string>>();
   @Output() columnClicked = new EventEmitter<{ state: SortState; order: string[] }>();
+  // @Output() toggleChange = new EventEmitter<{ row: any, checked: boolean, confirm: boolean  }>();
+  @Output() toggleChange = new EventEmitter<{ row: any; checked: boolean; checkbox: HTMLInputElement }>();
+  @Output() editClicked = new EventEmitter<any>();
 
   sortedColumns: string[] = [];
   clickedRows: Set<string> = new Set();
@@ -86,8 +89,7 @@ export class TablesComponent
   tableWrapperRef!: ElementRef<HTMLDivElement>;
 
   private destroyRef = inject(DestroyRef);
-  protected readonly applicationService = inject(ApplicationService);
-
+  
   constructor(
     private cdr: ChangeDetectorRef,
     private dialog: MatDialog,
@@ -447,23 +449,15 @@ export class TablesComponent
       container?.classList.remove('dimmed-overlay');
 
       if (confirmed) {
-        console.log(`Applicant ID: ${row.id}, Old Status: ${this.activeStatus}`);
+        console.log(`Applicant ID: ${row.idEmployee}, Old Status: ${this.activeStatus}`);
 
-        this.activeStatus = targetStatus;
-        checkbox.checked = this.activeStatus;
+        // this.activeStatus = targetStatus;
+        // checkbox.checked = this.activeStatus;
 
-        console.log(`Applicant ID: ${row.id}, New Status: ${this.activeStatus}`);
+        this.toggleChange.emit({ row, checked: targetStatus, checkbox });
+        // this.toggleChange.emit({ row, checked: this.activeStatus, confirm: confirmed });
 
-        // this.applicationService.updateStatus(row.id, targetStatus).subscribe({
-        //   next: (response) => {
-        //     row.activeStatus = targetStatus;
-        //     checkbox.checked = row.activeStatus;
-        //     console.log(`Status updated successfully for ID ${row.id}`);
-        //   },
-        //   error: (error) => {
-        //     console.error(`Failed to update status for ID ${row.id}:`, error);
-        //   }
-        // });
+        console.log(`Applicant ID: ${row.idEmployee}, New Status: ${this.activeStatus}`);
       }
     });
   }
@@ -475,39 +469,40 @@ export class TablesComponent
   }
 
   onClickEditDialog(event: Event, row: any): void {
-    event.stopPropagation();
+    event.stopPropagation(); 
+    this.editClicked.emit(row);
 
-    Promise.resolve().then(() => {
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.add('dimmed-overlay');
-    });
+    // Promise.resolve().then(() => {
+    //   const container = document.querySelector('.cdk-overlay-container');
+    //   container?.classList.add('dimmed-overlay');
+    // });
 
-    const dialogRef = this.dialog.open(FormDialogComponent, {
-      width: '496px',
-      panelClass: 'custom-dialog-container',
-      autoFocus: false,
-      disableClose: true,
-      data: {
-        title: 'Edit User Web',
-        message: 'Employee ID',
-        labelInput: ['Employee ID', 'Username', 'Password', 'Confirm Password'],
-        valInput: [row.userID, row.fullName, '1234', '1234'],
-        // valInput: [row.userID, row.fullName, '', ''],
-        confirm: true,
-        isEditMode: true,
-      }
-    });
+    // const dialogRef = this.dialog.open(FormDialogComponent, {
+    //   width: '496px',
+    //   panelClass: 'custom-dialog-container',
+    //   autoFocus: false,
+    //   disableClose: true,
+    //   data: {
+    //     title: 'Edit User Web',
+    //     message: 'Employee ID',
+    //     labelInput: ['Employee ID', 'Username', 'Password', 'Confirm Password'],
+    //     valInput: [row.idEmployee, row.fullName, '1234', '1234'],
+    //     // valInput: [row.userID, row.fullName, '', ''],
+    //     confirm: true,
+    //     isEditMode: true,
+    //   }
+    // });
 
-    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.remove('dimmed-overlay');
+    // dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+    //   const container = document.querySelector('.cdk-overlay-container');
+    //   container?.classList.remove('dimmed-overlay');
 
-      if (confirmed) {
-        console.log(`Applicant ID: ${row.userID}, Old Status: ${this.activeStatus}`);
-      }
-    });
+    //   if (confirmed) {
+    //     console.log(`Applicant ID: ${row.userID}, Old Status: ${this.activeStatus}`);
+    //   }
+    // });
 
-    console.log('Edit open popup', row);
+    // console.log('Edit open popup', row);
   }
 
   onClickEdit(event: Event, row: any): void {

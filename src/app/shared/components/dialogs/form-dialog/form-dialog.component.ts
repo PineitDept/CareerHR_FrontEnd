@@ -22,9 +22,17 @@ export class FormDialogComponent implements OnInit {
   ngOnInit(): void {
     const controls = (this.data.valInput || []).map((val, i) => {
       const label = this.data.labelInput?.[i]?.toLowerCase() || '';
-      const isPasswordField = label.includes('password') || label.includes('confirm');
-      const control = this.fb.control(val || '', Validators.required);
-      if (this.data.isEditMode && isPasswordField && !this.enablePasswordFields) control.disable();
+      const isPasswordField = label.includes('password') && !label.includes('confirm');
+
+      const validators = [Validators.required];
+      if (isPasswordField) {
+        validators.push(Validators.minLength(6));
+      }
+
+      const control = this.fb.control(val || '', validators);
+      if (this.data.isEditMode && (label.includes('password') || label.includes('confirm')) && !this.enablePasswordFields) {
+        control.disable();
+      }
       return control;
     });
 

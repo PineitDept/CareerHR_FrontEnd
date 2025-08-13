@@ -1,7 +1,7 @@
-<div class="tw-flex tw-flex-wrap tw-justify-between tw-items-center tw-gap-4 tw-px-6 tw-py-6 tw-bg-white">
+<div class="tw-flex tw-flex-wrap tw-items-center tw-gap-4 tw-px-6 tw-py-6 tw-bg-white" [ngClass]="!filterDate ? ' tw-justify-end' : 'tw-justify-between'">
 
   <!-- Left Section -->
-  <div class="tw-flex tw-gap-4">
+  <div class="tw-flex tw-gap-4" [ngClass]="filterDate ? 'tw-block' : 'tw-hidden'">
 
     <!-- Back Button -->
     <button

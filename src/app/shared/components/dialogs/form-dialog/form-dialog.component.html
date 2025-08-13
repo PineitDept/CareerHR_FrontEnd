@@ -8,7 +8,9 @@
   <form [formGroup]="inputForm" (ngSubmit)="onConfirm()">
     <div formArrayName="inputs" class="tw-text-base tw-text-gray-700 tw-px-6 tw-py-6 tw-pt-[14px]" (click)="$event.stopPropagation()">
       <ng-container *ngFor="let label of data.labelInput; let i = index">
-        <p class="tw-font-bold tw-mt-[10px] tw-block">
+        <p class="tw-font-bold tw-mt-[10px] tw-block"
+            [class.tw-hidden]="inputControls.at(i).disabled"
+        >
           {{ label }} <span class="text-red" *ngIf="isRequired(i)">*</span>
         </p>
 
@@ -16,7 +18,7 @@
           <input
             [formControlName]="i"
             [type]="getInputType(i, label)"
-            class="tw-mt-[10px] tw-rounded-lg tw-border-[1px] tw-border-[#ADB5BD] tw-mx-auto tw-w-full tw-h-9 focus:tw-border-[2px] tw-p-2 disabled:tw-bg-[#ebebeb] disabled:tw-opacity-40 disabled:tw-pointer-events-none"
+            class="tw-mt-[10px] tw-rounded-lg tw-border-[1px] tw-border-[#ADB5BD] tw-mx-auto tw-w-full tw-h-9 focus:tw-border-[2px] tw-p-2 disabled:tw-hidden disabled:tw-opacity-40 disabled:tw-pointer-events-none"
             [disabled]="isDisabled(i, label)"
             [ngClass]="getInputClass(i)"
             required
@@ -26,7 +28,7 @@
             class="tw-absolute tw-right-3 tw-top-[13px]"
             *ngIf="label.toLowerCase().includes('password')"
             (click)="togglePasswordVisibility(i)"
-            [class.tw-opacity-40]="inputControls.at(i).disabled"
+            [class.tw-hidden]="inputControls.at(i).disabled"
           >
             <app-icon *ngIf="!isPasswordVisible(i)" name="eye-off" [size]="18" fill="#333"></app-icon>
             <app-icon *ngIf="isPasswordVisible(i)" name="eye" [size]="21" fill="#333"></app-icon>
@@ -39,6 +41,9 @@
           </ng-container>
           <ng-container *ngIf="inputControls.at(i)?.errors?.['notMatch']">
             Passwords do not match
+          </ng-container>
+          <ng-container *ngIf="inputControls.at(i)?.errors?.['minlength']">
+            {{ label }} must be at least 6 characters
           </ng-container>
         </div>
 

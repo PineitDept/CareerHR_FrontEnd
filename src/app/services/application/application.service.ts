@@ -14,7 +14,7 @@ export class ApplicationService {
   }
 
   getApplications(params: ICandidateFilterRequest): Observable<CandidatePagedResult<ICandidateWithPositionsDto>> {
-    return this.apiService.get<PagedResult<ICandidateWithPositionsDto>>('api/Applicants/SummaryScores', {
+    return this.apiService.get<PagedResult<ICandidateWithPositionsDto>>('Applicants/Summary-Scores', {
       params: params,
       loading: true,
       withAuth: true
