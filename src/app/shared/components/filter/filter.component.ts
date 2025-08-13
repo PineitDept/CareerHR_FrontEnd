@@ -21,6 +21,7 @@ export class FilterComponent {
   @Input() disabledKeys: string[] = [];
   @Input() selectedRows: any[] = [];
   @Input() filterDynamicButton: boolean = false;
+  @Input() filterDate: boolean = true;
   @Input() filterOurCompany: boolean = false;
   @Input() filterDateRange: { month: string; year: string} = { month: '', year: '' };
 
