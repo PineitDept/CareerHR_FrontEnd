@@ -2,7 +2,7 @@ import * as XLSX from 'xlsx-js-style';
 import dayjs from 'dayjs';
 
 export class UserCandidatesUtils {
-  private static readonly STORAGE_KEY = 'searchForm';
+  static readonly STORAGE_KEY = 'searchForm';
 
   /** ----------------- Session Storage Helpers ----------------- **/
   static getSavedSearchForm():

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, HostListener } from '@angular/core';
 import { createStatusIcon, defaultColumns, defaultFilterButtons, defaultSearchByOptions, defaultSearchForm } from '../../../../../constants/admin-setting/user-candidates.constants';
 import { UserCandidatesUtils } from '../../../../../utils/admin-setting/user-candidates-utils';
 import { UserCandidatesService } from '../../../../../services/admin-setting/user-candidates/user-candidates.service';
@@ -32,6 +32,8 @@ export class UserCandidatesComponent {
   tableResetKey = 0;
 
   suppressNextSortFetch = false;
+
+  private isPageUnloading = false;
 
   constructor(
     private userCandidatesService: UserCandidatesService,
@@ -192,5 +194,18 @@ export class UserCandidatesComponent {
     console.log('Button clicked: Export Excel');
     const filename = `User-Candidates_${dayjs(this.startDate).format('YYYY-MM-DD')}_to_${dayjs(this.endDate).format('YYYY-MM-DD')}.xlsx`;
     UserCandidatesUtils.onExportClicked(this.columns, this.rows, filename);
+  }
+
+  @HostListener('window:beforeunload')
+  onBeforeUnload() {
+    // Case for reload/closing tab (SPA navigation will not trigger this)
+    this.isPageUnloading = true;
+  }
+
+  ngOnDestroy(): void {
+    // If not a reload (i.e., navigating within the app), clear the search form
+    if (!this.isPageUnloading) {
+      sessionStorage.removeItem(UserCandidatesUtils.STORAGE_KEY);
+    }
   }
 }
