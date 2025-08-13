@@ -2,6 +2,29 @@ import * as XLSX from 'xlsx-js-style';
 import dayjs from 'dayjs';
 
 export class UserCandidatesUtils {
+  private static readonly STORAGE_KEY = 'searchForm';
+
+  /** ----------------- Session Storage Helpers ----------------- **/
+  static getSavedSearchForm():
+    | { searchBy: string; searchValue: string }
+    | null {
+    try {
+      const raw = sessionStorage.getItem(UserCandidatesUtils.STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (
+        parsed &&
+        typeof parsed.searchBy === 'string' &&
+        Object.prototype.hasOwnProperty.call(parsed, 'searchValue')
+      ) {
+        return parsed;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
   /** ----------------- Search Functions ----------------- **/
   static onSearch(
     form: { searchBy: string; searchValue: string },
@@ -10,6 +33,13 @@ export class UserCandidatesUtils {
     clearSortFn: () => void,
     setQueryParams: (qp: any) => void
   ) {
+    try {
+      sessionStorage.setItem(
+        UserCandidatesUtils.STORAGE_KEY,
+        JSON.stringify(form)
+      );
+    } catch {}
+
     const key = form.searchBy;
     const queryParams = { [key]: form.searchValue };
     setQueryParams(queryParams);
@@ -25,6 +55,10 @@ export class UserCandidatesUtils {
     setQueryParams: (qp: any) => void,
     clearSearchForm: () => void
   ) {
+    try {
+      sessionStorage.removeItem(UserCandidatesUtils.STORAGE_KEY);
+    } catch {}
+
     clearSearchForm();
     const queryParams = {};
     setQueryParams(queryParams);
@@ -51,7 +85,7 @@ export class UserCandidatesUtils {
   /** ----------------- Sorting ----------------- **/
   static onColumnClicked(
     sortState: { [field: string]: 'asc' | 'desc' | null },
-    sortOrder: string[],                                // <<— รับลำดับคอลัมน์
+    sortOrder: string[],                                // <<— receives the column order
     setSortFields: (sf: string[]) => void,
     fetchFn: () => void,
     scrollTop: () => void
@@ -64,7 +98,7 @@ export class UserCandidatesUtils {
         pairs.push(`${mapped}:${dir}`);
       }
     }
-    setSortFields(pairs); // เช่น ["userID:desc","email:asc","phoneNumber:desc"]
+    setSortFields(pairs); // e.g., ["userID:desc", "email:asc", "phoneNumber:desc"]
     fetchFn();
     scrollTop();
   }
