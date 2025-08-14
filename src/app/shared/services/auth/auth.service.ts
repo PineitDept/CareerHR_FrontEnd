@@ -69,7 +69,7 @@ export class AuthService {
     }, {
       withAuth: false,
       loading: false,
-      withCredentials: true // No cookies sent
+      withCredentials: true // Send cookies
     }).pipe(
       tap(res => {
         this.saveTokens(res.accessToken); // Update the token
