@@ -12,7 +12,7 @@ import {
   Directive,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router } from '@angular/router';
+import { NavigationStart, Router } from '@angular/router';
 import {
   Observable,
   Subject,
@@ -123,6 +123,8 @@ export abstract class BaseUserWebComponent implements OnInit, OnDestroy {
   // Public Event Handlers
   onSearch(form: SearchForm): void {
     // this.searchSubject.next(form);
+    this.searchForm = form;
+    this.persistSearchForm(this.searchForm);
     this.searchSubject.next({
       ...form,
       __marker: Date.now()
@@ -132,6 +134,7 @@ export abstract class BaseUserWebComponent implements OnInit, OnDestroy {
   onClearSearch(): void {
     this.searchForm = { searchBy: '', searchValue: '' };
     // this.searchSubject.next(this.searchForm);
+    this.persistSearchForm(this.searchForm);
     const forceTriggerSearch = {
       ...(this.searchForm as any),
       __marker: Date.now()
@@ -170,6 +173,7 @@ export abstract class BaseUserWebComponent implements OnInit, OnDestroy {
   protected initializeComponent(): void {
     this.loadPersistedState();
     this.loadInitialData();
+    this.setupRouteChangeListener();
   }
 
   protected setupReactiveStreams(): void {
@@ -291,6 +295,33 @@ export abstract class BaseUserWebComponent implements OnInit, OnDestroy {
     );
   }
 
+  protected persistSearchForm(form: SearchForm): void {
+    const storageKeys = this.getStorageKeys();
+    this.saveToStorage(storageKeys.FILTER_SETTINGS + '_SEARCH_FORM', form);
+  }
+
+  protected loadPersistedSearchForm(): SearchForm | null {
+    const storageKeys = this.getStorageKeys();
+    return this.loadFromStorage<SearchForm>(storageKeys.FILTER_SETTINGS + '_SEARCH_FORM');
+  }
+
+  protected setupRouteChangeListener(): void {
+    this.router.events
+      .pipe(
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(event => {
+        if (event instanceof NavigationStart) {
+          this.clearPersistedSearchForm();
+        }
+      });
+  }
+
+  protected clearPersistedSearchForm(): void {
+    const storageKeys = this.getStorageKeys();
+    localStorage.removeItem(storageKeys.FILTER_SETTINGS + '_SEARCH_FORM');
+  }
+
   protected loadInitialData(): void {
     this.fetchData(this.filterRequest(), false).subscribe();
   }
@@ -405,6 +436,11 @@ export abstract class BaseUserWebComponent implements OnInit, OnDestroy {
     //     month: persistedFilter.month || '',
     //     year: persistedFilter.year || '',
     //   };
+    }
+
+    const persistedSearchForm = this.loadPersistedSearchForm();
+    if (persistedSearchForm) {
+      this.searchForm = persistedSearchForm;
     }
 
     const clickedRows = this.loadFromStorage<string[]>(
