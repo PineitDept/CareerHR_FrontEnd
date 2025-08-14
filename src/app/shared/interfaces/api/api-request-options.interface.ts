@@ -17,6 +17,7 @@ export interface ApiRequestOptionsBase {
   loading?: boolean;
   feature?: string;
   abortSignal?: AbortSignal;
+  // withCredentials?: boolean;
 }
 
 // For observe: 'body'

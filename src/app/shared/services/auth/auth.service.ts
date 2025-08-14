@@ -2,6 +2,7 @@ import { inject, Injectable, Injector } from '@angular/core';
 import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
 import { catchError, filter, switchMap, take, tap, finalize, map } from 'rxjs/operators';
 import { ApiService } from '../api/api.service';
+import { ILoginResponse } from '../../../interfaces/login/login.interface';
 
 @Injectable({
   providedIn: 'root'
@@ -19,28 +20,39 @@ export class AuthService {
     return sessionStorage.getItem('access_token');
   }
 
-  getRefreshToken(): string | null {
-    return sessionStorage.getItem('refresh_token');
+  // getRefreshToken(): string | null {
+  //   return sessionStorage.getItem('refresh_token');
+  // }
+
+  saveTokens(
+    access: string,
+    // refresh: string
+  ) {
+    sessionStorage.setItem('access_token', access);
+    // sessionStorage.setItem('refresh_token', refresh);
   }
 
-  saveTokens(access: string, refresh: string) {
-    sessionStorage.setItem('access_token', access);
-    sessionStorage.setItem('refresh_token', refresh);
+  saveUserProfile(user: any) {
+    sessionStorage.setItem('user', JSON.stringify(user));
   }
 
   clearTokens() {
     sessionStorage.removeItem('access_token');
-    sessionStorage.removeItem('refresh_token');
+    // sessionStorage.removeItem('refresh_token');
+  }
+
+  clearUserProfile() {
+    sessionStorage.removeItem('user');
   }
 
   refreshToken(): Observable<string> {
     const apiService = this.injector.get(ApiService);
-    const refreshToken = this.getRefreshToken();
+    // const refreshToken = this.getRefreshToken();
 
-    // (1) No refresh token → throw error immediately
-    if (!refreshToken) {
-      return throwError(() => new Error('No refresh token'));
-    }
+    // // (1) No refresh token → throw error immediately
+    // if (!refreshToken) {
+    //   return throwError(() => new Error('No refresh token'));
+    // }
 
     // (2) If refresh is already in progress → wait for token from Subject
     if (this.isRefreshing) {
@@ -52,14 +64,14 @@ export class AuthService {
     this.refreshTokenSubject.next(null);
 
     // Send request to the users/refresh endpoint
-    return apiService.post<{ accessToken: string }>('users/refresh', {
-      refreshToken: this.getRefreshToken()
+    return apiService.post<ILoginResponse>('Auth/refresh-token', {
+      // refreshToken: this.getRefreshToken()
     }, {
       withAuth: false,
-      loading: false
+      loading: false,
     }).pipe(
       tap(res => {
-        this.saveTokens(res.accessToken, this.getRefreshToken()!); // Update the token
+        this.saveTokens(res.accessToken); // Update the token
         this.refreshTokenSubject.next(res.accessToken); // Emit the token to waiting subscribers
       }),
       map(res => res.accessToken), // Convert the response to only a string
