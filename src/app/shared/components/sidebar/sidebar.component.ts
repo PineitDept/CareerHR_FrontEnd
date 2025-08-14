@@ -301,10 +301,7 @@ export class SidebarComponent {
 
       if (!confirmed) return;
 
-      const refreshToken = this.authService.getRefreshToken();
-      if (!refreshToken) return;
-
-      this.loginService.logout({ refreshToken }).subscribe({
+      this.loginService.logout().subscribe({
         next: () => {
           // already navigated to /login
         },
