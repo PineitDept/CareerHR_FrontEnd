@@ -98,7 +98,8 @@ export class ApiService {
       observe,
       responseType: opts.responseType ?? 'json',
       context,
-      signal
+      signal,
+      // withCredentials: opts.withCredentials ?? false
     } as any;
 
     if (opts.loading) this.loader.show();

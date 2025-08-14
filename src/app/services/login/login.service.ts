@@ -17,23 +17,26 @@ export class LoginService {
   ) { }
 
   login(credentials: ILoginRequest): Observable<ILoginResponse> {
-    return this.apiService.post<ILoginResponse>('users/login', credentials, {
+    return this.apiService.post<ILoginResponse>('Auth/login', credentials, {
       withAuth: false,  // No token attached
-      loading: true     // Trigger loading indicator
+      loading: true,    // Trigger loading indicator
     }).pipe(
       tap(res => {
-        this.authService.saveTokens(res.accessToken, res.refreshToken);
+        // this.authService.saveTokens(res.accessToken, res.refreshToken);
+        this.authService.saveTokens(res.accessToken);
+        this.authService.saveUserProfile(res.user);
       })
     );
   }
 
-  logout(payload: ILogoutRequest): Observable<any> {
-    return this.apiService.post('users/logout', payload, {
+  logout(): Observable<any> {
+    return this.apiService.post('Auth/logout', {}, {
       withAuth: true,
-      loading: true
+      loading: true,
     }).pipe(
       tap(() => {
         this.authService.clearTokens();
+        this.authService.clearUserProfile();
         this.router.navigate(['/login']);
       })
     );
