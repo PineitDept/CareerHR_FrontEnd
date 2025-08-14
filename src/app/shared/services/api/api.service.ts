@@ -99,7 +99,7 @@ export class ApiService {
       responseType: opts.responseType ?? 'json',
       context,
       signal,
-      // withCredentials: opts.withCredentials ?? false
+      withCredentials: opts.withCredentials ?? false
     } as any;
 
     if (opts.loading) this.loader.show();

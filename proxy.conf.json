@@ -1,0 +1,8 @@
+{
+  "/api": {
+    "target": "http://pineapi.pinepacific.com",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  }
+}
