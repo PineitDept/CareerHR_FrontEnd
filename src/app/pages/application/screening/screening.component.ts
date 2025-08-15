@@ -157,50 +157,6 @@ export class ScreeningComponent extends BaseApplicationComponent {
     },
   ] as const;
 
-  defaultFilterButtons = () => ([
-    { label: 'Add', key: 'add', color: '#00AAFF' },
-  ]);
-
-  filterButtons = this.defaultFilterButtons();
-
-  onFilterButtonClick(key: string) {
-    switch (key) {
-      case 'add':
-        console.log('Add button clicked');
-        Promise.resolve().then(() => {
-          const container = document.querySelector('.cdk-overlay-container');
-          container?.classList.add('dimmed-overlay');
-        });
-    
-        const dialogRef = this.dialog.open(FormDialogComponent, {
-          width: '496px',
-          panelClass: 'custom-dialog-container',
-          autoFocus: false,
-          disableClose: true,
-          data: {
-            title: 'Add User Web',
-            message: 'Employee ID',
-            labelInput: ['Employee ID', 'Username', 'Password', 'Confirm Password'],
-            valInput: ["", "", "", ""],
-            confirm: true,
-            isEditMode: false,
-          }
-        });
-    
-        dialogRef.afterClosed().subscribe((confirmed: boolean) => {
-          const container = document.querySelector('.cdk-overlay-container');
-          container?.classList.remove('dimmed-overlay');
-    
-          if (confirmed) {
-            // console.log(`Applicant ID: ${row.userID}, Old Status: ${this.activeStatus}`);
-            console.log('Add User')
-          }
-        });
-
-        break;
-    }
-  }
-
   // Abstract method implementations
   protected getStorageKeys() {
     return SCREENING_CONFIG.STORAGE_KEYS;
