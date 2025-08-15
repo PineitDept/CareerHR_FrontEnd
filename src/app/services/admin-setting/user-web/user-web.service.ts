@@ -1,30 +1,3 @@
-// import { Injectable } from '@angular/core';
-// import { ApiService } from '../../../shared/services/api/api.service';
-// import { UserPagedResult, IUserFilterRequest, IUserWithPositionsDto } from '../../../interfaces/admin-setting/user-web.interface';
-// import { Observable } from 'rxjs/internal/Observable';
-// import { PagedResult } from '../../../shared/interfaces/api/paged-result.interface';
-
-// @Injectable({
-//   providedIn: 'root'
-// })
-// export class UserWebService {
-
-//   constructor(private apiService: ApiService) {
-//   }
-  
-//   getUserWeb(params: IUserFilterRequest): Observable<UserPagedResult<IUserWithPositionsDto>> {
-//     console.log(params)
-//     return this.apiService.get<PagedResult<IUserWithPositionsDto>>('api/UserWeb', {
-//       // params: params,
-//       loading: true,
-//       withAuth: true
-//     });
-//   }
-// }
-
-
-
-// services/admin-setting/user-web/user-web.service.ts
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from '../../../shared/services/api/api.service';
