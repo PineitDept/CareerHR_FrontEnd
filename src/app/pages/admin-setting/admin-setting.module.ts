@@ -12,6 +12,9 @@ import { GeneralBenefitsComponent } from './pages/data-setting/application/gener
 import { EmailTemplateComponent } from './pages/data-setting/application/email/email-template/email-template.component';
 import { EmailAttributeComponent } from './pages/data-setting/application/email/email-attribute/email-attribute.component';
 import { SharedModule } from '../../shared/shared.module';
+import { ApplicationQuestionComponent } from './pages/data-setting/application/application-question/application-question.component';
+import { ApplicationQuestionDetailsComponent } from './pages/data-setting/application/application-question/pages/application-question-details/application-question-details.component';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 @NgModule({
   declarations: [
@@ -24,12 +27,16 @@ import { SharedModule } from '../../shared/shared.module';
     WebPolicyComponent,
     GeneralBenefitsComponent,
     EmailTemplateComponent,
-    EmailAttributeComponent
+    EmailAttributeComponent,
+    ApplicationQuestionComponent,
+    ApplicationQuestionDetailsComponent
   ],
   imports: [
     CommonModule,
     AdminSettingRoutingModule,
-    SharedModule
+    SharedModule,
+    FormsModule,
+    ReactiveFormsModule,
   ]
 })
 export class AdminSettingModule { }

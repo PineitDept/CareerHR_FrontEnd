@@ -10,6 +10,8 @@ import { WebPolicyComponent } from './pages/data-setting/application/web-policy/
 import { GeneralBenefitsComponent } from './pages/data-setting/application/general-benefits/general-benefits.component';
 import { EmailTemplateComponent } from './pages/data-setting/application/email/email-template/email-template.component';
 import { EmailAttributeComponent } from './pages/data-setting/application/email/email-attribute/email-attribute.component';
+import { ApplicationQuestionComponent } from './pages/data-setting/application/application-question/application-question.component';
+import { ApplicationQuestionDetailsComponent } from './pages/data-setting/application/application-question/pages/application-question-details/application-question-details.component';
 
 const routes: Routes = [
   {
@@ -43,6 +45,14 @@ const routes: Routes = [
       {
         path: 'data-setting/application/general-benefits',
         component: GeneralBenefitsComponent
+      },
+      {
+        path: 'data-setting/application/application-question',
+        component: ApplicationQuestionComponent
+      },
+      {
+        path: 'data-setting/application/application-question/details',
+        component: ApplicationQuestionDetailsComponent
       },
       {
         path: 'data-setting/application/email/email-template',

@@ -14,7 +14,7 @@
     </button>
 
     <!-- Year Dropdown -->
-    <div class="tw-relative dropdown tw-min-w-[135px]" #yearDropdown *ngIf="!filterDynamicButton">
+    <div class="tw-relative dropdown tw-min-w-[135px]" #yearDropdown *ngIf="!filterDynamicButton && !disabledFilterDateRange">
       <button (click)="toggleDropdown('year')"
         class="tw-w-full tw-bg-black tw-text-white tw-rounded-lg tw-px-4 tw-py-2 tw-text-base tw-flex tw-items-center tw-justify-between tw-gap-2">
         {{ selectedYear }}
@@ -30,7 +30,7 @@
     </div>
 
     <!-- Month Dropdown -->
-    <div class="tw-relative dropdow tw-min-w-[135px]" #monthDropdown *ngIf="!filterDynamicButton">
+    <div class="tw-relative dropdow tw-min-w-[135px]" #monthDropdown *ngIf="!filterDynamicButton && !disabledFilterDateRange">
       <button (click)="toggleDropdown('month')"
         class="tw-w-full tw-bg-black tw-text-white tw-rounded-lg tw-px-4 tw-py-2 tw-text-base tw-flex tw-items-center tw-justify-between tw-gap-2">
         {{ selectedMonth }}
@@ -49,7 +49,7 @@
     <button
       class="tw-bg-[#660708] tw-text-white tw-rounded-lg tw-px-4 tw-py-2 tw-text-base tw-min-w-[112px]"
       (click)="onAllListClick()"
-      *ngIf="!filterDynamicButton"
+      *ngIf="!filterDynamicButton && !disabledFilterDateRange"
     >
       All List
     </button>

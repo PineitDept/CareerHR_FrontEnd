@@ -70,6 +70,7 @@ export class TablesComponent
   // @Output() toggleChange = new EventEmitter<{ row: any, checked: boolean, confirm: boolean  }>();
   @Output() toggleChange = new EventEmitter<{ row: any; checked: boolean; checkbox: HTMLInputElement }>();
   @Output() editClicked = new EventEmitter<any>();
+  @Output() viewRowClicked = new EventEmitter<any>();
 
   sortedColumns: string[] = [];
   clickedRows: Set<string> = new Set();
@@ -89,7 +90,7 @@ export class TablesComponent
   tableWrapperRef!: ElementRef<HTMLDivElement>;
 
   private destroyRef = inject(DestroyRef);
-  
+
   constructor(
     private cdr: ChangeDetectorRef,
     private dialog: MatDialog,
@@ -466,10 +467,11 @@ export class TablesComponent
   onClickView(event: Event, row: any): void {
     event.stopPropagation();
     console.log('View', row);
+    this.viewRowClicked.emit(row);
   }
 
   onClickEditDialog(event: Event, row: any): void {
-    event.stopPropagation(); 
+    event.stopPropagation();
     this.editClicked.emit(row);
 
     // Promise.resolve().then(() => {
