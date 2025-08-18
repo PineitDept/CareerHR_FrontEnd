@@ -12,6 +12,7 @@ import { EmailTemplateComponent } from './pages/data-setting/application/email/e
 import { EmailAttributeComponent } from './pages/data-setting/application/email/email-attribute/email-attribute.component';
 import { SpecialBenefitsComponent } from './pages/data-setting/application/special-benefits/special-benefits.component';
 import { ComputerSkillsComponent } from './pages/data-setting/application/computer-skills/computer-skills.component';
+import { LanguageSkillsComponent } from './pages/data-setting/application/language-skills/language-skills.component';
 
 const routes: Routes = [
   {
@@ -53,6 +54,10 @@ const routes: Routes = [
       {
         path: 'data-setting/application/computer-skills',
         component: ComputerSkillsComponent
+      },
+      {
+        path: 'data-setting/application/language-skills',
+        component: LanguageSkillsComponent
       },
       {
         path: 'data-setting/application/email/email-template',

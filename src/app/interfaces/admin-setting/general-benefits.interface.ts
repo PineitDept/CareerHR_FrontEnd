@@ -63,5 +63,24 @@ export interface ComputerScreeningRow {
   activeStatus?: boolean;
 }
 
+export interface ILanguageWithPositionsDto {
+  idlanguage: number;
+  language: string;
+  status: number;
+  statusText: string;
+  canDelete: boolean;
+  usageCount?: number;
+}
+
+export interface LanguageScreeningRow {
+  idlanguage: number;
+  language: string;
+  status: number;
+  statusText: string;
+  canDelete: boolean;
+  usageCount?: number;
+  activeStatus?: boolean;
+}
+
 // Type alias for the actual API response
 // export type ApiResponse = IBenefitsWithPositionsDto[];

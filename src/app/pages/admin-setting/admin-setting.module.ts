@@ -14,6 +14,7 @@ import { EmailAttributeComponent } from './pages/data-setting/application/email/
 import { SharedModule } from '../../shared/shared.module';
 import { SpecialBenefitsComponent } from './pages/data-setting/application/special-benefits/special-benefits.component';
 import { ComputerSkillsComponent } from './pages/data-setting/application/computer-skills/computer-skills.component';
+import { LanguageSkillsComponent } from './pages/data-setting/application/language-skills/language-skills.component';
 
 @NgModule({
   declarations: [
@@ -28,7 +29,8 @@ import { ComputerSkillsComponent } from './pages/data-setting/application/comput
     EmailTemplateComponent,
     EmailAttributeComponent,
     SpecialBenefitsComponent,
-    ComputerSkillsComponent
+    ComputerSkillsComponent,
+    LanguageSkillsComponent
   ],
   imports: [
     CommonModule,
