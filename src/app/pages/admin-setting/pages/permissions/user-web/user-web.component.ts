@@ -111,6 +111,10 @@ export class UserWebComponent extends BaseUserWebComponent {
 
   filterButtons = this.defaultFilterButtons();
 
+  override ngOnInit(): void {
+    this.loadUsers();
+  }
+
   handleEditDialog(row: any): void {
     Promise.resolve().then(() => {
       const container = document.querySelector('.cdk-overlay-container');
@@ -165,11 +169,9 @@ export class UserWebComponent extends BaseUserWebComponent {
         // 🔹 รอให้ทั้ง 2 เส้นทำงานเสร็จ
         Promise.all(updates)
           .then(() => {
-            console.log('User info updated.');
             this.loadUsers();
           })
           .catch((err) => {
-            console.error('Error during update:', err);
           });
       }
     });
@@ -222,11 +224,9 @@ export class UserWebComponent extends BaseUserWebComponent {
 
             this.userWebService.createUserWeb(payload).subscribe({
               next: (res) => {
-                console.log('User updated:', res);
                 this.loadUsers();
               },
               error: (err) => {
-                console.error('Error updating user:', err);
               },
             });
           }
@@ -317,8 +317,7 @@ export class UserWebComponent extends BaseUserWebComponent {
 
         if ('isActive' in row) row.isActive = checked;
         if ('activeStatus' in row) row.activeStatus = checked;
-
-        console.log(`User ${row.idEmployee} toggle success`);
+        
       },
       error: () => {
         console.error('Toggle failed');

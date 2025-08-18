@@ -15,6 +15,9 @@ import { SharedModule } from '../../shared/shared.module';
 import { ApplicationQuestionComponent } from './pages/data-setting/application/application-question/application-question.component';
 import { ApplicationQuestionDetailsComponent } from './pages/data-setting/application/application-question/pages/application-question-details/application-question-details.component';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { SpecialBenefitsComponent } from './pages/data-setting/application/special-benefits/special-benefits.component';
+import { ComputerSkillsComponent } from './pages/data-setting/application/computer-skills/computer-skills.component';
+import { LanguageSkillsComponent } from './pages/data-setting/application/language-skills/language-skills.component';
 
 @NgModule({
   declarations: [
@@ -29,7 +32,10 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
     EmailTemplateComponent,
     EmailAttributeComponent,
     ApplicationQuestionComponent,
-    ApplicationQuestionDetailsComponent
+    ApplicationQuestionDetailsComponent,
+    SpecialBenefitsComponent,
+    ComputerSkillsComponent,
+    LanguageSkillsComponent
   ],
   imports: [
     CommonModule,

@@ -62,6 +62,9 @@ export class TablesComponent
   @Input() splitRows: boolean = true;
   @Input() columns: Column[] = [];
   @Input() enableRowClick: boolean = true;
+  @Input() isAddMode: boolean = false;
+  @Input() fieldErrors: boolean = false;
+  @Input() highlightRowIndex: number | null = null;
 
   @Output() selectionChanged = new EventEmitter<any[]>();
   @Output() rowClicked = new EventEmitter<any>();
@@ -71,6 +74,8 @@ export class TablesComponent
   @Output() toggleChange = new EventEmitter<{ row: any; checked: boolean; checkbox: HTMLInputElement }>();
   @Output() editClicked = new EventEmitter<any>();
   @Output() viewRowClicked = new EventEmitter<any>();
+  @Output() createInlineSave = new EventEmitter<any>();
+  @Output() createInlineCancel = new EventEmitter<void>();
 
   sortedColumns: string[] = [];
   clickedRows: Set<string> = new Set();
@@ -83,6 +88,8 @@ export class TablesComponent
   editingRowId: string | number | null = null;
   editedValue: string = '';
   editRow: boolean = false;
+  rowValidationErrors: { [rowId: string]: boolean } = {};
+  ishighlightRow: boolean = false;
 
   @ViewChild('selectAllCheckbox')
   selectAllCheckbox!: ElementRef<HTMLInputElement>;
@@ -143,6 +150,10 @@ export class TablesComponent
       this.columnClicked.emit({ state: s, order: [] });
 
       this.cdr.detectChanges();
+    }
+
+    if (changes['highlightRowIndex'] && !changes['highlightRowIndex'].firstChange) {
+      this.ishighlightRow = true
     }
   }
 
@@ -423,44 +434,40 @@ export class TablesComponent
   onToggleChange(event: Event, row: any): void {
     event.stopPropagation();
 
-    Promise.resolve().then(() => {
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.add('dimmed-overlay');
-    });
-
     const checkbox = event.target as HTMLInputElement;
     const targetStatus = checkbox.checked;
 
     checkbox.checked = !targetStatus;
 
-    const dialogRef = this.dialog.open(AlertDialogComponent, {
-      width: '496px',
-      panelClass: 'custom-dialog-container',
-      autoFocus: false,
-      disableClose: true,
-      data: {
-        title: 'Confirmation',
-        message: 'Are you sure you want to change the status of this item?',
-        confirm: true
-      }
-    });
+    if (!row._isNew) {
+      Promise.resolve().then(() => {
+        const container = document.querySelector('.cdk-overlay-container');
+        container?.classList.add('dimmed-overlay');
+      });
 
-    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.remove('dimmed-overlay');
+      const dialogRef = this.dialog.open(AlertDialogComponent, {
+        width: '496px',
+        panelClass: 'custom-dialog-container',
+        autoFocus: false,
+        disableClose: true,
+        data: {
+          title: 'Confirmation',
+          message: 'Are you sure you want to change the status of this item?',
+          confirm: true
+        }
+      });
 
-      if (confirmed) {
-        console.log(`Applicant ID: ${row.idEmployee}, Old Status: ${this.activeStatus}`);
+      dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+        const container = document.querySelector('.cdk-overlay-container');
+        container?.classList.remove('dimmed-overlay');
 
-        // this.activeStatus = targetStatus;
-        // checkbox.checked = this.activeStatus;
-
-        this.toggleChange.emit({ row, checked: targetStatus, checkbox });
-        // this.toggleChange.emit({ row, checked: this.activeStatus, confirm: confirmed });
-
-        console.log(`Applicant ID: ${row.idEmployee}, New Status: ${this.activeStatus}`);
-      }
-    });
+        if (confirmed) {
+          this.toggleChange.emit({ row, checked: targetStatus, checkbox });
+        }
+      });
+    } else {
+      this.toggleChange.emit({ row, checked: targetStatus, checkbox });
+    }
   }
 
   // textlin on click
@@ -473,47 +480,17 @@ export class TablesComponent
   onClickEditDialog(event: Event, row: any): void {
     event.stopPropagation();
     this.editClicked.emit(row);
-
-    // Promise.resolve().then(() => {
-    //   const container = document.querySelector('.cdk-overlay-container');
-    //   container?.classList.add('dimmed-overlay');
-    // });
-
-    // const dialogRef = this.dialog.open(FormDialogComponent, {
-    //   width: '496px',
-    //   panelClass: 'custom-dialog-container',
-    //   autoFocus: false,
-    //   disableClose: true,
-    //   data: {
-    //     title: 'Edit User Web',
-    //     message: 'Employee ID',
-    //     labelInput: ['Employee ID', 'Username', 'Password', 'Confirm Password'],
-    //     valInput: [row.idEmployee, row.fullName, '1234', '1234'],
-    //     // valInput: [row.userID, row.fullName, '', ''],
-    //     confirm: true,
-    //     isEditMode: true,
-    //   }
-    // });
-
-    // dialogRef.afterClosed().subscribe((confirmed: boolean) => {
-    //   const container = document.querySelector('.cdk-overlay-container');
-    //   container?.classList.remove('dimmed-overlay');
-
-    //   if (confirmed) {
-    //     console.log(`Applicant ID: ${row.userID}, Old Status: ${this.activeStatus}`);
-    //   }
-    // });
-
-    // console.log('Edit open popup', row);
   }
 
-  onClickEdit(event: Event, row: any): void {
+  onClickEdit(event: Event, row: any, index: number): void {
     event.stopPropagation();
-    this.editingRowId = row.id;
-    // this.editedValue = row[this.colField];
-
+    this.editingRowId = index;
     this.editRow = true;
-    console.log('Edit inline', row);
+
+    if (this.highlightRowIndex && this.ishighlightRow) {
+      this.ishighlightRow = false
+      this.fieldErrors = false
+    }
   }
 
   onClickSave(event: Event, row: any): void {
@@ -545,7 +522,7 @@ export class TablesComponent
         this.editRow = false;
         this.cdr.detectChanges();
 
-        console.log('Saved and exited edit mode.');
+        this.editClicked.emit(row);
       }
     });
   }
@@ -565,6 +542,57 @@ export class TablesComponent
 
   // TrackBy Functions for Performance
   trackByColumn: TrackByFunction<Column> = (index, column) => column.field;
-  trackByRow: TrackByFunction<any> = (index, row) => row.id || index;
+  trackByRow: TrackByFunction<any> = (index, row) => row._tempId ?? row.id ?? index;
   trackByOption: TrackByFunction<string> = (index, option) => option;
+
+  startInlineCreate(defaults: any = {}, position: 'top' | 'bottom' = 'top') {
+    const newRow = { _tempId: `__new__${Date.now()}`, _isNew: true, ...defaults };
+    const snapshot = this.rowsValue as any[];
+
+    if (position === 'bottom') {
+      snapshot.push(newRow);
+      requestAnimationFrame(() => {
+        this.tableWrapperRef?.nativeElement?.scrollTo({
+          top: this.tableWrapperRef.nativeElement.scrollHeight,
+          behavior: 'smooth'
+        });
+      });
+    } else {
+      snapshot.unshift(newRow);
+    }
+
+    this.editingRowId = newRow._tempId;
+    this.editRow = true;
+    this.cdr.detectChanges();
+  }
+
+  saveInlineCreate(row: any) {
+    const payload = { ...row };
+    payload.status = payload.activeStatus ? 1 : 2;
+    delete payload._tempId;
+    delete payload._isNew;
+    this.createInlineSave.emit(payload);
+  }
+
+  cancelInlineCreate(row?: any) {
+    if (row?._isNew) {
+      const idx = this.rowsValue.findIndex(r => r === row);
+      if (idx >= 0) {
+        this.rowsValue.splice(idx, 1);
+      }
+    }
+    this.editingRowId = null;
+    this.editRow = false;
+    this.createInlineCancel.emit();
+    this.cdr.detectChanges();
+
+    if (this.highlightRowIndex && this.ishighlightRow) {
+      this.ishighlightRow = false
+    }
+  }
+
+  // onInlineKeydown(e: KeyboardEvent, row: any) {
+  //   if (e.key === 'Enter') { e.preventDefault(); this.saveInlineCreate(row); }
+  //   if (e.key === 'Escape') { e.preventDefault(); this.cancelInlineCreate(row); }
+  // }
 }

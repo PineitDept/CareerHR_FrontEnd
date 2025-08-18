@@ -11,8 +11,8 @@ import { GeneralBenefitsService } from '../../../../../../services/admin-setting
 import { LoadingService } from '../../../../../../shared/services/loading/loading.service';
 import {
   IBenefitsFilterRequest, 
-  IBenefitsWithPositionsDto,
-  ScreeningRow,
+  ILanguageWithPositionsDto,
+  LanguageScreeningRow,
 } from '../../../../../../interfaces/admin-setting/general-benefits.interface';
 import { catchError, EMPTY, tap } from 'rxjs';
 import { TablesComponent } from '../../../../../../shared/components/tables/tables.component';
@@ -27,17 +27,17 @@ const SCREENING_CONFIG = {
 } as const;
 
 @Component({
-  selector: 'app-general-benefits',
-  templateUrl: './general-benefits.component.html',
-  styleUrl: './general-benefits.component.scss'
+  selector: 'app-language-skills',
+  templateUrl: './language-skills.component.html',
+  styleUrl: './language-skills.component.scss'
 })
-export class GeneralBenefitsComponent extends BaseGeneralBenefitsComponent<IBenefitsWithPositionsDto> {
+export class LanguageSkillsComponent extends BaseGeneralBenefitsComponent<ILanguageWithPositionsDto> {
   @ViewChild('tables', { static: false }) tables!: TablesComponent;
   @Output() toggleRequested = new EventEmitter<{ row: any; next: boolean }>();
 
   hasMoreData = true;
   currentPage = 1;
-  ScreenRows: ScreeningRow[] = [];
+  ScreenRows: LanguageScreeningRow[] = [];
   isAddingRow = false;
   fieldErrors:boolean = false;
   duplicateRowIndex: number | null = null;
@@ -59,15 +59,16 @@ export class GeneralBenefitsComponent extends BaseGeneralBenefitsComponent<IBene
       width: '40px',
     },
     {
-      header: 'General Benefits',
-      field: 'welfareBenefits',
+      header: 'Language Skills',
+      field: 'language',
       type: 'text'
     },
     {
       header: 'Status',
       field: 'status',
       type: 'toggle',
-      align: 'center'
+      align: 'center',
+      width: '15%'
     },
     {
       header: 'Action',
@@ -86,14 +87,14 @@ export class GeneralBenefitsComponent extends BaseGeneralBenefitsComponent<IBene
   filterButtons = this.defaultFilterButtons();
 
   override ngOnInit(): void {
-    this.generalBenefitsService.setBenefitType('general-benefits');
+    this.generalBenefitsService.setBenefitType('langauge-skills');
     this.loadUsers();
   }
 
-  handleEditRow(row: ScreeningRow): void {
-    const id = row.item;
-    const payload: Partial<IBenefitsWithPositionsDto> = {
-      welfareBenefits: row.welfareBenefits,
+  handleEditRow(row: LanguageScreeningRow): void {
+    const id = row.idlanguage;
+    const payload: Partial<ILanguageWithPositionsDto> = {
+      language: row.language,
       status: row.activeStatus ? 1 : 2,
     };
 
@@ -111,8 +112,8 @@ export class GeneralBenefitsComponent extends BaseGeneralBenefitsComponent<IBene
         
         setTimeout(() => {
           const rows = [...this.ScreenRows];
-          const name = row.welfareBenefits;
-          this.duplicateRowIndex = rows.findIndex(row => row.welfareBenefits.trim().toLocaleLowerCase() === name.trim().toLocaleLowerCase());
+          const name = row.language;
+          this.duplicateRowIndex = rows.findIndex(row => row.language.trim().toLocaleLowerCase() === name.trim().toLocaleLowerCase());
         },100)
         
         this.loadUsers();
@@ -154,7 +155,7 @@ export class GeneralBenefitsComponent extends BaseGeneralBenefitsComponent<IBene
         this.fieldErrors = true;
 
         const rows = [...this.ScreenRows];
-        this.duplicateRowIndex = rows.findIndex(row => row.welfareBenefits.trim().toLocaleLowerCase() === payload.welfareBenefits.trim().toLocaleLowerCase());
+        this.duplicateRowIndex = rows.findIndex(row => row.language.trim().toLocaleLowerCase() === payload.language.trim().toLocaleLowerCase());
       }
     });
   }
@@ -170,7 +171,7 @@ export class GeneralBenefitsComponent extends BaseGeneralBenefitsComponent<IBene
   };
 
   loadUsers() {
-    this.generalBenefitsService.getBenefitsWeb<IBenefitsWithPositionsDto>(this.currentFilterParams).subscribe({
+    this.generalBenefitsService.getBenefitsWeb<ILanguageWithPositionsDto>(this.currentFilterParams).subscribe({
       next: (res) => {
         this.ScreenRows = this.transformApiDataToRows(res);
         this.cdr.detectChanges();
@@ -192,17 +193,17 @@ export class GeneralBenefitsComponent extends BaseGeneralBenefitsComponent<IBene
   }
 
   protected transformApiDataToRows(
-    items: readonly IBenefitsWithPositionsDto[]
-  ): ScreeningRow[] {
+    items: readonly ILanguageWithPositionsDto[]
+  ): LanguageScreeningRow[] {
     return items.map((item) => this.transformSingleItem(item));
   }
 
   private transformSingleItem(
-    item: IBenefitsWithPositionsDto
-  ): ScreeningRow {
+    item: ILanguageWithPositionsDto
+  ): LanguageScreeningRow {
     return {
-      item: item.item,
-      welfareBenefits: item.welfareBenefits,
+      idlanguage: item.idlanguage,
+      language: item.language,
       status: item.status,
       statusText: item.statusText,
       canDelete: item.canDelete,
@@ -226,12 +227,12 @@ export class GeneralBenefitsComponent extends BaseGeneralBenefitsComponent<IBene
     checkbox: HTMLInputElement;
   }) {
     
-    if (this.isAddingRow && !row.item) {
+    if (this.isAddingRow && !row.idlanguage) {
       checkbox.checked = checked;
       if ('isActive' in row) row.isActive = checked;
       if ('activeStatus' in row) row.activeStatus = checked;
     } else {
-      this.generalBenefitsService.toggleStatus(row.item).subscribe({
+      this.generalBenefitsService.toggleStatus(row.idlanguage).subscribe({
         next: () => {
           checkbox.checked = checked;
           if ('isActive' in row) row.isActive = checked;
