@@ -5,7 +5,7 @@
 
     <!-- Back Button -->
     <button
-      *ngIf="filterDynamicButton"
+      *ngIf="filterDynamicButton && !GradeSelect"
       (click)="onBackClick()"
       class="tw-flex tw-items-center tw-gap-2 tw-bg-transparent tw-text-[#212529] tw-rounded-lg tw-px-2 tw-py-1 tw-text-base tw-font-semibold"
     >
@@ -14,7 +14,7 @@
     </button>
 
     <!-- Year Dropdown -->
-    <div class="tw-relative dropdown tw-min-w-[135px]" #yearDropdown *ngIf="!filterDynamicButton">
+    <div class="tw-relative dropdown tw-min-w-[135px]" #yearDropdown *ngIf="!filterDynamicButton && !GradeSelect">
       <button (click)="toggleDropdown('year')"
         class="tw-w-full tw-bg-black tw-text-white tw-rounded-lg tw-px-4 tw-py-2 tw-text-base tw-flex tw-items-center tw-justify-between tw-gap-2">
         {{ selectedYear }}
@@ -30,7 +30,7 @@
     </div>
 
     <!-- Month Dropdown -->
-    <div class="tw-relative dropdow tw-min-w-[135px]" #monthDropdown *ngIf="!filterDynamicButton">
+    <div class="tw-relative dropdow tw-min-w-[135px]" #monthDropdown *ngIf="!filterDynamicButton && !GradeSelect">
       <button (click)="toggleDropdown('month')"
         class="tw-w-full tw-bg-black tw-text-white tw-rounded-lg tw-px-4 tw-py-2 tw-text-base tw-flex tw-items-center tw-justify-between tw-gap-2">
         {{ selectedMonth }}
@@ -45,11 +45,27 @@
       </ul>
     </div>
 
+    <!-- Grade Dropdown -->
+    <div class="tw-relative dropdow tw-min-w-[135px]" #gradeDropdown *ngIf="!filterDynamicButton && GradeSelect">
+      <button (click)="toggleDropdown('grade')"
+        class="tw-w-full tw-bg-black tw-text-white tw-rounded-lg tw-px-4 tw-py-2 tw-text-base tw-flex tw-items-center tw-justify-between tw-gap-2">
+        {{ selectedGrade }}
+        <app-icon name="chevron-down" [size]="16" />
+      </button>
+      <ul *ngIf="isGradeOpen"
+        class="tw-absolute tw-bg-white tw-shadow-md tw-rounded-lg tw-mt-1 tw-z-20 tw-w-full tw-min-w-[100px]">
+        <li *ngFor="let g of allGrade" (click)="selectOption('grade', g)"
+          class="tw-px-4 tw-py-2 tw-text-base tw-cursor-pointer hover:tw-bg-gray-100">
+          {{ g }}
+        </li>
+      </ul>
+    </div>
+
     <!-- All List Button -->
     <button
       class="tw-bg-[#660708] tw-text-white tw-rounded-lg tw-px-4 tw-py-2 tw-text-base tw-min-w-[112px]"
       (click)="onAllListClick()"
-      *ngIf="!filterDynamicButton"
+      *ngIf="!filterDynamicButton && !GradeSelect"
     >
       All List
     </button>

@@ -88,6 +88,7 @@ export class GeneralBenefitsComponent extends BaseGeneralBenefitsComponent<IBene
   override ngOnInit(): void {
     this.generalBenefitsService.setBenefitType('general-benefits');
     this.loadUsers();
+    super.ngOnInit();
   }
 
   handleEditRow(row: ScreeningRow): void {
@@ -170,7 +171,7 @@ export class GeneralBenefitsComponent extends BaseGeneralBenefitsComponent<IBene
   };
 
   loadUsers() {
-    this.generalBenefitsService.getBenefitsWeb<IBenefitsWithPositionsDto>(this.currentFilterParams).subscribe({
+    this.generalBenefitsService.getBenefitsWeb<IBenefitsWithPositionsDto[]>(this.currentFilterParams).subscribe({
       next: (res) => {
         this.ScreenRows = this.transformApiDataToRows(res);
         this.cdr.detectChanges();

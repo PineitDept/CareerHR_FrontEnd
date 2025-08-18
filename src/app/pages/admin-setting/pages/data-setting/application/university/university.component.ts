@@ -10,11 +10,13 @@ import { BaseGeneralBenefitsComponent } from '../../../../../../shared/base/base
 import { GeneralBenefitsService } from '../../../../../../services/admin-setting/general-benefits/general-benefits.service'
 import { LoadingService } from '../../../../../../shared/services/loading/loading.service';
 import {
+  IApiResponse,
   IBenefitsFilterRequest, 
-  ISpecialBenefitsWithPositionsDto,
-  SpecialScreeningRow,
+  IUniversityWithPositionsDto,
+  SearchForm,
+  UniversityScreeningRow,
 } from '../../../../../../interfaces/admin-setting/general-benefits.interface';
-import { catchError, EMPTY, tap } from 'rxjs';
+import { catchError, EMPTY, map, Observable, tap } from 'rxjs';
 import { TablesComponent } from '../../../../../../shared/components/tables/tables.component';
 import { NotificationService } from '../../../../../../shared/services/notification/notification.service';
 
@@ -27,20 +29,22 @@ const SCREENING_CONFIG = {
 } as const;
 
 @Component({
-  selector: 'app-special-benefits',
-  templateUrl: './special-benefits.component.html',
-  styleUrl: './special-benefits.component.scss'
+  selector: 'app-university',
+  templateUrl: './university.component.html',
+  styleUrl: './university.component.scss'
 })
-export class SpecialBenefitsComponent extends BaseGeneralBenefitsComponent<ISpecialBenefitsWithPositionsDto> {
+export class UniversityComponent extends BaseGeneralBenefitsComponent<IUniversityWithPositionsDto> {
   @ViewChild('tables', { static: false }) tables!: TablesComponent;
   @Output() toggleRequested = new EventEmitter<{ row: any; next: boolean }>();
 
   hasMoreData = true;
   currentPage = 1;
-  ScreenRows: SpecialScreeningRow[] = [];
+  ScreenRows: UniversityScreeningRow[] = this.rows();
+  SearchForm!: SearchForm;
   isAddingRow = false;
   fieldErrors:boolean = false;
   duplicateRowIndex: number | null = null;
+  gradeSelected: number = 0;
 
   constructor(
     private generalBenefitsService: GeneralBenefitsService,
@@ -59,15 +63,30 @@ export class SpecialBenefitsComponent extends BaseGeneralBenefitsComponent<ISpec
       width: '40px',
     },
     {
-      header: 'Soecial Benefits',
-      field: 'welfareBenefits',
+      header: 'University',
+      field: 'university',
       type: 'text'
+    },
+    {
+      header: 'University ID',
+      field: 'uniId',
+      type: 'text',
+      align: 'center',
+      width: '10%'
+    },
+    {
+      header: 'Grade',
+      field: 'typeScore',
+      type: 'text',
+      align: 'center',
+      width: '10%'
     },
     {
       header: 'Status',
       field: 'status',
       type: 'toggle',
-      align: 'center'
+      align: 'center',
+      width: '10%'
     },
     {
       header: 'Action',
@@ -86,15 +105,17 @@ export class SpecialBenefitsComponent extends BaseGeneralBenefitsComponent<ISpec
   filterButtons = this.defaultFilterButtons();
 
   override ngOnInit(): void {
-    this.generalBenefitsService.setBenefitType('special-benefits');
+    this.generalBenefitsService.setBenefitType('university');
     this.loadUsers();
     super.ngOnInit();
   }
 
-  handleEditRow(row: SpecialScreeningRow): void {
+  handleEditRow(row: UniversityScreeningRow): void {
     const id = row.id;
-    const payload: Partial<ISpecialBenefitsWithPositionsDto> = {
-      welfareBenefits: row.welfareBenefits,
+    const payload: Partial<IUniversityWithPositionsDto> = {
+      uniId: row.uniId,
+      university: row.university,
+      typeScore: this.mapGradeToScore(row.typeScore),
       status: row.activeStatus ? 1 : 2,
     };
 
@@ -112,9 +133,16 @@ export class SpecialBenefitsComponent extends BaseGeneralBenefitsComponent<ISpec
         
         setTimeout(() => {
           const rows = [...this.ScreenRows];
-          const name = row.welfareBenefits;
-          this.duplicateRowIndex = rows.findIndex(row => row.welfareBenefits.trim().toLocaleLowerCase() === name.trim().toLocaleLowerCase());
-        },100)
+          const name = row.university.trim().toLowerCase();
+          const uniId = row.uniId.trim().toLowerCase();
+
+          this.duplicateRowIndex = rows.findIndex(r =>
+            r.id !== row.id && (
+              r.university.trim().toLowerCase() === name ||
+              r.uniId.trim().toLowerCase() === uniId
+            )
+          );
+        }, 100);
         
         this.loadUsers();
       }
@@ -144,7 +172,7 @@ export class SpecialBenefitsComponent extends BaseGeneralBenefitsComponent<ISpec
 
         const rows = [...this.rows()];
         const idx = rows.findIndex(r => r._isNew);
-        if (idx >= 0) rows[idx] = { ...res };
+        if (idx >= 0) rows[idx] = { ...res.items };
         this.rowsData.set(rows);
         this.tables.editingRowId = null;
         this.tables.editRow = false;
@@ -155,7 +183,15 @@ export class SpecialBenefitsComponent extends BaseGeneralBenefitsComponent<ISpec
         this.fieldErrors = true;
 
         const rows = [...this.ScreenRows];
-        this.duplicateRowIndex = rows.findIndex(row => row.welfareBenefits.trim().toLocaleLowerCase() === payload.welfareBenefits.trim().toLocaleLowerCase());
+        const inputUniversity = payload.university?.trim().toLowerCase() || '';
+        const inputUniId = payload.uniId?.trim().toLowerCase() || '';
+
+        this.duplicateRowIndex = rows.findIndex(row => {
+          const rowUniversity = row.university?.trim().toLowerCase() || '';
+          const rowUniId = row.uniId?.trim().toLowerCase() || '';
+
+          return rowUniversity === inputUniversity || rowUniId === inputUniId;
+        });
       }
     });
   }
@@ -167,17 +203,23 @@ export class SpecialBenefitsComponent extends BaseGeneralBenefitsComponent<ISpec
 
   protected currentFilterParams: IBenefitsFilterRequest = {
     page: 1,
-    pageSize: 30
+    pageSize: 30,
   };
 
   loadUsers() {
-    this.generalBenefitsService.getBenefitsWeb<ISpecialBenefitsWithPositionsDto[]>(this.currentFilterParams).subscribe({
-      next: (res) => {
-        this.ScreenRows = this.transformApiDataToRows(res);
-        this.cdr.detectChanges();
-      },
-      error: (err) => console.error(err),
-    });
+    this.generalBenefitsService
+      .getBenefitsWeb<IApiResponse<IUniversityWithPositionsDto>>(this.currentFilterParams)
+      .subscribe({
+        next: (res) => {
+          const items = Array.isArray(res) ? res : res?.items ?? [];
+          const rows = this.transformApiDataToRows(items);
+          this.rowsData.set(rows);
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error(err);
+        },
+      });
   }
 
   // Abstract method implementations
@@ -185,30 +227,65 @@ export class SpecialBenefitsComponent extends BaseGeneralBenefitsComponent<ISpec
     return SCREENING_CONFIG.STORAGE_KEYS;
   }
 
-  protected createInitialFilter(): IBenefitsFilterRequest {
-    return {
+  protected createInitialFilter(gradeScore?: number): IBenefitsFilterRequest {
+    const base: IBenefitsFilterRequest = {
       page: 1,
-      pageSize: 30
+      pageSize: 30,
+      hasNextPage: false,
+      hasPreviousPage: false,
     };
+
+    if (gradeScore && gradeScore !== 0) {
+      base.TypeScoreMin = gradeScore;
+      base.TypeScoreMax = gradeScore;
+    }
+
+    return base;
   }
 
   protected transformApiDataToRows(
-    items: readonly ISpecialBenefitsWithPositionsDto[]
-  ): SpecialScreeningRow[] {
+    items: readonly IUniversityWithPositionsDto[]
+  ): UniversityScreeningRow[] {
     return items.map((item) => this.transformSingleItem(item));
   }
 
   private transformSingleItem(
-    item: ISpecialBenefitsWithPositionsDto
-  ): SpecialScreeningRow {
+    item: IUniversityWithPositionsDto
+  ): UniversityScreeningRow {
     return {
       id: item.id,
-      welfareBenefits: item.welfareBenefits,
+      uniId:  item.uniId,
+      university: item.university,
+      typeScore:  this.mapScoreToGrade(item.typeScore),
       status: item.status,
       statusText: item.statusText,
       canDelete: item.canDelete,
       activeStatus: item.status === 1
     };
+  }
+
+  private mapScoreToGrade(score: number | null | undefined): string {
+    switch (score) {
+      case 1: return 'A';
+      case 2: return 'B';
+      case 3: return 'C';
+      case 4: return 'D';
+      case 5: return 'E';
+      case 6: return 'N/A';
+      default: return '-';
+    }
+  }
+
+  private mapGradeToScore(grade: string | null | undefined): number {
+    switch ((grade || '').toUpperCase()) {
+      case 'A': return 1;
+      case 'B': return 2;
+      case 'C': return 3;
+      case 'D': return 4;
+      case 'E': return 5;
+      case 'N/A': return 6;
+      default: return 0;
+    }
   }
 
   onToggleChange(e: Event, row: any) {
@@ -243,5 +320,29 @@ export class SpecialBenefitsComponent extends BaseGeneralBenefitsComponent<ISpec
         }
       });
     }
+  }
+
+  onGradeSelected(grade: string) {
+    this.isFiltering = true;
+    this.gradeSelected = this.mapGradeToScore(grade)
+    
+    if (this.gradeSelected !== 0) {
+      this.currentFilterParams.page = 1;
+      this.currentFilterParams.pageSize = 30;
+      this.currentFilterParams.TypeScoreMin = this.mapGradeToScore(grade);
+      this.currentFilterParams.TypeScoreMax = this.mapGradeToScore(grade);
+      // this.clearPersistedSearchForm();
+    } else {
+      delete this.currentFilterParams.TypeScoreMin;
+      delete this.currentFilterParams.TypeScoreMax;
+    }
+    
+    this.scrollToTop();
+    this.loadUsers()
+
+    setTimeout(() => {
+      this.isFiltering = false;
+    }, 500);
+    
   }
 }
