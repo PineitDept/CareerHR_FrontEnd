@@ -27,10 +27,41 @@ export interface ScreeningRow {
   activeStatus?: boolean;
 }
 
-export interface BenefitStatus {
-  activeStatus: boolean;
+export interface ISpecialBenefitsWithPositionsDto {
+  id: number;
+  welfareBenefits: string;
   status: number;
+  statusText: string;
+  canDelete: boolean;
+}
+
+export interface SpecialScreeningRow {
+  id: number;
+  welfareBenefits: string;
+  status: number;
+  statusText: string;
+  canDelete: boolean;
+  activeStatus?: boolean;
+}
+
+export interface IComputerWithPositionsDto {
+  idcpSkill: number;
+  nameCpskill: string;
+  status: number;
+  statusText: string;
+  canDelete: boolean;
+  usageCount?: number;
+}
+
+export interface ComputerScreeningRow {
+  idcpSkill: number;
+  nameCpskill: string;
+  status: number;
+  statusText: string;
+  canDelete: boolean;
+  usageCount?: number;
+  activeStatus?: boolean;
 }
 
 // Type alias for the actual API response
-export type ApiResponse = IBenefitsWithPositionsDto[];
+// export type ApiResponse = IBenefitsWithPositionsDto[];

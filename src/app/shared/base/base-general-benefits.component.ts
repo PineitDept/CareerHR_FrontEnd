@@ -30,7 +30,7 @@ import {
 
 import { GeneralBenefitsService } from '../../services/admin-setting/general-benefits/general-benefits.service'
 import {
-    ApiResponse,
+    // ApiResponse,
     IBenefitsFilterRequest,
     IBenefitsWithPositionsDto
 } from '../../interfaces/admin-setting/general-benefits.interface';
@@ -52,7 +52,7 @@ export const SEARCH_OPTIONS: string[] = [
 export type SearchOption = (typeof SEARCH_OPTIONS)[number];
 
 @Directive()
-export abstract class BaseGeneralBenefitsComponent implements OnInit, OnDestroy {
+export abstract class BaseGeneralBenefitsComponent<T> implements OnInit, OnDestroy {
     // Dependency Injection
     protected readonly router = inject(Router);
     protected readonly generalbenefitsService = inject(GeneralBenefitsService);
@@ -69,9 +69,11 @@ export abstract class BaseGeneralBenefitsComponent implements OnInit, OnDestroy 
     };
 
     protected abstract createInitialFilter(): IBenefitsFilterRequest;
-    protected abstract transformApiDataToRows(
-        items: readonly IBenefitsWithPositionsDto[]
-    ): any[];
+    // protected abstract transformApiDataToRows(
+    //     items: readonly IBenefitsWithPositionsDto[]
+    // ): any[];
+
+    protected abstract transformApiDataToRows(items: readonly T[]): any[];
 
     // Reactive State Management with Signals
     protected readonly loadingState = signal(false);
@@ -206,7 +208,7 @@ export abstract class BaseGeneralBenefitsComponent implements OnInit, OnDestroy 
             ...filter
         };
 
-        return this.generalbenefitsService.getBenefitsWeb(fullFilter).pipe(
+        return this.generalbenefitsService.getBenefitsWeb<T>(fullFilter).pipe(
             tap((items) => this.handleApiResponse(items, append)),
             tap(() => this.persistFilterState()),
             catchError((error) => this.handleApiError(error)),
@@ -236,11 +238,8 @@ export abstract class BaseGeneralBenefitsComponent implements OnInit, OnDestroy 
         this.fetchData(this.filterRequest(), false).subscribe();
     }
 
-    protected handleApiResponse(
-        response: IBenefitsWithPositionsDto[], 
-        append: boolean
-    ): void {
-        this.updateFilterWithResponse(response);
+    protected handleApiResponse(response: T[], append: boolean): void {
+        // this.updateFilterWithResponse(response);
         this.updateRowsData(response, append);
     }
 
@@ -250,7 +249,7 @@ export abstract class BaseGeneralBenefitsComponent implements OnInit, OnDestroy 
     }
 
     // Protected State Updates
-    protected updateFilterWithResponse(response: ApiResponse): void {
+    protected updateFilterWithResponse(response: T[]): void {
         const currentFilter = this.filterRequest();
         this.filterRequest.set({
             ...currentFilter,
@@ -260,7 +259,7 @@ export abstract class BaseGeneralBenefitsComponent implements OnInit, OnDestroy 
     }
 
     protected updateRowsData(
-        items: readonly IBenefitsWithPositionsDto[],
+        items: readonly T[],
         append: boolean
     ): void {
         const processedRows = this.transformApiDataToRows(items);
