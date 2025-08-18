@@ -111,10 +111,6 @@ export class UserWebComponent extends BaseUserWebComponent {
 
   filterButtons = this.defaultFilterButtons();
 
-  override ngOnInit(): void {
-    this.loadUsers();
-  }
-
   handleEditDialog(row: any): void {
     Promise.resolve().then(() => {
       const container = document.querySelector('.cdk-overlay-container');

@@ -89,6 +89,7 @@ export class LanguageSkillsComponent extends BaseGeneralBenefitsComponent<ILangu
   override ngOnInit(): void {
     this.generalBenefitsService.setBenefitType('langauge-skills');
     this.loadUsers();
+    super.ngOnInit();
   }
 
   handleEditRow(row: LanguageScreeningRow): void {
@@ -171,7 +172,7 @@ export class LanguageSkillsComponent extends BaseGeneralBenefitsComponent<ILangu
   };
 
   loadUsers() {
-    this.generalBenefitsService.getBenefitsWeb<ILanguageWithPositionsDto>(this.currentFilterParams).subscribe({
+    this.generalBenefitsService.getBenefitsWeb<ILanguageWithPositionsDto[]>(this.currentFilterParams).subscribe({
       next: (res) => {
         this.ScreenRows = this.transformApiDataToRows(res);
         this.cdr.detectChanges();

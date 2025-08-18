@@ -1,12 +1,17 @@
 <div class="tw-sticky tw-top-0 tw-z-[30]">
   <app-header-content
-    [headerName]="'Language Skills'"
-    [headerType]="''"
+    [headerName]="'University'"
+    [headerType]="'search'"
+    [searchByOptions]="searchByOptions"
+    [searchForm]="searchForm"
+    (search)="onSearch($event)"
+    (clearSearch)="onClearSearch()"
   ></app-header-content>
 </div>
 
 <app-filter
-  [filterDate]="false"
+  [GradeSelect]="true"
+  (gradeSelected)="onGradeSelected($event)"
   [actionButtons]="filterButtons"
   [disabledKeys]="isAddingRow ? ['add'] : []"
   (buttonClicked)="onFilterButtonClick($event)"
@@ -22,7 +27,7 @@
   <app-tables
     #tables
     [columns]="columns"
-    [rows]="ScreenRows"
+    [rows]="rows()"
     [splitRows]="true"
     [showCheckbox]="false"
     [enableRowClick]="false"

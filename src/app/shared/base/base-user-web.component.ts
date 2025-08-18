@@ -87,7 +87,7 @@ export abstract class BaseUserWebComponent implements OnInit, OnDestroy {
 
   // Computed Properties
   readonly isLoading = computed(() => this.loadingState());
-  readonly rows = computed(() => this.rowsData());
+  rows = computed(() => this.rowsData());
 //   readonly activeTab = computed(() => this.filterRequest().statusGroup || '');
   readonly currentSort = computed(() => this.sortConfig());
 
@@ -114,6 +114,7 @@ export abstract class BaseUserWebComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.initializeComponent();
     this.setupReactiveStreams();
+    this.rows = computed(() => this.rowsData());
   }
 
   ngOnDestroy(): void {

@@ -89,6 +89,7 @@ export class ComputerSkillsComponent extends BaseGeneralBenefitsComponent<ICompu
   override ngOnInit(): void {
     this.generalBenefitsService.setBenefitType('computer-skills');
     this.loadUsers();
+    super.ngOnInit();
   }
 
   handleEditRow(row: ComputerScreeningRow): void {
@@ -171,7 +172,7 @@ export class ComputerSkillsComponent extends BaseGeneralBenefitsComponent<ICompu
   };
 
   loadUsers() {
-    this.generalBenefitsService.getBenefitsWeb<IComputerWithPositionsDto>(this.currentFilterParams).subscribe({
+    this.generalBenefitsService.getBenefitsWeb<IComputerWithPositionsDto[]>(this.currentFilterParams).subscribe({
       next: (res) => {
         this.ScreenRows = this.transformApiDataToRows(res);
         this.cdr.detectChanges();

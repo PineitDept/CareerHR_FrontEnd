@@ -16,7 +16,7 @@ export class GeneralBenefitsService {
   constructor(private api: ApiService) {}
 
   // Set API base path depending on the benefit type
-  setBenefitType(type: 'general-benefits' | 'special-benefits' | 'computer-skills' | 'langauge-skills') {
+  setBenefitType(type: 'general-benefits' | 'special-benefits' | 'computer-skills' | 'langauge-skills' | 'university') {
     switch (type) {
       case 'general-benefits':
         this.base = 'InfoWelfareBenefit/info-welfare-benefits';
@@ -29,6 +29,9 @@ export class GeneralBenefitsService {
         break;
       case 'langauge-skills':
         this.base = 'Language/languages';
+        break;
+      case 'university':
+        this.base = 'UniversityGrades';
         break;
       default:
         throw new Error(`Unknown benefit type: ${type}`);
@@ -46,15 +49,17 @@ export class GeneralBenefitsService {
   }
 
   // GET: List benefits with filters
-  getBenefitsWeb<T>(params: IBenefitsFilterRequest): Observable<T[]> {
+  getBenefitsWeb<T>(params: IBenefitsFilterRequest): Observable<T> {
     const query = this.clean({
       page: params.page,
       pageSize: params.pageSize,
       search: params.search,
       sortFields: params.sortFields,
+      TypeScoreMin: params.TypeScoreMin,
+      TypeScoreMax: params.TypeScoreMax,
     });
 
-    return this.api.get<T[]>(this.base, {
+    return this.api.get<T>(this.base, {
       params: query,
       loading: true,
       withAuth: true,

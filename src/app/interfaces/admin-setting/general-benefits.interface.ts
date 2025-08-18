@@ -8,6 +8,8 @@ export interface IBenefitsFilterRequest {
   queryParams?: Record<string, any>;
   search?: string;
   sortFields?: string;
+  TypeScoreMin?: number;
+  TypeScoreMax?: number;
 }
 
 export interface IBenefitsWithPositionsDto {
@@ -82,5 +84,38 @@ export interface LanguageScreeningRow {
   activeStatus?: boolean;
 }
 
-// Type alias for the actual API response
-// export type ApiResponse = IBenefitsWithPositionsDto[];
+export interface IUniversityWithPositionsDto {
+  id: number;
+  uniId: string;
+  university: string;
+  typeScore: number;
+  status: number;
+  statusText: string;
+  canDelete: boolean;
+}
+
+export interface UniversityScreeningRow {
+  id: number;
+  uniId: string;
+  university: string;
+  typeScore: string;
+  status: number;
+  statusText: string;
+  canDelete: boolean;
+  activeStatus?: boolean;
+}
+
+export interface IApiResponse<T> {
+  items: T[];
+  totalItems: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
+export interface SearchForm {
+  readonly searchBy: string;
+  readonly searchValue: string;
+}
