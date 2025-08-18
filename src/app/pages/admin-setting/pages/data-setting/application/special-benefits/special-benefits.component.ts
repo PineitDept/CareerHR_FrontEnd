@@ -11,8 +11,8 @@ import { GeneralBenefitsService } from '../../../../../../services/admin-setting
 import { LoadingService } from '../../../../../../shared/services/loading/loading.service';
 import {
   IBenefitsFilterRequest, 
-  IBenefitsWithPositionsDto,
-  ScreeningRow,
+  ISpecialBenefitsWithPositionsDto,
+  SpecialScreeningRow,
 } from '../../../../../../interfaces/admin-setting/general-benefits.interface';
 import { catchError, EMPTY, tap } from 'rxjs';
 import { TablesComponent } from '../../../../../../shared/components/tables/tables.component';
@@ -27,17 +27,17 @@ const SCREENING_CONFIG = {
 } as const;
 
 @Component({
-  selector: 'app-general-benefits',
-  templateUrl: './general-benefits.component.html',
-  styleUrl: './general-benefits.component.scss'
+  selector: 'app-special-benefits',
+  templateUrl: './special-benefits.component.html',
+  styleUrl: './special-benefits.component.scss'
 })
-export class GeneralBenefitsComponent extends BaseGeneralBenefitsComponent<IBenefitsWithPositionsDto> {
+export class SpecialBenefitsComponent extends BaseGeneralBenefitsComponent<ISpecialBenefitsWithPositionsDto> {
   @ViewChild('tables', { static: false }) tables!: TablesComponent;
   @Output() toggleRequested = new EventEmitter<{ row: any; next: boolean }>();
 
   hasMoreData = true;
   currentPage = 1;
-  ScreenRows: ScreeningRow[] = [];
+  ScreenRows: SpecialScreeningRow[] = [];
   isAddingRow = false;
   fieldErrors:boolean = false;
   duplicateRowIndex: number | null = null;
@@ -59,7 +59,7 @@ export class GeneralBenefitsComponent extends BaseGeneralBenefitsComponent<IBene
       width: '40px',
     },
     {
-      header: 'General Benefits',
+      header: 'Soecial Benefits',
       field: 'welfareBenefits',
       type: 'text'
     },
@@ -86,13 +86,13 @@ export class GeneralBenefitsComponent extends BaseGeneralBenefitsComponent<IBene
   filterButtons = this.defaultFilterButtons();
 
   override ngOnInit(): void {
-    this.generalBenefitsService.setBenefitType('general-benefits');
+    this.generalBenefitsService.setBenefitType('special-benefits');
     this.loadUsers();
   }
 
-  handleEditRow(row: ScreeningRow): void {
-    const id = row.item;
-    const payload: Partial<IBenefitsWithPositionsDto> = {
+  handleEditRow(row: SpecialScreeningRow): void {
+    const id = row.id;
+    const payload: Partial<ISpecialBenefitsWithPositionsDto> = {
       welfareBenefits: row.welfareBenefits,
       status: row.activeStatus ? 1 : 2,
     };
@@ -170,7 +170,7 @@ export class GeneralBenefitsComponent extends BaseGeneralBenefitsComponent<IBene
   };
 
   loadUsers() {
-    this.generalBenefitsService.getBenefitsWeb<IBenefitsWithPositionsDto>(this.currentFilterParams).subscribe({
+    this.generalBenefitsService.getBenefitsWeb<ISpecialBenefitsWithPositionsDto>(this.currentFilterParams).subscribe({
       next: (res) => {
         this.ScreenRows = this.transformApiDataToRows(res);
         this.cdr.detectChanges();
@@ -192,16 +192,16 @@ export class GeneralBenefitsComponent extends BaseGeneralBenefitsComponent<IBene
   }
 
   protected transformApiDataToRows(
-    items: readonly IBenefitsWithPositionsDto[]
-  ): ScreeningRow[] {
+    items: readonly ISpecialBenefitsWithPositionsDto[]
+  ): SpecialScreeningRow[] {
     return items.map((item) => this.transformSingleItem(item));
   }
 
   private transformSingleItem(
-    item: IBenefitsWithPositionsDto
-  ): ScreeningRow {
+    item: ISpecialBenefitsWithPositionsDto
+  ): SpecialScreeningRow {
     return {
-      item: item.item,
+      id: item.id,
       welfareBenefits: item.welfareBenefits,
       status: item.status,
       statusText: item.statusText,
@@ -226,12 +226,12 @@ export class GeneralBenefitsComponent extends BaseGeneralBenefitsComponent<IBene
     checkbox: HTMLInputElement;
   }) {
     
-    if (this.isAddingRow && !row.item) {
+    if (this.isAddingRow && !row.id) {
       checkbox.checked = checked;
       if ('isActive' in row) row.isActive = checked;
       if ('activeStatus' in row) row.activeStatus = checked;
     } else {
-      this.generalBenefitsService.toggleStatus(row.item).subscribe({
+      this.generalBenefitsService.toggleStatus(row.id).subscribe({
         next: () => {
           checkbox.checked = checked;
           if ('isActive' in row) row.isActive = checked;

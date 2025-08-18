@@ -1,6 +1,6 @@
 <div class="tw-sticky tw-top-0 tw-z-[30]">
   <app-header-content
-    [headerName]="'General Benefits'"
+    [headerName]="'Language Skills'"
     [headerType]="''"
   ></app-header-content>
 </div>
@@ -16,7 +16,7 @@
 
 <div
   #tableContainer
-  class="tw-max-h-[calc(100vh-260px)] tw-overflow-y-auto"
+  class="tw-max-h-[calc(100vh-330px)] tw-overflow-y-auto"
   (scroll)="onScroll($event)"
 >
   <app-tables
@@ -35,3 +35,5 @@
     [highlightRowIndex]="duplicateRowIndex"
   ></app-tables>
 </div>
+
+<p class="tw-p-6 tw-pt-0"><strong>Notice:</strong> If question has been used by an applicant, it cannot be deleted.</p>

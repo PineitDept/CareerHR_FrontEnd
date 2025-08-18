@@ -4,17 +4,38 @@ import { ApiService } from '../../../shared/services/api/api.service';
 
 import {
   IBenefitsFilterRequest,
-  IBenefitsWithPositionsDto
+  IBenefitsWithPositionsDto,
 } from '../../../interfaces/admin-setting/general-benefits.interface';
 
 @Injectable({
   providedIn: 'root'
 })
 export class GeneralBenefitsService {
-  private readonly base = 'InfoWelfareBenefit/info-welfare-benefits';
+  private base = '';
 
   constructor(private api: ApiService) {}
 
+  // Set API base path depending on the benefit type
+  setBenefitType(type: 'general-benefits' | 'special-benefits' | 'computer-skills' | 'langauge-skills') {
+    switch (type) {
+      case 'general-benefits':
+        this.base = 'InfoWelfareBenefit/info-welfare-benefits';
+        break;
+      case 'special-benefits':
+        this.base = 'WelfareBenefit/welfare-benefits';
+        break;
+      case 'computer-skills':
+        this.base = 'ComputerSkill/cp-skills';
+        break;
+      case 'langauge-skills':
+        this.base = 'Language/languages';
+        break;
+      default:
+        throw new Error(`Unknown benefit type: ${type}`);
+    }
+  }
+
+  // Clean empty/null/undefined values from object
   private clean(obj: Record<string, any>) {
     const out: Record<string, any> = {};
     Object.keys(obj).forEach(k => {
@@ -24,8 +45,8 @@ export class GeneralBenefitsService {
     return out;
   }
 
-  // GET: List Benefits (with filter)
-  getBenefitsWeb(params: IBenefitsFilterRequest): Observable<IBenefitsWithPositionsDto[]> {
+  // GET: List benefits with filters
+  getBenefitsWeb<T>(params: IBenefitsFilterRequest): Observable<T[]> {
     const query = this.clean({
       page: params.page,
       pageSize: params.pageSize,
@@ -33,16 +54,16 @@ export class GeneralBenefitsService {
       sortFields: params.sortFields,
     });
 
-    return this.api.get<IBenefitsWithPositionsDto[]>(this.base, {
+    return this.api.get<T[]>(this.base, {
       params: query,
       loading: true,
       withAuth: true,
     });
   }
 
-  // GET: Get single Benefit by ID
-  getBenefitById(id: number): Observable<IBenefitsWithPositionsDto> {
-    return this.api.get<IBenefitsWithPositionsDto>(`${this.base}/${id}`, {
+  // GET: Single benefit by ID
+  getBenefitById<T>(id: number): Observable<T> {
+    return this.api.get<T>(`${this.base}/${id}`, {
       withAuth: true,
       loading: true,
     });

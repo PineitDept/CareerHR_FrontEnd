@@ -1,5 +1,5 @@
 <!-- expandable-table.component.html -->
-<div #tableWrapper class="tw-relative tw-px-6 tw-py-6 tw-pr-2 tw-bg-white tw-w-fit tw-min-w-full" [ngClass]="rowsValue.length > 0 ? 'tw-pr-2' : 'tw-pr-6'">
+<div #tableWrapper class="tw-relative tw-px-6 tw-py-6 tw-pr-2 tw-pt-0 tw-bg-white tw-w-fit tw-min-w-full" [ngClass]="rowsValue.length > 0 ? 'tw-pr-2' : 'tw-pr-6'">
   <div class="tw-rounded-md tw-shadow-sm tw-border tw-border-gray-200">
     <table class="tw-table-auto tw-w-full tw-text-sm tw-text-left tw-border-collapse">
       <thead>
@@ -60,13 +60,15 @@
           class="table-row tw-transition-colors tw-duration-200 tw-cursor-pointer"
           [ngClass]="{
             'tw-cursor-pointer': enableRowClick,
-            'tw-cursor-default': !enableRowClick
+            'tw-cursor-default': !enableRowClick,
+            'tw-bg-red-50': rowValidationErrors[row._tempId ?? row.id]
           }"
           [class.tw-bg-white]="!splitRows"
           [class.tw-bg-gray-50]="splitRows && i % 2 === 0" [class.tw-bg-gray-100]="splitRows && i % 2 === 1"
           [class.hover:tw-bg-gray-200]="true" [class.tw-border-b]="i < rowsValue.length - 1 && !splitRows"
           [class.selected-row]="selectedRows.has(i)"
           [class.tw-bg-yellow-50]="clickedRows.has(row.id?.toString())"
+          [class.tw-bg-red-100]="ishighlightRow && highlightRowIndex === i"
           (click)="enableRowClick && onRowClick(row, $event)">
 
           <!-- Checkbox Cell -->
@@ -102,7 +104,7 @@
                         [(ngModel)]="row[column.field]"
                         (click)="$event.stopPropagation()" />
                     </ng-container> -->
-                    <ng-container *ngIf="editRow && (editingRowId === (row._tempId ?? row.id ?? i+1)); else viewMode">
+                    <ng-container *ngIf="editRow && (editingRowId === (row._tempId ?? i+1)); else viewMode">
                       <input
                         type="text"
                         class="tw-border tw-rounded tw-px-2 tw-py-1 tw-w-full"
@@ -111,7 +113,6 @@
                         (click)="$event.stopPropagation()"
                         (keydown)="row._isNew"
                       />
-                      {{fieldErrors}}
                     </ng-container>
                     <ng-template #viewMode>
                       {{ getCellValue(row, column.field) }}

@@ -1,17 +1,14 @@
 <div class="tw-sticky tw-top-0 tw-z-[30]">
   <app-header-content
-    [headerName]="'User Web'"
-    [headerType]="'search'"
-    [searchByOptions]="searchByOptions"
-    [searchForm]="searchForm"
-    (search)="onSearch($event)"
-    (clearSearch)="onClearSearch()"
+    [headerName]="'Special Benefits'"
+    [headerType]="''"
   ></app-header-content>
 </div>
 
 <app-filter
   [filterDate]="false"
   [actionButtons]="filterButtons"
+  [disabledKeys]="isAddingRow ? ['add'] : []"
   (buttonClicked)="onFilterButtonClick($event)"
 ></app-filter>
 
@@ -23,14 +20,18 @@
   (scroll)="onScroll($event)"
 >
   <app-tables
+    #tables
     [columns]="columns"
     [rows]="ScreenRows"
     [splitRows]="true"
     [showCheckbox]="false"
     [enableRowClick]="false"
     (toggleChange)="onUserToggleRequested($event)"
-    (editClicked)="handleEditDialog($event)"
-    [sortStates]="currentSort()"
-    (columnClicked)="onColumnClick($event)"
+    (editClicked)="handleEditRow($event)"
+    (createInlineSave)="onInlineSave($event)"
+    (createInlineCancel)="onInlineCancel()"
+    [isAddMode]="isAddingRow"
+    [fieldErrors]="fieldErrors"
+    [highlightRowIndex]="duplicateRowIndex"
   ></app-tables>
 </div>

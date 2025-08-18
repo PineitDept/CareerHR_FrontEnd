@@ -64,6 +64,7 @@ export class TablesComponent
   @Input() enableRowClick: boolean = true;
   @Input() isAddMode: boolean = false;
   @Input() fieldErrors: boolean = false;
+  @Input() highlightRowIndex: number | null = null;
 
   @Output() selectionChanged = new EventEmitter<any[]>();
   @Output() rowClicked = new EventEmitter<any>();
@@ -86,7 +87,8 @@ export class TablesComponent
   editingRowId: string | number | null = null;
   editedValue: string = '';
   editRow: boolean = false;
-  private _newTempIdSeq = 0;
+  rowValidationErrors: { [rowId: string]: boolean } = {};
+  ishighlightRow: boolean = false;
 
   @ViewChild('selectAllCheckbox')
   selectAllCheckbox!: ElementRef<HTMLInputElement>;
@@ -147,6 +149,10 @@ export class TablesComponent
       this.columnClicked.emit({ state: s, order: [] });
 
       this.cdr.detectChanges();
+    }
+
+    if (changes['highlightRowIndex'] && !changes['highlightRowIndex'].firstChange) {
+      this.ishighlightRow = true
     }
   }
 
@@ -478,6 +484,11 @@ export class TablesComponent
     event.stopPropagation();
     this.editingRowId = index;
     this.editRow = true;
+
+    if (this.highlightRowIndex && this.ishighlightRow) {
+      this.ishighlightRow = false
+      this.fieldErrors = false
+    }
   }
 
   onClickSave(event: Event, row: any): void {
@@ -572,6 +583,10 @@ export class TablesComponent
     this.editRow = false;
     this.createInlineCancel.emit();
     this.cdr.detectChanges();
+
+    if (this.highlightRowIndex && this.ishighlightRow) {
+      this.ishighlightRow = false
+    }
   }
 
   // onInlineKeydown(e: KeyboardEvent, row: any) {
