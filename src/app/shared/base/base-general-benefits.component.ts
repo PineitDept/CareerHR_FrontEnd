@@ -32,7 +32,8 @@ import { GeneralBenefitsService } from '../../services/admin-setting/general-ben
 import {
     // ApiResponse,
     IBenefitsFilterRequest,
-    IBenefitsWithPositionsDto
+    IBenefitsWithPositionsDto,
+    SearchForm,
 } from '../../interfaces/admin-setting/general-benefits.interface';
 import { SortState } from '../../shared/components/tables/tables.component';
 
@@ -46,7 +47,8 @@ export const BASE_CONFIG = {
 } as const;
 
 export const SEARCH_OPTIONS: string[] = [
-    'welfareBenefits'
+    'University',
+    'University ID'
 ] as const;
 
 export type SearchOption = (typeof SEARCH_OPTIONS)[number];
@@ -86,23 +88,57 @@ export abstract class BaseGeneralBenefitsComponent<T> implements OnInit, OnDestr
 
     // Computed Properties
     readonly isLoading = computed(() => this.loadingState());
-    readonly rows = computed(() => this.rowsData());
+    rows = computed(() => this.rowsData());
     //   readonly activeTab = computed(() => this.filterRequest().statusGroup || '');
     readonly currentSort = computed(() => this.sortConfig());
 
     readonly resetCounter = signal<number>(0);
     
+    // Subjects for reactive streams
+    protected readonly searchSubject = new BehaviorSubject<SearchForm>({
+        searchBy: '',
+        searchValue: '',
+    });
+    
     protected readonly tabChangeSubject = new BehaviorSubject<string>('');
     protected readonly columnSortSubject = new BehaviorSubject<string>('');
     protected readonly scrollSubject = new Subject<Event>();
+    protected isFiltering: boolean = false;
+    
+    // Public Properties
+    readonly searchByOptions = SEARCH_OPTIONS;
+    searchForm: SearchForm = { searchBy: '', searchValue: '' };
 
     ngOnInit(): void {
         this.initializeComponent();
         this.setupReactiveStreams();
+        this.rows = computed(() => this.rowsData());
     }
 
     ngOnDestroy(): void {
         this.persistCurrentState();
+    }
+    
+    // Public Event Handlers
+    onSearch(form: SearchForm): void {
+        // this.searchSubject.next(form);
+        this.searchForm = form;
+        this.persistSearchForm(this.searchForm);
+        this.searchSubject.next({
+            ...form,
+            __marker: Date.now()
+        } as any);
+    }
+
+    onClearSearch(): void {
+        this.searchForm = { searchBy: '', searchValue: '' };
+        // this.searchSubject.next(this.searchForm);
+        this.persistSearchForm(this.searchForm);
+        const forceTriggerSearch = {
+            ...(this.searchForm as any),
+            __marker: Date.now()
+        };
+        this.searchSubject.next(forceTriggerSearch);
     }
 
     async onColumnClick(payload: { state: SortState; order: string[] }): Promise<void> {
@@ -140,9 +176,27 @@ export abstract class BaseGeneralBenefitsComponent<T> implements OnInit, OnDestr
     }
 
     protected setupReactiveStreams(): void {
+        this.setupSearchStream();
         this.setupTabChangeStream();
         this.setupColumnSortStream();
         this.setupScrollStream();
+    }
+    
+    protected setupSearchStream(): void {
+        this.searchSubject
+            .pipe(
+            skip(1),
+            debounceTime(BASE_CONFIG.DEBOUNCE_TIME),
+            distinctUntilChanged(
+                (prev, curr) =>
+                prev.searchBy === curr.searchBy &&
+                prev.searchValue === curr.searchValue
+            ),
+            tap(() => this.resetPagination()),
+            switchMap((searchForm) => this.handleSearch(searchForm)),
+            takeUntilDestroyed(this.destroyRef)
+            )
+            .subscribe();
     }
 
     protected setupTabChangeStream(): void {
@@ -176,6 +230,12 @@ export abstract class BaseGeneralBenefitsComponent<T> implements OnInit, OnDestr
             takeUntilDestroyed(this.destroyRef)
         ).subscribe();
     }
+    
+    // Protected Stream Handlers
+    protected handleSearch(searchForm: SearchForm): Observable<void> {
+        const updatedFilter = this.updateFilterForSearch(searchForm);
+        return this.fetchData(updatedFilter, false);
+    }
 
     protected handleColumnSort(column: string): Observable<void> {
         const updatedFilter = this.updateFilterForSort(column);
@@ -183,10 +243,13 @@ export abstract class BaseGeneralBenefitsComponent<T> implements OnInit, OnDestr
     }
 
     protected handleInfiniteScroll(event: Event): Observable<void> {
+        if (this.isFiltering) return EMPTY;
+
         const element = event.target as HTMLElement;
         if (!this.canLoadMore(element)) return EMPTY;
 
         const currentFilter = this.filterRequest();
+        console.log(currentFilter)
         if (currentFilter.hasNextPage && !this.isLoading()) {
             const updatedFilter = { ...currentFilter, page: currentFilter.page + 1 };
             return this.fetchData(updatedFilter, true);
@@ -205,17 +268,38 @@ export abstract class BaseGeneralBenefitsComponent<T> implements OnInit, OnDestr
         this.loadingState.set(true);
 
         const fullFilter: IBenefitsFilterRequest = {
-            ...filter
+            ...filter,
+            search: this.searchForm.searchValue || undefined
         };
 
-        return this.generalbenefitsService.getBenefitsWeb<T>(fullFilter).pipe(
-            tap((items) => this.handleApiResponse(items, append)),
+        return this.generalbenefitsService.getBenefitsWeb<any>(fullFilter).pipe(
+            tap((res) => {
+                const items = Array.isArray(res)
+                    ? res
+                    : Array.isArray(res?.items)
+                        ? res.items
+                        : [];
+
+                this.handleApiResponse(items, append);
+            }),
             tap(() => this.persistFilterState()),
             catchError((error) => this.handleApiError(error)),
             tap(() => this.loadingState.set(false)),
             map(() => void 0)
         );
     }
+
+    
+    protected persistSearchForm(form: SearchForm): void {
+        const storageKeys = this.getStorageKeys();
+        this.saveToStorage(storageKeys.FILTER_SETTINGS + '_SEARCH_FORM', form);
+    }
+
+    protected loadPersistedSearchForm(): SearchForm | null {
+        const storageKeys = this.getStorageKeys();
+        return this.loadFromStorage<SearchForm>(storageKeys.FILTER_SETTINGS + '_SEARCH_FORM');
+    }
+
 
     protected setupRouteChangeListener(): void {
         this.router.events
@@ -235,7 +319,7 @@ export abstract class BaseGeneralBenefitsComponent<T> implements OnInit, OnDestr
     }
 
     protected loadInitialData(): void {
-        this.fetchData(this.filterRequest(), false).subscribe();
+        // this.fetchData(this.filterRequest(), false).subscribe();
     }
 
     protected handleApiResponse(response: T[], append: boolean): void {
@@ -267,6 +351,18 @@ export abstract class BaseGeneralBenefitsComponent<T> implements OnInit, OnDestr
         this.rowsData.set(
             append ? [...currentRows, ...processedRows] : processedRows
         );
+    }
+    
+    // Protected Filter Updates
+    protected updateFilterForSearch(
+        searchForm: SearchForm
+        ): IBenefitsFilterRequest {
+        const currentFilter = this.filterRequest();
+        const search = this.isValidSearchOption(searchForm.searchBy)
+            ? searchForm.searchValue || undefined
+            : undefined;
+
+        return { ...currentFilter, page: 1 };
     }
 
     protected updateFilterForSort(column: string): IBenefitsFilterRequest {
@@ -322,6 +418,12 @@ export abstract class BaseGeneralBenefitsComponent<T> implements OnInit, OnDestr
                 ...persistedFilter,
             });
         }
+
+        const persistedSearchForm = this.loadPersistedSearchForm();
+        if (persistedSearchForm) {
+            this.searchForm = persistedSearchForm;
+        }
+
 
         const clickedRows = this.loadFromStorage<string[]>(
             storageKeys.CLICKED_ROWS

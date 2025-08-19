@@ -25,9 +25,11 @@ export class FilterComponent {
   @Input() filterOurCompany: boolean = false;
   @Input() filterDateRange: { month: string; year: string} = { month: '', year: '' };
   @Input() disabledFilterDateRange: boolean = false;
+  @Input() GradeSelect: boolean = false;
 
   @Output() buttonClicked = new EventEmitter<string>();
   @Output() dateRangeSelected = new EventEmitter<{ startDate: string; endDate: string }>();
+  @Output() gradeSelected = new EventEmitter<string>();
 
   currentYear = new Date().getFullYear();
   currentMonth = new Date().getMonth(); // 0-indexed
@@ -39,16 +41,20 @@ export class FilterComponent {
   months = this.getMonthsByYear(String(this.currentYear));
 
   ourCompany = ['All', 'PPC', 'PMC', 'PIM'];
+  allGrade = ['All Grade', 'A', 'B', 'C', 'D', 'E', 'N/A'];
 
   selectedYear = String(this.currentYear);
   selectedMonth = 'All';
   selectedCompany = 'All';
+  selectedGrade = 'All Grade';
 
   isYearOpen = false;
   isMonthOpen = false;
+  isGradeOpen = false;
 
   @ViewChild('yearDropdown') yearDropdown!: ElementRef;
   @ViewChild('monthDropdown') monthDropdown!: ElementRef;
+  @ViewChild('gradeDropdown') gradeDropdown!: ElementRef;
 
   constructor(
     private router: Router
@@ -81,16 +87,17 @@ export class FilterComponent {
     // }
   }
 
-  toggleDropdown(type: 'year' | 'month') {
+  toggleDropdown(type: 'year' | 'month' | 'grade') {
     this.isYearOpen = type === 'year' ? !this.isYearOpen : false;
     this.isMonthOpen = type === 'month' ? !this.isMonthOpen : false;
+    this.isGradeOpen = type === 'grade' ? !this.isGradeOpen : false;
   }
 
   onActionButtonClick(key: string) {
     this.buttonClicked.emit(key);
   }
 
-  selectOption(type: 'year' | 'month' | 'company', value: string) {
+  selectOption(type: 'year' | 'month' | 'company' | 'grade', value: string) {
     if (type === 'year') {
       this.selectedYear = value;
       this.months = this.getMonthsByYear(value);
@@ -105,6 +112,10 @@ export class FilterComponent {
       this.isMonthOpen = false;
     } else if (type === 'company') {
       this.selectedCompany = value;
+    } else if (type === 'grade') {
+      this.selectedGrade = value;
+      this.isGradeOpen = false;
+      this.gradeSelected.emit(this.selectedGrade);
     }
 
     this.emitDateRange();
@@ -159,6 +170,9 @@ export class FilterComponent {
     }
     if (!this.monthDropdown?.nativeElement.contains(target)) {
       this.isMonthOpen = false;
+    }
+    if (!this.gradeDropdown?.nativeElement.contains(target)) {
+      this.isGradeOpen = false;
     }
   }
 }

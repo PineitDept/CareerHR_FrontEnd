@@ -18,6 +18,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { SpecialBenefitsComponent } from './pages/data-setting/application/special-benefits/special-benefits.component';
 import { ComputerSkillsComponent } from './pages/data-setting/application/computer-skills/computer-skills.component';
 import { LanguageSkillsComponent } from './pages/data-setting/application/language-skills/language-skills.component';
+import { UniversityComponent } from './pages/data-setting/application/university/university.component';
 
 @NgModule({
   declarations: [
@@ -35,7 +36,8 @@ import { LanguageSkillsComponent } from './pages/data-setting/application/langua
     ApplicationQuestionDetailsComponent,
     SpecialBenefitsComponent,
     ComputerSkillsComponent,
-    LanguageSkillsComponent
+    LanguageSkillsComponent,
+    UniversityComponent
   ],
   imports: [
     CommonModule,
