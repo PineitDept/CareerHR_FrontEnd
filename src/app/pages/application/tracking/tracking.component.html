@@ -29,6 +29,7 @@
   #tableContainer
   class="tw-overflow-y-auto tw-transition-all tw-duration-500 tw-ease-in-out"
   (scroll)="onScroll($event)"
+  #scrollArea
 >
   <app-tables
     [columns]="columns"
@@ -40,5 +41,6 @@
     (rowClicked)="onRowClick($event)"
     (columnClicked)="onColumnClick($event)"
     (listClickedRows)="onClickedRowsChanged($event)"
+    [hasOverflowY]="hasOverflowY"
   ></app-tables>
 </div>

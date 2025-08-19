@@ -24,6 +24,7 @@ export class FilterComponent {
   @Input() filterDate: boolean = true;
   @Input() filterOurCompany: boolean = false;
   @Input() filterDateRange: { month: string; year: string} = { month: '', year: '' };
+  @Input() disabledFilterDateRange: boolean = false;
   @Input() GradeSelect: boolean = false;
 
   @Output() buttonClicked = new EventEmitter<string>();
@@ -64,16 +65,26 @@ export class FilterComponent {
   }
 
   onBackClick() {
-    const currentUrl = this.router.url;
-    const matched = currentUrl.match(/\/purchasing\/(.*?)-po\/details|\/purchasing\/purchase-order\/details/);
+    const fullUrl = this.router.url;                  // e.g. /admin-setting/.../application-question/details?categoryType=AboutMe
+    const [pathOnly] = fullUrl.split('?');            // ตัด query ออกก่อน
 
-    if (matched) {
-      const poType = matched[1]; // e.g., 'asset', 'tools', etc., or undefined if it's a purchase-order
-      const target = poType ? `/purchasing/${poType}-po` : `/purchasing/purchase-order`;
-      this.router.navigate([target]);
-    } else {
-      this.router.navigate(['/purchasing/purchase-order']);
+    if (pathOnly.includes('/details')) {
+      // ตัดตั้งแต่คำว่า /details และทุกอย่างหลังจากนั้นออก
+      const basePath = pathOnly.replace(/\/details(?:\/.*)?$/, '');
+      // นำทางกลับไปที่ path ที่ตัดแล้ว (เช่น /admin-setting/data-setting/application/application-question)
+      this.router.navigateByUrl(basePath || '/');
+      return;
     }
+    // const currentUrl = this.router.url;
+    // const matched = currentUrl.match(/\/purchasing\/(.*?)-po\/details|\/purchasing\/purchase-order\/details/);
+
+    // if (matched) {
+    //   const poType = matched[1]; // e.g., 'asset', 'tools', etc., or undefined if it's a purchase-order
+    //   const target = poType ? `/purchasing/${poType}-po` : `/purchasing/purchase-order`;
+    //   this.router.navigate([target]);
+    // } else {
+    //   this.router.navigate(['/purchasing/purchase-order']);
+    // }
   }
 
   toggleDropdown(type: 'year' | 'month' | 'grade') {

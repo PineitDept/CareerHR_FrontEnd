@@ -18,7 +18,7 @@
 
 <app-loading></app-loading>
 
-<div class="tw-h-[calc(100vh-300px)] tw-overflow-y-auto" (scroll)="onScroll($event)">
+<div class="tw-h-[calc(100vh-300px)] tw-overflow-y-auto" (scroll)="onScroll($event)" #scrollArea>
   <app-tables
     [columns]="columns"
     [rows]="rows"
@@ -26,5 +26,6 @@
     [enableRowClick]="false"
     [resetKey]="tableResetKey"
     (columnClicked)="onColumnClicked($event)"
+    [hasOverflowY]="hasOverflowY"
   ></app-tables>
 </div>

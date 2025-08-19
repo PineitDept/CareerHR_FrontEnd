@@ -23,6 +23,7 @@
   #tableContainer
   class="tw-max-h-[calc(100vh-330px)] tw-overflow-y-auto"
   (scroll)="onScroll($event)"
+  #scrollArea
 >
   <app-tables
     #tables
@@ -38,6 +39,7 @@
     [isAddMode]="isAddingRow"
     [fieldErrors]="fieldErrors"
     [highlightRowIndex]="duplicateRowIndex"
+    [hasOverflowY]="hasOverflowY"
   ></app-tables>
 </div>
 
