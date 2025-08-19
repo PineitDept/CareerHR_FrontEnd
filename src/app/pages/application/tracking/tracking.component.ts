@@ -63,6 +63,10 @@ export class TrackingComponent
 {
   // Additional ViewChild for tracking-specific functionality
   @ViewChild('filter', { static: false }) filterRef!: ElementRef;
+  
+  @ViewChild('scrollArea') scrollArea!: ElementRef<HTMLDivElement>;
+  hasOverflowY = false;
+  private ro?: ResizeObserver;
 
   // Tracking-specific state
   private readonly trackingFilterRequest =
@@ -305,6 +309,7 @@ export class TrackingComponent
   }
 
   override ngOnDestroy(): void {
+    this.ro?.disconnect?.();
     super.ngOnDestroy();
     this.disconnectResizeObserver();
   }

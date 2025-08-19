@@ -65,6 +65,7 @@ export class TablesComponent
   @Input() isAddMode: boolean = false;
   @Input() fieldErrors: boolean = false;
   @Input() highlightRowIndex: number | null = null;
+  @Input() hasOverflowY = false;
 
   @Output() selectionChanged = new EventEmitter<any[]>();
   @Output() rowClicked = new EventEmitter<any>();

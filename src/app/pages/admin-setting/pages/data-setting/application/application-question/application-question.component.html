@@ -6,12 +6,13 @@
 </div>
 <app-loading></app-loading>
 
-<div class="tw-h-[calc(100vh-300px)] tw-overflow-y-auto">
+<div class="tw-h-[calc(100vh-300px)] tw-overflow-y-auto tw-mt-6" #scrollArea>
   <app-tables
     [columns]="columns"
     [rows]="rows"
     [showCheckbox]="false"
     [enableRowClick]="false"
     (viewRowClicked)="onViewRowClicked($event)"
+    [hasOverflowY]="hasOverflowY"
   ></app-tables>
 </div>

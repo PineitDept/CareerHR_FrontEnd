@@ -4,13 +4,14 @@ import {
   EventEmitter,
   ViewChild,
   ChangeDetectorRef,
+  ElementRef,
 } from '@angular/core';
 import { Columns } from '../../../../../../shared/interfaces/tables/column.interface';
 import { BaseGeneralBenefitsComponent } from '../../../../../../shared/base/base-general-benefits.component';
 import { GeneralBenefitsService } from '../../../../../../services/admin-setting/general-benefits/general-benefits.service'
 import { LoadingService } from '../../../../../../shared/services/loading/loading.service';
 import {
-  IBenefitsFilterRequest, 
+  IBenefitsFilterRequest,
   IComputerWithPositionsDto,
   ComputerScreeningRow,
 } from '../../../../../../interfaces/admin-setting/general-benefits.interface';
@@ -42,12 +43,28 @@ export class ComputerSkillsComponent extends BaseGeneralBenefitsComponent<ICompu
   fieldErrors:boolean = false;
   duplicateRowIndex: number | null = null;
 
+  @ViewChild('scrollArea') scrollArea!: ElementRef<HTMLDivElement>;
+  hasOverflowY = false;
+  private ro?: ResizeObserver;
+
   constructor(
     private generalBenefitsService: GeneralBenefitsService,
     private loadingService: LoadingService,
     private notificationService: NotificationService,
     private cdr: ChangeDetectorRef ) {
     super();
+  }
+
+  ngAfterViewInit(): void {
+    this.measureOverflow();
+
+    this.ro = new ResizeObserver(() => this.measureOverflow());
+    this.ro.observe(this.scrollArea.nativeElement);
+  }
+
+  measureOverflow(): void {
+    const el = this.scrollArea.nativeElement;
+    this.hasOverflowY = el.scrollHeight > el.clientHeight;
   }
 
   readonly columns: Columns = [
@@ -110,13 +127,13 @@ export class ComputerSkillsComponent extends BaseGeneralBenefitsComponent<ICompu
         this.loadingService.hide();
         this.notificationService.error('A benefit with this name already exists.');
         this.fieldErrors = true;
-        
+
         setTimeout(() => {
           const rows = [...this.ScreenRows];
           const name = row.nameCpskill;
           this.duplicateRowIndex = rows.findIndex(row => row.nameCpskill.trim().toLocaleLowerCase() === name.trim().toLocaleLowerCase());
         },100)
-        
+
         this.loadUsers();
       }
     });
@@ -175,6 +192,7 @@ export class ComputerSkillsComponent extends BaseGeneralBenefitsComponent<ICompu
     this.generalBenefitsService.getBenefitsWeb<IComputerWithPositionsDto[]>(this.currentFilterParams).subscribe({
       next: (res) => {
         this.ScreenRows = this.transformApiDataToRows(res);
+        setTimeout(() => this.measureOverflow());
         this.cdr.detectChanges();
       },
       error: (err) => console.error(err),
@@ -227,7 +245,7 @@ export class ComputerSkillsComponent extends BaseGeneralBenefitsComponent<ICompu
     checked: boolean;
     checkbox: HTMLInputElement;
   }) {
-    
+
     if (this.isAddingRow && !row.idcpSkill) {
       checkbox.checked = checked;
       if ('isActive' in row) row.isActive = checked;
@@ -244,5 +262,11 @@ export class ComputerSkillsComponent extends BaseGeneralBenefitsComponent<ICompu
         }
       });
     }
+  }
+
+  override ngOnDestroy(): void {
+    this.ro?.disconnect?.();
+
+    super.ngOnDestroy();
   }
 }
