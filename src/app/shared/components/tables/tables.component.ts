@@ -66,6 +66,8 @@ export class TablesComponent
   @Input() fieldErrors: boolean = false;
   @Input() highlightRowIndex: number | null = null;
   @Input() hasOverflowY = false;
+  @Input() withinCard: boolean = false;
+  @Input() isToggleAlert: boolean = false;
 
   @Output() selectionChanged = new EventEmitter<any[]>();
   @Output() rowClicked = new EventEmitter<any>();
@@ -430,14 +432,14 @@ export class TablesComponent
   }
 
   getVisibleColumnCount(): number {
-    // let count = this.columns.filter(
-    //   (col) => !col.subColumn || this.isSubColumnVisible(col)
-    // ).length;
+    let count = this.columns.filter(
+      (col) => !col.subColumn || this.isSubColumnVisible(col)
+    ).length;
 
-    // if (this.showCheckbox) count += 1;
-    // return count;
+    if (this.showCheckbox) count += 1;
+    return count;
 
-    return this.columns.length;
+    // return this.columns.length;
   }
 
   getBackgroundClass(fill?: string): string {
@@ -462,7 +464,7 @@ export class TablesComponent
 
     checkbox.checked = !targetStatus;
 
-    if (!row._isNew) {
+    if (!row._isNew && !this.isToggleAlert) {
       Promise.resolve().then(() => {
         const container = document.querySelector('.cdk-overlay-container');
         container?.classList.add('dimmed-overlay');
@@ -489,7 +491,32 @@ export class TablesComponent
         }
       });
     } else {
-      this.toggleChange.emit({ row, checked: targetStatus, checkbox });
+      if (this.isToggleAlert) {
+        Promise.resolve().then(() => {
+          const container = document.querySelector('.cdk-overlay-container');
+          container?.classList.add('dimmed-overlay');
+        });
+
+        const dialogRef = this.dialog.open(AlertDialogComponent, {
+          width: '640px',
+          panelClass: 'custom-dialog-container',
+          autoFocus: false,
+          disableClose: true,
+          data: {
+            title: 'Please contact the Human Resources Department',
+            message: `For change the status of this item, please contact our Human Resources Department for assistance.`,
+            confirm: false
+          }
+        });
+
+        dialogRef.afterClosed().subscribe(() => {
+          const container = document.querySelector('.cdk-overlay-container');
+          container?.classList.remove('dimmed-overlay');
+        });
+      } else {
+        this.toggleChange.emit({ row, checked: targetStatus, checkbox });
+      }
+      console.log('Toggle change', { row, checked: targetStatus, checkbox });
     }
   }
 
