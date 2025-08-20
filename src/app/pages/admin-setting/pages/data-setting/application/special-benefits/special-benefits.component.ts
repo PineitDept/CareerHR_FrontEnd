@@ -105,7 +105,7 @@ export class SpecialBenefitsComponent extends BaseGeneralBenefitsComponent<ISpec
   override ngOnInit(): void {
     this.generalBenefitsService.setBenefitType('special-benefits');
     this.loadUsers();
-    super.ngOnInit();
+    // super.ngOnInit();
   }
 
   handleEditRow(row: SpecialScreeningRow): void {

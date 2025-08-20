@@ -106,7 +106,7 @@ export class LanguageSkillsComponent extends BaseGeneralBenefitsComponent<ILangu
   override ngOnInit(): void {
     this.generalBenefitsService.setBenefitType('langauge-skills');
     this.loadUsers();
-    super.ngOnInit();
+    // super.ngOnInit();
   }
 
   handleEditRow(row: LanguageScreeningRow): void {

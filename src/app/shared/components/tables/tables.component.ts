@@ -97,6 +97,10 @@ export class TablesComponent
   @ViewChild('tableWrapper', { static: true })
   tableWrapperRef!: ElementRef<HTMLDivElement>;
 
+  @Input() createDefaults: any = {};  
+  footerRow: any = {};  
+  indexAdd: number = 0;
+
   private destroyRef = inject(DestroyRef);
 
   constructor(
@@ -153,8 +157,26 @@ export class TablesComponent
       this.cdr.detectChanges();
     }
 
+    if (changes['isAddMode']) {
+      if (this.isAddMode) {
+        this.footerRow = {
+          ...this.createDefaults,
+          activeStatus: this.createDefaults.activeStatus ?? false,
+          status: this.createDefaults.status ?? 2,
+        };
+        this.indexAdd = this.rowsValue.length + 1
+      } else {
+        this.footerRow = {};
+      }
+      this.cdr.detectChanges();
+    }
+
     if (changes['highlightRowIndex'] && !changes['highlightRowIndex'].firstChange) {
       this.ishighlightRow = true
+    }
+
+    if (changes['rows']) {
+      this.indexAdd = this.rowsValue.length + 1
     }
   }
 
@@ -550,17 +572,17 @@ export class TablesComponent
     const newRow = { _tempId: `__new__${Date.now()}`, _isNew: true, ...defaults };
     const snapshot = this.rowsValue as any[];
 
-    if (position === 'bottom') {
-      snapshot.push(newRow);
-      requestAnimationFrame(() => {
-        this.tableWrapperRef?.nativeElement?.scrollTo({
-          top: this.tableWrapperRef.nativeElement.scrollHeight,
-          behavior: 'smooth'
-        });
-      });
-    } else {
-      snapshot.unshift(newRow);
-    }
+    // if (position === 'bottom') {
+    //   snapshot.push(newRow);
+    //   requestAnimationFrame(() => {
+    //     this.tableWrapperRef?.nativeElement?.scrollTo({
+    //       top: this.tableWrapperRef.nativeElement.scrollHeight,
+    //       behavior: 'smooth'
+    //     });
+    //   });
+    // } else {
+    //   snapshot.unshift(newRow);
+    // }
 
     this.editingRowId = newRow._tempId;
     this.editRow = true;

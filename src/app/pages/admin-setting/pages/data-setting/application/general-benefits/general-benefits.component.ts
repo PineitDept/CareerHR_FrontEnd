@@ -105,7 +105,7 @@ export class GeneralBenefitsComponent extends BaseGeneralBenefitsComponent<IBene
   override ngOnInit(): void {
     this.generalBenefitsService.setBenefitType('general-benefits');
     this.loadUsers();
-    super.ngOnInit();
+    // super.ngOnInit();
   }
 
   handleEditRow(row: ScreeningRow): void {

@@ -123,7 +123,11 @@ export class UniversityComponent extends BaseGeneralBenefitsComponent<IUniversit
 
   override ngOnInit(): void {
     this.generalBenefitsService.setBenefitType('university');
-    this.loadUsers();
+    // this.loadUsers();
+    
+    // const storageKeys = this.getStorageKeys();
+    // this.saveToStorage(storageKeys.FILTER_SETTINGS + '_Grade', 0);
+
     super.ngOnInit();
   }
 
@@ -145,7 +149,7 @@ export class UniversityComponent extends BaseGeneralBenefitsComponent<IUniversit
       },
       error: (err) => {
         this.loadingService.hide();
-        this.notificationService.error('A benefit with this name already exists.');
+        this.notificationService.error(err.error.error.title);
         this.fieldErrors = true;
 
         setTimeout(() => {
@@ -181,6 +185,7 @@ export class UniversityComponent extends BaseGeneralBenefitsComponent<IUniversit
 
   onInlineSave(payload: any) {
     this.isAddingRow = false;
+    payload.typeScore = this.mapGradeToScore(payload.typeScore)
     this.generalbenefitsService.createBenefit(payload).subscribe({
       next: (res) => {
         this.fieldErrors = false;
@@ -196,7 +201,7 @@ export class UniversityComponent extends BaseGeneralBenefitsComponent<IUniversit
       },
       error: (err) => {
         this.isAddingRow = true;
-        this.notificationService.error('A benefit with this name already exists.');
+        this.notificationService.error(err.error.error.title);
         this.fieldErrors = true;
 
         const rows = [...this.ScreenRows];
@@ -250,7 +255,7 @@ export class UniversityComponent extends BaseGeneralBenefitsComponent<IUniversit
       page: 1,
       pageSize: 30,
       hasNextPage: false,
-      hasPreviousPage: false,
+      hasPreviousPage: false
     };
 
     if (gradeScore && gradeScore !== 0) {
@@ -343,16 +348,20 @@ export class UniversityComponent extends BaseGeneralBenefitsComponent<IUniversit
   onGradeSelected(grade: string) {
     this.isFiltering = true;
     this.gradeSelected = this.mapGradeToScore(grade)
+    const storageKeys = this.getStorageKeys();
 
     if (this.gradeSelected !== 0) {
       this.currentFilterParams.page = 1;
       this.currentFilterParams.pageSize = 30;
       this.currentFilterParams.TypeScoreMin = this.mapGradeToScore(grade);
       this.currentFilterParams.TypeScoreMax = this.mapGradeToScore(grade);
-      // this.clearPersistedSearchForm();
+      this.currentFilterParams.search = this.searchForm.searchValue
+      
+      this.saveToStorage(storageKeys.FILTER_SETTINGS + '_Grade', this.gradeSelected);
     } else {
       delete this.currentFilterParams.TypeScoreMin;
       delete this.currentFilterParams.TypeScoreMax;
+      this.saveToStorage(storageKeys.FILTER_SETTINGS + '_Grade', 0);
     }
 
     this.scrollToTop();
