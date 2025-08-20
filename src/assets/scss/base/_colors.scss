@@ -58,6 +58,7 @@ $color-map: (
   blue: $blue,
   denim-blue: $denim-blue,
   azure: $azure,
+  azure-dark: $azure-dark,
   electric-indigo: $electric-indigo,
   neon-blue: $neon-blue,
   maya-blue: $maya-blue,
@@ -98,5 +99,23 @@ $color-map: (
 
   .bg-#{$name} {
     background-color: #{$hex};
+  }
+
+  .hover\:bg-#{$name}:hover {
+    background-color: #{$hex};
+  }
+
+  .focus\:ring-#{$name}:focus {
+    outline: none;
+    box-shadow:
+      0 0 0 2px #ffffff,
+      0 0 0 5px rgba($hex, 0.45);
+  }
+
+  .focus-visible\:ring-#{$name}:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px #ffffff,
+      0 0 0 5px rgba($hex, 0.45);
   }
 }

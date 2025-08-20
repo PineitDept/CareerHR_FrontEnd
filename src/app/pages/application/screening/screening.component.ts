@@ -3,6 +3,9 @@ import {
   Component,
   ChangeDetectionStrategy,
   computed,
+  ViewChild,
+  ElementRef,
+  effect,
 } from '@angular/core';
 
 import { BaseApplicationComponent } from '../../../shared/base/base-application.component';
@@ -35,6 +38,10 @@ const SCREENING_CONFIG = {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ScreeningComponent extends BaseApplicationComponent {
+  @ViewChild('scrollArea') scrollArea!: ElementRef<HTMLDivElement>;
+  hasOverflowY = false;
+  private ro?: ResizeObserver;
+
   constructor(private dialog: MatDialog) {
     super();
   }
@@ -157,6 +164,24 @@ export class ScreeningComponent extends BaseApplicationComponent {
     },
   ] as const;
 
+  ngAfterViewInit(): void {
+    this.measureOverflow();
+
+    this.ro = new ResizeObserver(() => this.measureOverflow());
+    this.ro.observe(this.scrollArea.nativeElement);
+
+    // 👇 วัดใหม่ทุกครั้งที่ rows() อัปเดตจาก Base
+    effect(() => {
+      const _ = this.rows();          // อ่านค่าเพื่อให้ effect ติดตาม
+      queueMicrotask(() => this.measureOverflow()); // วัดหลัง DOM อัปเดต
+    }, { injector: this.destroyRef as any });
+  }
+
+  measureOverflow(): void {
+    const el = this.scrollArea.nativeElement;
+    this.hasOverflowY = el.scrollHeight > el.clientHeight;
+  }
+
   // Abstract method implementations
   protected getStorageKeys() {
     return SCREENING_CONFIG.STORAGE_KEYS;
@@ -184,7 +209,7 @@ export class ScreeningComponent extends BaseApplicationComponent {
   ): ScreeningRow[] {
     return items.map((item) => this.transformSingleItem(item));
   }
-  
+
 
   // Override tab change behavior for screening-specific logic
   protected override updateFilterForTab(tab: string): ICandidateFilterRequest {
@@ -225,5 +250,10 @@ export class ScreeningComponent extends BaseApplicationComponent {
       employeeAction: summary.employeeAction?.split(' ')[0] || '',
       screening: createStatusBadge(summary.screening),
     };
+  }
+
+  override ngOnDestroy(): void {
+    this.ro?.disconnect?.();
+    super.ngOnDestroy();
   }
 }

@@ -4,6 +4,7 @@ import {
   EventEmitter,
   ViewChild,
   ChangeDetectorRef,
+  ElementRef,
 } from '@angular/core';
 import { Columns } from '../../../../../../shared/interfaces/tables/column.interface';
 import { BaseGeneralBenefitsComponent } from '../../../../../../shared/base/base-general-benefits.component';
@@ -11,7 +12,7 @@ import { GeneralBenefitsService } from '../../../../../../services/admin-setting
 import { LoadingService } from '../../../../../../shared/services/loading/loading.service';
 import {
   IApiResponse,
-  IBenefitsFilterRequest, 
+  IBenefitsFilterRequest,
   IUniversityWithPositionsDto,
   SearchForm,
   UniversityScreeningRow,
@@ -46,12 +47,28 @@ export class UniversityComponent extends BaseGeneralBenefitsComponent<IUniversit
   duplicateRowIndex: number | null = null;
   gradeSelected: number = 0;
 
+  @ViewChild('scrollArea') scrollArea!: ElementRef<HTMLDivElement>;
+  hasOverflowY = false;
+  private ro?: ResizeObserver;
+
   constructor(
     private generalBenefitsService: GeneralBenefitsService,
     private loadingService: LoadingService,
     private notificationService: NotificationService,
     private cdr: ChangeDetectorRef ) {
     super();
+  }
+
+  ngAfterViewInit(): void {
+    this.measureOverflow();
+
+    this.ro = new ResizeObserver(() => this.measureOverflow());
+    this.ro.observe(this.scrollArea.nativeElement);
+  }
+
+  measureOverflow(): void {
+    const el = this.scrollArea.nativeElement;
+    this.hasOverflowY = el.scrollHeight > el.clientHeight;
   }
 
   readonly columns: Columns = [
@@ -130,7 +147,7 @@ export class UniversityComponent extends BaseGeneralBenefitsComponent<IUniversit
         this.loadingService.hide();
         this.notificationService.error('A benefit with this name already exists.');
         this.fieldErrors = true;
-        
+
         setTimeout(() => {
           const rows = [...this.ScreenRows];
           const name = row.university.trim().toLowerCase();
@@ -143,7 +160,7 @@ export class UniversityComponent extends BaseGeneralBenefitsComponent<IUniversit
             )
           );
         }, 100);
-        
+
         this.loadUsers();
       }
     });
@@ -214,6 +231,7 @@ export class UniversityComponent extends BaseGeneralBenefitsComponent<IUniversit
           const items = Array.isArray(res) ? res : res?.items ?? [];
           const rows = this.transformApiDataToRows(items);
           this.rowsData.set(rows);
+          setTimeout(() => this.measureOverflow());
           this.cdr.detectChanges();
         },
         error: (err) => {
@@ -303,7 +321,7 @@ export class UniversityComponent extends BaseGeneralBenefitsComponent<IUniversit
     checked: boolean;
     checkbox: HTMLInputElement;
   }) {
-    
+
     if (this.isAddingRow && !row.id) {
       checkbox.checked = checked;
       if ('isActive' in row) row.isActive = checked;
@@ -325,7 +343,7 @@ export class UniversityComponent extends BaseGeneralBenefitsComponent<IUniversit
   onGradeSelected(grade: string) {
     this.isFiltering = true;
     this.gradeSelected = this.mapGradeToScore(grade)
-    
+
     if (this.gradeSelected !== 0) {
       this.currentFilterParams.page = 1;
       this.currentFilterParams.pageSize = 30;
@@ -336,13 +354,19 @@ export class UniversityComponent extends BaseGeneralBenefitsComponent<IUniversit
       delete this.currentFilterParams.TypeScoreMin;
       delete this.currentFilterParams.TypeScoreMax;
     }
-    
+
     this.scrollToTop();
     this.loadUsers()
 
     setTimeout(() => {
       this.isFiltering = false;
     }, 500);
-    
+
+  }
+
+  override ngOnDestroy(): void {
+    this.ro?.disconnect?.();
+
+    super.ngOnDestroy();
   }
 }

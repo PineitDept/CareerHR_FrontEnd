@@ -1,4 +1,4 @@
-import { Component, HostListener } from '@angular/core';
+import { Component, ElementRef, HostListener, ViewChild } from '@angular/core';
 import { createStatusIcon, defaultColumns, defaultFilterButtons, defaultSearchByOptions, defaultSearchForm } from '../../../../../constants/admin-setting/user-candidates.constants';
 import { UserCandidatesUtils } from '../../../../../utils/admin-setting/user-candidates-utils';
 import { UserCandidatesService } from '../../../../../services/admin-setting/user-candidates/user-candidates.service';
@@ -35,6 +35,10 @@ export class UserCandidatesComponent {
 
   private isPageUnloading = false;
 
+  @ViewChild('scrollArea') scrollArea!: ElementRef<HTMLDivElement>;
+  hasOverflowY = false;
+  private ro?: ResizeObserver;
+
   constructor(
     private userCandidatesService: UserCandidatesService,
     private loadingService: LoadingService,
@@ -48,6 +52,20 @@ export class UserCandidatesComponent {
     } else {
       this.searchForm = defaultSearchForm();
     }
+  }
+
+  ngAfterViewInit(): void {
+    // วัดครั้งแรก
+    this.measureOverflow();
+
+    // เฝ้าดูการเปลี่ยนขนาดของคอนเทนเนอร์ (เช่น resize หน้าต่าง)
+    this.ro = new ResizeObserver(() => this.measureOverflow());
+    this.ro.observe(this.scrollArea.nativeElement);
+  }
+
+  measureOverflow(): void {
+    const el = this.scrollArea.nativeElement;
+    this.hasOverflowY = el.scrollHeight > el.clientHeight;
   }
 
   onSearch(form: { searchBy: string; searchValue: string }) {
@@ -154,6 +172,8 @@ export class UserCandidatesComponent {
         this.rows = append ? [...this.rows, ...mapped] : mapped;
         this.currentPage = append ? this.currentPage + 1 : 1;
         this.hasMoreData = mapped.length === 20;
+
+        queueMicrotask(() => this.measureOverflow());
       },
       error: (err) => {
         console.error('Error fetching user candidates:', err);
@@ -207,5 +227,6 @@ export class UserCandidatesComponent {
     if (!this.isPageUnloading) {
       sessionStorage.removeItem(UserCandidatesUtils.STORAGE_KEY);
     }
+    this.ro?.disconnect?.();
   }
 }

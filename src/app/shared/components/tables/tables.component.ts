@@ -65,6 +65,7 @@ export class TablesComponent
   @Input() isAddMode: boolean = false;
   @Input() fieldErrors: boolean = false;
   @Input() highlightRowIndex: number | null = null;
+  @Input() hasOverflowY = false;
 
   @Output() selectionChanged = new EventEmitter<any[]>();
   @Output() rowClicked = new EventEmitter<any>();
@@ -73,6 +74,7 @@ export class TablesComponent
   // @Output() toggleChange = new EventEmitter<{ row: any, checked: boolean, confirm: boolean  }>();
   @Output() toggleChange = new EventEmitter<{ row: any; checked: boolean; checkbox: HTMLInputElement }>();
   @Output() editClicked = new EventEmitter<any>();
+  @Output() viewRowClicked = new EventEmitter<any>();
   @Output() createInlineSave = new EventEmitter<any>();
   @Output() createInlineCancel = new EventEmitter<void>();
 
@@ -96,7 +98,7 @@ export class TablesComponent
   tableWrapperRef!: ElementRef<HTMLDivElement>;
 
   private destroyRef = inject(DestroyRef);
-  
+
   constructor(
     private cdr: ChangeDetectorRef,
     private dialog: MatDialog,
@@ -473,10 +475,11 @@ export class TablesComponent
   onClickView(event: Event, row: any): void {
     event.stopPropagation();
     console.log('View', row);
+    this.viewRowClicked.emit(row);
   }
 
   onClickEditDialog(event: Event, row: any): void {
-    event.stopPropagation(); 
+    event.stopPropagation();
     this.editClicked.emit(row);
   }
 
@@ -519,7 +522,7 @@ export class TablesComponent
         this.editingRowId = null;
         this.editRow = false;
         this.cdr.detectChanges();
-        
+
         this.editClicked.emit(row);
       }
     });

@@ -2,6 +2,9 @@
 import {
   Component,
   ChangeDetectionStrategy,
+  ViewChild,
+  ElementRef,
+  effect,
 } from '@angular/core';
 
 import { BaseApplicationComponent } from '../../../shared/base/base-application.component';
@@ -33,6 +36,10 @@ const ALL_APPLICATION_CONFIG = {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AllApplicationComponent extends BaseApplicationComponent {
+
+  @ViewChild('scrollArea') scrollArea!: ElementRef<HTMLDivElement>;
+  hasOverflowY = false;
+  private ro?: ResizeObserver;
 
   // Table Configuration
   readonly columns: Columns = [
@@ -153,6 +160,24 @@ export class AllApplicationComponent extends BaseApplicationComponent {
     },
   ] as const;
 
+  ngAfterViewInit(): void {
+    this.measureOverflow();
+
+    this.ro = new ResizeObserver(() => this.measureOverflow());
+    this.ro.observe(this.scrollArea.nativeElement);
+
+    // 👇 วัดใหม่ทุกครั้งที่ rows() อัปเดตจาก Base
+    effect(() => {
+      const _ = this.rows();          // อ่านค่าเพื่อให้ effect ติดตาม
+      queueMicrotask(() => this.measureOverflow()); // วัดหลัง DOM อัปเดต
+    }, { injector: this.destroyRef as any });
+  }
+
+  measureOverflow(): void {
+    const el = this.scrollArea.nativeElement;
+    this.hasOverflowY = el.scrollHeight > el.clientHeight;
+  }
+
   // Abstract method implementations
   protected getStorageKeys() {
     return ALL_APPLICATION_CONFIG.STORAGE_KEYS;
@@ -206,5 +231,10 @@ export class AllApplicationComponent extends BaseApplicationComponent {
       totalBonus: summary.totalBonus,
       submitStatusLabel: createStatusBadge(summary.submitStatusLabel),
     };
+  }
+
+  override ngOnDestroy(): void {
+    this.ro?.disconnect?.();
+    super.ngOnDestroy();
   }
 }

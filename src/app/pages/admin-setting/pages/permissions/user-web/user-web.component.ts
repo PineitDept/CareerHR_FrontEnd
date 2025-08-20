@@ -5,6 +5,8 @@ import {
   Output,
   EventEmitter,
   Input,
+  ViewChild,
+  ElementRef,
 } from '@angular/core';
 import { Columns } from '../../../../../shared/interfaces/tables/column.interface';
 import { FormDialogComponent } from '../../../../../shared/components/dialogs/form-dialog/form-dialog.component';
@@ -40,19 +42,35 @@ const SCREENING_CONFIG = {
 export class UserWebComponent extends BaseUserWebComponent {
 
   @Output() toggleRequested = new EventEmitter<{ row: any; next: boolean }>();
-  
+
   hasMoreData = true;
   currentPage = 1;
   ScreenRows: ScreeningRow[] = [];
   SearchForm!: SearchForm;
 
+  @ViewChild('scrollArea') scrollArea!: ElementRef<HTMLDivElement>;
+  hasOverflowY = false;
+  private ro?: ResizeObserver;
+
   constructor(
-    private dialog: MatDialog, 
+    private dialog: MatDialog,
     private userWebService: UserWebService,
     private loadingService: LoadingService) {
     super();
   }
-  
+
+  ngAfterViewInit(): void {
+    this.measureOverflow();
+
+    this.ro = new ResizeObserver(() => this.measureOverflow());
+    this.ro.observe(this.scrollArea.nativeElement);
+  }
+
+  measureOverflow(): void {
+    const el = this.scrollArea.nativeElement;
+    this.hasOverflowY = el.scrollHeight > el.clientHeight;
+  }
+
   readonly columns: Columns = [
     {
       header: 'No',
@@ -138,10 +156,10 @@ export class UserWebComponent extends BaseUserWebComponent {
 
       if (formValues && Array.isArray(formValues)) {
         const [idEmployeeStr, Username, password, confirmPassword] = formValues;
-        
+
         const parts = Username.trim().split(/\s+/);
         const lastName = parts.pop() || '';
-        const firstName = parts.join(' '); 
+        const firstName = parts.join(' ');
 
         const updates: Promise<any>[] = [];
 
@@ -177,12 +195,12 @@ export class UserWebComponent extends BaseUserWebComponent {
   onFilterButtonClick(key: string) {
     switch (key) {
       case 'add':
-        
+
         Promise.resolve().then(() => {
           const container = document.querySelector('.cdk-overlay-container');
           container?.classList.add('dimmed-overlay');
         });
-    
+
         const dialogRef = this.dialog.open(FormDialogComponent, {
           width: '496px',
           panelClass: 'custom-dialog-container',
@@ -199,7 +217,7 @@ export class UserWebComponent extends BaseUserWebComponent {
         });
 
         dialogRef.afterClosed().subscribe((formValues: string[] | false) => {
-            
+
           const container = document.querySelector('.cdk-overlay-container');
           container?.classList.remove('dimmed-overlay');
 
@@ -208,7 +226,7 @@ export class UserWebComponent extends BaseUserWebComponent {
 
             const parts = UserName.trim().split(/\s+/);
             const lastName = parts.pop() || '';
-            const firstName = parts.join(' '); 
+            const firstName = parts.join(' ');
 
             const payload: CreateUserWebDto = {
               idEmployee: Number(idEmployeeStr),
@@ -241,6 +259,7 @@ export class UserWebComponent extends BaseUserWebComponent {
     this.userWebService.getUserWeb(this.currentFilterParams).subscribe({
       next: (res) => {
         this.ScreenRows = this.transformApiDataToRows(res.items);
+        setTimeout(() => this.measureOverflow());
       },
       error: (err) => console.error(err),
     });
@@ -263,7 +282,7 @@ export class UserWebComponent extends BaseUserWebComponent {
   ): ScreeningRow[] {
     return items.map((item) => this.transformSingleItem(item));
   }
-  
+
   private transformSingleItem(
     item: IUserWithPositionsDto
   ): ScreeningRow {
@@ -313,11 +332,16 @@ export class UserWebComponent extends BaseUserWebComponent {
 
         if ('isActive' in row) row.isActive = checked;
         if ('activeStatus' in row) row.activeStatus = checked;
-        
+
       },
       error: () => {
         console.error('Toggle failed');
       }
     });
+  }
+
+  override ngOnDestroy(): void {
+    this.ro?.disconnect?.();
+    super.ngOnDestroy();
   }
 }

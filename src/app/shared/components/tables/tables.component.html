@@ -1,11 +1,18 @@
 <!-- expandable-table.component.html -->
-<div #tableWrapper class="tw-relative tw-px-6 tw-py-6 tw-pr-2 tw-pt-0 tw-bg-white tw-w-fit tw-min-w-full" [ngClass]="rowsValue.length > 0 ? 'tw-pr-2' : 'tw-pr-6'">
-  <div class="tw-rounded-md tw-shadow-sm tw-border tw-border-gray-200">
-    <table class="tw-table-auto tw-w-full tw-text-sm tw-text-left tw-border-collapse">
+<div #tableWrapper class="tw-relative tw-px-6 tw-py-6 tw-pt-0 tw-bg-white tw-w-fit tw-min-w-full"
+  [ngClass]="{
+    'tw-pr-2': rowsValue.length > 0 && hasOverflowY,
+  }"
+>
+  <div class="tw-rounded-md tw-shadow-sm tw-border tw-border-gray-200 tw-overflow-hidden">
+    <table class="tw-table-auto tw-w-full tw-text-sm tw-text-left tw-border-separate tw-border-spacing-0">
       <thead>
-        <tr class="tw-bg-red-900 tw-text-white">
+        <tr class="tw-text-white">
           <!-- Checkbox Column -->
-          <th class="tw-w-[36px] tw-px-1 tw-py-2" *ngIf="showCheckbox">
+          <th
+            class="tw-w-[36px] tw-px-1 tw-py-2 tw-bg-red-900 tw-bg-clip-padding tw-rounded-tl-md"
+            *ngIf="showCheckbox"
+          >
             <div class="tw-flex tw-text-center tw-align-middle">
               <input #selectAllCheckbox type="checkbox" [checked]="allSelected" (click)="$event.preventDefault()"
                 (mousedown)="onHeaderCheckboxClick($event)"
@@ -15,13 +22,18 @@
           </th>
 
           <!-- Dynamic Columns with Smooth Animation -->
-          <ng-container *ngFor="let column of columns; trackBy: trackByColumn">
-            <th class="column-header tw-px-2 tw-py-2 tw-text-center tw-relative tw-whitespace-nowrap"
+          <ng-container *ngFor="let column of columns; let first = first; let last = last; trackBy: trackByColumn">
+            <th class="column-header tw-px-2 tw-py-2 tw-text-center tw-relative tw-whitespace-nowrap tw-bg-red-900 tw-bg-clip-padding"
               [class.main-column]="column.mainColumn" [class.sub-column]="column.subColumn"
               [class.wrap-text]="column.wrapText" [class.expanded]="!column.subColumn || isSubColumnVisible(column)"
               [class.collapsed]="column.subColumn && !isSubColumnVisible(column)" [style.width]="getColumnWidth(column)"
               [style.min-width]="getColumnMinWidth(column)" [style.max-width]="getColumnMaxWidth(column)"
-              (click)="onColumnClick(column)">
+              (click)="onColumnClick(column)"
+              [ngClass]="{
+                'tw-rounded-tl-md': first && !showCheckbox,
+                'tw-rounded-tr-md': last
+              }"
+            >
 
               <div class="header-content tw-flex tw-items-center tw-justify-center tw-gap-2">
                 <!-- Sub-column indicator -->
