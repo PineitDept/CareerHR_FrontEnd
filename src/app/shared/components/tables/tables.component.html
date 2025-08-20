@@ -1,17 +1,33 @@
 <!-- expandable-table.component.html -->
-<div #tableWrapper class="tw-relative tw-px-6 tw-py-6 tw-pt-0 tw-bg-white tw-w-fit tw-min-w-full"
+<div #tableWrapper class="tw-relative tw-bg-white tw-w-fit tw-min-w-full"
   [ngClass]="{
     'tw-pr-2': rowsValue.length > 0 && hasOverflowY,
+    'tw-px-0 tw-py-0': withinCard,
+    'tw-px-6 tw-py-6 tw-pt-0': !withinCard,
   }"
 >
-  <div class="tw-rounded-md tw-shadow-sm tw-border tw-border-gray-200 tw-overflow-clip">
+  <div class="tw-shadow-sm tw-border tw-border-gray-200"
+    [ngClass]="withinCard ? 'tw-overflow-hidden' : 'tw-overflow-clip tw-rounded-md'"
+  >
     <table class="tw-table-auto tw-w-full tw-text-sm tw-text-left tw-border-separate tw-border-spacing-0">
       <thead>
-        <tr class="tw-text-white">
+        <tr class="tw-text-white"
+          [ngClass]="{
+            'tw-text-white': !withinCard,
+            'tw-text-black': withinCard,
+            'tw-h-[45px]': withinCard,
+          }"
+        >
           <!-- Checkbox Column -->
           <th
-            class="tw-w-[36px] tw-px-1 tw-py-2 tw-bg-red-900 tw-bg-clip-padding tw-rounded-tl-md"
+            class="tw-w-[36px] tw-px-1 tw-py-2  tw-bg-clip-padding"
             *ngIf="showCheckbox"
+            [ngClass]="{
+              'tw-rounded-tl-md': !withinCard,
+              'tw-bg-red-900': !withinCard,
+              'tw-bg-[#F0F3F5]': withinCard,
+              '!tw-rounded-tl-none': withinCard
+            }"
           >
             <div class="tw-flex tw-text-center tw-align-middle">
               <input #selectAllCheckbox type="checkbox" [checked]="allSelected" (click)="$event.preventDefault()"
@@ -23,15 +39,20 @@
 
           <!-- Dynamic Columns with Smooth Animation -->
           <ng-container *ngFor="let column of columns; let first = first; let last = last; trackBy: trackByColumn">
-            <th class="column-header tw-px-2 tw-py-2 tw-text-center tw-relative tw-whitespace-nowrap tw-bg-red-900 tw-bg-clip-padding"
+            <th class="column-header tw-px-2 tw-py-2 tw-text-center tw-relative tw-whitespace-nowrap tw-bg-clip-padding"
               [class.main-column]="column.mainColumn" [class.sub-column]="column.subColumn"
               [class.wrap-text]="column.wrapText" [class.expanded]="!column.subColumn || isSubColumnVisible(column)"
               [class.collapsed]="column.subColumn && !isSubColumnVisible(column)" [style.width]="getColumnWidth(column)"
               [style.min-width]="getColumnMinWidth(column)" [style.max-width]="getColumnMaxWidth(column)"
               (click)="onColumnClick(column)"
               [ngClass]="{
-                '!tw-rounded-tl-[4px]': first && !showCheckbox,
-                '!tw-rounded-tr-[4px]': last
+                '!tw-rounded-tl-[4px]': first && !showCheckbox && !withinCard,
+                '!tw-rounded-tr-[4px]': last && !withinCard,
+                'tw-bg-red-900': !withinCard,
+                'tw-bg-[#F0F3F5]': withinCard,
+                '!tw-rounded-tl-none': withinCard && first && !showCheckbox,
+                '!tw-rounded-tr-none': withinCard && last,
+                'tw-border-b tw-border-gray-200': withinCard
               }"
             >
 
@@ -84,7 +105,12 @@
           (click)="enableRowClick && onRowClick(row, $event)">
 
           <!-- Checkbox Cell -->
-          <td class="tw-w-[36px] tw-px-1 tw-py-2" *ngIf="showCheckbox">
+          <td class="tw-w-[36px] tw-px-1 tw-py-2" *ngIf="showCheckbox"
+            [ngClass]="{
+              'tw-rounded-bl-xl': withinCard && i === rowsValue.length - 1,
+              'tw-border-b tw-border-gray-200': withinCard && i < rowsValue.length - 1
+            }"
+          >
             <div class="tw-flex tw-text-center tw-align-middle">
               <input type="checkbox" [checked]="selectedRows.has(i)" (change)="toggleSelectRow(i)"
                 (click)="$event.stopPropagation()"
@@ -93,14 +119,19 @@
           </td>
 
           <!-- Dynamic Data Cells -->
-          <ng-container *ngFor="let column of columns; trackBy: trackByColumn">
+          <ng-container *ngFor="let column of columns; let firstCol = first; let lastCol = last; trackBy: trackByColumn">
             <td class="table-cell tw-px-2 tw-py-2 tw-align-middle"
               [class.main-column]="column.mainColumn" [class.sub-column]="column.subColumn"
               [class.wrap-text]="column.wrapText" [class.expanded]="!column.subColumn || isSubColumnVisible(column)"
               [class.collapsed]="column.subColumn && !isSubColumnVisible(column)" [style.width]="getColumnWidth(column)"
               [style.min-width]="getColumnMinWidth(column)" [style.max-width]="getColumnMaxWidth(column)"
               [style.text-align]="column.align || 'left'"
-              [ngClass]="column.type === 'icon' && !column.sortable ? getBackgroundClass(getCellValue(row, column.field)?.fill) : ''">
+              [ngClass]="[
+                column.type === 'icon' && !column.sortable ? getBackgroundClass(getCellValue(row, column.field)?.fill) : '',
+                withinCard && i === rowsValue.length - 1 && !showCheckbox && firstCol ? 'tw-rounded-bl-xl' : '',
+                withinCard && i === rowsValue.length - 1 && lastCol ? 'tw-rounded-br-xl' : '',
+                (withinCard && i < rowsValue.length - 1) ? 'tw-border-b tw-border-gray-200' : ''
+              ]">
               <!-- Cell Content with Type Switching -->
               <div class="cell-content">
                 <ng-container [ngSwitch]="column.type || 'text'">
@@ -285,7 +316,7 @@
                     {{indexAdd}}
                   </div>
                 </ng-container>
-                
+
                 <!-- textlink -->
                 <ng-container *ngSwitchCase="'textlink'">
                   <div class="tw-flex tw-gap-3 tw-justify-center">
