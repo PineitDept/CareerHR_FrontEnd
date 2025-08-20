@@ -62,6 +62,10 @@ export class FilterComponent {
 
   ngOnInit() {
     this.emitDateRange();
+
+    const storedGradeIndex = localStorage.getItem('benefitsFiterSettings_Grade');
+    const value = this.allGrade[Number(storedGradeIndex)]
+    this.selectedGrade = value;
   }
 
   onBackClick() {

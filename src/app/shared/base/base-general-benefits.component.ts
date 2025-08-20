@@ -249,7 +249,6 @@ export abstract class BaseGeneralBenefitsComponent<T> implements OnInit, OnDestr
         if (!this.canLoadMore(element)) return EMPTY;
 
         const currentFilter = this.filterRequest();
-        console.log(currentFilter)
         if (currentFilter.hasNextPage && !this.isLoading()) {
             const updatedFilter = { ...currentFilter, page: currentFilter.page + 1 };
             return this.fetchData(updatedFilter, true);
@@ -269,18 +268,19 @@ export abstract class BaseGeneralBenefitsComponent<T> implements OnInit, OnDestr
 
         const fullFilter: IBenefitsFilterRequest = {
             ...filter,
-            search: this.searchForm.searchValue || undefined
+            search: this.searchForm.searchValue || undefined,
+            TypeScoreMin: this.loadGrade() || undefined,
+            TypeScoreMax: this.loadGrade() || undefined
         };
 
         return this.generalbenefitsService.getBenefitsWeb<any>(fullFilter).pipe(
             tap((res) => {
-                const items = Array.isArray(res)
-                    ? res
-                    : Array.isArray(res?.items)
-                        ? res.items
-                        : [];
+                const items = Array.isArray(res?.items) ? res.items : [];
+                const page = res?.page ?? 1;
+                const hasNextPage = res?.hasNextPage ?? false;
 
-                this.handleApiResponse(items, append);
+                // this.handleApiResponse(items, append);
+                this.handleApiResponse({ items, page, hasNextPage }, append);
             }),
             tap(() => this.persistFilterState()),
             catchError((error) => this.handleApiError(error)),
@@ -300,6 +300,15 @@ export abstract class BaseGeneralBenefitsComponent<T> implements OnInit, OnDestr
         return this.loadFromStorage<SearchForm>(storageKeys.FILTER_SETTINGS + '_SEARCH_FORM');
     }
 
+    protected loadGrade(): number | null {
+        const storageKeys = this.getStorageKeys();
+        return this.loadFromStorage(storageKeys.FILTER_SETTINGS + '_Grade');
+    }
+
+    protected clearGrade(): void {
+        const storageKeys = this.getStorageKeys();
+        localStorage.removeItem(storageKeys.FILTER_SETTINGS + '_Grade');
+    }
 
     protected setupRouteChangeListener(): void {
         this.router.events
@@ -309,6 +318,7 @@ export abstract class BaseGeneralBenefitsComponent<T> implements OnInit, OnDestr
             .subscribe(event => {
                 if (event instanceof NavigationStart) {
                     this.clearPersistedSearchForm();
+                    this.clearGrade();
                 }
             });
     }
@@ -319,12 +329,17 @@ export abstract class BaseGeneralBenefitsComponent<T> implements OnInit, OnDestr
     }
 
     protected loadInitialData(): void {
-        // this.fetchData(this.filterRequest(), false).subscribe();
+        this.fetchData(this.filterRequest(), false).subscribe();
     }
 
-    protected handleApiResponse(response: T[], append: boolean): void {
-        // this.updateFilterWithResponse(response);
-        this.updateRowsData(response, append);
+    // protected handleApiResponse(response: T[], append: boolean): void {
+    //     this.updateFilterWithResponse(response);
+    //     this.updateRowsData(response, append);
+    // }
+
+    protected handleApiResponse(response: { items: T[], page: number, hasNextPage: boolean }, append: boolean): void {
+        this.updateFilterWithResponse(response);
+        this.updateRowsData(response.items, append);
     }
 
     protected handleApiError(error: any): Observable<never> {
@@ -333,12 +348,12 @@ export abstract class BaseGeneralBenefitsComponent<T> implements OnInit, OnDestr
     }
 
     // Protected State Updates
-    protected updateFilterWithResponse(response: T[]): void {
+    protected updateFilterWithResponse(response: { page: number, hasNextPage: boolean }): void {
         const currentFilter = this.filterRequest();
         this.filterRequest.set({
             ...currentFilter,
-            // page: response.page,
-            // hasNextPage: response.hasNextPage,
+            page: response.page,
+            hasNextPage: response.hasNextPage
         });
     }
 
@@ -416,6 +431,7 @@ export abstract class BaseGeneralBenefitsComponent<T> implements OnInit, OnDestr
             this.filterRequest.set({
                 ...this.createInitialFilter(),
                 ...persistedFilter,
+                page: 1
             });
         }
 

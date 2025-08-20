@@ -4,7 +4,7 @@
     'tw-pr-2': rowsValue.length > 0 && hasOverflowY,
   }"
 >
-  <div class="tw-rounded-md tw-shadow-sm tw-border tw-border-gray-200 tw-overflow-hidden">
+  <div class="tw-rounded-md tw-shadow-sm tw-border tw-border-gray-200 tw-overflow-clip">
     <table class="tw-table-auto tw-w-full tw-text-sm tw-text-left tw-border-separate tw-border-spacing-0">
       <thead>
         <tr class="tw-text-white">
@@ -30,8 +30,8 @@
               [style.min-width]="getColumnMinWidth(column)" [style.max-width]="getColumnMaxWidth(column)"
               (click)="onColumnClick(column)"
               [ngClass]="{
-                'tw-rounded-tl-md': first && !showCheckbox,
-                'tw-rounded-tr-md': last
+                '!tw-rounded-tl-[4px]': first && !showCheckbox,
+                '!tw-rounded-tr-[4px]': last
               }"
             >
 
@@ -123,7 +123,6 @@
                         [ngClass]="fieldErrors ? 'tw-border-red-500' : 'tw-border-gray-300'"
                         [(ngModel)]="row[column.field]"
                         (click)="$event.stopPropagation()"
-                        (keydown)="row._isNew"
                       />
                     </ng-container>
                     <ng-template #viewMode>
@@ -231,7 +230,7 @@
                       <app-icon name="pen-to-square" [size]="20"></app-icon> <span>Edit</span>
                     </a>
 
-                    <ng-container *ngIf="row._isNew; else normalActions">
+                    <!-- <ng-container *ngIf="row._isNew; else normalActions">
                       <a href="javascript:void(0)"
                         class="tw-text-[#00AA00] hover:tw-text-[#148014] tw-flex tw-items-center tw-gap-1 tw-font-semibold"
                         (click)="saveInlineCreate(row); $event.stopPropagation()">
@@ -242,9 +241,9 @@
                         (click)="cancelInlineCreate(row); $event.stopPropagation()">
                         <app-icon name="xmark" [size]="20"></app-icon> <span>Cancel</span>
                       </a>
-                    </ng-container>
+                    </ng-container> -->
 
-                    <ng-template #normalActions>
+                    <!-- <ng-template #normalActions> -->
                       <ng-container *ngIf="editingRowId === i+1 && editRow">
                         <a href="javascript:void(0)"
                           class="tw-text-[#00AA00] hover:tw-text-[#148014] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
@@ -258,9 +257,9 @@
                           <app-icon name="xmark" [size]="20"></app-icon> <span>Cancel</span>
                         </a>
                       </ng-container>
-                    </ng-template>
+                    <!-- </ng-template> -->
 
-                    <a *ngIf="column.textlinkActions?.includes('delete') && !editRow" href="javascript:void(0)"
+                    <a *ngIf="column.textlinkActions?.includes('delete') && editingRowId !== i+1 && !row._isNew" href="javascript:void(0)"
                       class="tw-text-[#F00] hover:tw-text-[#AA0000] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
                       (click)="onClickDelete($event, row)">
                       <app-icon name="trash" [size]="20"></app-icon> <span>Delete</span>
@@ -274,9 +273,95 @@
         </tr>
       </tbody>
 
+      <tfoot *ngIf="isAddMode">
+        <tr class="tw-sticky tw-bottom-0 tw-z-10 sticky-footer tw-border-t tw-border-gray-200">
+
+          <ng-container *ngFor="let column of columns; trackBy: trackByColumn">
+            <td class="tw-px-2 tw-py-2 tw-align-middle" [style.width]="getColumnWidth(column)">
+              <ng-container [ngSwitch]="column.type || 'text'">
+                <!-- __index -->
+                <ng-container  *ngIf="column.field === '__index'" >
+                  <div class="tw-text-center">
+                    {{indexAdd}}
+                  </div>
+                </ng-container>
+                
+                <!-- textlink -->
+                <ng-container *ngSwitchCase="'textlink'">
+                  <div class="tw-flex tw-gap-3 tw-justify-center">
+                    <a href="javascript:void(0)"
+                      class="tw-text-[#00AA00] hover:tw-text-[#148014] tw-flex tw-items-center tw-gap-1 tw-font-semibold"
+                      (click)="saveInlineCreate(footerRow)">
+                      <app-icon name="file-plus-circle" [size]="20"></app-icon> <span>Save</span>
+                    </a>
+                    <a href="javascript:void(0)"
+                      class="tw-text-[#6C757D] hover:tw-text-[rgb(64,68,71)] tw-flex tw-items-center tw-gap-1 tw-font-semibold"
+                      (click)="cancelInlineCreate(footerRow)">
+                      <app-icon name="xmark" [size]="20"></app-icon> <span>Cancel</span>
+                    </a>
+                  </div>
+                </ng-container>
+
+                <!-- toggle -->
+                <ng-container *ngSwitchCase="'toggle'">
+                  <label class="tw-flex tw-items-center tw-cursor-pointer tw-justify-center">
+                    <input type="checkbox" class="tw-sr-only tw-peer"
+                          [(ngModel)]="footerRow.activeStatus">
+                    <div class="tw-relative tw-w-11 tw-h-6 peer-checked:tw-bg-[#00AA00] tw-bg-gray-200 tw-rounded-full tw-peer
+                                peer-checked:after:tw-translate-x-full after:tw-content-[''] after:tw-absolute after:tw-top-[2px]
+                                after:tw-start-[2px] after:tw-bg-white after:tw-rounded-full after:tw-h-5 after:tw-w-5 after:tw-transition-all">
+                    </div>
+                  </label>
+                </ng-container>
+
+                <!-- select -->
+                <ng-container *ngSwitchCase="'select'">
+                  <select class="tw-border tw-border-gray-300 tw-rounded tw-px-2 tw-py-1 tw-w-full"
+                          [(ngModel)]="footerRow[column.field]">
+                    <option [ngValue]="undefined">Select</option>
+                    <option *ngFor="let opt of (column.options || []); trackBy: trackByOption" [ngValue]="opt">{{ opt }}</option>
+                  </select>
+                </ng-container>
+
+                <!-- date -->
+                <ng-container *ngSwitchCase="'date'">
+                  <input type="date"
+                        class="tw-border tw-border-gray-300 tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white"
+                        [(ngModel)]="footerRow[column.field]" />
+                </ng-container>
+
+                <!-- number -->
+                <ng-container *ngSwitchCase="'number'">
+                  <ng-container  *ngIf="column.field !== '__index'" >
+                    <input type="number"
+                          class="tw-border tw-border-gray-300 tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white"
+                          [(ngModel)]="footerRow[column.field]" />
+                  </ng-container>
+                </ng-container>
+
+                <!-- text -->
+                <ng-container *ngSwitchDefault>
+                  <ng-container *ngIf="column.type === 'text'; else emptyCell">
+                    <input type="text"
+                          class="tw-border tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white"
+                          [ngClass]="fieldErrors ? 'tw-border-red-500' : 'tw-border-gray-300'"
+                          [(ngModel)]="footerRow[column.field]" />
+                  </ng-container>
+                  <ng-template #emptyCell>
+                    <span></span>
+                  </ng-template>
+                </ng-container>
+
+              </ng-container>
+            </td>
+          </ng-container>
+        </tr>
+      </tfoot>
+
+
       <!-- No Data Template -->
       <ng-template #noData>
-        <tbody>
+        <tbody *ngIf="!isAddMode">
           <tr>
             <td [attr.colspan]="getVisibleColumnCount()" class="tw-text-center tw-py-8 tw-text-gray-500">
               <div class="tw-flex tw-flex-row tw-justify-center tw-items-center tw-gap-3">

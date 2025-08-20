@@ -106,7 +106,7 @@ export class ComputerSkillsComponent extends BaseGeneralBenefitsComponent<ICompu
   override ngOnInit(): void {
     this.generalBenefitsService.setBenefitType('computer-skills');
     this.loadUsers();
-    super.ngOnInit();
+    // super.ngOnInit();
   }
 
   handleEditRow(row: ComputerScreeningRow): void {
