@@ -26,7 +26,7 @@
           <label class="tw-text-sm tw-font-semibold">Category Type Name</label>
         </div>
         <input type="text"
-          class="tw-w-full tw-bg-[#FFFFFF] tw-border tw-border-[#CED4DA] tw-rounded-lg tw-px-4 tw-py-2 tw-text-sm"
+          class="tw-w-full tw-bg-[#FFFFFF] tw-border tw-border-[#CED4DA] tw-rounded-lg tw-px-4 tw-py-2 tw-text-sm disabled:tw-text-[#6C757D] disabled:tw-bg-[#E9ECEF]"
           formControlName="CategoryTypeName" />
       </div>
     </div>
@@ -52,6 +52,9 @@
                         after:tw-bg-white after:tw-rounded-full after:tw-h-5 after:tw-w-5 after:tw-transition-all
                         peer-checked:after:tw-translate-x-full rtl:peer-checked:after:tw--translate-x-full"
               (click)="toggleActive()" tabindex="0" (keyup.enter)="toggleActive()" (keyup.space)="toggleActive()"
+              [ngClass]="{
+                'peer-checked:tw-bg-[#00AA00]/40 tw-pointer-events-none': !isEditing
+              }"
               aria-controls="activeStatus">
             </div>
 
@@ -76,8 +79,11 @@
           type="button"
           (click)="onAddClicked()"
           class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-azure hover:bg-azure-dark
-                tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
-                tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-azure   focus-visible:ring-azure"
+          tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
+            tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-azure focus-visible:ring-azure"
+          [ngClass]="{
+            'tw-pointer-events-none tw-opacity-50': !isEditing
+          }"
           aria-label="Add Category">
           <app-icon [name]="'plus'" [size]="18" extraClass="tw-text-white"></app-icon>
           <span class="tw-font-semibold">Add</span>
@@ -94,8 +100,10 @@
           [hasOverflowY]="false"
           [enableRowClick]="false"
           [withinCard]="true"
-          (viewRowClicked)="onViewRowClicked($event)"
+          [isDisabledForm]="!isEditing"
+          (viewRowClicked)="onRowClicked($event, 'view')"
           (toggleChange)="onToggleChangeCategory($event)"
+          (editCardClicked)="onRowClicked($event, 'edit')"
         ></app-tables>
       </div>
     </div>
@@ -111,20 +119,37 @@
       <div class="tw-flex tw-items-center tw-justify-between">
         <label class="tw-text-lg tw-font-bold">Category Details</label>
 
-        <button
-          type="button"
-          (click)="onSaveDetailsClicked()"
-          class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-persian-green hover:bg-persian-green-dark
-                tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
-                tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-persian-green focus-visible:ring-persian-green
-                disabled:tw-cursor-not-allowed disabled:tw-bg-gray-400"
-          aria-label="Save Details"
-          [disabled]="!checkFormDetailsChanged()"
-          *ngIf="!isViewMode"
-        >
-          <app-icon [name]="'download'" [size]="18" extraClass="tw-text-white"></app-icon>
-          <span class="tw-font-semibold">Save</span>
-        </button>
+        <div class="tw-flex tw-items-center tw-gap-2">
+          <button
+            type="button"
+            (click)="onEditDetailsClicked()"
+            class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-orange hover:bg-orange-dark
+            tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
+              tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-orange focus-visible:ring-orange"
+            [ngClass]="{
+              'tw-pointer-events-none tw-opacity-50': !isEditing
+            }"
+            aria-label="Edit Details"
+            *ngIf="!isViewMode && isEditMode && !isEditDetails"
+          >
+            <app-icon [name]="'pencil'" [size]="18" extraClass="tw-text-white"></app-icon>
+            <span class="tw-font-semibold">Edit</span>
+          </button>
+          <button
+            type="button"
+            (click)="onSaveDetailsClicked()"
+            class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-persian-green hover:bg-persian-green-dark
+                  tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
+                  tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-persian-green focus-visible:ring-persian-green
+                  disabled:tw-cursor-not-allowed disabled:tw-bg-gray-400"
+            aria-label="Save Details"
+            [disabled]="!checkFormDetailsChanged()"
+            *ngIf="!isViewMode && (isAddMode || isEditDetails)"
+          >
+            <app-icon [name]="'download'" [size]="18" extraClass="tw-text-white"></app-icon>
+            <span class="tw-font-semibold">Save</span>
+          </button>
+        </div>
       </div>
       <hr class="tw--mx-6 tw-mt-4">
       <div class="tw-my-4">
@@ -144,6 +169,9 @@
           class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-azure hover:bg-azure-dark
                 tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
                 tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-azure focus-visible:ring-azure"
+          [ngClass]="{
+            'tw-pointer-events-none tw-opacity-50': !isEditDetails && !isAddMode
+          }"
           aria-label="Add Question"
           *ngIf="!isViewMode">
           <app-icon [name]="'plus'" [size]="18" extraClass="tw-text-white"></app-icon>
@@ -161,6 +189,15 @@
           [enableRowClick]="false"
           [withinCard]="true"
           (toggleChange)="onToggleChangeDetails($event)"
+          [isDisabledForm]="isDisabled"
+          (createInlineSave)="onInlineSave($event)"
+          (createInlineCancel)="onInlineCancel()"
+          [isAddMode]="isAddingRow"
+          [fieldErrors]="fieldErrors"
+          [highlightRowIndex]="duplicateRowIndex"
+          [isZeroOneStatus]="true"
+          (deleteRowClicked)="onDeleteRowClicked($event)"
+          
         ></app-tables>
       </div>
     </div>

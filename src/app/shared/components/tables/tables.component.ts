@@ -68,6 +68,8 @@ export class TablesComponent
   @Input() hasOverflowY = false;
   @Input() withinCard: boolean = false;
   @Input() isToggleAlert: boolean = false;
+  @Input() isDisabledForm: boolean = false;
+  @Input() isZeroOneStatus: boolean = false;
 
   @Output() selectionChanged = new EventEmitter<any[]>();
   @Output() rowClicked = new EventEmitter<any>();
@@ -76,9 +78,11 @@ export class TablesComponent
   // @Output() toggleChange = new EventEmitter<{ row: any, checked: boolean, confirm: boolean  }>();
   @Output() toggleChange = new EventEmitter<{ row: any; checked: boolean; checkbox: HTMLInputElement }>();
   @Output() editClicked = new EventEmitter<any>();
+  @Output() editCardClicked = new EventEmitter<any>();
   @Output() viewRowClicked = new EventEmitter<any>();
   @Output() createInlineSave = new EventEmitter<any>();
   @Output() createInlineCancel = new EventEmitter<void>();
+  @Output() deleteRowClicked = new EventEmitter<any>();
 
   sortedColumns: string[] = [];
   clickedRows: Set<string> = new Set();
@@ -99,8 +103,8 @@ export class TablesComponent
   @ViewChild('tableWrapper', { static: true })
   tableWrapperRef!: ElementRef<HTMLDivElement>;
 
-  @Input() createDefaults: any = {};  
-  footerRow: any = {};  
+  @Input() createDefaults: any = {};
+  footerRow: any = {};
   indexAdd: number = 0;
 
   private destroyRef = inject(DestroyRef);
@@ -532,6 +536,11 @@ export class TablesComponent
     this.editClicked.emit(row);
   }
 
+  onClickEditCard(event: Event, row: any): void {
+    event.stopPropagation();
+    this.editCardClicked.emit(row);
+  }
+
   onClickEdit(event: Event, row: any, index: number): void {
     event.stopPropagation();
     this.editingRowId = index;
@@ -588,6 +597,7 @@ export class TablesComponent
   onClickDelete(event: Event, row: any): void {
     event.stopPropagation();
     console.log('Delete', row);
+    this.deleteRowClicked.emit(row);
   }
 
   // TrackBy Functions for Performance
@@ -617,8 +627,16 @@ export class TablesComponent
   }
 
   saveInlineCreate(row: any) {
+    console.log('Saving inline create:', row);
     const payload = { ...row };
-    payload.status = payload.activeStatus ? 1 : 2;
+    console.log('Inline create payload:', payload);
+    if (!this.isZeroOneStatus) {
+      console.log('isZeroOneStatus is false');
+      payload.status = payload.activeStatus ? 1 : 2;
+    } else {
+      console.log('isZeroOneStatus is true');
+      payload.status = payload.activeStatus ? 1 : 0;
+    }
     delete payload._tempId;
     delete payload._isNew;
     this.createInlineSave.emit(payload);
@@ -638,6 +656,33 @@ export class TablesComponent
 
     if (this.highlightRowIndex && this.ishighlightRow) {
       this.ishighlightRow = false
+    }
+  }
+
+  onNumberKeydown(e: KeyboardEvent, field: string) {
+    if (field !== 'sort') return;
+    const blocked = ['e', 'E', '+', '-', '.'];
+    if (blocked.includes(e.key)) e.preventDefault(); // กัน e,+,-,.
+  }
+
+  onNumberTyping(e: Event, field: string) {
+    if (field !== 'sort') return;
+    const el = e.target as HTMLInputElement;
+
+    // เก็บไว้เฉพาะตัวเลข อนุญาตสถานะชั่วคราวเป็น '' หรือ '0' เพื่อพิมพ์ 10/20 ได้
+    const onlyDigits = el.value.replace(/[^\d]/g, '');
+    if (onlyDigits !== el.value) el.value = onlyDigits;
+
+    this.footerRow[field] = onlyDigits === '' ? undefined : Number(onlyDigits);
+  }
+
+  onNumberBlur(e: Event, field: string) {
+    if (field !== 'sort') return;
+    const el = e.target as HTMLInputElement;
+    const n = Number(el.value || 0);
+    if (!Number.isFinite(n) || n < 1) {
+      el.value = '1';
+      this.footerRow[field] = 1; // ค่าขั้นต่ำสุดท้าย
     }
   }
 
