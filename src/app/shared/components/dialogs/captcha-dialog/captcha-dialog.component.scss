@@ -1,0 +1,8 @@
+.captcha-img {
+  width: 220px;  /* ปรับได้ตามต้องการ */
+  height: 60px;
+  object-fit: cover;
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(50,79,155,0.06) inset;
+  image-rendering: -webkit-optimize-contrast;
+}

@@ -52,7 +52,7 @@
                 'tw-bg-[#F0F3F5]': withinCard,
                 '!tw-rounded-tl-none': withinCard && first && !showCheckbox,
                 '!tw-rounded-tr-none': withinCard && last,
-                'tw-border-b tw-border-gray-200': withinCard
+                'tw-border-b tw-border-gray-200': withinCard,
               }"
             >
 
@@ -130,14 +130,21 @@
                 column.type === 'icon' && !column.sortable ? getBackgroundClass(getCellValue(row, column.field)?.fill) : '',
                 withinCard && i === rowsValue.length - 1 && !showCheckbox && firstCol ? 'tw-rounded-bl-xl' : '',
                 withinCard && i === rowsValue.length - 1 && lastCol ? 'tw-rounded-br-xl' : '',
-                (withinCard && i < rowsValue.length - 1) ? 'tw-border-b tw-border-gray-200' : ''
-              ]">
+                (withinCard && i < rowsValue.length - 1) ? 'tw-border-b tw-border-gray-200' : '',
+                isDisabledForm ? 'tw-pointer-events-none tw-bg-[#fafafa]' : '',
+              ]"
+            >
               <!-- Cell Content with Type Switching -->
-              <div class="cell-content">
+              <div class="cell-content"
+                [ngClass]="{
+                  'tw-text-gray-600': isDisabledForm,
+                  'tw-text-gray-800': !isDisabledForm
+                }"
+              >
                 <ng-container [ngSwitch]="column.type || 'text'">
 
                   <!-- Text Content -->
-                  <span *ngSwitchCase="'text'" class="tw-text-gray-800">
+                  <span *ngSwitchCase="'text'">
                     <!-- {{ getCellValue(row, column.field) }} -->
 
                     <!-- <ng-container *ngIf="editingRowId === i+1; else viewMode" >
@@ -162,19 +169,19 @@
                   </span>
 
                   <!-- Expandable Content -->
-                  <div *ngSwitchCase="'expandable'" class="tw-text-gray-800">
+                  <div *ngSwitchCase="'expandable'">
                     <span>{{ getCellValue(row, column.field) }}</span>
                   </div>
 
                   <!-- Badge Content -->
                   <span *ngSwitchCase="'badge'"
                     class="tw-inline-flex tw-items-center tw-justify-center tw-rounded-lg tw-px-2.5 tw-py-1 tw-text-xs tw-font-medium tw-ring-1 tw-ring-inset tw-transition-all tw-duration-200 tw-max-w-full tw-whitespace-nowrap tw-overflow-hidden tw-text-ellipsis"
-                    [ngClass]="getCellValue(row, column.field)?.class || ['tw-bg-gray-100', 'tw-text-gray-800', 'tw-ring-gray-300']">
+                    [ngClass]="getCellValue(row, column.field)?.class || ['tw-bg-gray-100', 'tw-ring-gray-300']">
                     {{ getCellValue(row, column.field)?.label || 'Badge' }}
                   </span>
 
                   <!-- Number Content -->
-                  <span *ngSwitchCase="'number'" class="tw-text-gray-800">
+                  <span *ngSwitchCase="'number'">
                     {{ getCellValue(row, column.field) | number: '1.0-2' }}
                   </span>
 
@@ -207,15 +214,15 @@
                   </button>
 
                   <!-- Date Content -->
-                  <span *ngSwitchCase="'date'" class="tw-text-gray-800">
+                  <span *ngSwitchCase="'date'">
                     {{ getCellValue(row, column.field) | date: 'dd/MM/yyyy':'UTC' }}
                   </span>
-                  <span *ngSwitchCase="'dateWithTime'" class="tw-text-gray-800">
+                  <span *ngSwitchCase="'dateWithTime'">
                     {{ getCellValue(row, column.field) | date: 'dd/MM/yyyy HH:mm':'UTC' }}
                   </span>
 
                   <!-- List Content -->
-                  <div *ngSwitchCase="'list'" class="tw-text-gray-800">
+                  <div *ngSwitchCase="'list'">
                     <ol class="tw-list-decimal tw-pl-4 tw-space-y-1">
                       <li *ngFor="let item of getCellValue(row, column.field); let idx = index" class="tw-text-sm">
                         {{ item }}
@@ -233,16 +240,24 @@
                   </div>
 
                   <!-- toggle Content -->
-                  <div *ngSwitchCase="'toggle'" class="tw-text-gray-800">
+                  <div *ngSwitchCase="'toggle'">
                     <label class="tw-inline-flex tw-items-center tw-cursor-pointer" (click)="$event.stopPropagation()">
                       <input type="checkbox" value="" class="tw-sr-only tw-peer" [checked]="row.activeStatus" (click)="onToggleChange($event, row)">
-                      <div class="tw-relative tw-w-11 tw-h-6 peer-checked:tw-bg-[#00AA00] tw-bg-gray-200 tw-rounded-full tw-peer peer-checked:after:tw-translate-x-full rtl:peer-checked:after:tw--translate-x-full tw-border-white after:tw-content-[''] after:tw-absolute after:tw-top-[2px] after:tw-start-[2px] after:tw-bg-white after:tw-rounded-full after:tw-h-5 after:tw-w-5 after:tw-transition-all"></div>
+                      <div class="tw-relative tw-w-11 tw-h-6 peer-checked:tw-bg-[#00AA00] tw-bg-gray-200 tw-rounded-full tw-peer peer-checked:after:tw-translate-x-full rtl:peer-checked:after:tw--translate-x-full tw-border-white after:tw-content-[''] after:tw-absolute after:tw-top-[2px] after:tw-start-[2px] after:tw-bg-white after:tw-rounded-full after:tw-h-5 after:tw-w-5 after:tw-transition-all"
+                        [ngClass]="{
+                          'peer-checked:tw-bg-[#00AA00]/40': isDisabledForm
+                        }"
+                      ></div>
                     </label>
                   </div>
 
                   <!-- text link Content -->
-                  <div *ngSwitchCase="'textlink'" class="tw-text-gray-800 tw-flex tw-justify-center tw-gap-4"
-                    (click)="$event.stopPropagation()">
+                  <div *ngSwitchCase="'textlink'" class="tw-flex tw-justify-center tw-gap-4"
+                    (click)="$event.stopPropagation()"
+                    [ngClass]="{
+                      'tw-opacity-50': isDisabledForm
+                    }"
+                  >
                     <a *ngIf="column.textlinkActions?.includes('view')" href="javascript:void(0)"
                       class="tw-text-[#5500FF] hover:tw-text-[#5f31bb] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
                       (click)="onClickView($event, row)">
@@ -252,6 +267,12 @@
                     <a *ngIf="column.textlinkActions?.includes('edit-topopup')" href="javascript:void(0)"
                       class="tw-text-[#D97706] hover:tw-text-[#a7671e] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
                       (click)="onClickEditDialog($event, row)">
+                      <app-icon name="pen-to-square" [size]="20"></app-icon> <span>Edit</span>
+                    </a>
+
+                    <a *ngIf="column.textlinkActions?.includes('edit-card')" href="javascript:void(0)"
+                      class="tw-text-[#D97706] hover:tw-text-[#a7671e] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
+                      (click)="onClickEditCard($event, row)">
                       <app-icon name="pen-to-square" [size]="20"></app-icon> <span>Edit</span>
                     </a>
 
@@ -365,8 +386,15 @@
                 <ng-container *ngSwitchCase="'number'">
                   <ng-container  *ngIf="column.field !== '__index'" >
                     <input type="number"
-                          class="tw-border tw-border-gray-300 tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white"
-                          [(ngModel)]="footerRow[column.field]" />
+                      class="tw-border tw-border-gray-300 tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white"
+                      [(ngModel)]="footerRow[column.field]"
+                      [attr.min]="column.field === 'sort' ? 1 : null"
+                      [attr.step]="column.field === 'sort' ? 1 : null"
+                      [attr.inputmode]="column.field === 'sort' ? 'numeric' : null"
+                      (keydown)="column.field === 'sort' && onNumberKeydown($event, 'sort')"
+                      (input)="column.field === 'sort' && onNumberTyping($event, 'sort')"
+                      (blur)="column.field === 'sort' && onNumberBlur($event, 'sort')"
+                    />
                   </ng-container>
                 </ng-container>
 
