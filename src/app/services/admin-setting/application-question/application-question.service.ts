@@ -24,4 +24,11 @@ export class ApplicationQuestionService {
       loading: true
     });
   }
+
+  getQuestionsByCategory(categoryId: number): Observable<any> {
+    return this.apiService.get<any>(`InfoQuestion/questions/by-category/${categoryId}`, {
+      withAuth: true,
+      loading: true
+    });
+  }
 }
