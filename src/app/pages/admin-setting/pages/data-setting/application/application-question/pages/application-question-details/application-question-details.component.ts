@@ -8,6 +8,7 @@ import { TablesComponent } from '../../../../../../../../shared/components/table
 import { animate, style, transition, trigger } from '@angular/animations';
 import { MatDialog } from '@angular/material/dialog';
 import { AlertDialogComponent } from '../../../../../../../../shared/components/dialogs/alert-dialog/alert-dialog.component';
+import { CaptchaDialogComponent } from '../../../../../../../../shared/components/dialogs/captcha-dialog/captcha-dialog.component';
 
 type CategoryForm = {
   categoryId: number | string | null;
@@ -77,15 +78,15 @@ export class ApplicationQuestionDetailsComponent {
       type: 'textlink',
       align: 'center',
       width: '18%',
-      textlinkActions: ['view','edit-topopup']
+      textlinkActions: ['view','edit-card']
     }
   ];
 
   categoryDetailsColumns: Columns = [
     {
       header: 'No.',
-      field: 'index',
-      type: 'text',
+      field: '__index',
+      type: 'number',
       align: 'center',
       width: '4%'
     },
@@ -106,7 +107,7 @@ export class ApplicationQuestionDetailsComponent {
     {
       header: 'Row Answer',
       field: 'sort',
-      type: 'text',
+      type: 'number',
       align: 'center',
       width: '13%'
     },
@@ -130,8 +131,19 @@ export class ApplicationQuestionDetailsComponent {
   categoryRows: any[] = [];
   categoryDetailsRows: any[] = [];
 
-  isEnabledCardDetails: boolean = false;
-  isViewMode: boolean = false;
+  isEnabledCardDetails = false;
+
+  isEditing = false;
+  private initialSnapshot: any = null;
+
+  isViewMode = false;
+  isAddMode = false;
+  isEditMode = false;
+  isEditDetails = false;
+
+  isAddingRow = false;
+  fieldErrors = false;
+  duplicateRowIndex: number | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -143,6 +155,16 @@ export class ApplicationQuestionDetailsComponent {
   ngOnInit() {
     this.initializeForm();
 
+    // เริ่มด้วย view-mode: ปิดการแก้ไขทั้งฟอร์ม
+    this.formDetails.disable({ emitEvent: false });
+    this.setActionButtons('view');
+
+    // subscribe เปลี่ยน enable/disable ปุ่ม Save แบบเรียลไทม์ **เฉพาะตอนอยู่โหมดแก้ไข**
+    this.formDetails.valueChanges.subscribe(() => {
+      if (!this.isEditing) return;
+      this.setButtonDisabled('save', !this.hasFormChanged());
+    });
+
     this.route.queryParams.subscribe(params => {
       this.categoryType = params['categoryType'] || '';
       this.formDetails.patchValue({
@@ -150,7 +172,8 @@ export class ApplicationQuestionDetailsComponent {
           CategoryTypeName: this.categoryType,
           activeStatus: true
         }
-      });
+      }, { emitEvent: false });
+      // หลังดึงข้อมูลเสร็จ ให้ snapshot ค่าเริ่มต้นไว้ใช้เทียบภายหลัง
       this.fetchCategoryTypesDetails();
     });
   }
@@ -186,6 +209,10 @@ export class ApplicationQuestionDetailsComponent {
     return this.categoryDetailsFG.get('items') as any; // FormArray<FormGroup<CategoryDetailForm>>
   }
 
+  get isDisabled() {
+    return this.categoryDetailsFG.disabled;
+  }
+
   private buildCategoryFG(c: any) {
     return this.fb.group<CategoryForm>({
       categoryId: c?.categoryId ?? null,
@@ -201,6 +228,30 @@ export class ApplicationQuestionDetailsComponent {
       sort: d?.sort ?? null,
       activeStatus: d?.status === 1 ? true : false,
     } as any);
+  }
+
+  private setActionButtons(mode: 'view' | 'edit') {
+    if (mode === 'view') {
+      this.filterButtons = [{ label: 'Edit', key: 'edit', color: '#000000' }];
+      this.disabledKeys = []; // ไม่มีอะไรให้ disable
+    } else {
+      this.filterButtons = [{ label: 'Save', key: 'save', color: '#000055' }];
+      // ตอนเข้าโหมดแก้ไขใหม่ ๆ ยังไม่เปลี่ยนค่า -> disable Save ไว้ก่อน
+      this.disabledKeys = ['save'];
+    }
+  }
+
+  private setButtonDisabled(key: string, disabled: boolean) {
+    const set = new Set(this.disabledKeys);
+    if (disabled) set.add(key);
+    else set.delete(key);
+    this.disabledKeys = Array.from(set);
+  }
+
+  private hasFormChanged(): boolean {
+    if (!this.initialSnapshot) return false;
+    const current = this.formDetails.getRawValue();
+    return JSON.stringify(current) !== JSON.stringify(this.initialSnapshot);
   }
 
   toggleActive(): void {
@@ -237,7 +288,9 @@ export class ApplicationQuestionDetailsComponent {
     console.log('Add Category clicked');
     // เปิด Card Details
     this.isEnabledCardDetails = true;
+    this.isAddMode = true;
     this.isViewMode = false;
+    this.isEditMode = false;
     this.categoryDetailsFG.enable();
 
     // รีเซ็ต FormGroup สำหรับ categoryDetails
@@ -275,6 +328,8 @@ export class ApplicationQuestionDetailsComponent {
 
         // สร้าง rows จากฟอร์ม (เพื่อแสดงในตาราง)
         this.rebuildCategoryRowsFromForm();
+        this.formDetails.disable({ emitEvent: false });
+        this.initialSnapshot = this.formDetails.getRawValue();
       },
       error: (error) => {
         console.error('Error fetching category types details:', error);
@@ -319,12 +374,26 @@ export class ApplicationQuestionDetailsComponent {
 
   onEditClicked() {
     console.log('Edit button clicked');
+    // เข้าโหมดแก้ไข
+    this.isEditing = true;
+    this.formDetails.enable({ emitEvent: false });
+
+    // เก็บ snapshot ตอนเริ่มแก้ไข
+    this.initialSnapshot = this.formDetails.getRawValue();
+
+    // สลับปุ่มเป็น Save และ disable ไว้ก่อนจนกว่าจะมีการแก้
+    this.setActionButtons('edit');
   }
 
   onSaveClicked() {
     console.log('Save button clicked');
-    const value = this.formDetails.getRawValue();
+    // ไม่ให้กดถ้าไม่มีการเปลี่ยน
+    if (!this.hasFormChanged()) {
+      // กันเคสเผลอคลิกจากคีย์ลัดหรืออื่น ๆ
+      return;
+    }
 
+    const value = this.formDetails.getRawValue();
     const payload = {
       categoryType: {
         name: value.categoryType.CategoryTypeName,
@@ -349,6 +418,15 @@ export class ApplicationQuestionDetailsComponent {
     };
 
     console.log('SAVE payload:', payload);
+    // ปิดโหมดแก้ไข + รีเซ็ตสถานะปุ่ม
+    this.isEditing = false;
+    this.formDetails.disable({ emitEvent: false });
+
+    // จับ snapshot ใหม่หลังเซฟสำเร็จ (ให้สถานะล่าสุดคือ baseline)
+    this.initialSnapshot = this.formDetails.getRawValue();
+
+    // กลับไปโหมด view: โชว์เฉพาะปุ่ม Edit
+    this.setActionButtons('view');
   }
 
   onSaveDetailsClicked() {
@@ -366,16 +444,28 @@ export class ApplicationQuestionDetailsComponent {
 
   onAddQuestionClicked() {
     console.log('Add button clicked');
+    this.isAddingRow = true;
+    this.categoryDetailsTable.startInlineCreate({ activeStatus: false, status: 0 }, 'bottom');
   }
 
   onToggleChange(event: Event): void {
     console.log('Toggle change event:', event);
   }
 
-  onViewRowClicked(row: any) {
+  onRowClicked(row: any, action: 'view' | 'edit') {
     console.log('View row clicked:', row);
     this.isEnabledCardDetails = true;
-    this.isViewMode = true;
+    if (action === 'view') {
+      this.isViewMode = true;
+      this.isAddMode = false;
+      this.isEditMode = false;
+      this.isEditDetails = false;
+    } else {
+      this.isViewMode = false;
+      this.isAddMode = false;
+      this.isEditMode = true;
+      this.isEditDetails = false;
+    }
 
     this.formDetails.patchValue({
       selectedCategoryId: row?.categoryId ?? null,
@@ -416,5 +506,107 @@ export class ApplicationQuestionDetailsComponent {
       e.checkbox.checked = e.checked;
       this.rebuildDetailsRowsFromForm();
     }
+  }
+
+  onEditDetailsClicked() {
+    console.log('Edit Details button clicked');
+    this.categoryDetailsFG.enable();
+    this.isEditDetails = true;
+  }
+
+  onInlineSave(payload: any) {
+    this.isAddingRow = false;
+    console.log('Inline save payload:', payload);
+
+    // 1) แปลงค่าจาก payload ให้ตรงกับโครงสร้างฟอร์ม
+    const normalized = {
+      id: payload.id ?? null,
+      questionTH: (payload.questionTH ?? '').trim(),
+      questionEN: (payload.questionEN ?? '').trim(),
+      sort: payload.sort !== undefined && payload.sort !== null ? Number(payload.sort) : null,
+      // รองรับทั้ง activeStatus แบบ boolean และ status แบบ 1/2
+      activeStatus: payload.activeStatus ?? (payload.status === 1),
+    };
+
+    // 2) push เข้า FormArray (source of truth)
+    this.detailsFA.push(
+      this.fb.group<CategoryDetailForm>(normalized as any)
+      // หรือใช้ this.buildDetailFG({ ...normalized, status: normalized.activeStatus ? 1 : 2 })
+    );
+
+    // 3) rebuild rows ให้ตารางอัปเดต
+    this.rebuildDetailsRowsFromForm();
+
+    // 4) ทำให้ฟอร์มรู้ว่ามีการเปลี่ยน (ปุ่ม Save จะ enabled)
+    this.categoryDetailsFG.markAsDirty();
+    this.formDetails.markAsDirty();
+
+    // 5) (ออปชัน) เลื่อนลงล่างให้เห็นแถวใหม่ทันที
+    setTimeout(() => {
+      try {
+        this.categoryDetailsTable?.tableWrapperRef?.nativeElement?.scrollTo({
+          top: this.categoryDetailsTable?.tableWrapperRef?.nativeElement?.scrollHeight ?? 0,
+          behavior: 'smooth'
+        });
+      } catch {}
+    }, 0);
+
+    console.log('Inline save payload:', payload, '→ added:', normalized);
+  }
+
+  onDeleteRowClicked(row: any) {
+    console.log('Delete row clicked:', row);
+    Promise.resolve().then(() => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.add('dimmed-overlay');
+    });
+
+    const dialogRef = this.dialog.open(CaptchaDialogComponent, {
+      width: '520px',
+      panelClass: 'custom-dialog-container',
+      disableClose: true,
+      data: {
+        title: 'Delete',
+        message: 'Are you sure you want to delete this item?',
+        length: 6,
+        caseSensitive: false
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(async (ok: boolean) => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.remove('dimmed-overlay');
+
+      if (!ok) return; // ยกเลิกถ้า CAPTCHA ไม่ผ่าน/กด Cancel
+
+    // --- หา index ของแถวใน FormArray ---
+    const id = row?.id ?? null;
+    const idx = this.detailsFA.controls.findIndex((fg: FormGroup) => {
+      const v = fg.value as CategoryDetailForm;
+      // ถ้ามี id ให้เทียบด้วย id ก่อน, ถ้าไม่มี ใช้ฟิลด์ประกอบ
+      return id != null
+        ? v.id === id
+        : v.questionTH === row?.questionTH &&
+          v.questionEN === row?.questionEN &&
+          v.sort === row?.sort;
+    });
+
+    if (idx < 0) {
+      console.warn('Row not found in FormArray, skip delete.');
+      return;
+    }
+
+    // --- Optimistic update: ลบทันทีใน UI ---
+    const backup = this.detailsFA.at(idx).value as CategoryDetailForm;
+    this.detailsFA.removeAt(idx);
+    this.rebuildDetailsRowsFromForm();
+    this.categoryDetailsFG.markAsDirty();
+    this.formDetails.markAsDirty();
+    });
+  }
+
+  onInlineCancel() {
+    this.isAddingRow = false;
+    this.fieldErrors = false;
   }
 }
