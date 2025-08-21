@@ -19,6 +19,8 @@ import { SpecialBenefitsComponent } from './pages/data-setting/application/speci
 import { ComputerSkillsComponent } from './pages/data-setting/application/computer-skills/computer-skills.component';
 import { LanguageSkillsComponent } from './pages/data-setting/application/language-skills/language-skills.component';
 import { UniversityComponent } from './pages/data-setting/application/university/university.component';
+import { QuillModule } from 'ngx-quill';
+import { EmailTemplateDetailsComponent } from './pages/data-setting/application/email/email-template/pages/email-template-details/email-template-details.component';
 
 @NgModule({
   declarations: [
@@ -37,7 +39,8 @@ import { UniversityComponent } from './pages/data-setting/application/university
     SpecialBenefitsComponent,
     ComputerSkillsComponent,
     LanguageSkillsComponent,
-    UniversityComponent
+    UniversityComponent,
+    EmailTemplateDetailsComponent
   ],
   imports: [
     CommonModule,
@@ -45,6 +48,7 @@ import { UniversityComponent } from './pages/data-setting/application/university
     SharedModule,
     FormsModule,
     ReactiveFormsModule,
+    QuillModule.forRoot()
   ]
 })
 export class AdminSettingModule { }

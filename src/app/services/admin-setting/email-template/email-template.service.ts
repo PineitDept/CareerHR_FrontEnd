@@ -1,0 +1,35 @@
+import { Injectable } from '@angular/core';
+import { ApiService } from '../../../shared/services/api/api.service';
+import { Observable } from 'rxjs';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class EmailTemplateService {
+
+  constructor(private apiService: ApiService) {}
+
+  // ดึงรายการทั้งหมด
+  getAllEmailTemplates(): Observable<any> {
+    return this.apiService.get<any>('EmailSettings/mail-management', {
+      withAuth: true,
+      loading: true
+    });
+  }
+
+  // ดึงรายการเดียวตาม id
+  getEmailTemplateById(id: number | string): Observable<any> {
+    return this.apiService.get<any>(`EmailSettings/mail-management/${id}`, {
+      withAuth: true,
+      loading: true
+    });
+  }
+
+  // แก้ไขรายการ
+  updateEmailTemplate(id: number | string, data: any): Observable<any> {
+    return this.apiService.put<any>(`EmailSettings/mail-management/${id}`, data, {
+      withAuth: true,
+      loading: true
+    });
+  }
+}
