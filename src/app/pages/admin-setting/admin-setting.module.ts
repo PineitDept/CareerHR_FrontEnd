@@ -21,6 +21,7 @@ import { LanguageSkillsComponent } from './pages/data-setting/application/langua
 import { UniversityComponent } from './pages/data-setting/application/university/university.component';
 import { QuillModule } from 'ngx-quill';
 import { EmailTemplateDetailsComponent } from './pages/data-setting/application/email/email-template/pages/email-template-details/email-template-details.component';
+import { EmailAttributeDetailsComponent } from './pages/data-setting/application/email/email-attribute/pages/email-attribute-details/email-attribute-details.component';
 
 @NgModule({
   declarations: [
@@ -40,7 +41,8 @@ import { EmailTemplateDetailsComponent } from './pages/data-setting/application/
     ComputerSkillsComponent,
     LanguageSkillsComponent,
     UniversityComponent,
-    EmailTemplateDetailsComponent
+    EmailTemplateDetailsComponent,
+    EmailAttributeDetailsComponent
   ],
   imports: [
     CommonModule,
