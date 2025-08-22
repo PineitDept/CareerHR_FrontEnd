@@ -70,6 +70,7 @@ export class TablesComponent
   @Input() isToggleAlert: boolean = false;
   @Input() isDisabledForm: boolean = false;
   @Input() isZeroOneStatus: boolean = false;
+  @Input() allowViewWhenDisabled: boolean = false;
 
   @Output() selectionChanged = new EventEmitter<any[]>();
   @Output() rowClicked = new EventEmitter<any>();
