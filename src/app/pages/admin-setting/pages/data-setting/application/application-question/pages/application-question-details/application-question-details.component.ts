@@ -158,6 +158,12 @@ export class ApplicationQuestionDetailsComponent {
 
   private isProgrammaticUpdate = false;
 
+  private DETAILS_CACHE_KEY = 'categoryDetailsCache';
+
+  private CATEGORY_TYPE_DRAFT_PREFIX = 'categoryTypeDraft';
+
+  private DIRTY_PREFIX = 'aqd:dirty';
+
   constructor(
     private route: ActivatedRoute,
     private applicationQuestionService: ApplicationQuestionService,
@@ -172,15 +178,20 @@ export class ApplicationQuestionDetailsComponent {
     this.formDetails.disable({ emitEvent: false });
     this.setActionButtons('view');
 
-    this.formDetails.valueChanges.subscribe(() => {
+    this.formDetails.get('categoryType.CategoryTypeName')?.valueChanges.subscribe((v) => {
+      // เก็บเฉพาะเวลาผู้ใช้แก้จริง ๆ
       if (!this.isEditing) return;
       if (this.isProgrammaticUpdate) return;
 
-      let enable = this.hasFormChanged();
-      // เคส Add: อย่าเปิดปุ่ม Save (ตัวบน) จนกว่าจะกรอกชื่อ + มีอย่างน้อย 1 แถว
-      if (this.isAddMode) {
-        enable = enable && this.checkFormDetailsChanged();
-      }
+      this.writeCategoryTypeDraft(String(v ?? '').trim());
+    });
+
+    this.formDetails.valueChanges.subscribe(() => {
+      if (this.isProgrammaticUpdate) return;
+
+      // เปิดปุ่มถ้ามี draft (CategoryTypeName หรือ details ใด ๆ) หรือฟอร์มเปลี่ยนจาก baseline
+      const enable = this.hasPendingDrafts() || this.hasFormChanged();
+
       this.setButtonDisabled('save', !enable);
     });
 
@@ -308,6 +319,286 @@ export class ApplicationQuestionDetailsComponent {
     }
   }
 
+  private makeCacheKey(categoryId: string | number): string {
+    return `${this.categoryType || 'default'}:${String(categoryId)}`;
+  }
+
+  private readDetailsCache(): Record<string, any> {
+    try {
+      const raw = sessionStorage.getItem(this.DETAILS_CACHE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  private writeDetailsCache(obj: Record<string, any>) {
+    try {
+      sessionStorage.setItem(this.DETAILS_CACHE_KEY, JSON.stringify(obj));
+    } catch {}
+  }
+
+  private getCachedDetails(categoryId: string | number) {
+    const cache = this.readDetailsCache();
+    const key = this.makeCacheKey(categoryId);
+    return cache[key] ?? null;
+  }
+
+  private setCachedDetails(categoryId: string | number, data: {
+    CategoryName: string;
+    items: Array<{ id: number | string | null; questionTH: string; questionEN: string; sort: number | null; status: 1 | 2; }>;
+  }) {
+    const cache = this.readDetailsCache();
+    const key = this.makeCacheKey(categoryId);
+    cache[key] = data;
+    this.writeDetailsCache(cache);
+  }
+
+  private deleteCachedDetails(categoryId: string | number) {
+    const cache = this.readDetailsCache();
+    const key = this.makeCacheKey(categoryId);
+    if (cache[key]) {
+      delete cache[key];
+      this.writeDetailsCache(cache);
+    }
+  }
+
+  private syncCategoryNameToList(categoryId: number | string, name: string) {
+    const clean = (name ?? '').trim();
+    if (!clean) return;
+
+    const idx = this.categoriesFA.controls.findIndex(
+      (fg: FormGroup) => String(fg.value.categoryId) === String(categoryId)
+    );
+
+    if (idx > -1) {
+      // ไม่ให้กระทบ valueChanges ของฟอร์มหลัก
+      this.categoriesFA.at(idx).patchValue({ categoryName: clean }, { emitEvent: false });
+      this.rebuildCategoryRowsFromForm();
+    }
+  }
+
+  private applyCachedNamesToCategoryList() {
+    const cache = this.readDetailsCache();
+    if (!cache || !Object.keys(cache).length) return;
+
+    // สร้าง index เดิม
+    const indexById = new Map<string, number>();
+    this.categoriesFA.controls.forEach((fg: FormGroup, i: number) => {
+      const id = String(fg.value.categoryId);
+      indexById.set(id, i);
+    });
+
+    const type = this.categoryType || 'default';
+
+    Object.entries<any>(cache).forEach(([key, cached]) => {
+      const [t, id] = key.split(':');
+      if (t !== type) return;
+
+      const cachedName = (cached?.CategoryName ?? '').trim();
+
+      // ถ้ามีอยู่แล้ว → อัปเดตชื่อ
+      if (indexById.has(String(id))) {
+        if (cachedName) {
+          const idx = indexById.get(String(id))!;
+          this.categoriesFA.at(idx).patchValue({ categoryName: cachedName }, { emitEvent: false });
+        }
+        return;
+      }
+
+      // ถ้ายังไม่มีในตาราง และเป็น temp id → "เพิ่มแถวใหม่" (แสดง Category ใหม่)
+      if (this.isTempId(id)) {
+        const fg = this.fb.group<CategoryForm>({
+          categoryId: id,
+          categoryName: cachedName || '-',
+          activeStatus: true,
+        } as any);
+        this.categoriesFA.push(fg, { emitEvent: false });
+        // อัปเดต index map กันพลาดหลายตัว
+        indexById.set(String(id), this.categoriesFA.length - 1);
+      }
+    });
+
+    this.rebuildCategoryRowsFromForm(); // อัปเดตรายการซ้าย
+  }
+
+  private lastSelectedKey(): string {
+    return `aqd:lastSelected:${this.categoryType || 'default'}`;
+  }
+
+  private rememberLastSelected(categoryId: number | string) {
+    try { sessionStorage.setItem(this.lastSelectedKey(), String(categoryId)); } catch {}
+  }
+
+  private getLastSelected(): string | null {
+    try { return sessionStorage.getItem(this.lastSelectedKey()); } catch { return null; }
+  }
+
+  // เรียกหลังโหลดรายการแล้ว (ใน fetchCategoryTypesDetails)
+  private autoOpenLastSelectedIfAny() {
+    const last = this.getLastSelected();
+    if (!last) return;
+
+    const row = this.categoryRows.find(r => String(r.categoryId) === String(last));
+    if (row) {
+      // เปิดแบบ view ก็ได้ (หรือ edit ตามต้องการ)
+      this.onRowClicked(row, 'view');
+    }
+  }
+
+  private categoryTypeDraftKey(): string {
+    return `${this.CATEGORY_TYPE_DRAFT_PREFIX}:${this.categoryType || 'default'}`;
+  }
+
+  private readCategoryTypeDraft(): string | null {
+    try { return sessionStorage.getItem(this.categoryTypeDraftKey()); } catch { return null; }
+  }
+
+  private writeCategoryTypeDraft(name: string) {
+    try { sessionStorage.setItem(this.categoryTypeDraftKey(), name ?? ''); } catch {}
+  }
+
+  private clearCategoryTypeDraft() {
+    try { sessionStorage.removeItem(this.categoryTypeDraftKey()); } catch {}
+  }
+
+  private applyCategoryTypeDraft() {
+    const draft = (this.readCategoryTypeDraft() ?? '').trim();
+    if (!draft) return;
+
+    // ไม่ให้กระตุ้น valueChanges โดยไม่จำเป็น
+    this.formDetails.get('categoryType.CategoryTypeName')
+      ?.patchValue(draft, { emitEvent: false });
+  }
+
+  private dirtyKey(): string {
+    return `${this.DIRTY_PREFIX}:${this.categoryType || 'default'}`;
+  }
+  private readDirty(): string[] {
+    try {
+      const raw = sessionStorage.getItem(this.dirtyKey());
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  }
+  private writeDirty(ids: string[]) {
+    try { sessionStorage.setItem(this.dirtyKey(), JSON.stringify(Array.from(new Set(ids.map(String))))); } catch {}
+  }
+  private markDirty(categoryId: number | string) {
+    const ids = this.readDirty();
+    ids.push(String(categoryId));
+    this.writeDirty(ids);
+  }
+  private clearDirty() {
+    try { sessionStorage.removeItem(this.dirtyKey()); } catch {}
+  }
+
+  private collectDirtyDetailsForPayload() {
+    const ids = this.readDirty();                     // ["12","18",...]
+    if (!ids.length) return [];
+
+    const cache = this.readDetailsCache();            // key: "<type>:<id>"
+    const type = this.categoryType || 'default';
+    const list = [];
+
+    for (const id of ids) {
+      const entry = cache[`${type}:${String(id)}`];
+      if (!entry) continue;
+      list.push({
+        categoryId: id,
+        CategoryName: entry.CategoryName ?? '',
+        items: (entry.items ?? []).map((it: any) => ({
+          id: it.id ?? null,
+          questionTH: (it.questionTH ?? '').trim(),
+          questionEN: (it.questionEN ?? '').trim(),
+          sort: (it.sort ?? it.sort === 0) ? Number(it.sort) : null,
+          status: it.status, // 1/2 ตามที่คุณเก็บใน cache
+        })),
+      });
+    }
+    return list;
+  }
+
+  // === Temp Id helpers ===
+  private createTempId(): string {
+    return `tmp-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+  }
+  private isTempId(id: any): boolean {
+    return String(id).startsWith('tmp-');
+  }
+
+  private hasPendingDrafts(): boolean {
+    const hasDirty = (this.readDirty()?.length ?? 0) > 0;
+    const nameDraft = (this.readCategoryTypeDraft() ?? '').trim();
+    return hasDirty || !!nameDraft;
+  }
+
+  private reflectPendingDraftsUI() {
+    if (this.hasPendingDrafts()) {
+      // ถ้ามี draft แต่ฟอร์มยังปิดอยู่ → เปิดโหมดแก้ไขอัตโนมัติ
+      if (!this.isEditing || this.formDetails.disabled) {
+        this.enterEditMode('draft');
+      } else {
+        // อยู่ในโหมด edit อยู่แล้ว → ให้ Save กดได้
+        this.setActionButtons('edit');
+        this.setButtonDisabled('save', false);
+      }
+    } else {
+      // ไม่มี draft → UI เป็นโหมด view
+      this.setActionButtons('view');
+    }
+  }
+
+  private enterEditMode(source: 'user' | 'draft' = 'user') {
+    this.isEditing = true;
+    this.formDetails.enable({ emitEvent: false });
+
+    // การ์ด Details ยังล็อกไว้ก่อน ยกเว้นอยู่ใน Add mode หรือเพิ่งกด Edit Details
+    if (this.isEnabledCardDetails && !this.isAddMode && !this.isEditDetails) {
+      this.categoryDetailsFG.disable({ emitEvent: false });
+    }
+
+    this.setActionButtons('edit');
+    // ถ้าเข้าเพราะผู้ใช้กด Edit → รอให้มีการแก้ก่อนถึง enable Save
+    // ถ้าเข้าเพราะมี draft → เปิดปุ่ม Save ให้กดได้เลย
+    this.setButtonDisabled('save', source === 'user');
+  }
+
+  private findDetailsIndexByRow(row: any): number {
+    // 1) ถ้ามี id ให้ลองเทียบด้วย id ก่อน
+    if (row?.id != null) {
+      const byId = this.detailsFA.controls.findIndex((fg: { value: CategoryDetailForm; }) => (fg.value as CategoryDetailForm).id === row.id);
+      if (byId > -1) return byId;
+    }
+
+    // util สำหรับ normalize ค่า
+    const T = (v: any) => (v ?? '').toString().trim();
+    const N = (v: any) => (v === undefined || v === null || v === '' ? null : Number(v));
+    const B = (v: any) => !!v;
+
+    const qTH = T(row?.questionTH);
+    const qEN = T(row?.questionEN);
+    const srt = N(row?.sort);
+    const act = B(row?.activeStatus);
+
+    // 2) จับคู่ด้วยค่าเนื้อหา (normalize แล้ว)
+    let byContent = this.detailsFA.controls.findIndex((fg: { value: CategoryDetailForm; }) => {
+      const v = fg.value as CategoryDetailForm;
+      return T(v.questionTH) === qTH &&
+            T(v.questionEN) === qEN &&
+            N(v.sort) === srt &&
+            B(v.activeStatus) === act;
+    });
+    if (byContent > -1) return byContent;
+
+    // 3) เผื่อไว้: ใช้ index ที่โชว์ในตาราง (กรณีไม่มี sort/filter อื่น)
+    if (typeof row?.index === 'number') {
+      const guess = row.index - 1;
+      if (guess >= 0 && guess < this.detailsFA.length) return guess;
+    }
+
+    return -1;
+  }
+
   toggleActive(): void {
     Promise.resolve().then(() => {
       const container = document.querySelector('.cdk-overlay-container');
@@ -368,8 +659,7 @@ export class ApplicationQuestionDetailsComponent {
       this.initialSnapshot = this.formDetails.getRawValue();
       this.formDetails.markAsPristine();
 
-      // ปุ่ม Save (ตัวบน) เริ่มต้นต้องปิดไว้ก่อน
-      this.setButtonDisabled('save', true);
+      this.reflectPendingDraftsUI();
     } finally {
       this.isProgrammaticUpdate = false;
     }
@@ -403,10 +693,22 @@ export class ApplicationQuestionDetailsComponent {
         this.categoriesFA.clear({ emitEvent: false });
         (response ?? []).forEach((c: any) => this.categoriesFA.push(this.buildCategoryFG(c), { emitEvent: false }));
 
-        // สร้าง rows จากฟอร์ม (เพื่อแสดงในตาราง)
-        this.rebuildCategoryRowsFromForm();
+        // จับ baseline จากข้อมูล "จริง" ก่อนวาง draft/cache
         this.formDetails.disable({ emitEvent: false });
         this.initialSnapshot = this.formDetails.getRawValue();
+
+        // วาง draft/cache ตามที่ผู้ใช้แก้ค้าง
+        this.applyCachedNamesToCategoryList();
+        this.applyCategoryTypeDraft();
+
+        // อัปเดตรายการซ้าย
+        this.rebuildCategoryRowsFromForm();
+
+        // ถ้ามี draft → โชว์ปุ่ม Save ได้ทันที
+        this.reflectPendingDraftsUI();
+
+        // เปิดรายการล่าสุดตามเดิม (จะไม่ไปรีเซ็ต snapshot ถ้ามี draft — ดูข้อ C)
+        this.autoOpenLastSelectedIfAny();
       },
       error: (error) => {
         console.error('Error fetching category types details:', error);
@@ -451,33 +753,20 @@ export class ApplicationQuestionDetailsComponent {
 
   onEditClicked() {
     console.log('Edit button clicked');
-    // เข้าโหมดแก้ไข
-    this.isEditing = true;
-    this.formDetails.enable({ emitEvent: false });
-
-    if (this.isEnabledCardDetails) {
-      this.categoryDetailsFG.disable({ emitEvent: false });
-      this.isEditDetails = false;
-    }
-
-    // เก็บ snapshot ตอนเริ่มแก้ไข
+    // snapshot ตอนเริ่มแก้ไข
     this.initialSnapshot = this.formDetails.getRawValue();
-
-    // สลับปุ่มเป็น Save และ disable ไว้ก่อนจนกว่าจะมีการแก้
-    this.setActionButtons('edit');
-    this.setButtonDisabled('save', true);
+    // เข้าโหมดแก้ไข (มาจากการกดของผู้ใช้)
+    this.enterEditMode('user');
   }
 
   onSaveClicked() {
-    console.log('Save button clicked');
-    // ไม่ให้กดถ้าไม่มีการเปลี่ยน
-    if (!this.hasFormChanged()) {
-      // กันเคสเผลอคลิกจากคีย์ลัดหรืออื่น ๆ
-      return;
-    }
+    if (!this.hasFormChanged() && !this.hasPendingDrafts()) return;
 
     const value = this.formDetails.getRawValue();
-    const payload = {
+    const dirtyDetailsList = this.collectDirtyDetailsForPayload();
+
+    // รองรับทั้ง “อันเดียว” และ “หลายอัน”
+    const payload: any = {
       categoryType: {
         name: value.categoryType.CategoryTypeName,
         isActive: !!value.categoryType.activeStatus,
@@ -487,42 +776,98 @@ export class ApplicationQuestionDetailsComponent {
         categoryName: c.categoryName,
         isActive: !!c.activeStatus,
       })),
-      selectedCategoryId: value.selectedCategoryId,
-      categoryDetails: {
-        CategoryName: value.categoryDetails?.CategoryName ?? '',
-        items: (value.categoryDetails?.items ?? []).map((d: CategoryDetailForm) => ({
-          id: d.id,
-          questionTH: d.questionTH,
-          questionEN: d.questionEN,
-          sort: d.sort,
-          status: d.activeStatus ? 1 : 2,
-        })),
-      }
     };
 
+    if (dirtyDetailsList.length === 1) {
+      payload.selectedCategoryId = dirtyDetailsList[0].categoryId;
+      payload.categoryDetails = {
+        CategoryName: dirtyDetailsList[0].CategoryName,
+        items: dirtyDetailsList[0].items,
+      };
+    } else if (dirtyDetailsList.length > 1) {
+      payload.selectedCategoryId = null;
+      payload.categoryDetailsList = dirtyDetailsList; // <-- ✅ หลายหมวด
+    } else {
+      // ไม่มี draft รายละเอียด ก็ไม่ต้องส่งส่วน details
+      payload.selectedCategoryId = null;
+      payload.categoryDetailsList = [];
+    }
+
     console.log('SAVE payload:', payload);
-    // ปิดโหมดแก้ไข + รีเซ็ตสถานะปุ่ม
+    // TODO: เรียก API จริง แล้วทำต่อเมื่อ success
+
+    // เคลียร์ draft และ cache ทั้งหมดหลังบันทึกสำเร็จ
+    this.clearCategoryTypeDraft();     // ล้าง draft ชื่อ Category Type
+    for (const d of dirtyDetailsList) {
+      this.deleteCachedDetails(d.categoryId);
+    }
+    this.clearDirty();                 // ล้างรายการ dirty ให้หมด
+
     this.isEditing = false;
     this.formDetails.disable({ emitEvent: false });
-
-    // จับ snapshot ใหม่หลังเซฟสำเร็จ (ให้สถานะล่าสุดคือ baseline)
     this.initialSnapshot = this.formDetails.getRawValue();
-
-    // กลับไปโหมด view: โชว์เฉพาะปุ่ม Edit
     this.setActionButtons('view');
   }
 
   onSaveDetailsClicked() {
     console.log('Save Details button clicked');
-    if (!this.checkFormDetailsChanged()) {
-      // ถ้าฟอร์มไม่เปลี่ยนแปลงหรือไม่มีข้อมูล
-      console.log("No changes to save");
-      return;
+    if (!this.checkFormDetailsChanged()) return;
+
+    let categoryId = this.formDetails.get('selectedCategoryId')?.value;
+
+    // อ่านค่าจากฟอร์มปัจจุบันเพื่อนำไปแคช
+    const name = (this.categoryDetailsFG.get('CategoryName')?.value || '').trim();
+    const itemsFA = (this.detailsFA.getRawValue() || []) as CategoryDetailForm[];
+    const itemsForCache = itemsFA.map(d => ({
+      id: d.id ?? null,
+      questionTH: (d.questionTH ?? '').trim(),
+      questionEN: (d.questionEN ?? '').trim(),
+      sort: (d.sort ?? d.sort === 0) ? Number(d.sort) : null,
+      status: d.activeStatus ? 1 as const : 2 as const,
+    }));
+
+    // เคส "เพิ่มใหม่": ยังไม่มี selectedCategoryId (null) + อยู่ใน Add mode
+    if (this.isAddMode && (categoryId == null)) {
+      const tempId = this.createTempId();
+      categoryId = tempId;
+
+      // 1) set selectedCategoryId เป็น temp id โดยไม่ยิง valueChanges
+      this.formDetails.patchValue({ selectedCategoryId: tempId }, { emitEvent: false });
+
+      // 2) push แถวใหม่เข้า categories (เพื่อให้ตารางซ้ายแสดง Category ใหม่ทันที)
+      const fg = this.fb.group<CategoryForm>({
+        categoryId: tempId,
+        categoryName: name || '-',
+        activeStatus: true,
+      } as any);
+      this.categoriesFA.push(fg, { emitEvent: false });
+      this.rebuildCategoryRowsFromForm();
+
+      // 3) จดจำ last selected ไว้เปิดอัตโนมัติหลังรีโหลด
+      this.rememberLastSelected(tempId);
     }
 
-    // ถ้ามีการเปลี่ยนแปลง ให้บันทึกข้อมูล
-    console.log('Saving data...');
-    // เพิ่มการบันทึกข้อมูลที่นี่
+    // จากนี้เหมือนเดิม: เซฟลง cache + sync ชื่อ + markDirty
+    this.setCachedDetails(categoryId, { CategoryName: name, items: itemsForCache });
+    this.syncCategoryNameToList(categoryId, name);
+    this.markDirty(categoryId);
+
+    // ปรับ baseline/สแน็ปช็อต
+    this.detailsBaseline = this.buildCurrentDetailsView();
+
+    // ไม่แตะ initialSnapshot หลัก เพื่อให้ Save หลักยัง "พร้อมกด"
+    // อัปเดต UI ให้เห็นปุ่ม Save ได้ทันทีหลังเซฟ details
+    this.reflectPendingDraftsUI();
+
+    console.log('Saved to cache for categoryId=', categoryId);
+    // กลับไปเป็นโหมดอ่านอย่างเดียวของการ์ด details
+    this.categoryDetailsFG.disable({ emitEvent: false });
+
+    // โชว์ปุ่ม "Edit" อีกครั้ง (และซ่อน "Save Details")
+    this.isEditDetails = false;
+    this.isAddMode = false;     // จบ flow เพิ่มใหม่
+    this.isEditMode = true;     // ยังอยู่ในโหมดแก้ไขหลักของหน้า
+    this.isViewMode = false;    // เผื่อกรณี state เพี้ยน
   }
 
   onAddQuestionClicked() {
@@ -536,6 +881,8 @@ export class ApplicationQuestionDetailsComponent {
   }
 
   onRowClicked(row: any, action: 'view' | 'edit') {
+    this.rememberLastSelected(row?.categoryId);
+
     this.isProgrammaticUpdate = true;
 
     console.log('View row clicked:', row);
@@ -557,19 +904,62 @@ export class ApplicationQuestionDetailsComponent {
       categoryDetails: { CategoryName: row?.categoryName ?? '' }
     }, { emitEvent: false });
 
+    const categoryId = row?.categoryId;
+    const cached = categoryId != null ? this.getCachedDetails(categoryId) : null;
+
+    if (cached) {
+      // ===== โหลดจากแคช =====
+      console.log('Load details from cache for categoryId=', categoryId, cached);
+
+      // ตั้งชื่อหมวดหมู่จากแคช (เชื่อถือแคชเป็นหลัก)
+      this.categoryDetailsFG.patchValue(
+        { CategoryName: cached.CategoryName ?? row?.categoryName ?? '' },
+        { emitEvent: false }
+      );
+
+      // เคลียร์และเติมรายการจากแคช
+      this.clearFormArrayQuietly(this.detailsFA);
+      (cached.items ?? []).forEach((d: any) => {
+        // ใช้ buildDetailFG ที่รองรับ d.status === 1
+        this.detailsFA.push(this.buildDetailFG(d), { emitEvent: false });
+      });
+      this.rebuildDetailsRowsFromForm();
+
+      // การ์ดยัง disabled (จนกว่าจะกด Edit Details)
+      this.categoryDetailsFG.disable({ emitEvent: false });
+
+      // baseline/snapshot สำหรับการเทียบ diff และปิดปุ่ม Save บนสุด
+      this.detailsBaseline = this.buildCurrentDetailsView();
+
+      // อย่ารื้อ baseline หลักถ้ามี draft ค้างอยู่
+      if (!this.hasPendingDrafts()) {
+        this.initialSnapshot = this.formDetails.getRawValue();
+      }
+
+      // ปรับปุ่มให้สะท้อนสถานะปัจจุบัน
+      this.reflectPendingDraftsUI();
+
+      this.isProgrammaticUpdate = false;
+      return; // จบที่แคช ไม่ต้องยิง API
+    }
+
     this.applicationQuestionService.getQuestionsByCategory(row.categoryId).subscribe({
       next: (response) => {
         console.log('Questions fetched successfully:', response);
-        // Handle the response as needed, e.g., navigate to a details page or display in a modal
-        this.detailsFA.clear();
+
+        this.clearFormArrayQuietly(this.detailsFA);
         (response ?? []).forEach((d: any) => this.detailsFA.push(this.buildDetailFG(d), { emitEvent: false }));
         this.rebuildDetailsRowsFromForm();
+
         this.categoryDetailsFG.disable({ emitEvent: false });
         this.detailsBaseline = this.buildCurrentDetailsView();
 
-        this.initialSnapshot = this.formDetails.getRawValue();
-        this.formDetails.markAsPristine();
-        this.setButtonDisabled('save', true);
+        if (!this.hasPendingDrafts()) {
+          this.initialSnapshot = this.formDetails.getRawValue();
+          this.formDetails.markAsPristine();
+        }
+        // จากนั้นสะท้อนสถานะปุ่มตาม draft
+        this.reflectPendingDraftsUI();
       },
       error: (error) => {
         console.error('Error fetching questions:', error);
@@ -672,29 +1062,20 @@ export class ApplicationQuestionDetailsComponent {
 
       if (!ok) return; // ยกเลิกถ้า CAPTCHA ไม่ผ่าน/กด Cancel
 
-    // --- หา index ของแถวใน FormArray ---
-    const id = row?.id ?? null;
-    const idx = this.detailsFA.controls.findIndex((fg: FormGroup) => {
-      const v = fg.value as CategoryDetailForm;
-      // ถ้ามี id ให้เทียบด้วย id ก่อน, ถ้าไม่มี ใช้ฟิลด์ประกอบ
-      return id != null
-        ? v.id === id
-        : v.questionTH === row?.questionTH &&
-          v.questionEN === row?.questionEN &&
-          v.sort === row?.sort;
-    });
+      // --- หา index ของแถวใน FormArray ---
+      let idx = this.findDetailsIndexByRow(row);
 
-    if (idx < 0) {
-      console.warn('Row not found in FormArray, skip delete.');
-      return;
-    }
+      if (idx < 0) {
+        console.warn('Row not found in FormArray, skip delete.');
+        return;
+      }
 
-    // --- Optimistic update: ลบทันทีใน UI ---
-    const backup = this.detailsFA.at(idx).value as CategoryDetailForm;
-    this.detailsFA.removeAt(idx);
-    this.rebuildDetailsRowsFromForm();
-    this.categoryDetailsFG.markAsDirty();
-    this.formDetails.markAsDirty();
+      // --- Optimistic update: ลบทันทีใน UI ---
+      const backup = this.detailsFA.at(idx).value as CategoryDetailForm;
+      this.detailsFA.removeAt(idx);
+      this.rebuildDetailsRowsFromForm();
+      this.categoryDetailsFG.markAsDirty();
+      this.formDetails.markAsDirty();
     });
   }
 
