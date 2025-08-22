@@ -24,6 +24,17 @@ type CategoryDetailForm = {
   activeStatus: boolean;
 };
 
+interface DetailsSnapshot {
+  name: string;
+  items: Array<{
+    id: number | string | null;
+    questionTH: string;
+    questionEN: string;
+    sort: number | null;
+    activeStatus: boolean;
+  }>;
+}
+
 @Component({
   selector: 'app-application-question-details',
   templateUrl: './application-question-details.component.html',
@@ -145,6 +156,8 @@ export class ApplicationQuestionDetailsComponent {
   fieldErrors = false;
   duplicateRowIndex: number | null = null;
 
+  private isProgrammaticUpdate = false;
+
   constructor(
     private route: ActivatedRoute,
     private applicationQuestionService: ApplicationQuestionService,
@@ -159,10 +172,16 @@ export class ApplicationQuestionDetailsComponent {
     this.formDetails.disable({ emitEvent: false });
     this.setActionButtons('view');
 
-    // subscribe เปลี่ยน enable/disable ปุ่ม Save แบบเรียลไทม์ **เฉพาะตอนอยู่โหมดแก้ไข**
     this.formDetails.valueChanges.subscribe(() => {
       if (!this.isEditing) return;
-      this.setButtonDisabled('save', !this.hasFormChanged());
+      if (this.isProgrammaticUpdate) return;
+
+      let enable = this.hasFormChanged();
+      // เคส Add: อย่าเปิดปุ่ม Save (ตัวบน) จนกว่าจะกรอกชื่อ + มีอย่างน้อย 1 แถว
+      if (this.isAddMode) {
+        enable = enable && this.checkFormDetailsChanged();
+      }
+      this.setButtonDisabled('save', !enable);
     });
 
     this.route.queryParams.subscribe(params => {
@@ -254,6 +273,41 @@ export class ApplicationQuestionDetailsComponent {
     return JSON.stringify(current) !== JSON.stringify(this.initialSnapshot);
   }
 
+  private detailsBaseline: DetailsSnapshot | null = null;
+
+  private buildCurrentDetailsView(): DetailsSnapshot {
+    const name = (this.categoryDetailsFG.get('CategoryName')?.value || '').trim();
+
+    const items = (this.categoryDetailsRows || []).map(r => ({
+      id: r?.id ?? null,
+      questionTH: (r?.questionTH ?? '').trim(),
+      questionEN: (r?.questionEN ?? '').trim(),
+      sort: (r?.sort ?? r?.sort === 0) ? Number(r.sort) : null,
+      activeStatus: !!r?.activeStatus,
+    }));
+
+    // จัดเรียงเพื่อให้ compare เสถียร
+    items.sort((a, b) =>
+      (Number(a.id) || 0) - (Number(b.id) || 0) ||
+      (a.sort ?? 0) - (b.sort ?? 0) ||
+      a.questionTH.localeCompare(b.questionTH) ||
+      a.questionEN.localeCompare(b.questionEN)
+    );
+
+    return { name, items };
+  }
+
+  private isSameDetails(a: DetailsSnapshot, b: DetailsSnapshot): boolean {
+    return JSON.stringify(a) === JSON.stringify(b);
+  }
+
+  private clearFormArrayQuietly(fa: any) {
+    // หลีกเลี่ยง fa.clear({emitEvent:false}) ถ้าเวอร์ชัน Angular ไม่รองรับ options
+    for (let i = fa.length - 1; i >= 0; i--) {
+      fa.removeAt(i, { emitEvent: false });
+    }
+  }
+
   toggleActive(): void {
     Promise.resolve().then(() => {
       const container = document.querySelector('.cdk-overlay-container');
@@ -285,46 +339,69 @@ export class ApplicationQuestionDetailsComponent {
   }
 
   onAddClicked() {
-    console.log('Add Category clicked');
-    // เปิด Card Details
-    this.isEnabledCardDetails = true;
-    this.isAddMode = true;
-    this.isViewMode = false;
-    this.isEditMode = false;
-    this.categoryDetailsFG.enable();
+    this.isProgrammaticUpdate = true;
+    try {
+      // เปิดการ์ด + สถานะโหมด
+      this.isEnabledCardDetails = true;
+      this.isAddMode = true;
+      this.isViewMode = false;
+      this.isEditMode = false;
+      this.isEditDetails = true; // ให้แก้รายละเอียดได้ทันทีในโหมด Add
 
-    // รีเซ็ต FormGroup สำหรับ categoryDetails
-    this.categoryDetailsFG.reset({
-      CategoryName: '',
-    });
+      // เปิดฟอร์มส่วน details แบบไม่ยิง event
+      this.categoryDetailsFG.enable({ emitEvent: false });
 
-    // เคลียร์ FormArray ของ categoryDetails (ข้อมูลที่กรอกในตาราง)
-    this.detailsFA.clear();
-    this.categoryDetailsRows = [];
+      // เคลียร์ค่าเลือก category เดิม
+      this.formDetails.patchValue({ selectedCategoryId: null }, { emitEvent: false });
 
-    // ปิดปุ่ม Save จนกว่าจะกรอกข้อมูล
-    // this.onSaveDetailsEnabled(false);
+      // รีเซ็ตหัวข้อของการ์ด details
+      this.categoryDetailsFG.reset({ CategoryName: '' }, { emitEvent: false });
+
+      // ล้างรายการคำถามแบบเงียบ
+      this.clearFormArrayQuietly(this.detailsFA);
+      this.categoryDetailsRows = [];
+
+      // baseline สำหรับการ์ด details
+      this.detailsBaseline = { name: '', items: [] };
+
+      // 🔑 สำคัญ: ถ่าย snapshot ใหม่ให้สถานะ “หลังเตรียม Add” เป็นจุดอ้างอิง
+      this.initialSnapshot = this.formDetails.getRawValue();
+      this.formDetails.markAsPristine();
+
+      // ปุ่ม Save (ตัวบน) เริ่มต้นต้องปิดไว้ก่อน
+      this.setButtonDisabled('save', true);
+    } finally {
+      this.isProgrammaticUpdate = false;
+    }
   }
 
   checkFormDetailsChanged(): boolean {
-    const formValue = this.formDetails.getRawValue();
-    const initialValue = this.formDetails.get('categoryDetails')?.value;
+    const current = this.buildCurrentDetailsView();
 
-    // ตรวจสอบว่า categoryDetails ไม่ได้ว่างเปล่าและข้อมูลต่างจากค่าเดิม
-    if (!formValue.categoryDetails.CategoryName ||
-        JSON.stringify(formValue.categoryDetails) === JSON.stringify(initialValue)) {
-      return false;
+    // กรณี Add: ต้องมีชื่อ + มีอย่างน้อย 1 แถว
+    if (this.isAddMode) {
+      return current.name.length > 0 && current.items.length > 0;
     }
-    return true;
+
+    // กรณี Edit: ต้องมีความต่างจาก baseline
+    if (this.isEditDetails) {
+      if (!this.detailsBaseline) return false;
+      return !this.isSameDetails(current, this.detailsBaseline);
+    }
+
+    return false;
   }
 
   fetchCategoryTypesDetails() {
     this.applicationQuestionService.getCategoryTypesInfoQuestionDetails(this.categoryType).subscribe({
       next: (response) => {
         console.log('Category types details fetched successfully:', response);
+
+        sessionStorage.setItem('categoryList', JSON.stringify(response ?? []));
+
         // สร้าง FormArray ของ categories
-        this.categoriesFA.clear();
-        (response ?? []).forEach((c: any) => this.categoriesFA.push(this.buildCategoryFG(c)));
+        this.categoriesFA.clear({ emitEvent: false });
+        (response ?? []).forEach((c: any) => this.categoriesFA.push(this.buildCategoryFG(c), { emitEvent: false }));
 
         // สร้าง rows จากฟอร์ม (เพื่อแสดงในตาราง)
         this.rebuildCategoryRowsFromForm();
@@ -383,6 +460,7 @@ export class ApplicationQuestionDetailsComponent {
 
     // สลับปุ่มเป็น Save และ disable ไว้ก่อนจนกว่าจะมีการแก้
     this.setActionButtons('edit');
+    this.setButtonDisabled('save', true);
   }
 
   onSaveClicked() {
@@ -433,7 +511,7 @@ export class ApplicationQuestionDetailsComponent {
     console.log('Save Details button clicked');
     if (!this.checkFormDetailsChanged()) {
       // ถ้าฟอร์มไม่เปลี่ยนแปลงหรือไม่มีข้อมูล
-      alert("No changes to save");
+      console.log("No changes to save");
       return;
     }
 
@@ -453,6 +531,8 @@ export class ApplicationQuestionDetailsComponent {
   }
 
   onRowClicked(row: any, action: 'view' | 'edit') {
+    this.isProgrammaticUpdate = true;
+
     console.log('View row clicked:', row);
     this.isEnabledCardDetails = true;
     if (action === 'view') {
@@ -470,19 +550,27 @@ export class ApplicationQuestionDetailsComponent {
     this.formDetails.patchValue({
       selectedCategoryId: row?.categoryId ?? null,
       categoryDetails: { CategoryName: row?.categoryName ?? '' }
-    });
+    }, { emitEvent: false });
 
     this.applicationQuestionService.getQuestionsByCategory(row.categoryId).subscribe({
       next: (response) => {
         console.log('Questions fetched successfully:', response);
         // Handle the response as needed, e.g., navigate to a details page or display in a modal
         this.detailsFA.clear();
-        (response ?? []).forEach((d: any) => this.detailsFA.push(this.buildDetailFG(d)));
+        (response ?? []).forEach((d: any) => this.detailsFA.push(this.buildDetailFG(d), { emitEvent: false }));
         this.rebuildDetailsRowsFromForm();
-        this.categoryDetailsFG.disable();
-        },
+        this.categoryDetailsFG.disable({ emitEvent: false });
+        this.detailsBaseline = this.buildCurrentDetailsView();
+
+        this.initialSnapshot = this.formDetails.getRawValue();
+        this.formDetails.markAsPristine();
+        this.setButtonDisabled('save', true);
+      },
       error: (error) => {
         console.error('Error fetching questions:', error);
+      },
+      complete: () => {
+        this.isProgrammaticUpdate = false;
       }
     });
   }
@@ -608,5 +696,20 @@ export class ApplicationQuestionDetailsComponent {
   onInlineCancel() {
     this.isAddingRow = false;
     this.fieldErrors = false;
+  }
+
+  ngOnDestroy() {
+
+    this.formDetails.reset();
+    this.categoryRows = [];
+    this.categoryDetailsRows = [];
+    this.isEnabledCardDetails = false;
+    this.isEditing = false;
+    this.isViewMode = false;
+    this.isAddMode = false;
+    this.isEditMode = false;
+    this.isEditDetails = false;
+
+    sessionStorage.removeItem('categoryList');
   }
 }
