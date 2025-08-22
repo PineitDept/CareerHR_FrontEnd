@@ -101,6 +101,7 @@
           [enableRowClick]="false"
           [withinCard]="true"
           [isDisabledForm]="!isEditing"
+          [allowViewWhenDisabled]="true"
           (viewRowClicked)="onRowClicked($event, 'view')"
           (toggleChange)="onToggleChangeCategory($event)"
           (editCardClicked)="onRowClicked($event, 'edit')"

@@ -455,6 +455,11 @@ export class ApplicationQuestionDetailsComponent {
     this.isEditing = true;
     this.formDetails.enable({ emitEvent: false });
 
+    if (this.isEnabledCardDetails) {
+      this.categoryDetailsFG.disable({ emitEvent: false });
+      this.isEditDetails = false;
+    }
+
     // เก็บ snapshot ตอนเริ่มแก้ไข
     this.initialSnapshot = this.formDetails.getRawValue();
 
