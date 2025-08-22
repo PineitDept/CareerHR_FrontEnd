@@ -1,5 +1,5 @@
 <div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
-    <app-header-content [headerName]="'Email Template Details'" [headerType]="''"></app-header-content>
+    <app-header-content [headerName]="'Email Attribute Details'" [headerType]="''"></app-header-content>
 </div>
 <app-loading></app-loading>
 
@@ -13,28 +13,17 @@
         <div
             class="tw-col-span-2 tw-space-y-4 tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
             <div>
-                <label class="tw-text-lg tw-font-bold">Email Detail</label>
+                <label class="tw-text-lg tw-font-bold">Email Attribute Detail</label>
                 <hr class="tw--mx-6 tw-mt-4">
             </div>
 
             <div>
                 <div class="tw-mb-1.5">
-                    <label class="tw-text-sm tw-font-semibold">Subject <span class="text-red">*</span></label>
+                    <label class="tw-text-sm tw-font-semibold">Email Attribute Name <span class="text-red">*</span></label>
                 </div>
                 <input type="text"
-                    class="tw-w-full tw-bg-[#FFFFFF] tw-border tw-border-[#CED4DA] tw-rounded-lg tw-px-4 tw-py-2 tw-text-sm"
-                    formControlName="subject" [ngClass]="!isEditing ? 'isDisabled' : ''"/>
-            </div>
-
-            <div>
-                <div class="tw-mb-1.5">
-                    <label class="tw-text-sm tw-font-semibold">Detail <span class="text-red">*</span></label>
-                </div>
-                <!-- <quill-editor [(ngModel)]="data" [modules]="modules" [formats]="formats" theme="snow"
-                    [placeholder]="'พิมพ์เนื้อหาอีเมล...'"></quill-editor> -->
-                <quill-editor formControlName="emailContent" [modules]="modules" [formats]="formats" theme="snow" 
-                    [placeholder]="'พิมพ์เนื้อหาอีเมล...'" [ngClass]="!isEditing ? 'isDisabled' : ''">
-                </quill-editor>
+                    class="tw-w-full tw-bg-[#FFFFFF] tw-border tw-border-[#CED4DA] tw-rounded-lg tw-px-4 tw-py-2 tw-text-sm isDisabled"
+                    formControlName="subject"/>
             </div>
         </div>
 
@@ -74,43 +63,51 @@
             </div>
         </div>
 
-        <!-- Left Panel -->
-        <div
-            class="tw-col-span-2 tw-space-y-4 tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
-            <div>
-                <label class="tw-text-lg tw-font-bold">Attachment</label>
-                <hr class="tw--mx-6 tw-mt-4">
-            </div>
+        <div class="tw-col-span-3">
+            <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-mt-2">
 
-            <div>
-                <div class="tw-mb-1.5">
-                    <label class="tw-text-sm tw-font-semibold">Attach File</label>
-                </div>
-                <button type="button" (click)="onAddClicked()" class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-azure hover:bg-azure-dark
-                tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
-                tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-azure   focus-visible:ring-azure"
-                    aria-label="Add Attachment"
-                    [ngClass]="!isEditing ? 'tw-opacity-40' : ''">
+            <div class="tw-flex tw-items-center tw-justify-between">
+                <label class="tw-text-lg tw-font-bold">Setting Attribute</label>
+
+                <!-- <button
+                    type="button"
+                    (click)="onAddQuestionClicked()"
+                    class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-azure hover:bg-azure-dark
+                            tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
+                            tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-azure focus-visible:ring-azure"
+                    [ngClass]="{
+                        'tw-pointer-events-none tw-opacity-50': !isEditing && !isAddMode
+                    }"
+                    aria-label="Add Question"
+                    *ngIf="!isViewMode">
                     <app-icon [name]="'plus'" [size]="18" extraClass="tw-text-white"></app-icon>
                     <span class="tw-font-semibold">Add</span>
-                </button>
+                </button> -->
+            </div>
+            <hr class="tw--mx-6 tw-mt-4">
+            <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
+                <app-tables
+                    #categoryTable
+                    [rows]="categoryRows"
+                    [columns]="categoryColumns"
+                    [showCheckbox]="false"
+                    [splitRows]="false"
+                    [hasOverflowY]="false"
+                    [enableRowClick]="false"
+                    [withinCard]="true"
+                    (toggleChange)="onToggleChangeDetails($event)"
+                    [isDisabledForm]="isDisabled"
+                    (createInlineSave)="onInlineSave($event)"
+                    (createInlineCancel)="onInlineCancel()"
+                    [isAddMode]="isAddingRow"
+                    [fieldErrors]="fieldErrors"
+                    [highlightRowIndex]="duplicateRowIndex"
+                    (deleteRowClicked)="onDeleteRowClicked($event)"
+                    (editClicked)="handleEditRow($event)"
+                ></app-tables>
+            </div>
             </div>
         </div>
+
     </div>
 </form>
-
-
-
-
-<!-- 
-<button type="button" (click)="showHtml = !showHtml">
-  {{ showHtml ? 'ซ่อน HTML Source' : 'แสดง HTML Source' }}
-</button>
-
-<h3>Preview (Rendered HTML with inline styles)</h3>
-<div class="preview-box" [innerHTML]="getInlineStyledHtml()"></div>
-
-<div *ngIf="showHtml" class="html-dump">
-  <h3>HTML Source</h3>
-  <pre>{{ getInlineStyledHtml() }}</pre>
-</div> -->

@@ -3,6 +3,8 @@ import { defaultColumns, defaultFilterButtonsDetails } from '../../../../../../.
 import { EmailTemplateService } from '../../../../../../../../../../app/services/admin-setting/email-template/email-template.service';
 import { ActivatedRoute } from '@angular/router';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
+import { AlertDialogComponent } from '../../../../../../../../../shared/components/dialogs/alert-dialog/alert-dialog.component';
+import { MatDialog } from '@angular/material/dialog';
 
 @Component({
   selector: 'app-email-template-details',
@@ -49,6 +51,7 @@ export class EmailTemplateDetailsComponent {
     private emailTemplateService: EmailTemplateService,
     private route: ActivatedRoute,
     private fb: FormBuilder,
+    private dialog: MatDialog,
   ) { }
 
   ngOnInit() {
@@ -60,7 +63,7 @@ export class EmailTemplateDetailsComponent {
 
     //   if (this.EmailID) this.fetchEmailIDsDetails();
     // });
-
+    this.emailTemplateService.setEMailType('email-template');
      this.route.queryParams.subscribe(params => {
       this.EmailID = params['id'] || '';      
       this.fetchEmailIDsDetails();
@@ -82,13 +85,29 @@ export class EmailTemplateDetailsComponent {
       emailContent: new FormControl('')
     });
   }
-
+  
   toggleActive(): void {
-    const ctrl = this.formDetails.get('activeStatus');
-    const current = !!ctrl?.value;
-    ctrl?.setValue(!current);
-    ctrl?.markAsDirty();
-    ctrl?.markAsTouched();
+    Promise.resolve().then(() => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.add('dimmed-overlay');
+    });
+
+    const dialogRef = this.dialog.open(AlertDialogComponent, {
+      width: '640px',
+      panelClass: 'custom-dialog-container',
+      autoFocus: false,
+      disableClose: true,
+      data: {
+        title: 'Please contact the Human Resources Department',
+        message: `For change the status of this category type, please contact our Human Resources Department for assistance.`,
+        confirm: false
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(() => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.remove('dimmed-overlay');
+    });
   }
 
   onAddClicked() {
@@ -179,7 +198,7 @@ export class EmailTemplateDetailsComponent {
     const value = this.formDetails.getRawValue();
     const payload = {
       subject: value.subject,
-      emailContent: value.emailContent
+      emailContent: this.getInlineStyledHtml()
     };
 
     console.log('SAVE payload:', payload);
@@ -195,7 +214,7 @@ export class EmailTemplateDetailsComponent {
 
     this.putEmailIDsDetails({
       subject: value.subject,
-      message: value.emailContent
+      message: this.getInlineStyledHtml()
     })
   }
 
