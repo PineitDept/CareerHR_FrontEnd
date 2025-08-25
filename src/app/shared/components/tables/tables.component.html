@@ -393,13 +393,14 @@
                   <ng-container  *ngIf="column.field !== '__index'" >
                     <input type="number"
                       class="tw-border tw-border-gray-300 tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white"
+                      [ngClass]="footerErrors[column.field] ? 'tw-border-red-500' : 'tw-border-gray-300'"
                       [(ngModel)]="footerRow[column.field]"
                       [attr.min]="column.field === 'sort' ? 1 : null"
                       [attr.step]="column.field === 'sort' ? 1 : null"
                       [attr.inputmode]="column.field === 'sort' ? 'numeric' : null"
-                      (keydown)="column.field === 'sort' && onNumberKeydown($event, 'sort')"
-                      (input)="column.field === 'sort' && onNumberTyping($event, 'sort')"
-                      (blur)="column.field === 'sort' && onNumberBlur($event, 'sort')"
+                      (keydown)="onFooterKeydown(column.field, $event)"
+                      (input)="onFooterInput(column.field, $event)"
+                      (blur)="onFooterBlur(column.field, $event)"
                     />
                   </ng-container>
                 </ng-container>
@@ -409,8 +410,9 @@
                   <ng-container *ngIf="column.type === 'text'; else emptyCell">
                     <input type="text"
                           class="tw-border tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white"
-                          [ngClass]="fieldErrors ? 'tw-border-red-500' : 'tw-border-gray-300'"
-                          [(ngModel)]="footerRow[column.field]" />
+                          [ngClass]="fieldErrors || footerErrors[column.field] ? 'tw-border-red-500' : 'tw-border-gray-300'"
+                          [(ngModel)]="footerRow[column.field]"
+                          (input)="onFooterInput(column.field, $event)" />
                   </ng-container>
                   <ng-template #emptyCell>
                     <span></span>

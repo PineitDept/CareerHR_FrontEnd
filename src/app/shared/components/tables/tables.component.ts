@@ -71,6 +71,7 @@ export class TablesComponent
   @Input() isDisabledForm: boolean = false;
   @Input() isZeroOneStatus: boolean = false;
   @Input() allowViewWhenDisabled: boolean = false;
+  @Input() requiredFooterFields: string[] = [];
 
   @Output() selectionChanged = new EventEmitter<any[]>();
   @Output() rowClicked = new EventEmitter<any>();
@@ -107,6 +108,8 @@ export class TablesComponent
   @Input() createDefaults: any = {};
   footerRow: any = {};
   indexAdd: number = 0;
+
+  footerErrors: Record<string, boolean> = {};
 
   private destroyRef = inject(DestroyRef);
 
@@ -172,8 +175,10 @@ export class TablesComponent
           status: this.createDefaults.status ?? 2,
         };
         this.indexAdd = this.rowsValue.length + 1
+        this.footerErrors = {};
       } else {
         this.footerRow = {};
+        this.footerErrors = {};
       }
       this.cdr.detectChanges();
     }
@@ -628,14 +633,15 @@ export class TablesComponent
   }
 
   saveInlineCreate(row: any) {
-    console.log('Saving inline create:', row);
+    if (!this.validateFooter()) {
+      this.cdr.detectChanges();
+      return; // ไม่ emit ออกไป
+    }
+
     const payload = { ...row };
-    console.log('Inline create payload:', payload);
     if (!this.isZeroOneStatus) {
-      console.log('isZeroOneStatus is false');
       payload.status = payload.activeStatus ? 1 : 2;
     } else {
-      console.log('isZeroOneStatus is true');
       payload.status = payload.activeStatus ? 1 : 0;
     }
     delete payload._tempId;
@@ -653,6 +659,7 @@ export class TablesComponent
     this.editingRowId = null;
     this.editRow = false;
     this.createInlineCancel.emit();
+    this.footerErrors = {};
     this.cdr.detectChanges();
 
     if (this.highlightRowIndex && this.ishighlightRow) {
@@ -685,6 +692,73 @@ export class TablesComponent
       el.value = '1';
       this.footerRow[field] = 1; // ค่าขั้นต่ำสุดท้าย
     }
+  }
+
+  onFooterInputChange() {
+    if (Object.keys(this.footerErrors).length) {
+      this.validateFooter(); // re-validate
+      this.cdr.detectChanges();
+    }
+  }
+
+  private validateFooter(): boolean {
+    const err: Record<string, boolean> = {};
+    for (const f of this.requiredFooterFields || []) {
+      const v = this.footerRow?.[f];
+
+      // rule ทั่วไป: string ต้องไม่ว่าง / number ต้องเป็นจำนวนบวก
+      if (f === 'sort') {
+        const n = Number(v);
+        if (!Number.isFinite(n) || n < 1) err[f] = true;
+      } else if (typeof v === 'string') {
+        if (!v || v.trim() === '') err[f] = true;
+      } else if (v === undefined || v === null) {
+        err[f] = true;
+      }
+    }
+    this.footerErrors = err;
+    return Object.keys(err).length === 0;
+  }
+
+  onFooterInput(field: string, e: Event) {
+    if (field === 'sort') this.onNumberTyping(e, 'sort');
+    if (this.isRequired(field)) this.validateFooterField(field);
+    this.cdr.detectChanges();
+  }
+
+  onFooterKeydown(field: string, e: KeyboardEvent) {
+    if (field === 'sort') this.onNumberKeydown(e, 'sort');
+  }
+
+  onFooterBlur(field: string, e: Event) {
+    if (field === 'sort') this.onNumberBlur(e, 'sort');
+    if (this.isRequired(field)) this.validateFooterField(field);
+    this.cdr.detectChanges();
+  }
+
+  private isRequired(field: string): boolean {
+    return (this.requiredFooterFields || []).includes(field);
+  }
+
+  private validateFooterField(field: string): void {
+    const v = this.footerRow?.[field];
+
+    // เคลียร์ค่าผลเดิมของฟิลด์นี้ก่อน
+    const next = { ...this.footerErrors };
+    delete next[field];
+
+    if (field === 'sort') {
+      const n = Number(v);
+      if (!Number.isFinite(n) || n < 1) next[field] = true;
+    } else {
+      if (typeof v === 'string') {
+        if (!v || v.trim() === '') next[field] = true;
+      } else if (v === undefined || v === null) {
+        next[field] = true;
+      }
+    }
+
+    this.footerErrors = next;
   }
 
   // onInlineKeydown(e: KeyboardEvent, row: any) {
