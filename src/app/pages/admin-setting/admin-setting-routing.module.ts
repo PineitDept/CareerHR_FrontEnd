@@ -17,6 +17,7 @@ import { ComputerSkillsComponent } from './pages/data-setting/application/comput
 import { LanguageSkillsComponent } from './pages/data-setting/application/language-skills/language-skills.component';
 import { UniversityComponent } from './pages/data-setting/application/university/university.component';
 import { EmailTemplateDetailsComponent } from './pages/data-setting/application/email/email-template/pages/email-template-details/email-template-details.component';
+import { PendingDraftsGuard } from '../../guards/pending-draft.guard';
 import { EmailAttributeDetailsComponent } from './pages/data-setting/application/email/email-attribute/pages/email-attribute-details/email-attribute-details.component';
 
 const routes: Routes = [
@@ -58,7 +59,8 @@ const routes: Routes = [
       },
       {
         path: 'data-setting/application/application-question/details',
-        component: ApplicationQuestionDetailsComponent
+        component: ApplicationQuestionDetailsComponent,
+        canDeactivate: [PendingDraftsGuard]
       },
       {
         path: 'data-setting/application/special-benefits',

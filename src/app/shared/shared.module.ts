@@ -8,6 +8,8 @@ import { MatIconModule }   from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule }  from '@angular/material/input';
 
+import { DragDropModule } from '@angular/cdk/drag-drop';
+
 import { HeaderContentComponent } from './components/headers/header-content/header-content.component';
 import { HeaderMainComponent } from './components/headers/header-main/header-main.component';
 import { SidebarComponent } from './components/sidebar/sidebar.component';
@@ -22,6 +24,7 @@ import { MultiSelectDropdownComponent } from './components/multi-select-dropdown
 import { FilterCheckBoxComponent } from './components/filter-check-box/filter-check-box.component';
 import { FormDialogComponent } from './components/dialogs/form-dialog/form-dialog.component';
 import { CaptchaDialogComponent } from './components/dialogs/captcha-dialog/captcha-dialog.component';
+import { ConfirmLeaveDialogComponent } from './components/dialogs/confirm-leave-dialog/confirm-leave-dialog.component';
 // import { PurchaseOrderDetailsFormComponent } from './components/forms/purchase-order-details-form/purchase-order-details-form.component';
 
 @NgModule({
@@ -39,6 +42,7 @@ import { CaptchaDialogComponent } from './components/dialogs/captcha-dialog/capt
     FilterCheckBoxComponent,
     FormDialogComponent,
     CaptchaDialogComponent,
+    ConfirmLeaveDialogComponent,
     // PurchaseOrderDetailsFormComponent
   ],
   imports: [
@@ -50,6 +54,7 @@ import { CaptchaDialogComponent } from './components/dialogs/captcha-dialog/capt
     MatIconModule,
     MatFormFieldModule,
     MatInputModule,
+    DragDropModule,
   ],
   exports: [
     HeaderContentComponent,
@@ -65,6 +70,7 @@ import { CaptchaDialogComponent } from './components/dialogs/captcha-dialog/capt
     FilterCheckBoxComponent,
     FormDialogComponent,
     CaptchaDialogComponent,
+    ConfirmLeaveDialogComponent,
     // PurchaseOrderDetailsFormComponent
   ]
 })

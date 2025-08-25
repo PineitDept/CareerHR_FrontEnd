@@ -25,6 +25,7 @@ import {
 } from '@angular/core';
 import { Column } from '../../interfaces/tables/column.interface';
 import { MatDialog } from '@angular/material/dialog';
+import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { AlertDialogComponent } from '../dialogs/alert-dialog/alert-dialog.component';
 import { FormDialogComponent } from '../dialogs/form-dialog/form-dialog.component';
 import { ApplicationService } from '../../../services/application/application.service';
@@ -71,6 +72,8 @@ export class TablesComponent
   @Input() isDisabledForm: boolean = false;
   @Input() isZeroOneStatus: boolean = false;
   @Input() allowViewWhenDisabled: boolean = false;
+  @Input() requiredFooterFields: string[] = [];
+  @Input() draggableRows: boolean = false;
 
   @Output() selectionChanged = new EventEmitter<any[]>();
   @Output() rowClicked = new EventEmitter<any>();
@@ -84,6 +87,8 @@ export class TablesComponent
   @Output() createInlineSave = new EventEmitter<any>();
   @Output() createInlineCancel = new EventEmitter<void>();
   @Output() deleteRowClicked = new EventEmitter<any>();
+  @Output() selectChanged = new EventEmitter<{ rowIndex: number; field: string; value: string }>();
+  @Output() rowsReordered = new EventEmitter<{ previousIndex: number; currentIndex: number }>();
 
   sortedColumns: string[] = [];
   clickedRows: Set<string> = new Set();
@@ -108,6 +113,8 @@ export class TablesComponent
   @Input() createDefaults: any = {};
   footerRow: any = {};
   indexAdd: number = 0;
+
+  footerErrors: Record<string, boolean> = {};
 
   private destroyRef = inject(DestroyRef);
 
@@ -173,8 +180,10 @@ export class TablesComponent
           status: this.createDefaults.status ?? 2,
         };
         this.indexAdd = this.rowsValue.length + 1
+        this.footerErrors = {};
       } else {
         this.footerRow = {};
+        this.footerErrors = {};
       }
       this.cdr.detectChanges();
     }
@@ -411,6 +420,9 @@ export class TablesComponent
     if (currentRows[rowIndex]) {
       currentRows[rowIndex][field] = value;
     }
+
+    this.selectChanged.emit({ rowIndex, field, value });
+
     this.dropdownOverlay = null;
     this.cdr.detectChanges();
   }
@@ -639,14 +651,15 @@ export class TablesComponent
   }
 
   saveInlineCreate(row: any) {
-    console.log('Saving inline create:', row);
+    if (!this.validateFooter()) {
+      this.cdr.detectChanges();
+      return; // ไม่ emit ออกไป
+    }
+
     const payload = { ...row };
-    console.log('Inline create payload:', payload);
     if (!this.isZeroOneStatus) {
-      console.log('isZeroOneStatus is false');
       payload.status = payload.activeStatus ? 1 : 2;
     } else {
-      console.log('isZeroOneStatus is true');
       payload.status = payload.activeStatus ? 1 : 0;
     }
     delete payload._tempId;
@@ -664,6 +677,7 @@ export class TablesComponent
     this.editingRowId = null;
     this.editRow = false;
     this.createInlineCancel.emit();
+    this.footerErrors = {};
     this.cdr.detectChanges();
 
     if (this.highlightRowIndex && this.ishighlightRow) {
@@ -696,6 +710,91 @@ export class TablesComponent
       el.value = '1';
       this.footerRow[field] = 1; // ค่าขั้นต่ำสุดท้าย
     }
+  }
+
+  onFooterInputChange() {
+    if (Object.keys(this.footerErrors).length) {
+      this.validateFooter(); // re-validate
+      this.cdr.detectChanges();
+    }
+  }
+
+  private validateFooter(): boolean {
+    const err: Record<string, boolean> = {};
+    for (const f of this.requiredFooterFields || []) {
+      const v = this.footerRow?.[f];
+
+      // rule ทั่วไป: string ต้องไม่ว่าง / number ต้องเป็นจำนวนบวก
+      if (f === 'sort') {
+        const n = Number(v);
+        if (!Number.isFinite(n) || n < 1) err[f] = true;
+      } else if (typeof v === 'string') {
+        if (!v || v.trim() === '') err[f] = true;
+      } else if (v === undefined || v === null) {
+        err[f] = true;
+      }
+    }
+    this.footerErrors = err;
+    return Object.keys(err).length === 0;
+  }
+
+  onFooterInput(field: string, e: Event) {
+    if (field === 'sort') this.onNumberTyping(e, 'sort');
+    if (this.isRequired(field)) this.validateFooterField(field);
+    this.cdr.detectChanges();
+  }
+
+  onFooterKeydown(field: string, e: KeyboardEvent) {
+    if (field === 'sort') this.onNumberKeydown(e, 'sort');
+  }
+
+  onFooterBlur(field: string, e: Event) {
+    if (field === 'sort') this.onNumberBlur(e, 'sort');
+    if (this.isRequired(field)) this.validateFooterField(field);
+    this.cdr.detectChanges();
+  }
+
+  private isRequired(field: string): boolean {
+    return (this.requiredFooterFields || []).includes(field);
+  }
+
+  private validateFooterField(field: string): void {
+    const v = this.footerRow?.[field];
+
+    // เคลียร์ค่าผลเดิมของฟิลด์นี้ก่อน
+    const next = { ...this.footerErrors };
+    delete next[field];
+
+    if (field === 'sort') {
+      const n = Number(v);
+      if (!Number.isFinite(n) || n < 1) next[field] = true;
+    } else {
+      if (typeof v === 'string') {
+        if (!v || v.trim() === '') next[field] = true;
+      } else if (v === undefined || v === null) {
+        next[field] = true;
+      }
+    }
+
+    this.footerErrors = next;
+  }
+
+  onDrop(event: CdkDragDrop<any[]>) {
+    if (!this.draggableRows || this.isDisabledForm) return;
+
+    // 1) rearrange อาร์เรย์ที่โชว์ในตาราง
+    moveItemInArray(this.rowsValue, event.previousIndex, event.currentIndex);
+
+    // 2) อัปเดตฟิลด์ sort ให้ทุกแถวเท่ากับตำแหน่งใหม่ (i+1)
+    this.rowsValue.forEach((r, i) => (r.sort = i + 1));
+
+    // 3) แจ้ง parent เพื่อ sync แหล่งข้อมูลจริง (FormArray)
+    this.rowsReordered.emit({
+      previousIndex: event.previousIndex,
+      currentIndex: event.currentIndex,
+    });
+
+    this.cdr.detectChanges();
   }
 
   // onInlineKeydown(e: KeyboardEvent, row: any) {

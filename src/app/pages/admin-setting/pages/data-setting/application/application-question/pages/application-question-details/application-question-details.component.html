@@ -191,6 +191,8 @@
           [withinCard]="true"
           (toggleChange)="onToggleChangeDetails($event)"
           [isDisabledForm]="isDisabled"
+          [draggableRows]="!isDisabled"
+          (rowsReordered)="onDetailsRowsReordered($event)"
           (createInlineSave)="onInlineSave($event)"
           (createInlineCancel)="onInlineCancel()"
           [isAddMode]="isAddingRow"
@@ -198,7 +200,9 @@
           [highlightRowIndex]="duplicateRowIndex"
           [isZeroOneStatus]="true"
           (deleteRowClicked)="onDeleteRowClicked($event)"
-          
+          [requiredFooterFields]="['questionTH','questionEN','sort']"
+          (selectChanged)="onSelectChangedDetails($event)"
+          [createDefaults]="tableCreateDefaults"
         ></app-tables>
       </div>
     </div>
