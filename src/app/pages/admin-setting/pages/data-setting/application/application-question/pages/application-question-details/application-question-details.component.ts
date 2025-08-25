@@ -101,9 +101,9 @@ export class ApplicationQuestionDetailsComponent {
     { header: 'No.', field: '__index', type: 'number', align: 'center', width: '4%' },
     { header: 'Question (TH)', field: 'questionTH', type: 'text', width: '32%', wrapText: true },
     { header: 'Question (EN)', field: 'questionEN', type: 'text', width: '32%', wrapText: true },
-    { header: 'Row Answer', field: 'sort', type: 'number', align: 'center', width: '13%' },
+    { header: 'Row Answer', field: 'sort', type: 'number', align: 'center', width: '10%' },
     { header: 'Status', field: 'activeStatus', type: 'toggle', align: 'center', width: '7%' },
-    { header: 'Action', field: 'textlink', type: 'textlink', align: 'center', width: '12%', textlinkActions: ['edit-inrow','delete'] },
+    { header: 'Action', field: 'textlink', type: 'textlink', align: 'center', width: '15%', textlinkActions: ['edit-inrow','delete'] },
   ];
 
   scoringColumnDef: Column = {
@@ -111,7 +111,7 @@ export class ApplicationQuestionDetailsComponent {
     field: 'scoringMethod',
     type: 'select',
     align: 'center',     // ตรงกับ union type
-    width: '13%',
+    width: '12%',
     options: ['Normal', 'Reverse'],
   };
 
@@ -243,6 +243,37 @@ export class ApplicationQuestionDetailsComponent {
     } else {
       this.categoryDetailsColumns = [...this.baseCategoryDetailsColumns];
       this.tableCreateDefaults = {};
+    }
+  }
+
+  // mapping ความกว้างเมื่อมี scoring
+  private withScoringWidths: Record<string, string> = {
+    '__index': '4%',
+    'questionTH': '27%',
+    'questionEN': '27%',
+    'sort': '10%',
+    'scoringMethod': '12%',
+    'activeStatus': '8%',
+    'textlink': '12%',
+  };
+
+  private applyWidths(cols: Columns, widths: Record<string,string>): Columns {
+    return cols.map(c => ({ ...c, width: widths[c.field] ?? c.width }));
+  }
+
+  private buildColumnsFor(categoryId: number | string) {
+    if (String(categoryId) === '5') {
+      // สร้างสำเนาคอลัมน์พื้นฐาน แล้วสอด scoring ไว้ก่อน activeStatus
+      const base = [...this.baseCategoryDetailsColumns];
+      const idxStatus = base.findIndex(c => c.field === 'activeStatus');
+      const withScoring = [
+        ...base.slice(0, idxStatus),
+        this.scoringColumnDef,
+        ...base.slice(idxStatus),
+      ];
+      this.categoryDetailsColumns = this.applyWidths(withScoring, this.withScoringWidths);
+    } else {
+      this.categoryDetailsColumns = this.baseCategoryDetailsColumns;
     }
   }
 
@@ -934,6 +965,8 @@ export class ApplicationQuestionDetailsComponent {
 
   onRowClicked(row: any, action: 'view' | 'edit') {
     this.rememberLastSelected(row?.categoryId);
+
+    this.buildColumnsFor(row?.categoryId);
 
     this.isProgrammaticUpdate = true;
 

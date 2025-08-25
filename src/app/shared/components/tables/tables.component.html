@@ -9,7 +9,7 @@
   <div class="tw-shadow-sm tw-border tw-border-gray-200"
     [ngClass]="withinCard ? 'tw-overflow-hidden' : 'tw-overflow-clip tw-rounded-md'"
   >
-    <table class="tw-table-auto tw-w-full tw-text-sm tw-text-left tw-border-separate tw-border-spacing-0">
+    <table class="tw-table-fixed tw-w-full tw-text-sm tw-text-left tw-border-separate tw-border-spacing-0">
       <thead>
         <tr class="tw-text-white"
           [ngClass]="{
@@ -187,7 +187,7 @@
                   </span>
 
                   <!-- Select Dropdown -->
-                  <div *ngSwitchCase="'select'" class="tw-relative tw-max-w-[135px]">
+                  <div *ngSwitchCase="'select'" class="tw-relative">
                     <button
                       class="dropdown-button tw-bg-white tw-border tw-border-gray-300 tw-rounded-md tw-px-3 tw-py-1 tw-w-full tw-text-sm tw-flex tw-items-center tw-justify-between tw-truncate tw-transition-all tw-duration-200 hover:tw-border-gray-400 focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-red-500 focus:tw-border-red-500"
                       [id]="'dropdown-button-' + i + '-' + column.field"
