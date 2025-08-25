@@ -22,6 +22,7 @@ import { MultiSelectDropdownComponent } from './components/multi-select-dropdown
 import { FilterCheckBoxComponent } from './components/filter-check-box/filter-check-box.component';
 import { FormDialogComponent } from './components/dialogs/form-dialog/form-dialog.component';
 import { CaptchaDialogComponent } from './components/dialogs/captcha-dialog/captcha-dialog.component';
+import { ConfirmLeaveDialogComponent } from './components/dialogs/confirm-leave-dialog/confirm-leave-dialog.component';
 // import { PurchaseOrderDetailsFormComponent } from './components/forms/purchase-order-details-form/purchase-order-details-form.component';
 
 @NgModule({
@@ -39,6 +40,7 @@ import { CaptchaDialogComponent } from './components/dialogs/captcha-dialog/capt
     FilterCheckBoxComponent,
     FormDialogComponent,
     CaptchaDialogComponent,
+    ConfirmLeaveDialogComponent,
     // PurchaseOrderDetailsFormComponent
   ],
   imports: [
@@ -65,6 +67,7 @@ import { CaptchaDialogComponent } from './components/dialogs/captcha-dialog/capt
     FilterCheckBoxComponent,
     FormDialogComponent,
     CaptchaDialogComponent,
+    ConfirmLeaveDialogComponent,
     // PurchaseOrderDetailsFormComponent
   ]
 })

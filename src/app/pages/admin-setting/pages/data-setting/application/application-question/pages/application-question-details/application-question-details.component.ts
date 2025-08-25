@@ -9,6 +9,7 @@ import { animate, style, transition, trigger } from '@angular/animations';
 import { MatDialog } from '@angular/material/dialog';
 import { AlertDialogComponent } from '../../../../../../../../shared/components/dialogs/alert-dialog/alert-dialog.component';
 import { CaptchaDialogComponent } from '../../../../../../../../shared/components/dialogs/captcha-dialog/captcha-dialog.component';
+import { Subject, takeUntil } from 'rxjs';
 
 type CategoryForm = {
   categoryId: number | string | null;
@@ -164,6 +165,8 @@ export class ApplicationQuestionDetailsComponent {
 
   private DIRTY_PREFIX = 'aqd:dirty';
 
+  private destroy$ = new Subject<void>();
+
   constructor(
     private route: ActivatedRoute,
     private applicationQuestionService: ApplicationQuestionService,
@@ -178,34 +181,35 @@ export class ApplicationQuestionDetailsComponent {
     this.formDetails.disable({ emitEvent: false });
     this.setActionButtons('view');
 
-    this.formDetails.get('categoryType.CategoryTypeName')?.valueChanges.subscribe((v) => {
-      // เก็บเฉพาะเวลาผู้ใช้แก้จริง ๆ
-      if (!this.isEditing) return;
-      if (this.isProgrammaticUpdate) return;
+    this.formDetails.get('categoryType.CategoryTypeName')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((v) => {
+        if (!this.isEditing) return;
+        if (this.isProgrammaticUpdate) return;
+        this.writeCategoryTypeDraft(String(v ?? '').trim());
+      });
 
-      this.writeCategoryTypeDraft(String(v ?? '').trim());
-    });
+    this.formDetails.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        if (this.isProgrammaticUpdate) return;
+        const enable = this.hasPendingDrafts() || this.hasFormChanged();
+        this.setButtonDisabled('save', !enable);
+      });
 
-    this.formDetails.valueChanges.subscribe(() => {
-      if (this.isProgrammaticUpdate) return;
-
-      // เปิดปุ่มถ้ามี draft (CategoryTypeName หรือ details ใด ๆ) หรือฟอร์มเปลี่ยนจาก baseline
-      const enable = this.hasPendingDrafts() || this.hasFormChanged();
-
-      this.setButtonDisabled('save', !enable);
-    });
-
-    this.route.queryParams.subscribe(params => {
-      this.categoryType = params['categoryType'] || '';
-      this.formDetails.patchValue({
-        categoryType: {
-          CategoryTypeName: this.categoryType,
-          activeStatus: true
-        }
-      }, { emitEvent: false });
-      // หลังดึงข้อมูลเสร็จ ให้ snapshot ค่าเริ่มต้นไว้ใช้เทียบภายหลัง
-      this.fetchCategoryTypesDetails();
-    });
+    this.route.queryParams
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(params => {
+        this.categoryType = params['categoryType'] || '';
+        this.formDetails.patchValue({
+          categoryType: {
+            CategoryTypeName: this.categoryType,
+            activeStatus: true
+          }
+        }, { emitEvent: false });
+        // หลังดึงข้อมูลเสร็จ ให้ snapshot ค่าเริ่มต้นไว้ใช้เทียบภายหลัง
+        this.fetchCategoryTypesDetails();
+      });
   }
 
   initializeForm() {
@@ -278,7 +282,7 @@ export class ApplicationQuestionDetailsComponent {
     this.disabledKeys = Array.from(set);
   }
 
-  private hasFormChanged(): boolean {
+  public hasFormChanged(): boolean {
     if (!this.initialSnapshot) return false;
     const current = this.formDetails.getRawValue();
     return JSON.stringify(current) !== JSON.stringify(this.initialSnapshot);
@@ -526,24 +530,32 @@ export class ApplicationQuestionDetailsComponent {
     return String(id).startsWith('tmp-');
   }
 
-  private hasPendingDrafts(): boolean {
+  public hasPendingDrafts(): boolean {
     const hasDirty = (this.readDirty()?.length ?? 0) > 0;
     const nameDraft = (this.readCategoryTypeDraft() ?? '').trim();
     return hasDirty || !!nameDraft;
   }
 
   private reflectPendingDraftsUI() {
-    if (this.hasPendingDrafts()) {
-      // ถ้ามี draft แต่ฟอร์มยังปิดอยู่ → เปิดโหมดแก้ไขอัตโนมัติ
-      if (!this.isEditing || this.formDetails.disabled) {
-        this.enterEditMode('draft');
-      } else {
-        // อยู่ในโหมด edit อยู่แล้ว → ให้ Save กดได้
-        this.setActionButtons('edit');
-        this.setButtonDisabled('save', false);
-      }
+    const pending = this.hasPendingDrafts();
+
+    // ถ้าอยู่ในโหมดแก้ไขอยู่แล้ว → คงปุ่ม Save ไว้เสมอ
+    if (this.isEditing) {
+      this.setActionButtons('edit');
+      // เปิด/ปิดปุ่ม Save ตามเงื่อนไขจริง
+      const enable = pending || this.hasFormChanged();
+      this.setButtonDisabled('save', !enable);
+      return;
+    }
+
+    // ไม่ได้อยู่โหมดแก้ไข
+    if (pending) {
+      // มี draft → เข้าสู่ edit-mode อัตโนมัติ และเปิดปุ่ม Save
+      if (this.formDetails.disabled) this.enterEditMode('draft');
+      this.setActionButtons('edit');
+      this.setButtonDisabled('save', false);
     } else {
-      // ไม่มี draft → UI เป็นโหมด view
+      // ไม่มี draft และไม่ได้อยู่โหมดแก้ไข → โหมด view
       this.setActionButtons('view');
     }
   }
@@ -597,6 +609,26 @@ export class ApplicationQuestionDetailsComponent {
     }
 
     return -1;
+  }
+
+  public clearDraftsForCurrentType(): void {
+    // ล้าง draft ของชื่อ Category Type
+    this.clearCategoryTypeDraft();
+
+    // ล้าง cache รายการ details ของประเภทปัจจุบัน
+    const type = this.categoryType || 'default';
+    const cache = this.readDetailsCache();
+    let changed = false;
+    for (const key of Object.keys(cache)) {
+      if (key.startsWith(`${type}:`)) {
+        delete cache[key];
+        changed = true;
+      }
+    }
+    if (changed) this.writeDetailsCache(cache);
+
+    // ล้างรายการ dirty ids
+    this.clearDirty();
   }
 
   toggleActive(): void {
@@ -1085,6 +1117,9 @@ export class ApplicationQuestionDetailsComponent {
   }
 
   ngOnDestroy() {
+    this.isProgrammaticUpdate = true;
+    this.destroy$.next();
+    this.destroy$.complete();
 
     this.formDetails.reset();
     this.categoryRows = [];
