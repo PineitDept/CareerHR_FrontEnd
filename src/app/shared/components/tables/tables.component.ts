@@ -85,6 +85,7 @@ export class TablesComponent
   @Output() createInlineSave = new EventEmitter<any>();
   @Output() createInlineCancel = new EventEmitter<void>();
   @Output() deleteRowClicked = new EventEmitter<any>();
+  @Output() selectChanged = new EventEmitter<{ rowIndex: number; field: string; value: string }>();
 
   sortedColumns: string[] = [];
   clickedRows: Set<string> = new Set();
@@ -415,6 +416,9 @@ export class TablesComponent
     if (currentRows[rowIndex]) {
       currentRows[rowIndex][field] = value;
     }
+
+    this.selectChanged.emit({ rowIndex, field, value });
+    
     this.dropdownOverlay = null;
     this.cdr.detectChanges();
   }

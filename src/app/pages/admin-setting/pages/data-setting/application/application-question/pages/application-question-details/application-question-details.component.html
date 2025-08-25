@@ -199,6 +199,8 @@
           [isZeroOneStatus]="true"
           (deleteRowClicked)="onDeleteRowClicked($event)"
           [requiredFooterFields]="['questionTH','questionEN','sort']"
+          (selectChanged)="onSelectChangedDetails($event)"
+          [createDefaults]="tableCreateDefaults"
         ></app-tables>
       </div>
     </div>

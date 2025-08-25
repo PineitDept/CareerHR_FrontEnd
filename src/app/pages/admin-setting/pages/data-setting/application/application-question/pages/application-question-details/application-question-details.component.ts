@@ -3,7 +3,7 @@ import { defaultDetailsFilterButtons } from '../../../../../../../../constants/a
 import { ActivatedRoute } from '@angular/router';
 import { ApplicationQuestionService } from '../../../../../../../../services/admin-setting/application-question/application-question.service';
 import { FormBuilder, FormGroup } from '@angular/forms';
-import { Columns } from '../../../../../../../../shared/interfaces/tables/column.interface';
+import { Column, Columns } from '../../../../../../../../shared/interfaces/tables/column.interface';
 import { TablesComponent } from '../../../../../../../../shared/components/tables/tables.component';
 import { animate, style, transition, trigger } from '@angular/animations';
 import { MatDialog } from '@angular/material/dialog';
@@ -23,6 +23,7 @@ type CategoryDetailForm = {
   questionEN: string;
   sort: number | null;
   activeStatus: boolean;
+  scoringMethod: 1 | 2 | null;
 };
 
 interface DetailsSnapshot {
@@ -33,6 +34,7 @@ interface DetailsSnapshot {
     questionEN: string;
     sort: number | null;
     activeStatus: boolean;
+    scoringMethod: 1 | 2 | null;
   }>;
 }
 
@@ -94,51 +96,30 @@ export class ApplicationQuestionDetailsComponent {
     }
   ];
 
-  categoryDetailsColumns: Columns = [
-    {
-      header: 'No.',
-      field: '__index',
-      type: 'number',
-      align: 'center',
-      width: '4%'
-    },
-    {
-      header: 'Question (TH)',
-      field: 'questionTH',
-      type: 'text',
-      width: '32%',
-      wrapText: true,
-    },
-    {
-      header: 'Question (EN)',
-      field: 'questionEN',
-      type: 'text',
-      width: '32%',
-      wrapText: true,
-    },
-    {
-      header: 'Row Answer',
-      field: 'sort',
-      type: 'number',
-      align: 'center',
-      width: '13%'
-    },
-    {
-      header: 'Status',
-      field: 'activeStatus',
-      type: 'toggle',
-      align: 'center',
-      width: '7%'
-    },
-    {
-      header: 'Action',
-      field: 'textlink',
-      type: 'textlink',
-      align: 'center',
-      width: '12%',
-      textlinkActions: ['edit-inrow','delete']
-    }
+  // เก็บ columns พื้นฐาน (คงของเดิมไว้)
+  baseCategoryDetailsColumns: Columns = [
+    { header: 'No.', field: '__index', type: 'number', align: 'center', width: '4%' },
+    { header: 'Question (TH)', field: 'questionTH', type: 'text', width: '32%', wrapText: true },
+    { header: 'Question (EN)', field: 'questionEN', type: 'text', width: '32%', wrapText: true },
+    { header: 'Row Answer', field: 'sort', type: 'number', align: 'center', width: '13%' },
+    { header: 'Status', field: 'activeStatus', type: 'toggle', align: 'center', width: '7%' },
+    { header: 'Action', field: 'textlink', type: 'textlink', align: 'center', width: '12%', textlinkActions: ['edit-inrow','delete'] },
   ];
+
+  scoringColumnDef: Column = {
+    header: 'Scoring Method',
+    field: 'scoringMethod',
+    type: 'select',
+    align: 'center',     // ตรงกับ union type
+    width: '13%',
+    options: ['Normal', 'Reverse'],
+  };
+
+  // ไว้ bind เข้า <app-tables>
+  categoryDetailsColumns: Columns = [...this.baseCategoryDetailsColumns];
+
+  // default ค่าของ footer เวลา add แถว (ใช้กับ [createDefaults])
+  tableCreateDefaults: any = {};
 
   categoryRows: any[] = [];
   categoryDetailsRows: any[] = [];
@@ -247,6 +228,24 @@ export class ApplicationQuestionDetailsComponent {
     return this.categoryDetailsFG.disabled;
   }
 
+  // helper: สลับคอลัมน์ตาม categoryId
+  private setColumnsFor(categoryId: number | string | null | undefined) {
+    const cols = [...this.baseCategoryDetailsColumns];
+
+    if (String(categoryId) === '5') {
+      // แทรก "Scoring Method" ที่ตำแหน่งก่อน activeStatus
+      const statusIdx = cols.findIndex(c => c.field === 'activeStatus');
+      if (statusIdx !== -1) {
+        cols.splice(statusIdx, 0, this.scoringColumnDef); // ← แทรกตรงนี้
+      }
+      this.categoryDetailsColumns = cols;
+      this.tableCreateDefaults = { scoringMethod: 'Normal' }; // default footer ตอนเพิ่มแถว
+    } else {
+      this.categoryDetailsColumns = [...this.baseCategoryDetailsColumns];
+      this.tableCreateDefaults = {};
+    }
+  }
+
   private buildCategoryFG(c: any) {
     return this.fb.group<CategoryForm>({
       categoryId: c?.categoryId ?? null,
@@ -261,6 +260,7 @@ export class ApplicationQuestionDetailsComponent {
       questionEN: d?.questionEN ?? '',
       sort: d?.sort ?? null,
       activeStatus: d?.status === 1 ? true : false,
+      scoringMethod: this.toScoringUnion(d?.scoringMethod), // default 1(Normal)
     } as any);
   }
 
@@ -299,6 +299,7 @@ export class ApplicationQuestionDetailsComponent {
       questionEN: (r?.questionEN ?? '').trim(),
       sort: (r?.sort ?? r?.sort === 0) ? Number(r.sort) : null,
       activeStatus: !!r?.activeStatus,
+      scoringMethod: this.toScoringUnion(r?.scoringMethod),
     }));
 
     // จัดเรียงเพื่อให้ compare เสถียร
@@ -350,7 +351,14 @@ export class ApplicationQuestionDetailsComponent {
 
   private setCachedDetails(categoryId: string | number, data: {
     CategoryName: string;
-    items: Array<{ id: number | string | null; questionTH: string; questionEN: string; sort: number | null; status: 1 | 2; }>;
+    items: Array<{
+      id: number | string | null;
+      questionTH: string;
+      questionEN: string;
+      sort: number | null;
+      status: 1 | 2;
+      scoringMethod: 1 | 2 | null;
+    }>;
   }) {
     const cache = this.readDetailsCache();
     const key = this.makeCacheKey(categoryId);
@@ -516,6 +524,7 @@ export class ApplicationQuestionDetailsComponent {
           questionEN: (it.questionEN ?? '').trim(),
           sort: (it.sort ?? it.sort === 0) ? Number(it.sort) : null,
           status: it.status, // 1/2 ตามที่คุณเก็บใน cache
+          scoringMethod: this.toScoringUnion(it.scoringMethod) ?? 1,
         })),
       });
     }
@@ -768,8 +777,18 @@ export class ApplicationQuestionDetailsComponent {
       questionEN: it.questionEN,
       sort: it.sort,
       activeStatus: !!it.activeStatus,
+      scoringMethod: this.scoringLabel(it.scoringMethod),
       textlinkActions: ['edit-inrow','delete'], // อาจปรับตามสิทธิ์จาก API
     }));
+  }
+
+  private toScoringUnion(v: any): 1 | 2 | null {
+    if (v === 1 || v === '1' || v === 'Normal') return 1;
+    if (v === 2 || v === '2' || v === 'Reverse') return 2;
+    return null;
+  }
+  private scoringLabel(u: 1 | 2 | null): 'Normal' | 'Reverse' | '' {
+    return u === 2 ? 'Reverse' : u === 1 ? 'Normal' : '';
   }
 
   onFilterButtonClick(key: string) {
@@ -856,6 +875,7 @@ export class ApplicationQuestionDetailsComponent {
       questionEN: (d.questionEN ?? '').trim(),
       sort: (d.sort ?? d.sort === 0) ? Number(d.sort) : null,
       status: d.activeStatus ? 1 as const : 2 as const,
+      scoringMethod: this.toScoringUnion(d.scoringMethod) ?? 1,
     }));
 
     // เคส "เพิ่มใหม่": ยังไม่มี selectedCategoryId (null) + อยู่ใน Add mode
@@ -905,7 +925,7 @@ export class ApplicationQuestionDetailsComponent {
   onAddQuestionClicked() {
     console.log('Add button clicked');
     this.isAddingRow = true;
-    this.categoryDetailsTable.startInlineCreate({ activeStatus: false, status: 0 }, 'bottom');
+    this.categoryDetailsTable.startInlineCreate({ activeStatus: false, status: 0, scoringMethod: 'Normal' }, 'bottom');
   }
 
   onToggleChange(event: Event): void {
@@ -930,6 +950,8 @@ export class ApplicationQuestionDetailsComponent {
       this.isEditMode = true;
       this.isEditDetails = false;
     }
+
+    this.setColumnsFor(row?.categoryId);
 
     this.formDetails.patchValue({
       selectedCategoryId: row?.categoryId ?? null,
@@ -1033,6 +1055,13 @@ export class ApplicationQuestionDetailsComponent {
     this.isAddingRow = false;
     console.log('Inline save payload:', payload);
 
+    const scoring: 1 | 2 | null =
+      payload.scoringMethod === 'Reverse' ? 2 :
+      payload.scoringMethod === 'Normal'  ? 1 :
+      (payload.scoringMethod === 2 || payload.scoringMethod === '2') ? 2 :
+      (payload.scoringMethod === 1 || payload.scoringMethod === '1') ? 1 :
+      1; // default Normal
+
     // 1) แปลงค่าจาก payload ให้ตรงกับโครงสร้างฟอร์ม
     const normalized = {
       id: payload.id ?? null,
@@ -1041,6 +1070,7 @@ export class ApplicationQuestionDetailsComponent {
       sort: payload.sort !== undefined && payload.sort !== null ? Number(payload.sort) : null,
       // รองรับทั้ง activeStatus แบบ boolean และ status แบบ 1/2
       activeStatus: payload.activeStatus ?? (payload.status === 1),
+      scoringMethod: scoring,
     };
 
     // 2) push เข้า FormArray (source of truth)
@@ -1114,6 +1144,15 @@ export class ApplicationQuestionDetailsComponent {
   onInlineCancel() {
     this.isAddingRow = false;
     this.fieldErrors = false;
+  }
+
+  onSelectChangedDetails(e: { rowIndex: number; field: string; value: string }) {
+    if (e.field !== 'scoringMethod') return;
+    const idx = e.rowIndex;
+    if (idx < 0 || idx >= this.detailsFA.length) return;
+
+    const numeric = e.value === 'Reverse' ? 2 : 1;
+    this.detailsFA.at(idx).patchValue({ scoringMethod: numeric }, { emitEvent: false });
   }
 
   ngOnDestroy() {
