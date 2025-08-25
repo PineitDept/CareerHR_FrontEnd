@@ -8,6 +8,8 @@ import { MatIconModule }   from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule }  from '@angular/material/input';
 
+import { DragDropModule } from '@angular/cdk/drag-drop';
+
 import { HeaderContentComponent } from './components/headers/header-content/header-content.component';
 import { HeaderMainComponent } from './components/headers/header-main/header-main.component';
 import { SidebarComponent } from './components/sidebar/sidebar.component';
@@ -52,6 +54,7 @@ import { ConfirmLeaveDialogComponent } from './components/dialogs/confirm-leave-
     MatIconModule,
     MatFormFieldModule,
     MatInputModule,
+    DragDropModule,
   ],
   exports: [
     HeaderContentComponent,

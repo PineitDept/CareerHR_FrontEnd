@@ -88,8 +88,16 @@
       </thead>
 
       <!-- Table Body -->
-      <tbody *ngIf="rowsValue.length > 0; else noData">
+      <tbody
+        *ngIf="rowsValue.length > 0; else noData"
+        cdkDropList
+        [cdkDropListData]="rowsValue"
+        [cdkDropListDisabled]="!draggableRows || isDisabledForm"
+        (cdkDropListDropped)="onDrop($event)"
+      >
         <tr *ngFor="let row of rowsValue; let i = index; trackBy: trackByRow"
+          cdkDrag
+          cdkDragLockAxis="y"
           class="table-row tw-transition-colors tw-duration-200 tw-cursor-pointer"
           [ngClass]="{
             'tw-cursor-pointer': enableRowClick,

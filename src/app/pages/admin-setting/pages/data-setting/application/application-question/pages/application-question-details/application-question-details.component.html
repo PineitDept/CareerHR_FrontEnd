@@ -191,6 +191,8 @@
           [withinCard]="true"
           (toggleChange)="onToggleChangeDetails($event)"
           [isDisabledForm]="isDisabled"
+          [draggableRows]="!isDisabled"
+          (rowsReordered)="onDetailsRowsReordered($event)"
           (createInlineSave)="onInlineSave($event)"
           (createInlineCancel)="onInlineCancel()"
           [isAddMode]="isAddingRow"

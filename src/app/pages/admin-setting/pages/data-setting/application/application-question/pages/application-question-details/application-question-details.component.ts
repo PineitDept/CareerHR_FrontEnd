@@ -1188,6 +1188,29 @@ export class ApplicationQuestionDetailsComponent {
     this.detailsFA.at(idx).patchValue({ scoringMethod: numeric }, { emitEvent: false });
   }
 
+  onDetailsRowsReordered(e: { previousIndex: number; currentIndex: number }) {
+    const { previousIndex, currentIndex } = e;
+
+    // 1) ย้าย control ใน FormArray ให้ลำดับตรงกับที่ลาก
+    const fa = this.detailsFA;
+    if (previousIndex === currentIndex || previousIndex < 0 || currentIndex < 0) return;
+    if (previousIndex >= fa.length || currentIndex >= fa.length) return;
+
+    const ctrl = fa.at(previousIndex);
+    fa.removeAt(previousIndex, { emitEvent: false });
+    fa.insert(currentIndex, ctrl, { emitEvent: false });
+
+    // 2) อัปเดตค่า sort ของทุกแถว = index ใหม่ + 1
+    for (let i = 0; i < fa.length; i++) {
+      fa.at(i).patchValue({ sort: i + 1 }, { emitEvent: false });
+    }
+
+    // 3) rebuild rows สำหรับตาราง + mark dirty
+    this.rebuildDetailsRowsFromForm();
+    this.categoryDetailsFG.markAsDirty();
+    this.formDetails.markAsDirty();
+  }
+
   ngOnDestroy() {
     this.isProgrammaticUpdate = true;
     this.destroy$.next();

@@ -25,6 +25,7 @@ import {
 } from '@angular/core';
 import { Column } from '../../interfaces/tables/column.interface';
 import { MatDialog } from '@angular/material/dialog';
+import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { AlertDialogComponent } from '../dialogs/alert-dialog/alert-dialog.component';
 import { FormDialogComponent } from '../dialogs/form-dialog/form-dialog.component';
 import { ApplicationService } from '../../../services/application/application.service';
@@ -72,6 +73,7 @@ export class TablesComponent
   @Input() isZeroOneStatus: boolean = false;
   @Input() allowViewWhenDisabled: boolean = false;
   @Input() requiredFooterFields: string[] = [];
+  @Input() draggableRows: boolean = false;
 
   @Output() selectionChanged = new EventEmitter<any[]>();
   @Output() rowClicked = new EventEmitter<any>();
@@ -86,6 +88,7 @@ export class TablesComponent
   @Output() createInlineCancel = new EventEmitter<void>();
   @Output() deleteRowClicked = new EventEmitter<any>();
   @Output() selectChanged = new EventEmitter<{ rowIndex: number; field: string; value: string }>();
+  @Output() rowsReordered = new EventEmitter<{ previousIndex: number; currentIndex: number }>();
 
   sortedColumns: string[] = [];
   clickedRows: Set<string> = new Set();
@@ -418,7 +421,7 @@ export class TablesComponent
     }
 
     this.selectChanged.emit({ rowIndex, field, value });
-    
+
     this.dropdownOverlay = null;
     this.cdr.detectChanges();
   }
@@ -763,6 +766,24 @@ export class TablesComponent
     }
 
     this.footerErrors = next;
+  }
+
+  onDrop(event: CdkDragDrop<any[]>) {
+    if (!this.draggableRows || this.isDisabledForm) return;
+
+    // 1) rearrange อาร์เรย์ที่โชว์ในตาราง
+    moveItemInArray(this.rowsValue, event.previousIndex, event.currentIndex);
+
+    // 2) อัปเดตฟิลด์ sort ให้ทุกแถวเท่ากับตำแหน่งใหม่ (i+1)
+    this.rowsValue.forEach((r, i) => (r.sort = i + 1));
+
+    // 3) แจ้ง parent เพื่อ sync แหล่งข้อมูลจริง (FormArray)
+    this.rowsReordered.emit({
+      previousIndex: event.previousIndex,
+      currentIndex: event.currentIndex,
+    });
+
+    this.cdr.detectChanges();
   }
 
   // onInlineKeydown(e: KeyboardEvent, row: any) {
