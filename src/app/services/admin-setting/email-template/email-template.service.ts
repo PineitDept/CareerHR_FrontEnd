@@ -6,12 +6,26 @@ import { Observable } from 'rxjs';
   providedIn: 'root'
 })
 export class EmailTemplateService {
+  private base = '';
 
   constructor(private apiService: ApiService) {}
 
+  setEMailType(type: 'email-template' | 'email-attribute') {
+    switch (type) {
+      case 'email-template':
+        this.base = 'EmailSettings/mail-management';
+        break;
+      case 'email-attribute':
+        this.base = 'AttributeMailSettings/attribute-based';
+        break;
+      default:
+        throw new Error(`Unknown email type: ${type}`);
+    }
+  }
+
   // ดึงรายการทั้งหมด
   getAllEmailTemplates(): Observable<any> {
-    return this.apiService.get<any>('EmailSettings/mail-management', {
+    return this.apiService.get<any>(this.base, {
       withAuth: true,
       loading: true
     });
@@ -19,7 +33,7 @@ export class EmailTemplateService {
 
   // ดึงรายการเดียวตาม id
   getEmailTemplateById(id: number | string): Observable<any> {
-    return this.apiService.get<any>(`EmailSettings/mail-management/${id}`, {
+    return this.apiService.get<any>(`${this.base}/${id}`, {
       withAuth: true,
       loading: true
     });
@@ -27,7 +41,7 @@ export class EmailTemplateService {
 
   // แก้ไขรายการ
   updateEmailTemplate(id: number | string, data: any): Observable<any> {
-    return this.apiService.put<any>(`EmailSettings/mail-management/${id}`, data, {
+    return this.apiService.put<any>(`${this.base}/${id}`, data, {
       withAuth: true,
       loading: true
     });

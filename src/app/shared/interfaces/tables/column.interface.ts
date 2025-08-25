@@ -19,6 +19,8 @@ export interface Column {
   // Sortable
   sortable?: boolean;
   sortDirection?: 'asc' | 'desc' | null;
+
+  editing?: boolean;
 }
 
 export type Columns = Column[];

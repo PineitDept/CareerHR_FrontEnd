@@ -103,6 +103,7 @@ export class TablesComponent
   editRow: boolean = false;
   rowValidationErrors: { [rowId: string]: boolean } = {};
   ishighlightRow: boolean = false;
+  editingBuffer: any | null = null;
 
   @ViewChild('selectAllCheckbox')
   selectAllCheckbox!: ElementRef<HTMLInputElement>;
@@ -559,10 +560,16 @@ export class TablesComponent
     this.editingRowId = index;
     this.editRow = true;
 
+    this.editingBuffer = typeof structuredClone === 'function'
+      ? structuredClone(row)
+      : JSON.parse(JSON.stringify(row));
+
     if (this.highlightRowIndex && this.ishighlightRow) {
       this.ishighlightRow = false
       this.fieldErrors = false
     }
+
+    this.cdr.detectChanges();
   }
 
   onClickSave(event: Event, row: any): void {
@@ -590,8 +597,11 @@ export class TablesComponent
       container?.classList.remove('dimmed-overlay');
 
       if (confirmed) {
+        if (this.editingBuffer) Object.assign(row, this.editingBuffer);
+
         this.editingRowId = null;
         this.editRow = false;
+        this.editingBuffer = null;
         this.cdr.detectChanges();
 
         this.editClicked.emit(row);
@@ -604,6 +614,7 @@ export class TablesComponent
     this.editingRowId = null;
     // this.editedValue = '';
     this.editRow = false;
+    this.editingBuffer = null; 
     console.log('Cancelled edit');
   }
 

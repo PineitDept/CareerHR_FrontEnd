@@ -23,6 +23,7 @@ export class EmailTemplateComponent {
   ) { }
 
   ngOnInit() {
+    this.emailTemplateService.setEMailType('email-template');
     this.fetchEmailID();
   }
 

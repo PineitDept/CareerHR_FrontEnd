@@ -44,6 +44,7 @@
               [class.wrap-text]="column.wrapText" [class.expanded]="!column.subColumn || isSubColumnVisible(column)"
               [class.collapsed]="column.subColumn && !isSubColumnVisible(column)" [style.width]="getColumnWidth(column)"
               [style.min-width]="getColumnMinWidth(column)" [style.max-width]="getColumnMaxWidth(column)"
+              
               (click)="onColumnClick(column)"
               [ngClass]="{
                 '!tw-rounded-tl-[4px]': first && !showCheckbox && !withinCard,
@@ -56,7 +57,9 @@
               }"
             >
 
-              <div class="header-content tw-flex tw-items-center tw-justify-center tw-gap-2">
+              <div class="header-content tw-flex tw-items-center tw-justify-center tw-gap-2"
+                [style.justify-content]="withinCard ? (column.align || 'left') : ''"
+              >
                 <!-- Sub-column indicator -->
                 <span *ngIf="column.subColumn" class="tw-text-red-300 tw-font-mono tw-text-xs tw-opacity-75">└</span>
 
@@ -163,12 +166,12 @@
                         [(ngModel)]="row[column.field]"
                         (click)="$event.stopPropagation()" />
                     </ng-container> -->
-                    <ng-container *ngIf="editRow && (editingRowId === (row._tempId ?? i+1)); else viewMode">
+                    <ng-container *ngIf="editRow && (editingRowId === (row._tempId ?? i+1)) && (column.editing ?? true); else viewMode">
                       <input
                         type="text"
-                        class="tw-border tw-rounded tw-px-2 tw-py-1 tw-w-full"
+                        class="tw-border tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white"
                         [ngClass]="fieldErrors ? 'tw-border-red-500' : 'tw-border-gray-300'"
-                        [(ngModel)]="row[column.field]"
+                        [(ngModel)]="editingBuffer[column.field]"
                         (click)="$event.stopPropagation()"
                       />
                     </ng-container>
