@@ -73,7 +73,7 @@ export class LanguageSkillsComponent extends BaseGeneralBenefitsComponent<ILangu
       field: '__index',
       type: 'number',
       align: 'center',
-      width: '40px',
+      width: '5%',
     },
     {
       header: 'Language Skills',
@@ -104,7 +104,7 @@ export class LanguageSkillsComponent extends BaseGeneralBenefitsComponent<ILangu
   filterButtons = this.defaultFilterButtons();
 
   override ngOnInit(): void {
-    this.generalBenefitsService.setBenefitType('langauge-skills');
+    this.generalBenefitsService.setBenefitType('language-skills');
     this.loadUsers();
     // super.ngOnInit();
   }

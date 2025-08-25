@@ -3,12 +3,13 @@ import { defaultDetailsFilterButtons } from '../../../../../../../../constants/a
 import { ActivatedRoute } from '@angular/router';
 import { ApplicationQuestionService } from '../../../../../../../../services/admin-setting/application-question/application-question.service';
 import { FormBuilder, FormGroup } from '@angular/forms';
-import { Columns } from '../../../../../../../../shared/interfaces/tables/column.interface';
+import { Column, Columns } from '../../../../../../../../shared/interfaces/tables/column.interface';
 import { TablesComponent } from '../../../../../../../../shared/components/tables/tables.component';
 import { animate, style, transition, trigger } from '@angular/animations';
 import { MatDialog } from '@angular/material/dialog';
 import { AlertDialogComponent } from '../../../../../../../../shared/components/dialogs/alert-dialog/alert-dialog.component';
 import { CaptchaDialogComponent } from '../../../../../../../../shared/components/dialogs/captcha-dialog/captcha-dialog.component';
+import { Subject, takeUntil } from 'rxjs';
 
 type CategoryForm = {
   categoryId: number | string | null;
@@ -22,6 +23,7 @@ type CategoryDetailForm = {
   questionEN: string;
   sort: number | null;
   activeStatus: boolean;
+  scoringMethod: 1 | 2 | null;
 };
 
 interface DetailsSnapshot {
@@ -32,6 +34,7 @@ interface DetailsSnapshot {
     questionEN: string;
     sort: number | null;
     activeStatus: boolean;
+    scoringMethod: 1 | 2 | null;
   }>;
 }
 
@@ -93,51 +96,30 @@ export class ApplicationQuestionDetailsComponent {
     }
   ];
 
-  categoryDetailsColumns: Columns = [
-    {
-      header: 'No.',
-      field: '__index',
-      type: 'number',
-      align: 'center',
-      width: '4%'
-    },
-    {
-      header: 'Question (TH)',
-      field: 'questionTH',
-      type: 'text',
-      width: '32%',
-      wrapText: true,
-    },
-    {
-      header: 'Question (EN)',
-      field: 'questionEN',
-      type: 'text',
-      width: '32%',
-      wrapText: true,
-    },
-    {
-      header: 'Row Answer',
-      field: 'sort',
-      type: 'number',
-      align: 'center',
-      width: '13%'
-    },
-    {
-      header: 'Status',
-      field: 'activeStatus',
-      type: 'toggle',
-      align: 'center',
-      width: '7%'
-    },
-    {
-      header: 'Action',
-      field: 'textlink',
-      type: 'textlink',
-      align: 'center',
-      width: '12%',
-      textlinkActions: ['edit-inrow','delete']
-    }
+  // เก็บ columns พื้นฐาน (คงของเดิมไว้)
+  baseCategoryDetailsColumns: Columns = [
+    { header: 'No.', field: '__index', type: 'number', align: 'center', width: '4%' },
+    { header: 'Question (TH)', field: 'questionTH', type: 'text', width: '32%', wrapText: true },
+    { header: 'Question (EN)', field: 'questionEN', type: 'text', width: '32%', wrapText: true },
+    { header: 'Row Answer', field: 'sort', type: 'number', align: 'center', width: '10%' },
+    { header: 'Status', field: 'activeStatus', type: 'toggle', align: 'center', width: '7%' },
+    { header: 'Action', field: 'textlink', type: 'textlink', align: 'center', width: '15%', textlinkActions: ['edit-inrow','delete'] },
   ];
+
+  scoringColumnDef: Column = {
+    header: 'Scoring Method',
+    field: 'scoringMethod',
+    type: 'select',
+    align: 'center',     // ตรงกับ union type
+    width: '12%',
+    options: ['Normal', 'Reverse'],
+  };
+
+  // ไว้ bind เข้า <app-tables>
+  categoryDetailsColumns: Columns = [...this.baseCategoryDetailsColumns];
+
+  // default ค่าของ footer เวลา add แถว (ใช้กับ [createDefaults])
+  tableCreateDefaults: any = {};
 
   categoryRows: any[] = [];
   categoryDetailsRows: any[] = [];
@@ -164,6 +146,8 @@ export class ApplicationQuestionDetailsComponent {
 
   private DIRTY_PREFIX = 'aqd:dirty';
 
+  private destroy$ = new Subject<void>();
+
   constructor(
     private route: ActivatedRoute,
     private applicationQuestionService: ApplicationQuestionService,
@@ -178,34 +162,35 @@ export class ApplicationQuestionDetailsComponent {
     this.formDetails.disable({ emitEvent: false });
     this.setActionButtons('view');
 
-    this.formDetails.get('categoryType.CategoryTypeName')?.valueChanges.subscribe((v) => {
-      // เก็บเฉพาะเวลาผู้ใช้แก้จริง ๆ
-      if (!this.isEditing) return;
-      if (this.isProgrammaticUpdate) return;
+    this.formDetails.get('categoryType.CategoryTypeName')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((v) => {
+        if (!this.isEditing) return;
+        if (this.isProgrammaticUpdate) return;
+        this.writeCategoryTypeDraft(String(v ?? '').trim());
+      });
 
-      this.writeCategoryTypeDraft(String(v ?? '').trim());
-    });
+    this.formDetails.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        if (this.isProgrammaticUpdate) return;
+        const enable = this.hasPendingDrafts() || this.hasFormChanged();
+        this.setButtonDisabled('save', !enable);
+      });
 
-    this.formDetails.valueChanges.subscribe(() => {
-      if (this.isProgrammaticUpdate) return;
-
-      // เปิดปุ่มถ้ามี draft (CategoryTypeName หรือ details ใด ๆ) หรือฟอร์มเปลี่ยนจาก baseline
-      const enable = this.hasPendingDrafts() || this.hasFormChanged();
-
-      this.setButtonDisabled('save', !enable);
-    });
-
-    this.route.queryParams.subscribe(params => {
-      this.categoryType = params['categoryType'] || '';
-      this.formDetails.patchValue({
-        categoryType: {
-          CategoryTypeName: this.categoryType,
-          activeStatus: true
-        }
-      }, { emitEvent: false });
-      // หลังดึงข้อมูลเสร็จ ให้ snapshot ค่าเริ่มต้นไว้ใช้เทียบภายหลัง
-      this.fetchCategoryTypesDetails();
-    });
+    this.route.queryParams
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(params => {
+        this.categoryType = params['categoryType'] || '';
+        this.formDetails.patchValue({
+          categoryType: {
+            CategoryTypeName: this.categoryType,
+            activeStatus: true
+          }
+        }, { emitEvent: false });
+        // หลังดึงข้อมูลเสร็จ ให้ snapshot ค่าเริ่มต้นไว้ใช้เทียบภายหลัง
+        this.fetchCategoryTypesDetails();
+      });
   }
 
   initializeForm() {
@@ -243,6 +228,55 @@ export class ApplicationQuestionDetailsComponent {
     return this.categoryDetailsFG.disabled;
   }
 
+  // helper: สลับคอลัมน์ตาม categoryId
+  private setColumnsFor(categoryId: number | string | null | undefined) {
+    const cols = [...this.baseCategoryDetailsColumns];
+
+    if (String(categoryId) === '5') {
+      // แทรก "Scoring Method" ที่ตำแหน่งก่อน activeStatus
+      const statusIdx = cols.findIndex(c => c.field === 'activeStatus');
+      if (statusIdx !== -1) {
+        cols.splice(statusIdx, 0, this.scoringColumnDef); // ← แทรกตรงนี้
+      }
+      this.categoryDetailsColumns = cols;
+      this.tableCreateDefaults = { scoringMethod: 'Normal' }; // default footer ตอนเพิ่มแถว
+    } else {
+      this.categoryDetailsColumns = [...this.baseCategoryDetailsColumns];
+      this.tableCreateDefaults = {};
+    }
+  }
+
+  // mapping ความกว้างเมื่อมี scoring
+  private withScoringWidths: Record<string, string> = {
+    '__index': '4%',
+    'questionTH': '27%',
+    'questionEN': '27%',
+    'sort': '10%',
+    'scoringMethod': '12%',
+    'activeStatus': '8%',
+    'textlink': '12%',
+  };
+
+  private applyWidths(cols: Columns, widths: Record<string,string>): Columns {
+    return cols.map(c => ({ ...c, width: widths[c.field] ?? c.width }));
+  }
+
+  private buildColumnsFor(categoryId: number | string) {
+    if (String(categoryId) === '5') {
+      // สร้างสำเนาคอลัมน์พื้นฐาน แล้วสอด scoring ไว้ก่อน activeStatus
+      const base = [...this.baseCategoryDetailsColumns];
+      const idxStatus = base.findIndex(c => c.field === 'activeStatus');
+      const withScoring = [
+        ...base.slice(0, idxStatus),
+        this.scoringColumnDef,
+        ...base.slice(idxStatus),
+      ];
+      this.categoryDetailsColumns = this.applyWidths(withScoring, this.withScoringWidths);
+    } else {
+      this.categoryDetailsColumns = this.baseCategoryDetailsColumns;
+    }
+  }
+
   private buildCategoryFG(c: any) {
     return this.fb.group<CategoryForm>({
       categoryId: c?.categoryId ?? null,
@@ -257,6 +291,7 @@ export class ApplicationQuestionDetailsComponent {
       questionEN: d?.questionEN ?? '',
       sort: d?.sort ?? null,
       activeStatus: d?.status === 1 ? true : false,
+      scoringMethod: this.toScoringUnion(d?.scoringMethod), // default 1(Normal)
     } as any);
   }
 
@@ -278,7 +313,7 @@ export class ApplicationQuestionDetailsComponent {
     this.disabledKeys = Array.from(set);
   }
 
-  private hasFormChanged(): boolean {
+  public hasFormChanged(): boolean {
     if (!this.initialSnapshot) return false;
     const current = this.formDetails.getRawValue();
     return JSON.stringify(current) !== JSON.stringify(this.initialSnapshot);
@@ -295,6 +330,7 @@ export class ApplicationQuestionDetailsComponent {
       questionEN: (r?.questionEN ?? '').trim(),
       sort: (r?.sort ?? r?.sort === 0) ? Number(r.sort) : null,
       activeStatus: !!r?.activeStatus,
+      scoringMethod: this.toScoringUnion(r?.scoringMethod),
     }));
 
     // จัดเรียงเพื่อให้ compare เสถียร
@@ -346,7 +382,14 @@ export class ApplicationQuestionDetailsComponent {
 
   private setCachedDetails(categoryId: string | number, data: {
     CategoryName: string;
-    items: Array<{ id: number | string | null; questionTH: string; questionEN: string; sort: number | null; status: 1 | 2; }>;
+    items: Array<{
+      id: number | string | null;
+      questionTH: string;
+      questionEN: string;
+      sort: number | null;
+      status: 1 | 2;
+      scoringMethod: 1 | 2 | null;
+    }>;
   }) {
     const cache = this.readDetailsCache();
     const key = this.makeCacheKey(categoryId);
@@ -512,6 +555,7 @@ export class ApplicationQuestionDetailsComponent {
           questionEN: (it.questionEN ?? '').trim(),
           sort: (it.sort ?? it.sort === 0) ? Number(it.sort) : null,
           status: it.status, // 1/2 ตามที่คุณเก็บใน cache
+          scoringMethod: this.toScoringUnion(it.scoringMethod) ?? 1,
         })),
       });
     }
@@ -526,24 +570,32 @@ export class ApplicationQuestionDetailsComponent {
     return String(id).startsWith('tmp-');
   }
 
-  private hasPendingDrafts(): boolean {
+  public hasPendingDrafts(): boolean {
     const hasDirty = (this.readDirty()?.length ?? 0) > 0;
     const nameDraft = (this.readCategoryTypeDraft() ?? '').trim();
     return hasDirty || !!nameDraft;
   }
 
   private reflectPendingDraftsUI() {
-    if (this.hasPendingDrafts()) {
-      // ถ้ามี draft แต่ฟอร์มยังปิดอยู่ → เปิดโหมดแก้ไขอัตโนมัติ
-      if (!this.isEditing || this.formDetails.disabled) {
-        this.enterEditMode('draft');
-      } else {
-        // อยู่ในโหมด edit อยู่แล้ว → ให้ Save กดได้
-        this.setActionButtons('edit');
-        this.setButtonDisabled('save', false);
-      }
+    const pending = this.hasPendingDrafts();
+
+    // ถ้าอยู่ในโหมดแก้ไขอยู่แล้ว → คงปุ่ม Save ไว้เสมอ
+    if (this.isEditing) {
+      this.setActionButtons('edit');
+      // เปิด/ปิดปุ่ม Save ตามเงื่อนไขจริง
+      const enable = pending || this.hasFormChanged();
+      this.setButtonDisabled('save', !enable);
+      return;
+    }
+
+    // ไม่ได้อยู่โหมดแก้ไข
+    if (pending) {
+      // มี draft → เข้าสู่ edit-mode อัตโนมัติ และเปิดปุ่ม Save
+      if (this.formDetails.disabled) this.enterEditMode('draft');
+      this.setActionButtons('edit');
+      this.setButtonDisabled('save', false);
     } else {
-      // ไม่มี draft → UI เป็นโหมด view
+      // ไม่มี draft และไม่ได้อยู่โหมดแก้ไข → โหมด view
       this.setActionButtons('view');
     }
   }
@@ -597,6 +649,26 @@ export class ApplicationQuestionDetailsComponent {
     }
 
     return -1;
+  }
+
+  public clearDraftsForCurrentType(): void {
+    // ล้าง draft ของชื่อ Category Type
+    this.clearCategoryTypeDraft();
+
+    // ล้าง cache รายการ details ของประเภทปัจจุบัน
+    const type = this.categoryType || 'default';
+    const cache = this.readDetailsCache();
+    let changed = false;
+    for (const key of Object.keys(cache)) {
+      if (key.startsWith(`${type}:`)) {
+        delete cache[key];
+        changed = true;
+      }
+    }
+    if (changed) this.writeDetailsCache(cache);
+
+    // ล้างรายการ dirty ids
+    this.clearDirty();
   }
 
   toggleActive(): void {
@@ -736,8 +808,18 @@ export class ApplicationQuestionDetailsComponent {
       questionEN: it.questionEN,
       sort: it.sort,
       activeStatus: !!it.activeStatus,
+      scoringMethod: this.scoringLabel(it.scoringMethod),
       textlinkActions: ['edit-inrow','delete'], // อาจปรับตามสิทธิ์จาก API
     }));
+  }
+
+  private toScoringUnion(v: any): 1 | 2 | null {
+    if (v === 1 || v === '1' || v === 'Normal') return 1;
+    if (v === 2 || v === '2' || v === 'Reverse') return 2;
+    return null;
+  }
+  private scoringLabel(u: 1 | 2 | null): 'Normal' | 'Reverse' | '' {
+    return u === 2 ? 'Reverse' : u === 1 ? 'Normal' : '';
   }
 
   onFilterButtonClick(key: string) {
@@ -824,6 +906,7 @@ export class ApplicationQuestionDetailsComponent {
       questionEN: (d.questionEN ?? '').trim(),
       sort: (d.sort ?? d.sort === 0) ? Number(d.sort) : null,
       status: d.activeStatus ? 1 as const : 2 as const,
+      scoringMethod: this.toScoringUnion(d.scoringMethod) ?? 1,
     }));
 
     // เคส "เพิ่มใหม่": ยังไม่มี selectedCategoryId (null) + อยู่ใน Add mode
@@ -873,7 +956,7 @@ export class ApplicationQuestionDetailsComponent {
   onAddQuestionClicked() {
     console.log('Add button clicked');
     this.isAddingRow = true;
-    this.categoryDetailsTable.startInlineCreate({ activeStatus: false, status: 0 }, 'bottom');
+    this.categoryDetailsTable.startInlineCreate({ activeStatus: false, status: 0, scoringMethod: 'Normal' }, 'bottom');
   }
 
   onToggleChange(event: Event): void {
@@ -882,6 +965,8 @@ export class ApplicationQuestionDetailsComponent {
 
   onRowClicked(row: any, action: 'view' | 'edit') {
     this.rememberLastSelected(row?.categoryId);
+
+    this.buildColumnsFor(row?.categoryId);
 
     this.isProgrammaticUpdate = true;
 
@@ -898,6 +983,8 @@ export class ApplicationQuestionDetailsComponent {
       this.isEditMode = true;
       this.isEditDetails = false;
     }
+
+    this.setColumnsFor(row?.categoryId);
 
     this.formDetails.patchValue({
       selectedCategoryId: row?.categoryId ?? null,
@@ -999,32 +1086,59 @@ export class ApplicationQuestionDetailsComponent {
 
   onInlineSave(payload: any) {
     this.isAddingRow = false;
-    console.log('Inline save payload:', payload);
 
-    // 1) แปลงค่าจาก payload ให้ตรงกับโครงสร้างฟอร์ม
-    const normalized = {
+    // 1) เก็บ sort เดิมทั้งหมด
+    const existingSorts = (this.detailsFA.getRawValue() as CategoryDetailForm[])
+      .map(r => Number(r.sort))
+      .filter(n => Number.isFinite(n) && n > 0);
+
+    const maxSort = existingSorts.length ? Math.max(...existingSorts) : 0;
+
+    // 2) อ่านค่าที่ผู้ใช้กรอก แล้วคำนวณ finalSort ตามกติกา
+    const req = Number(payload.sort);
+    let finalSort = Number.isFinite(req) && req >= 1 ? req : maxSort + 1; // ถ้ากรอกไม่ดี → ท้ายสุด
+
+    if (existingSorts.includes(finalSort)) {
+      finalSort = maxSort + 1; // ถ้าซ้ำ → ท้ายสุด
+    }
+    if (finalSort > maxSort + 1) {
+      finalSort = maxSort + 1; // ถ้ามากเกิน → ท้ายสุด
+    }
+
+    // 3) map scoring
+    const scoring: 1 | 2 | null =
+      payload.scoringMethod === 'Reverse' ? 2 :
+      payload.scoringMethod === 'Normal'  ? 1 :
+      (payload.scoringMethod === 2 || payload.scoringMethod === '2') ? 2 :
+      (payload.scoringMethod === 1 || payload.scoringMethod === '1') ? 1 :
+      1;
+
+    // 4) เตรียมข้อมูล
+    const normalized: CategoryDetailForm = {
       id: payload.id ?? null,
       questionTH: (payload.questionTH ?? '').trim(),
       questionEN: (payload.questionEN ?? '').trim(),
-      sort: payload.sort !== undefined && payload.sort !== null ? Number(payload.sort) : null,
-      // รองรับทั้ง activeStatus แบบ boolean และ status แบบ 1/2
+      sort: finalSort,
       activeStatus: payload.activeStatus ?? (payload.status === 1),
+      scoringMethod: scoring,
     };
 
-    // 2) push เข้า FormArray (source of truth)
-    this.detailsFA.push(
-      this.fb.group<CategoryDetailForm>(normalized as any)
-      // หรือใช้ this.buildDetailFG({ ...normalized, status: normalized.activeStatus ? 1 : 2 })
-    );
+    // 5) คำนวณตำแหน่งแทรกตาม sort (default = ท้ายสุด)
+    let insertAt = this.detailsFA.length;
+    if (finalSort <= maxSort) {
+      const rows = (this.detailsFA.getRawValue() as CategoryDetailForm[]);
+      const idx = rows.findIndex(r => Number(r.sort) >= finalSort);
+      insertAt = idx === -1 ? this.detailsFA.length : idx;
+    }
 
-    // 3) rebuild rows ให้ตารางอัปเดต
+    // 6) แทรกลง FormArray
+    this.detailsFA.insert(insertAt, this.fb.group<CategoryDetailForm>(normalized as any), { emitEvent: false });
+
+    // 7) อัปเดตตาราง + mark dirty
     this.rebuildDetailsRowsFromForm();
-
-    // 4) ทำให้ฟอร์มรู้ว่ามีการเปลี่ยน (ปุ่ม Save จะ enabled)
     this.categoryDetailsFG.markAsDirty();
     this.formDetails.markAsDirty();
 
-    // 5) (ออปชัน) เลื่อนลงล่างให้เห็นแถวใหม่ทันที
     setTimeout(() => {
       try {
         this.categoryDetailsTable?.tableWrapperRef?.nativeElement?.scrollTo({
@@ -1084,7 +1198,42 @@ export class ApplicationQuestionDetailsComponent {
     this.fieldErrors = false;
   }
 
+  onSelectChangedDetails(e: { rowIndex: number; field: string; value: string }) {
+    if (e.field !== 'scoringMethod') return;
+    const idx = e.rowIndex;
+    if (idx < 0 || idx >= this.detailsFA.length) return;
+
+    const numeric = e.value === 'Reverse' ? 2 : 1;
+    this.detailsFA.at(idx).patchValue({ scoringMethod: numeric }, { emitEvent: false });
+  }
+
+  onDetailsRowsReordered(e: { previousIndex: number; currentIndex: number }) {
+    const { previousIndex, currentIndex } = e;
+
+    // 1) ย้าย control ใน FormArray ให้ลำดับตรงกับที่ลาก
+    const fa = this.detailsFA;
+    if (previousIndex === currentIndex || previousIndex < 0 || currentIndex < 0) return;
+    if (previousIndex >= fa.length || currentIndex >= fa.length) return;
+
+    const ctrl = fa.at(previousIndex);
+    fa.removeAt(previousIndex, { emitEvent: false });
+    fa.insert(currentIndex, ctrl, { emitEvent: false });
+
+    // 2) อัปเดตค่า sort ของทุกแถว = index ใหม่ + 1
+    for (let i = 0; i < fa.length; i++) {
+      fa.at(i).patchValue({ sort: i + 1 }, { emitEvent: false });
+    }
+
+    // 3) rebuild rows สำหรับตาราง + mark dirty
+    this.rebuildDetailsRowsFromForm();
+    this.categoryDetailsFG.markAsDirty();
+    this.formDetails.markAsDirty();
+  }
+
   ngOnDestroy() {
+    this.isProgrammaticUpdate = true;
+    this.destroy$.next();
+    this.destroy$.complete();
 
     this.formDetails.reset();
     this.categoryRows = [];

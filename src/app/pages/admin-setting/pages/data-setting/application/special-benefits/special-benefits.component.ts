@@ -73,7 +73,7 @@ export class SpecialBenefitsComponent extends BaseGeneralBenefitsComponent<ISpec
       field: '__index',
       type: 'number',
       align: 'center',
-      width: '40px',
+      width: '5%',
     },
     {
       header: 'Soecial Benefits',
@@ -84,7 +84,8 @@ export class SpecialBenefitsComponent extends BaseGeneralBenefitsComponent<ISpec
       header: 'Status',
       field: 'status',
       type: 'toggle',
-      align: 'center'
+      align: 'center',
+      width: '15%',
     },
     {
       header: 'Action',

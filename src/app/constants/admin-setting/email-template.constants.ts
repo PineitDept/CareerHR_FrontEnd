@@ -20,7 +20,7 @@ export const defaultColumns = (): Columns => ([
     field: '__index',
     type: 'number',
     align: 'center',
-    width: '40px',
+    width: '5%',
   },
   {
     header: 'Email Template Name',
@@ -50,10 +50,40 @@ export const defaultColumnsAttribute = (): Columns => ([
     field: '__index',
     type: 'number',
     align: 'center',
-    width: '40px',
+    width: '5%',
   },
   {
     header: 'Email Attribute Name',
+    field: 'subject',
+    type: 'text',
+  },
+  {
+    header: 'Status',
+    field: 'activeStatus',
+    type: 'toggle',
+    align: 'center',
+    width: '10%'
+  },
+  {
+    header: 'Action',
+    field: 'textlink',
+    type: 'textlink',
+    align: 'center',
+    width: '15%',
+    textlinkActions: ['view'],
+  }
+]);
+
+export const defaultColumnsPolicy = (): Columns => ([
+  {
+    header: 'No.',
+    field: '__index',
+    type: 'number',
+    align: 'center',
+    width: '5%',
+  },
+  {
+    header: 'Policy Name',
     field: 'subject',
     type: 'text',
   },

@@ -16,7 +16,7 @@ export class GeneralBenefitsService {
   constructor(private api: ApiService) {}
 
   // Set API base path depending on the benefit type
-  setBenefitType(type: 'general-benefits' | 'special-benefits' | 'computer-skills' | 'langauge-skills' | 'university') {
+  setBenefitType(type: 'general-benefits' | 'special-benefits' | 'computer-skills' | 'language-skills' | 'university') {
     switch (type) {
       case 'general-benefits':
         this.base = 'InfoWelfareBenefit/info-welfare-benefits';
@@ -27,7 +27,7 @@ export class GeneralBenefitsService {
       case 'computer-skills':
         this.base = 'ComputerSkill/cp-skills';
         break;
-      case 'langauge-skills':
+      case 'language-skills':
         this.base = 'Language/languages';
         break;
       case 'university':
