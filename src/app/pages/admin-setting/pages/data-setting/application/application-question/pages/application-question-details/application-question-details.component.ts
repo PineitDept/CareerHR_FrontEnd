@@ -1086,40 +1086,59 @@ export class ApplicationQuestionDetailsComponent {
 
   onInlineSave(payload: any) {
     this.isAddingRow = false;
-    console.log('Inline save payload:', payload);
 
+    // 1) เก็บ sort เดิมทั้งหมด
+    const existingSorts = (this.detailsFA.getRawValue() as CategoryDetailForm[])
+      .map(r => Number(r.sort))
+      .filter(n => Number.isFinite(n) && n > 0);
+
+    const maxSort = existingSorts.length ? Math.max(...existingSorts) : 0;
+
+    // 2) อ่านค่าที่ผู้ใช้กรอก แล้วคำนวณ finalSort ตามกติกา
+    const req = Number(payload.sort);
+    let finalSort = Number.isFinite(req) && req >= 1 ? req : maxSort + 1; // ถ้ากรอกไม่ดี → ท้ายสุด
+
+    if (existingSorts.includes(finalSort)) {
+      finalSort = maxSort + 1; // ถ้าซ้ำ → ท้ายสุด
+    }
+    if (finalSort > maxSort + 1) {
+      finalSort = maxSort + 1; // ถ้ามากเกิน → ท้ายสุด
+    }
+
+    // 3) map scoring
     const scoring: 1 | 2 | null =
       payload.scoringMethod === 'Reverse' ? 2 :
       payload.scoringMethod === 'Normal'  ? 1 :
       (payload.scoringMethod === 2 || payload.scoringMethod === '2') ? 2 :
       (payload.scoringMethod === 1 || payload.scoringMethod === '1') ? 1 :
-      1; // default Normal
+      1;
 
-    // 1) แปลงค่าจาก payload ให้ตรงกับโครงสร้างฟอร์ม
-    const normalized = {
+    // 4) เตรียมข้อมูล
+    const normalized: CategoryDetailForm = {
       id: payload.id ?? null,
       questionTH: (payload.questionTH ?? '').trim(),
       questionEN: (payload.questionEN ?? '').trim(),
-      sort: payload.sort !== undefined && payload.sort !== null ? Number(payload.sort) : null,
-      // รองรับทั้ง activeStatus แบบ boolean และ status แบบ 1/2
+      sort: finalSort,
       activeStatus: payload.activeStatus ?? (payload.status === 1),
       scoringMethod: scoring,
     };
 
-    // 2) push เข้า FormArray (source of truth)
-    this.detailsFA.push(
-      this.fb.group<CategoryDetailForm>(normalized as any)
-      // หรือใช้ this.buildDetailFG({ ...normalized, status: normalized.activeStatus ? 1 : 2 })
-    );
+    // 5) คำนวณตำแหน่งแทรกตาม sort (default = ท้ายสุด)
+    let insertAt = this.detailsFA.length;
+    if (finalSort <= maxSort) {
+      const rows = (this.detailsFA.getRawValue() as CategoryDetailForm[]);
+      const idx = rows.findIndex(r => Number(r.sort) >= finalSort);
+      insertAt = idx === -1 ? this.detailsFA.length : idx;
+    }
 
-    // 3) rebuild rows ให้ตารางอัปเดต
+    // 6) แทรกลง FormArray
+    this.detailsFA.insert(insertAt, this.fb.group<CategoryDetailForm>(normalized as any), { emitEvent: false });
+
+    // 7) อัปเดตตาราง + mark dirty
     this.rebuildDetailsRowsFromForm();
-
-    // 4) ทำให้ฟอร์มรู้ว่ามีการเปลี่ยน (ปุ่ม Save จะ enabled)
     this.categoryDetailsFG.markAsDirty();
     this.formDetails.markAsDirty();
 
-    // 5) (ออปชัน) เลื่อนลงล่างให้เห็นแถวใหม่ทันที
     setTimeout(() => {
       try {
         this.categoryDetailsTable?.tableWrapperRef?.nativeElement?.scrollTo({
