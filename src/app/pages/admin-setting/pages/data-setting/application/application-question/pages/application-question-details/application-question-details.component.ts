@@ -197,7 +197,7 @@ export class ApplicationQuestionDetailsComponent {
     this.formDetails = this.fb.group({
       // ส่วนหัว (ซ้าย/ขวา)
       categoryType: this.fb.group({
-        CategoryTypeName: [''],
+        CategoryTypeName: [{ value: '', disabled: true }],
         activeStatus: [true],
       }),
 
@@ -608,6 +608,10 @@ export class ApplicationQuestionDetailsComponent {
     if (this.isEnabledCardDetails && !this.isAddMode && !this.isEditDetails) {
       this.categoryDetailsFG.disable({ emitEvent: false });
     }
+
+    // บังคับให้ CategoryTypeName ยัง disabled เสมอ
+    this.formDetails.get('categoryType.CategoryTypeName')
+      ?.disable({ emitEvent: false });
 
     this.setActionButtons('edit');
     // ถ้าเข้าเพราะผู้ใช้กด Edit → รอให้มีการแก้ก่อนถึง enable Save
