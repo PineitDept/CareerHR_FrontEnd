@@ -10,13 +10,16 @@ export class EmailTemplateService {
 
   constructor(private apiService: ApiService) {}
 
-  setEMailType(type: 'email-template' | 'email-attribute') {
+  setEMailType(type: 'email-template' | 'email-attribute' | 'content-policy') {
     switch (type) {
       case 'email-template':
         this.base = 'EmailSettings/mail-management';
         break;
       case 'email-attribute':
         this.base = 'AttributeMailSettings/attribute-based';
+        break;
+      case 'content-policy':
+        this.base = 'ContentPolicy/policies';
         break;
       default:
         throw new Error(`Unknown email type: ${type}`);

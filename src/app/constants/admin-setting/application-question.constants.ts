@@ -11,6 +11,7 @@ export const defaultColumns = (): Columns => ([
     field: 'no',
     type: 'text',
     align: 'center',
+    width: '10%',
   },
   {
     header: 'Category Type',
@@ -22,6 +23,7 @@ export const defaultColumns = (): Columns => ([
     field: 'activeStatus',
     type: 'toggle',
     align: 'center',
+    width: '15%',
   },
   {
     header: 'Action',

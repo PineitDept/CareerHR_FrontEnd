@@ -19,6 +19,7 @@ import { UniversityComponent } from './pages/data-setting/application/university
 import { EmailTemplateDetailsComponent } from './pages/data-setting/application/email/email-template/pages/email-template-details/email-template-details.component';
 import { PendingDraftsGuard } from '../../guards/pending-draft.guard';
 import { EmailAttributeDetailsComponent } from './pages/data-setting/application/email/email-attribute/pages/email-attribute-details/email-attribute-details.component';
+import { WebPolicyDetailsComponent } from './pages/data-setting/application/web-policy/pages/web-policy-details/web-policy-details.component';
 
 const routes: Routes = [
   {
@@ -48,6 +49,10 @@ const routes: Routes = [
       {
         path: 'data-setting/application/web-policy',
         component: WebPolicyComponent
+      },
+      {
+        path: 'data-setting/application/web-policy/details',
+        component: WebPolicyDetailsComponent
       },
       {
         path: 'data-setting/application/general-benefits',

@@ -76,26 +76,29 @@ export class UserWebComponent extends BaseUserWebComponent {
       header: 'No',
       field: '__index',
       type: 'number',
-      align: 'center'
+      align: 'center',
+      width: '5%',
     },
     {
       header: 'Employee ID',
       field: 'idEmployee',
       type: 'text',
       align: 'center',
-      sortable: true
+      sortable: true,
+      width: '15%'
     },
     {
       header: 'Username',
       field: 'fullName',
       type: 'text',
-      width: '50%'
+      width: '25%'
     },
     {
       header: 'Status',
       field: 'isActive',
       type: 'toggle',
-      align: 'center'
+      align: 'center',
+      width: '10%'
     },
     {
       header: 'Last Login',

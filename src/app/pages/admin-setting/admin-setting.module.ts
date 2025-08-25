@@ -1,4 +1,4 @@
-import { NgModule } from '@angular/core';
+import { APP_INITIALIZER, NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AdminSettingComponent } from './admin-setting.component';
 import { AdminSettingRoutingModule } from './admin-setting-routing.module';
@@ -22,6 +22,8 @@ import { UniversityComponent } from './pages/data-setting/application/university
 import { QuillModule } from 'ngx-quill';
 import { EmailTemplateDetailsComponent } from './pages/data-setting/application/email/email-template/pages/email-template-details/email-template-details.component';
 import { EmailAttributeDetailsComponent } from './pages/data-setting/application/email/email-attribute/pages/email-attribute-details/email-attribute-details.component';
+import { quillInitFactory } from '../../app.module';
+import { WebPolicyDetailsComponent } from './pages/data-setting/application/web-policy/pages/web-policy-details/web-policy-details.component';
 
 @NgModule({
   declarations: [
@@ -42,7 +44,8 @@ import { EmailAttributeDetailsComponent } from './pages/data-setting/application
     LanguageSkillsComponent,
     UniversityComponent,
     EmailTemplateDetailsComponent,
-    EmailAttributeDetailsComponent
+    EmailAttributeDetailsComponent,
+    WebPolicyDetailsComponent
   ],
   imports: [
     CommonModule,
@@ -51,6 +54,9 @@ import { EmailAttributeDetailsComponent } from './pages/data-setting/application
     FormsModule,
     ReactiveFormsModule,
     QuillModule.forRoot()
-  ]
+  ],
+   providers: [
+    { provide: APP_INITIALIZER, useFactory: quillInitFactory, multi: true },
+  ],
 })
 export class AdminSettingModule { }
