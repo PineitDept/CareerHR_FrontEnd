@@ -77,7 +77,7 @@ export class UniversityComponent extends BaseGeneralBenefitsComponent<IUniversit
       field: '__index',
       type: 'number',
       align: 'center',
-      width: '40px',
+      width: '5%',
     },
     {
       header: 'University',

@@ -73,7 +73,7 @@ export class ComputerSkillsComponent extends BaseGeneralBenefitsComponent<ICompu
       field: '__index',
       type: 'number',
       align: 'center',
-      width: '40px',
+      width: '5%',
     },
     {
       header: 'Computer Skills',

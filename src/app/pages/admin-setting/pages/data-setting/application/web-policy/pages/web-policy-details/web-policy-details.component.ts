@@ -1,18 +1,18 @@
 import { Component } from '@angular/core';
-import { defaultColumns, defaultFilterButtonsDetails } from '../../../../../../../../../../app/constants/admin-setting/email-template.constants';
-import { EmailTemplateService } from '../../../../../../../../../../app/services/admin-setting/email-template/email-template.service';
+import { defaultColumns, defaultFilterButtonsDetails } from '../../../../../../../../../app/constants/admin-setting/email-template.constants';
+import { EmailTemplateService } from '../../../../../../../../../app/services/admin-setting/email-template/email-template.service';
 import { ActivatedRoute } from '@angular/router';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
-import { AlertDialogComponent } from '../../../../../../../../../shared/components/dialogs/alert-dialog/alert-dialog.component';
+import { AlertDialogComponent } from '../../../../../../../../../app/shared/components/dialogs/alert-dialog/alert-dialog.component';
 import { MatDialog } from '@angular/material/dialog';
-import { NotificationService } from '../../../../../../../../../shared/services/notification/notification.service';
+import { NotificationService } from '../../../../../../../../shared/services/notification/notification.service';
 
 @Component({
-  selector: 'app-email-template-details',
-  templateUrl: './email-template-details.component.html',
-  styleUrls: ['./email-template-details.component.scss']
+  selector: 'app-web-policy-details',
+  templateUrl: './web-policy-details.component.html',
+  styleUrl: './web-policy-details.component.scss'
 })
-export class EmailTemplateDetailsComponent {
+export class WebPolicyDetailsComponent {
   isEditing = false;
   private initialSnapshot: any = null;
 
@@ -60,15 +60,9 @@ export class EmailTemplateDetailsComponent {
   ngOnInit() {
     this.initializeForm();
 
-    // this.route.queryParams.subscribe(params => {
-    //   this.EmailID = params['id'] || '';
-    //   this.EmailSubject = params['subject'] || '';
-
-    //   if (this.EmailID) this.fetchEmailIDsDetails();
-    // });
-    this.emailTemplateService.setEMailType('email-template');
+    this.emailTemplateService.setEMailType('content-policy');
      this.route.queryParams.subscribe(params => {
-      this.EmailID = params['id'] || '';      
+      this.EmailID = params['id'] || '';
       this.fetchEmailIDsDetails();
     });
 
@@ -121,8 +115,8 @@ export class EmailTemplateDetailsComponent {
     this.emailTemplateService.getEmailTemplateById(this.EmailID).subscribe({
       next: (response) => {
         this.formDetails.patchValue({
-          subject: response[0].subject,
-          emailContent: response[0].message || ''
+          subject: response.subject,
+          emailContent: response.message || ''
         }, { emitEvent: false });
         this.initialSnapshot = this.formDetails.getRawValue();
         this.questionSet = response ?? [];
@@ -318,5 +312,4 @@ export class EmailTemplateDetailsComponent {
 
     return container.innerHTML;
   }
-
 }
