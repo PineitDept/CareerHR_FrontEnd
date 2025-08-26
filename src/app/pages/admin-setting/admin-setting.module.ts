@@ -24,6 +24,8 @@ import { EmailTemplateDetailsComponent } from './pages/data-setting/application/
 import { EmailAttributeDetailsComponent } from './pages/data-setting/application/email/email-attribute/pages/email-attribute-details/email-attribute-details.component';
 import { quillInitFactory } from '../../app.module';
 import { WebPolicyDetailsComponent } from './pages/data-setting/application/web-policy/pages/web-policy-details/web-policy-details.component';
+import { ReasonComponent } from './pages/data-setting/application/reason/reason.component';
+import { ReasonDetailsComponent } from './pages/data-setting/application/reason/pages/reason-details/reason-details.component';
 
 @NgModule({
   declarations: [
@@ -45,7 +47,9 @@ import { WebPolicyDetailsComponent } from './pages/data-setting/application/web-
     UniversityComponent,
     EmailTemplateDetailsComponent,
     EmailAttributeDetailsComponent,
-    WebPolicyDetailsComponent
+    WebPolicyDetailsComponent,
+    ReasonComponent,
+    ReasonDetailsComponent
   ],
   imports: [
     CommonModule,
