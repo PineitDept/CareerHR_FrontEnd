@@ -1,1 +1,363 @@
-<p>job-position-detalis works!</p>
+<div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
+    <app-header-content [headerName]="'Job Position Details'" [headerType]="''"></app-header-content>
+</div>
+<app-loading></app-loading>
+
+<app-filter [filterDynamicButton]="true" [actionButtons]="filterButtons" (buttonClicked)="onFilterButtonClick($event)"
+    [disabledKeys]="disabledKeys"></app-filter>
+
+
+<form [formGroup]="formDetails">
+    <div class="tw-grid tw-grid-cols-3 tw-gap-6 tw-px-6 tw-py-4 tw-bg-[#FFFFFF]">
+        <!-- Left Panel -->
+        <div
+            class="tw-col-span-2 tw-row-span-2 tw-space-y-4 tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+            <div>
+                <label class="tw-text-lg tw-font-bold">Position Detail</label>
+                <hr class="tw--mx-6 tw-mt-4">
+            </div>
+
+            <div>
+                <div class="tw-mb-1.5">
+                    <label class="tw-text-sm tw-font-semibold">Job Position <span class="text-red">*</span></label>
+                </div>
+                <input type="text"
+                    class="tw-w-full tw-bg-[#FFFFFF] tw-border tw-border-[#CED4DA] tw-rounded-lg tw-px-4 tw-py-2 tw-text-sm"
+                    [ngClass]="!isEditing ? 'isDisabled' : ''" formControlName="namePosition" />
+            </div>
+
+            <div class="tw-flex tw-w-full tw-gap-6">
+                <div class="tw-flex-1">
+                    <div class="tw-mb-1.5">
+                        <label class="tw-text-sm tw-font-semibold">Education <span class="text-red">*</span></label>
+                    </div>
+                    <input type="text"
+                        class="tw-w-full tw-bg-[#FFFFFF] tw-border tw-border-[#CED4DA] tw-rounded-lg tw-px-4 tw-py-2 tw-text-sm"
+                        [ngClass]="!isEditing ? 'isDisabled' : ''" formControlName="education" />
+
+                    <!-- <div class="tw-relative">
+                        <button cdkOverlayOrigin #origin="cdkOverlayOrigin"
+                            class="dropdown-button tw-border tw-border-gray-300 tw-rounded-md tw-px-3 tw-py-1 tw-w-full tw-text-sm tw-flex tw-items-center tw-justify-between tw-truncate tw-transition-all tw-duration-200 hover:tw-border-gray-400"
+                            [id]="'dropdown-button-' + i + '-' + column.field"
+                            (click)="toggleDropdown(i, column.field, origin, $event)"
+                            [attr.aria-expanded]="isDropdownOpen(i, column.field)" 
+                            [ngClass]="[isDisabledForm ? 'tw-bg-gray-100' : 'tw-bg-white']">
+                            <span class="tw-text-left tw-w-full tw-truncate"
+                                [class.tw-text-gray-400]="!getCellValue(row, column.field)">
+                                {{ getCellValue(row, column.field) || 'Select' }}
+                            </span>
+                            <app-icon name="chevron-down" [size]="16" fill="currentColor"
+                                [extraClass]="'tw-ml-2 tw-flex-shrink-0 tw-transition-transform tw-duration-200 ' + (isDropdownOpen(i, column.field) ? 'tw-rotate-180' : '')">
+                            </app-icon>
+                        </button>
+                    </div> -->
+
+
+                </div>
+                <div class="tw-flex-1">
+                    <div class="tw-mb-1.5">
+                        <label class="tw-text-sm tw-font-semibold">Working Details <span
+                                class="text-red">*</span></label>
+                    </div>
+                    <input type="text"
+                        class="tw-w-full tw-bg-[#FFFFFF] tw-border tw-border-[#CED4DA] tw-rounded-lg tw-px-4 tw-py-2 tw-text-sm"
+                        [ngClass]="!isEditing ? 'isDisabled' : ''" formControlName="workingDetails" />
+                </div>
+            </div>
+
+            <div class="tw-flex tw-w-full tw-gap-6">
+                <div class="tw-flex-1">
+                    <div class="tw-mb-1.5">
+                        <label class="tw-text-sm tw-font-semibold">Min Experience <span
+                                class="text-red">*</span></label>
+                    </div>
+                    <input type="text"
+                        class="tw-w-full tw-bg-[#FFFFFF] tw-border tw-border-[#CED4DA] tw-rounded-lg tw-px-4 tw-py-2 tw-text-sm"
+                        [ngClass]="!isEditing ? 'isDisabled' : ''" formControlName="minExperience" />
+                </div>
+                <div class="tw-flex-1">
+                    <div class="tw-mb-1.5">
+                        <label class="tw-text-sm tw-font-semibold">Max Experience <span
+                                class="text-red">*</span></label>
+                    </div>
+                    <input type="text"
+                        class="tw-w-full tw-bg-[#FFFFFF] tw-border tw-border-[#CED4DA] tw-rounded-lg tw-px-4 tw-py-2 tw-text-sm"
+                        [ngClass]="!isEditing ? 'isDisabled' : ''" formControlName="maxExperience" />
+                </div>
+            </div>
+
+            <div class="tw-flex tw-w-full tw-gap-6">
+                <div class="tw-flex-1">
+                    <div class="tw-mb-1.5">
+                        <label class="tw-text-sm tw-font-semibold">Min Salary <span class="text-red">*</span></label>
+                    </div>
+                    <input type="text"
+                        class="tw-w-full tw-bg-[#FFFFFF] tw-border tw-border-[#CED4DA] tw-rounded-lg tw-px-4 tw-py-2 tw-text-sm"
+                        [ngClass]="!isEditing ? 'isDisabled' : ''" formControlName="minSalary" />
+                </div>
+                <div class="tw-flex-1">
+                    <div class="tw-mb-1.5">
+                        <label class="tw-text-sm tw-font-semibold">Max Salary <span class="text-red">*</span></label>
+                    </div>
+                    <input type="text"
+                        class="tw-w-full tw-bg-[#FFFFFF] tw-border tw-border-[#CED4DA] tw-rounded-lg tw-px-4 tw-py-2 tw-text-sm"
+                        [ngClass]="!isEditing ? 'isDisabled' : ''" formControlName="maxSalary" />
+                </div>
+            </div>
+
+
+            <div class="tw-mb-1.5">
+                <label class="tw-text-sm tw-font-semibold">Max Salary <span class="text-red">*</span></label>
+            </div>
+            <div class="tw-flex tw-w-full tw-gap-6 !tw-mt-0" [ngClass]="isDisabled ? 'tw-pointer-events-none' : ''">
+
+                <label class="tw-flex tw-items-center" *ngFor="let loc of locationsList">
+                    <input class="tw-accent-blue-500/25 tw-relative tw-top-[1px]" type="checkbox" [disabled]="isDisabled" [checked]="locationsCtrl.value.includes(loc.id)"
+                        (change)="onLocationToggle(loc.id, $any($event.target).checked)" />
+                    <span class="tw-text-sm tw-ml-2">{{ loc.name }}</span>
+                </label>
+
+            </div>
+        </div>
+
+        <!-- Right Panel -->
+        <div class="tw-col-span-1 tw-space-y-6">
+            <div (click)="toggleQuality()"
+                class="tw-space-y-4 tw-bg-[#55AAFF] hover:tw-bg-[#478ed5] tw-p-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-cursor-pointer tw-transition-all"
+                [ngClass]="!isEditing ? 'tw-pointer-events-none tw-opacity-80' : ''">
+                <div class="tw-flex tw-flex-col tw-gap-y-2">
+                    <div class="tw-flex tw-items-center tw-gap-4">
+                        <app-icon [name]="'user-multiple'" [size]="48" extraClass="tw-text-white"></app-icon>
+                        <div>
+                            <p class="tw-text-sm tw-text-white">Quality</p>
+                            <p class="tw-text-3xl tw-font-bold tw-text-white">{{ formDetails.get('qualityPst')?.value }}
+                                Position</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="tw-space-y-4 tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+                <div>
+                    <label class="tw-text-lg tw-font-bold">Activation Status</label>
+                    <hr class="tw--mx-6 tw-mt-4">
+                </div>
+
+                <div class="tw-flex tw-flex-col tw-gap-y-2">
+                    <div class="tw-flex tw-items-center tw-gap-3">
+                        <input id="activeStatus" type="checkbox" class="tw-sr-only tw-peer"
+                            formControlName="activeStatus" role="switch"
+                            [attr.aria-checked]="formDetails.value.activeStatus ? 'true' : 'false'"
+                            aria-labelledby="activeStatusLabel" />
+
+                        <div class="tw-relative tw-w-11 tw-h-6 tw-cursor-pointer tw-rounded-full tw-transition-colors
+                        tw-bg-gray-200 peer-checked:tw-bg-[#00AA00]
+                        after:tw-content-[''] after:tw-absolute after:tw-top-[2px] after:tw-start-[2px]
+                        after:tw-bg-white after:tw-rounded-full after:tw-h-5 after:tw-w-5 after:tw-transition-all
+                        peer-checked:after:tw-translate-x-full rtl:peer-checked:after:tw--translate-x-full"
+                            (click)="onUserToggleRequested($event)" tabindex="0" (keyup.enter)="onUserToggleRequested()"
+                            (keyup.space)="onUserToggleRequested($event)" aria-controls="activeStatus"
+                            [ngClass]="!isEditing ? 'isDisabled tw-opacity-40' : ''">
+                        </div>
+
+                        <span id="activeStatusLabel" class="tw-text-sm tw-font-semibold">Active</span>
+                    </div>
+
+                    <p class="tw-text-sm tw-text-gray-500">
+                        Select to activate this category type.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="tw-col-span-3">
+            <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-mt-2">
+
+                <div class="tw-flex tw-items-center tw-justify-between">
+                    <label class="tw-text-lg tw-font-bold">Responsibilities</label>
+
+                    <button type="button" (click)="onAddQuestionClicked(ResponsibilitiesTable, 'resp')" class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-azure hover:bg-azure-dark
+                            tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
+                            tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-azure focus-visible:ring-azure"
+                        [ngClass]="{
+                        'tw-pointer-events-none tw-opacity-50': !isEditing && !isAddMode
+                    }" aria-label="Add Question" *ngIf="!isViewMode">
+                        <app-icon [name]="'plus'" [size]="18" extraClass="tw-text-white"></app-icon>
+                        <span class="tw-font-semibold">Add</span>
+                    </button>
+                </div>
+                <hr class="tw--mx-6 tw-mt-4">
+                <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
+                    <app-tables #ResponsibilitiesTable [rows]="responsibilitiesRows" [columns]="responsibilitiesColumns"
+                        [showCheckbox]="false" [splitRows]="false" [hasOverflowY]="false" [enableRowClick]="false"
+                        [withinCard]="true" (toggleChange)="onToggleChangeDetails($event)" [isDisabledForm]="isDisabled"
+                        [isAddMode]="addState.resp"
+                        (createInlineSave)="onInlineSave($event, 'resp', ResponsibilitiesTable)"
+                        (createInlineCancel)="onInlineCancel('resp')" [fieldErrors]="fieldErrors"
+                        [highlightRowIndex]="duplicateRowIndex" (deleteRowClicked)="onDeleteRowClicked($event, 'resp')"
+                        (editClicked)="handleEditRow($event)" [isConfirmDialogSaveRequired]="true"
+                        [draggableRows]="!isDisabled"></app-tables>
+                </div>
+            </div>
+        </div>
+
+        <div class="tw-col-span-3">
+            <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-mt-2">
+
+                <div class="tw-flex tw-items-center tw-justify-between">
+                    <label class="tw-text-lg tw-font-bold">Requirements</label>
+
+                    <button type="button" (click)="onAddQuestionClicked(RequirementsTable, 'req')" class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-azure hover:bg-azure-dark
+                            tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
+                            tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-azure focus-visible:ring-azure"
+                        [ngClass]="{
+                        'tw-pointer-events-none tw-opacity-50': !isEditing && !isAddMode
+                    }" aria-label="Add Question" *ngIf="!isViewMode">
+                        <app-icon [name]="'plus'" [size]="18" extraClass="tw-text-white"></app-icon>
+                        <span class="tw-font-semibold">Add</span>
+                    </button>
+                </div>
+                <hr class="tw--mx-6 tw-mt-4">
+                <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
+                    <app-tables #RequirementsTable [rows]="requirementsRows" [columns]="requirementsColumns"
+                        [showCheckbox]="false" [splitRows]="false" [hasOverflowY]="false" [enableRowClick]="false"
+                        [withinCard]="true" (toggleChange)="onToggleChangeDetails($event)" [isDisabledForm]="isDisabled"
+                        [isAddMode]="addState.req" (createInlineSave)="onInlineSave($event, 'req', RequirementsTable)"
+                        (createInlineCancel)="onInlineCancel('req')" [fieldErrors]="fieldErrors"
+                        [highlightRowIndex]="duplicateRowIndex" (deleteRowClicked)="onDeleteRowClicked($event, 'req')"
+                        (editClicked)="handleEditRow($event)" [isConfirmDialogSaveRequired]="true"
+                        [draggableRows]="!isDisabled"></app-tables>
+                </div>
+            </div>
+        </div>
+
+        <div class="tw-col-span-3">
+            <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-mt-2">
+
+                <div class="tw-flex tw-items-center tw-justify-between">
+                    <label class="tw-text-lg tw-font-bold">Preferred Skills</label>
+
+                    <button type="button" (click)="onAddQuestionClicked(PreferredSkillsTable, 'pref')" class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-azure hover:bg-azure-dark
+                            tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
+                            tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-azure focus-visible:ring-azure"
+                        [ngClass]="{
+                        'tw-pointer-events-none tw-opacity-50': !isEditing && !isAddMode
+                    }" aria-label="Add Question" *ngIf="!isViewMode">
+                        <app-icon [name]="'plus'" [size]="18" extraClass="tw-text-white"></app-icon>
+                        <span class="tw-font-semibold">Add</span>
+                    </button>
+                </div>
+                <hr class="tw--mx-6 tw-mt-4">
+                <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
+                    <app-tables #PreferredSkillsTable [rows]="preferredSkillsRows" [columns]="preferredSkillsColumn"
+                        [showCheckbox]="false" [splitRows]="false" [hasOverflowY]="false" [enableRowClick]="false"
+                        [withinCard]="true" (toggleChange)="onToggleChangeDetails($event)" [isDisabledForm]="isDisabled"
+                        [isAddMode]="addState.pref"
+                        (createInlineSave)="onInlineSave($event, 'pref', PreferredSkillsTable)"
+                        (createInlineCancel)="onInlineCancel('pref')" [fieldErrors]="fieldErrors"
+                        [highlightRowIndex]="duplicateRowIndex" (deleteRowClicked)="onDeleteRowClicked($event, 'pref')"
+                        (editClicked)="handleEditRow($event)" [isConfirmDialogSaveRequired]="true"
+                        [draggableRows]="!isDisabled"></app-tables>
+                </div>
+            </div>
+        </div>
+
+        <div class="tw-col-span-3">
+            <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-mt-2">
+
+                <div class="tw-flex tw-items-center tw-justify-between">
+                    <label class="tw-text-lg tw-font-bold">Setting Welfare Benefits</label>
+
+                    <!-- <button
+                    type="button"
+                    (click)="onAddQuestionClicked(PreferredSkillsTable, 'pref')"
+                    class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-azure hover:bg-azure-dark
+                            tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
+                            tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-azure focus-visible:ring-azure"
+                    [ngClass]="{
+                        'tw-pointer-events-none tw-opacity-50': !isEditing && !isAddMode
+                    }"
+                    aria-label="Add Question"
+                    *ngIf="!isViewMode">
+                    <app-icon [name]="'plus'" [size]="18" extraClass="tw-text-white"></app-icon>
+                    <span class="tw-font-semibold">Add</span>
+                </button> -->
+                </div>
+                <hr class="tw--mx-6 tw-mt-4">
+                <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden tw-p-6">
+                    <app-dual-listbox [items]="settingWelfareBenefits" [valueField]="'item'"
+                        [displayField]="'welfareBenefits'" [leftTitle]="'Available Options'"
+                        [rightTitle]="'Selected Actions'" [leftFilterPlaceholder]="'Search Available Options'"
+                        [rightFilterPlaceholder]="'Search Selected Options'" [height]="'350px'"
+                        [disabledBox]="!isEditing" formControlName="selectedIdsBenefits"></app-dual-listbox>
+                </div>
+            </div>
+        </div>
+
+        <div class="tw-col-span-3">
+            <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-mt-2">
+
+                <div class="tw-flex tw-items-center tw-justify-between">
+                    <label class="tw-text-lg tw-font-bold">Setting Welfare Benefits</label>
+
+                    <!-- <button
+                    type="button"
+                    (click)="onAddQuestionClicked(PreferredSkillsTable, 'pref')"
+                    class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-azure hover:bg-azure-dark
+                            tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
+                            tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-azure focus-visible:ring-azure"
+                    [ngClass]="{
+                        'tw-pointer-events-none tw-opacity-50': !isEditing && !isAddMode
+                    }"
+                    aria-label="Add Question"
+                    *ngIf="!isViewMode">
+                    <app-icon [name]="'plus'" [size]="18" extraClass="tw-text-white"></app-icon>
+                    <span class="tw-font-semibold">Add</span>
+                </button> -->
+                </div>
+                <hr class="tw--mx-6 tw-mt-4">
+                <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden tw-p-6">
+                    <app-dual-listbox [items]="settingLanguageSkills" [valueField]="'idlanguage'"
+                        [displayField]="'language'" [leftTitle]="'Available Options'" [rightTitle]="'Selected Actions'"
+                        [leftFilterPlaceholder]="'Search Available Options'"
+                        [rightFilterPlaceholder]="'Search Selected Options'" [height]="'350px'"
+                        [disabledBox]="!isEditing" formControlName="selectedIdsLanguage"></app-dual-listbox>
+                </div>
+            </div>
+        </div>
+
+        <div class="tw-col-span-3">
+            <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-mt-2">
+
+                <div class="tw-flex tw-items-center tw-justify-between">
+                    <label class="tw-text-lg tw-font-bold">Setting Computer Skills</label>
+
+                    <!-- <button
+                    type="button"
+                    (click)="onAddQuestionClicked(PreferredSkillsTable, 'pref')"
+                    class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-azure hover:bg-azure-dark
+                            tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
+                            tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-azure focus-visible:ring-azure"
+                    [ngClass]="{
+                        'tw-pointer-events-none tw-opacity-50': !isEditing && !isAddMode
+                    }"
+                    aria-label="Add Question"
+                    *ngIf="!isViewMode">
+                    <app-icon [name]="'plus'" [size]="18" extraClass="tw-text-white"></app-icon>
+                    <span class="tw-font-semibold">Add</span>
+                </button> -->
+                </div>
+                <hr class="tw--mx-6 tw-mt-4">
+                <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden tw-p-6">
+                    <app-dual-listbox [items]="settingComputerSkills" [valueField]="'idcpSkill'"
+                        [displayField]="'nameCpskill'" [leftTitle]="'Available Options'"
+                        [rightTitle]="'Selected Actions'" [leftFilterPlaceholder]="'Search Available Options'"
+                        [rightFilterPlaceholder]="'Search Selected Options'" [height]="'350px'"
+                        [disabledBox]="!isEditing" formControlName="selectedIdsComputer"></app-dual-listbox>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</form>

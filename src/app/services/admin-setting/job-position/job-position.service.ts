@@ -22,7 +22,7 @@ export class JobPositionService {
   }
 
   // ดึงรายการทั้งหมด
-  getAllEmailTemplates(): Observable<any> {
+  getAllJobTemplates(): Observable<any> {
     return this.apiService.get<any>(this.base, {
       withAuth: true,
       loading: true
@@ -30,7 +30,7 @@ export class JobPositionService {
   }
 
   // ดึงรายการเดียวตาม id
-  getEmailTemplateById(id: number | string): Observable<any> {
+  getJobTemplateById(id: number | string): Observable<any> {
     return this.apiService.get<any>(`${this.base}/${id}`, {
       withAuth: true,
       loading: true
@@ -38,10 +38,18 @@ export class JobPositionService {
   }
 
   // แก้ไขรายการ
-  updateEmailTemplate(id: number | string, data: any): Observable<any> {
+  updateJobPosition(id: number | string, data: any): Observable<any> {
     return this.apiService.put<any>(`${this.base}/${id}`, data, {
       withAuth: true,
       loading: true
+    });
+  }
+
+  // PATCH: Toggle Active/Inactive Status
+  toggleStatus(id: number): Observable<any> {
+    return this.apiService.patch(`${this.base}/${id}/toggle-status`, {}, {
+      withAuth: true,
+      loading: true,
     });
   }
 }

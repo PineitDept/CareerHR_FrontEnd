@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Output, ViewChild } from '@angular/core';
 import { defaultColumns, defaultFilterButtons } from '../../../../../../../app/constants/admin-setting/job-position.constants';
 import { JobPositionService } from '../../../../../../../app/services/admin-setting/job-position/job-position.service';
 import { Router } from '@angular/router';
@@ -12,10 +12,13 @@ export class JobPositionComponent {
   rows: any[] = [];
   columns = defaultColumns();
   filterButtons = defaultFilterButtons();
+  isAddingRow = false;
 
   @ViewChild('scrollArea') scrollArea!: ElementRef<HTMLDivElement>;
   hasOverflowY = false;
   private ro?: ResizeObserver;
+    
+  @Output() toggleRequested = new EventEmitter<{ row: any; next: boolean }>();
 
   constructor(
     private jobPositionService: JobPositionService,
@@ -40,7 +43,7 @@ export class JobPositionComponent {
   }
 
   fetchEmailID() {
-    this.jobPositionService.getAllEmailTemplates().subscribe({
+    this.jobPositionService.getAllJobTemplates().subscribe({
       next: (response) => {
         this.rows = (response.items ?? []).map((item: any, idx: number) => ({
           ...item,
@@ -77,5 +80,32 @@ export class JobPositionComponent {
         this.router.navigate(['/admin-setting/data-setting/manpower/job-position/details']);
         break;
     }
+  }
+
+  onToggleChange(e: Event, row: any) {
+    const next = (e.target as HTMLInputElement).checked;
+    (e.target as HTMLInputElement).checked = !next;
+    this.toggleRequested.emit({ row, next });
+  }
+
+  onUserToggleRequested({
+    row,
+    checked,
+    checkbox
+  }: {
+    row: any;
+    checked: boolean;
+    checkbox: HTMLInputElement;
+  }) {
+    this.jobPositionService.toggleStatus(row.idjobPst).subscribe({
+      next: () => {
+        checkbox.checked = checked;
+        if ('isActive' in row) row.isActive = checked;
+        if ('activeStatus' in row) row.activeStatus = checked;
+      },
+      error: () => {
+        console.error('Toggle failed');
+      }
+    });
   }
 }

@@ -75,6 +75,7 @@ export class TablesComponent
   @Input() isToggleAlert: boolean = false;
   @Input() isDisabledForm: boolean = false;
   @Input() isZeroOneStatus: boolean = false;
+  @Input() isOnlineStatus: boolean = false;
   @Input() allowViewWhenDisabled: boolean = false;
   @Input() requiredFooterFields: string[] = [];
   @Input() draggableRows: boolean = false;

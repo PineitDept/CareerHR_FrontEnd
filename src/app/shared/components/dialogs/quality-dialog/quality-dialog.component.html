@@ -1,0 +1,44 @@
+<div class="tw-text-black">
+    <div class="tw-text-lg tw-font-semibold tw-px-6 tw-pt-4 tw-pb-3">
+        Edit Quality
+    </div>
+
+    <div class="tw-border-t tw-border-[#E3E3E3]"></div>
+
+    <!-- ✅ เพิ่ม form wrapper -->
+    <form [formGroup]="form">
+        <mat-dialog-content>
+            <label class="tw-block tw-text-sm tw-font-bold tw-text-gray-700 tw-mb-2">
+                Quality <span class="tw-text-red-500">*</span>
+            </label>
+
+            <div
+                class="tw-flex tw-items-center tw-rounded-lg tw-overflow-hidden tw-border tw-border-blue-400 tw-w-full">
+                <button type="button"
+                    class="tw-bg-blue-400 tw-text-white tw-w-10 tw-h-8 tw-flex tw-items-center tw-justify-center tw-text-sm"
+                    (click)="decrease()">−</button>
+
+                <input type="number" class="tw-text-center tw-w-full tw-h-8 focus:tw-outline-none"
+                    formControlName="qualityDialog" />
+
+                <button type="button"
+                    class="tw-bg-blue-400 tw-text-white tw-w-10 tw-h-8 tw-flex tw-items-center tw-justify-center tw-text-sm"
+                    (click)="increase()">+</button>
+            </div>
+        </mat-dialog-content>
+    </form>
+
+    <div class="tw-border-t tw-border-gray-300"></div>
+
+    <div class="tw-text-right tw-px-6 tw-pt-3 tw-pb-3">
+        <button *ngIf="data.confirm"
+            class="tw-bg-gray-200 hover:tw-bg-gray-300 tw-text-black tw-font-medium tw-py-1.5 tw-px-5 tw-rounded tw-mr-2"
+            (click)="onCancel()">
+            Cancel
+        </button>
+        <button class="tw-text-white tw-font-medium tw-py-1.5 tw-px-6 tw-rounded" (click)="onConfirm()"
+            [ngClass]="data.confirm ? 'tw-bg-[#00AA55] hover:tw-bg-[#02934a]' : 'tw-bg-[#930000] hover:tw-bg-[#7a0000]'">
+            {{ data.confirm ? 'Confirm' : 'OK' }}
+        </button>
+    </div>
+</div>

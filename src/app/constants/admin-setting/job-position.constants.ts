@@ -58,3 +58,75 @@ export const defaultColumns = (): Columns => ([
     textlinkActions: ['view'],
   }
 ]);
+
+export const ResponsibilitiesColumns = (): Columns => ([
+  {
+      header: 'No.',
+      field: '__index',
+      type: 'number',
+      align: 'center',
+      width: '10%'
+    },
+    {
+      header: 'Details',
+      field: 'message',
+      type: 'text',
+      wrapText: true,
+    },
+    {
+      header: 'Action',
+      field: 'textlink',
+      type: 'textlink',
+      align: 'center',
+      width: '20%',
+      textlinkActions: ['edit-inrow', 'delete']
+    }
+]);
+
+export const RequirementsColumns = (): Columns => ([
+  {
+      header: 'No.',
+      field: '__index',
+      type: 'number',
+      align: 'center',
+      width: '10%'
+    },
+    {
+      header: 'Details',
+      field: 'message',
+      type: 'text',
+      wrapText: true,
+    },
+    {
+      header: 'Action',
+      field: 'textlink',
+      type: 'textlink',
+      align: 'center',
+      width: '20%',
+      textlinkActions: ['edit-inrow', 'delete']
+    }
+]);
+
+export const PreferredSkillsColumn = (): Columns => ([
+  {
+      header: 'No.',
+      field: '__index',
+      type: 'number',
+      align: 'center',
+      width: '10%'
+    },
+    {
+      header: 'Details',
+      field: 'message',
+      type: 'text',
+      wrapText: true,
+    },
+    {
+      header: 'Action',
+      field: 'textlink',
+      type: 'textlink',
+      align: 'center',
+      width: '20%',
+      textlinkActions: ['edit-inrow', 'delete']
+    }
+]);
