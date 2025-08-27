@@ -22,10 +22,14 @@ import {
   OnDestroy,
   signal,
   input,
+  ViewContainerRef,
+  TemplateRef,
 } from '@angular/core';
 import { Column } from '../../interfaces/tables/column.interface';
 import { MatDialog } from '@angular/material/dialog';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
+import { Overlay, OverlayRef, FlexibleConnectedPositionStrategy, ConnectedPosition, ScrollStrategyOptions, CdkOverlayOrigin } from '@angular/cdk/overlay';
+import { TemplatePortal } from '@angular/cdk/portal';
 import { AlertDialogComponent } from '../dialogs/alert-dialog/alert-dialog.component';
 import { FormDialogComponent } from '../dialogs/form-dialog/form-dialog.component';
 import { ApplicationService } from '../../../services/application/application.service';
@@ -37,7 +41,7 @@ export type SortState = {
 
 interface DropdownOverlay {
   visible: boolean;
-  rowIndex: number;
+  rowIndex: number | null; // null = footer
   field: string;
   x: number;
   y: number;
@@ -74,6 +78,8 @@ export class TablesComponent
   @Input() allowViewWhenDisabled: boolean = false;
   @Input() requiredFooterFields: string[] = [];
   @Input() draggableRows: boolean = false;
+  @Input() isConfirmDialogToggleRequired: boolean = false;
+  @Input() isConfirmDialogSaveRequired: boolean = false;
 
   @Output() selectionChanged = new EventEmitter<any[]>();
   @Output() rowClicked = new EventEmitter<any>();
@@ -118,9 +124,22 @@ export class TablesComponent
 
   private destroyRef = inject(DestroyRef);
 
+  @ViewChild('dropdownOverlayTpl', { static: true }) dropdownOverlayTpl!: TemplateRef<any>;
+
+  private overlayRef: OverlayRef | null = null;
+  private positionStrategy!: FlexibleConnectedPositionStrategy;
+
+  overlayPositions: ConnectedPosition[] = [
+    { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 4 },
+    { originX: 'start', originY: 'top',    overlayX: 'start', overlayY: 'bottom', offsetY: -4 },
+  ];
+
   constructor(
     private cdr: ChangeDetectorRef,
     private dialog: MatDialog,
+    private overlay: Overlay,
+    private vcr: ViewContainerRef,
+    private sso: ScrollStrategyOptions,
   ) {
     // ใช้ effect เพื่อ watch การเปลี่ยนแปลงของ rows signal
     effect(() => {
@@ -374,38 +393,47 @@ export class TablesComponent
   }
 
   // FIXED: Dropdown Management
-  toggleDropdown(rowIndex: number, field: string, event?: Event) {
+  toggleDropdown(rowIndex: number, field: string, origin: CdkOverlayOrigin, event?: Event) {
     event?.stopPropagation();
-
-    if (this.isDropdownOpen(rowIndex, field)) {
-      this.dropdownOverlay = null;
-      return;
-    }
-
-    const buttonEl = document.getElementById(
-      `dropdown-button-${rowIndex}-${field}`
-    );
-    const wrapperEl = this.tableWrapperRef?.nativeElement;
-
-    if (!buttonEl || !wrapperEl) return;
-
-    const buttonRect = buttonEl.getBoundingClientRect();
-    const wrapperRect = wrapperEl.getBoundingClientRect();
-
-    const column = this.columns.find((c) => c.field === field);
+    const column = this.columns.find(c => c.field === field);
     if (!column?.options) return;
 
-    this.dropdownOverlay = {
-      visible: true,
-      rowIndex,
-      field,
-      x: buttonRect.left - wrapperRect.left,
-      y: buttonRect.bottom - wrapperRect.top + 4,
-      width: buttonRect.width,
-      options: column.options,
-    };
+    this.openOverlay(origin, { rowIndex, field, options: column.options });
+  }
 
-    this.cdr.detectChanges();
+  private openOverlay(
+    origin: CdkOverlayOrigin,
+    ctx: { rowIndex: number | null; field: string; options: string[] }
+  ) {
+    const width = origin.elementRef.nativeElement.offsetWidth ?? 180;
+
+    if (!this.overlayRef) {
+      this.positionStrategy = this.overlay.position()
+        .flexibleConnectedTo(origin.elementRef)
+        .withPositions(this.overlayPositions)
+        .withFlexibleDimensions(false)
+        .withPush(true)
+        .withViewportMargin(8);
+
+      this.overlayRef = this.overlay.create({
+        positionStrategy: this.positionStrategy,
+        hasBackdrop: true,
+        backdropClass: 'cdk-overlay-transparent-backdrop',
+        scrollStrategy: this.sso.reposition(),
+        panelClass: 'tw-z-[9999]',
+      });
+
+      this.overlayRef.backdropClick().subscribe(() => this.closeOverlay());
+      this.overlayRef.detachments().subscribe(() => this.closeOverlay());
+    } else {
+
+      this.positionStrategy.setOrigin(origin.elementRef);
+      this.overlayRef.updatePosition();
+    }
+
+    const portal = new TemplatePortal(this.dropdownOverlayTpl, this.vcr, { $implicit: null, ctx, width } as any);
+    if (this.overlayRef.hasAttached()) this.overlayRef.detach();
+    this.overlayRef.attach(portal);
   }
 
   isDropdownOpen(rowIndex: number, field: string): boolean {
@@ -427,14 +455,37 @@ export class TablesComponent
     this.cdr.detectChanges();
   }
 
+  toggleFooterDropdown(field: string, origin: CdkOverlayOrigin, event?: Event) {
+    event?.stopPropagation();
+    const column = this.columns.find(c => c.field === field);
+    if (!column?.options) return;
+
+    this.openOverlay(origin, { rowIndex: null, field, options: column.options });
+  }
+
+  isFooterDropdownOpen(field: string): boolean {
+    return this.dropdownOverlay?.rowIndex === null && this.dropdownOverlay?.field === field;
+  }
+
+  selectFooterDropdownOption(field: string, value: string) {
+    this.footerRow[field] = value;
+    // re-validate ถ้าฟิลด์นี้เป็น required
+    if (this.isRequired(field)) this.validateFooterField(field);
+    this.dropdownOverlay = null;
+    this.cdr.detectChanges();
+  }
+
+  private closeOverlay() {
+    if (this.overlayRef?.hasAttached()) this.overlayRef.detach();
+  }
+
   @HostListener('document:click', ['$event'])
   onOutsideClick(event: MouseEvent) {
     const target = event.target as HTMLElement;
-    if (
-      !target.closest('.dropdown-button') &&
-      !target.closest('.dropdown-overlay')
-    ) {
+    if (!target.closest('.dropdown-button') &&
+        !target.closest('.dropdown-overlay')) {
       this.dropdownOverlay = null;
+      this.closeOverlay();
       this.cdr.detectChanges();
     }
   }
@@ -482,7 +533,7 @@ export class TablesComponent
 
     checkbox.checked = !targetStatus;
 
-    if (!row._isNew && !this.isToggleAlert) {
+    if (!row._isNew && !this.isToggleAlert && !this.isConfirmDialogToggleRequired) {
       Promise.resolve().then(() => {
         const container = document.querySelector('.cdk-overlay-container');
         container?.classList.add('dimmed-overlay');
@@ -521,8 +572,8 @@ export class TablesComponent
           autoFocus: false,
           disableClose: true,
           data: {
-            title: 'Please contact the Human Resources Department',
-            message: `For change the status of this item, please contact our Human Resources Department for assistance.`,
+            title: 'Please contact the Information Technology Department',
+            message: `For change the status of this item, please contact our Information Technology Department for assistance.`,
             confirm: false
           }
         });
@@ -575,38 +626,50 @@ export class TablesComponent
   onClickSave(event: Event, row: any): void {
     event.stopPropagation();
 
-    Promise.resolve().then(() => {
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.add('dimmed-overlay');
-    });
+    if (!this.isConfirmDialogSaveRequired) {
+      Promise.resolve().then(() => {
+        const container = document.querySelector('.cdk-overlay-container');
+        container?.classList.add('dimmed-overlay');
+      });
 
-    const dialogRef = this.dialog.open(AlertDialogComponent, {
-      width: '496px',
-      panelClass: 'custom-dialog-container',
-      autoFocus: false,
-      disableClose: true,
-      data: {
-        title: 'Confirmation',
-        message: 'Are you sure you want to change the status of this item?',
-        confirm: true
-      }
-    });
+      const dialogRef = this.dialog.open(AlertDialogComponent, {
+        width: '496px',
+        panelClass: 'custom-dialog-container',
+        autoFocus: false,
+        disableClose: true,
+        data: {
+          title: 'Confirmation',
+          message: 'Are you sure you want to change the status of this item?',
+          confirm: true
+        }
+      });
 
-    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.remove('dimmed-overlay');
+      dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+        const container = document.querySelector('.cdk-overlay-container');
+        container?.classList.remove('dimmed-overlay');
 
-      if (confirmed) {
-        if (this.editingBuffer) Object.assign(row, this.editingBuffer);
+        if (confirmed) {
+          if (this.editingBuffer) Object.assign(row, this.editingBuffer);
 
-        this.editingRowId = null;
-        this.editRow = false;
-        this.editingBuffer = null;
-        this.cdr.detectChanges();
+          this.editingRowId = null;
+          this.editRow = false;
+          this.editingBuffer = null;
+          this.cdr.detectChanges();
 
-        this.editClicked.emit(row);
-      }
-    });
+          this.editClicked.emit(row);
+        }
+      });
+    } else {
+      if (this.editingBuffer) Object.assign(row, this.editingBuffer);
+
+      this.editingRowId = null;
+      this.editRow = false;
+      this.editingBuffer = null;
+      this.cdr.detectChanges();
+
+      this.editClicked.emit(row);
+      console.log('SaveInline', row);
+    }
   }
 
   onClickCancel(event: Event, row: any): void {
@@ -614,7 +677,7 @@ export class TablesComponent
     this.editingRowId = null;
     // this.editedValue = '';
     this.editRow = false;
-    this.editingBuffer = null; 
+    this.editingBuffer = null;
     console.log('Cancelled edit');
   }
 
@@ -686,29 +749,26 @@ export class TablesComponent
   }
 
   onNumberKeydown(e: KeyboardEvent, field: string) {
-    if (field !== 'sort') return;
+    if (field !== 'sort' && field !== 'scoringMethod') return;
     const blocked = ['e', 'E', '+', '-', '.'];
-    if (blocked.includes(e.key)) e.preventDefault(); // กัน e,+,-,.
+    if (blocked.includes(e.key)) e.preventDefault();
   }
 
   onNumberTyping(e: Event, field: string) {
-    if (field !== 'sort') return;
+    if (field !== 'sort' && field !== 'scoringMethod') return;
     const el = e.target as HTMLInputElement;
-
-    // เก็บไว้เฉพาะตัวเลข อนุญาตสถานะชั่วคราวเป็น '' หรือ '0' เพื่อพิมพ์ 10/20 ได้
     const onlyDigits = el.value.replace(/[^\d]/g, '');
     if (onlyDigits !== el.value) el.value = onlyDigits;
-
     this.footerRow[field] = onlyDigits === '' ? undefined : Number(onlyDigits);
   }
 
   onNumberBlur(e: Event, field: string) {
-    if (field !== 'sort') return;
+    if (field !== 'sort' && field !== 'scoringMethod') return;
     const el = e.target as HTMLInputElement;
     const n = Number(el.value || 0);
     if (!Number.isFinite(n) || n < 1) {
       el.value = '1';
-      this.footerRow[field] = 1; // ค่าขั้นต่ำสุดท้าย
+      this.footerRow[field] = 1;
     }
   }
 
@@ -723,9 +783,7 @@ export class TablesComponent
     const err: Record<string, boolean> = {};
     for (const f of this.requiredFooterFields || []) {
       const v = this.footerRow?.[f];
-
-      // rule ทั่วไป: string ต้องไม่ว่าง / number ต้องเป็นจำนวนบวก
-      if (f === 'sort') {
+      if (f === 'sort' || f === 'scoringMethod') {
         const n = Number(v);
         if (!Number.isFinite(n) || n < 1) err[f] = true;
       } else if (typeof v === 'string') {
@@ -760,12 +818,10 @@ export class TablesComponent
 
   private validateFooterField(field: string): void {
     const v = this.footerRow?.[field];
-
-    // เคลียร์ค่าผลเดิมของฟิลด์นี้ก่อน
     const next = { ...this.footerErrors };
     delete next[field];
 
-    if (field === 'sort') {
+    if (field === 'sort' || field === 'scoringMethod') {
       const n = Number(v);
       if (!Number.isFinite(n) || n < 1) next[field] = true;
     } else {
@@ -775,7 +831,6 @@ export class TablesComponent
         next[field] = true;
       }
     }
-
     this.footerErrors = next;
   }
 

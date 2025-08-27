@@ -21,9 +21,10 @@ type CategoryDetailForm = {
   id: number | string | null;
   questionTH: string;
   questionEN: string;
+  type: string;
   sort: number | null;
   activeStatus: boolean;
-  scoringMethod: 1 | 2 | null;
+  scoringMethod: number | null;
 };
 
 interface DetailsSnapshot {
@@ -32,9 +33,10 @@ interface DetailsSnapshot {
     id: number | string | null;
     questionTH: string;
     questionEN: string;
+    type: string;
     sort: number | null;
     activeStatus: boolean;
-    scoringMethod: 1 | 2 | null;
+    scoringMethod: number | null;
   }>;
 }
 
@@ -96,23 +98,30 @@ export class ApplicationQuestionDetailsComponent {
     }
   ];
 
-  // เก็บ columns พื้นฐาน (คงของเดิมไว้)
   baseCategoryDetailsColumns: Columns = [
     { header: 'No.', field: '__index', type: 'number', align: 'center', width: '4%' },
-    { header: 'Question (TH)', field: 'questionTH', type: 'text', width: '32%', wrapText: true },
-    { header: 'Question (EN)', field: 'questionEN', type: 'text', width: '32%', wrapText: true },
-    { header: 'Row Answer', field: 'sort', type: 'number', align: 'center', width: '10%' },
-    { header: 'Status', field: 'activeStatus', type: 'toggle', align: 'center', width: '7%' },
-    { header: 'Action', field: 'textlink', type: 'textlink', align: 'center', width: '15%', textlinkActions: ['edit-inrow','delete'] },
+    { header: 'Question (TH)', field: 'questionTH', type: 'text', width: '30%', wrapText: true },
+    { header: 'Question (EN)', field: 'questionEN', type: 'text', width: '30%', wrapText: true },
+    { header: 'Type', field: 'type', type: 'select', align: 'center', width: '12%', options: ['Answer', 'Value'] },
+    { header: 'Status', field: 'activeStatus', type: 'toggle', align: 'center', width: '8%' },
+    { header: 'Action', field: 'textlink', type: 'textlink', align: 'center', width: '16%', textlinkActions: ['edit-inrow','delete'] },
   ];
 
   scoringColumnDef: Column = {
     header: 'Scoring Method',
     field: 'scoringMethod',
     type: 'select',
-    align: 'center',     // ตรงกับ union type
+    align: 'center',
     width: '12%',
     options: ['Normal', 'Reverse'],
+  };
+
+  category2NumberColumn: Column = {
+    header: 'Row Answer',
+    field: 'scoringMethod',
+    type: 'number',
+    align: 'center',
+    width: '10%',
   };
 
   // ไว้ bind เข้า <app-tables>
@@ -147,6 +156,8 @@ export class ApplicationQuestionDetailsComponent {
   private DIRTY_PREFIX = 'aqd:dirty';
 
   private destroy$ = new Subject<void>();
+
+  detailsRequiredFooterFields: string[] = ['questionTH','questionEN','type'];
 
   constructor(
     private route: ActivatedRoute,
@@ -228,53 +239,76 @@ export class ApplicationQuestionDetailsComponent {
     return this.categoryDetailsFG.disabled;
   }
 
-  // helper: สลับคอลัมน์ตาม categoryId
-  private setColumnsFor(categoryId: number | string | null | undefined) {
-    const cols = [...this.baseCategoryDetailsColumns];
-
-    if (String(categoryId) === '5') {
-      // แทรก "Scoring Method" ที่ตำแหน่งก่อน activeStatus
-      const statusIdx = cols.findIndex(c => c.field === 'activeStatus');
-      if (statusIdx !== -1) {
-        cols.splice(statusIdx, 0, this.scoringColumnDef); // ← แทรกตรงนี้
-      }
-      this.categoryDetailsColumns = cols;
-      this.tableCreateDefaults = { scoringMethod: 'Normal' }; // default footer ตอนเพิ่มแถว
-    } else {
-      this.categoryDetailsColumns = [...this.baseCategoryDetailsColumns];
-      this.tableCreateDefaults = {};
-    }
-  }
-
-  // mapping ความกว้างเมื่อมี scoring
-  private withScoringWidths: Record<string, string> = {
+  // พื้นฐาน (ไม่มี scoringMethod เพิ่มเติม)
+  private baseWithTypeWidths: Record<string, string> = {
     '__index': '4%',
-    'questionTH': '27%',
-    'questionEN': '27%',
-    'sort': '10%',
+    'questionTH': '30%',
+    'questionEN': '30%',
+    'type': '12%',
+    'activeStatus': '8%',
+    'textlink': '16%',
+  };
+
+  // มี scoring แบบ select (categoryId = 5)
+  private withScoringSelectWidths: Record<string, string> = {
+    '__index': '4%',
+    'questionTH': '24%',
+    'questionEN': '24%',
+    'type': '12%',
     'scoringMethod': '12%',
     'activeStatus': '8%',
-    'textlink': '12%',
+    'textlink': '16%',
+  };
+
+  // มี scoring แบบ number (categoryId = 2)
+  private withScoringNumberWidths: Record<string, string> = {
+    '__index': '4%',
+    'questionTH': '26%',
+    'questionEN': '26%',
+    'type': '12%',
+    'scoringMethod': '10%',
+    'activeStatus': '8%',
+    'textlink': '14%',
   };
 
   private applyWidths(cols: Columns, widths: Record<string,string>): Columns {
     return cols.map(c => ({ ...c, width: widths[c.field] ?? c.width }));
   }
 
-  private buildColumnsFor(categoryId: number | string) {
-    if (String(categoryId) === '5') {
-      // สร้างสำเนาคอลัมน์พื้นฐาน แล้วสอด scoring ไว้ก่อน activeStatus
-      const base = [...this.baseCategoryDetailsColumns];
-      const idxStatus = base.findIndex(c => c.field === 'activeStatus');
+  private setColumnsFor(categoryId: number | string | null | undefined) {
+    const id = String(categoryId ?? '');
+    if (id === '5') {
+      const statusIdx = this.baseCategoryDetailsColumns.findIndex(c => c.field === 'activeStatus');
       const withScoring = [
-        ...base.slice(0, idxStatus),
-        this.scoringColumnDef,
-        ...base.slice(idxStatus),
+        ...this.baseCategoryDetailsColumns.slice(0, statusIdx),
+        this.scoringColumnDef,                      // select Normal/Reverse
+        ...this.baseCategoryDetailsColumns.slice(statusIdx),
       ];
-      this.categoryDetailsColumns = this.applyWidths(withScoring, this.withScoringWidths);
-    } else {
-      this.categoryDetailsColumns = this.baseCategoryDetailsColumns;
+      this.categoryDetailsColumns = this.applyWidths(withScoring, this.withScoringSelectWidths);
+      this.tableCreateDefaults = { type: 'Answer', scoringMethod: 'Normal' };
+      this.detailsRequiredFooterFields = ['questionTH','questionEN','type']; // มี default ให้ scoring แล้ว
+      return;
     }
+    if (id === '2') {
+      const statusIdx = this.baseCategoryDetailsColumns.findIndex(c => c.field === 'activeStatus');
+      const withNumber = [
+        ...this.baseCategoryDetailsColumns.slice(0, statusIdx),
+        this.category2NumberColumn,                 // number (>=1, อนุญาตซ้ำ)
+        ...this.baseCategoryDetailsColumns.slice(statusIdx),
+      ];
+      this.categoryDetailsColumns = this.applyWidths(withNumber, this.withScoringNumberWidths);
+      this.tableCreateDefaults = { type: 'Answer', scoringMethod: 1 };
+      this.detailsRequiredFooterFields = ['questionTH','questionEN','type','scoringMethod'];
+      return;
+    }
+    // default
+    this.categoryDetailsColumns = this.applyWidths([...this.baseCategoryDetailsColumns], this.baseWithTypeWidths);
+    this.tableCreateDefaults = { type: 'Answer' };
+    this.detailsRequiredFooterFields = ['questionTH','questionEN','type'];
+  }
+
+  private buildColumnsFor(categoryId: number | string) {
+    this.setColumnsFor(categoryId);
   }
 
   private buildCategoryFG(c: any) {
@@ -284,15 +318,28 @@ export class ApplicationQuestionDetailsComponent {
       activeStatus: !!c?.isActive,
     } as any);
   }
+
   private buildDetailFG(d: any) {
     return this.fb.group<CategoryDetailForm>({
       id: d?.id ?? null,
       questionTH: d?.questionTH ?? '',
       questionEN: d?.questionEN ?? '',
+      type: (d?.type ?? 'Answer'),                                // default
       sort: d?.sort ?? null,
       activeStatus: d?.status === 1 ? true : false,
-      scoringMethod: this.toScoringUnion(d?.scoringMethod), // default 1(Normal)
+      scoringMethod: this.normalizeScoring(d?.scoringMethod),     // number|null
     } as any);
+  }
+
+  private normalizeScoring(v: any): number | null {
+    if (v === undefined || v === null || v === '') return null;
+    if (typeof v === 'string') {
+      if (v === 'Normal') return 1;
+      if (v === 'Reverse') return 2;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    }
+    return Number.isFinite(Number(v)) ? Number(v) : null;
   }
 
   private setActionButtons(mode: 'view' | 'edit') {
@@ -323,22 +370,25 @@ export class ApplicationQuestionDetailsComponent {
 
   private buildCurrentDetailsView(): DetailsSnapshot {
     const name = (this.categoryDetailsFG.get('CategoryName')?.value || '').trim();
+    const catId = String(this.formDetails.get('selectedCategoryId')?.value ?? '');
 
     const items = (this.categoryDetailsRows || []).map(r => ({
       id: r?.id ?? null,
       questionTH: (r?.questionTH ?? '').trim(),
       questionEN: (r?.questionEN ?? '').trim(),
+      type: (r?.type ?? 'Answer'),
       sort: (r?.sort ?? r?.sort === 0) ? Number(r.sort) : null,
       activeStatus: !!r?.activeStatus,
-      scoringMethod: this.toScoringUnion(r?.scoringMethod),
+      scoringMethod: (catId === '5') ? (r?.scoringMethod === 'Reverse' ? 2 : 1) :
+                    (r?.scoringMethod ?? null),
     }));
 
-    // จัดเรียงเพื่อให้ compare เสถียร
-    items.sort((a, b) =>
-      (Number(a.id) || 0) - (Number(b.id) || 0) ||
+    items.sort((a,b) =>
+      (Number(a.id)||0)-(Number(b.id)||0) ||
       (a.sort ?? 0) - (b.sort ?? 0) ||
       a.questionTH.localeCompare(b.questionTH) ||
-      a.questionEN.localeCompare(b.questionEN)
+      a.questionEN.localeCompare(b.questionEN) ||
+      a.type.localeCompare(b.type)
     );
 
     return { name, items };
@@ -386,9 +436,10 @@ export class ApplicationQuestionDetailsComponent {
       id: number | string | null;
       questionTH: string;
       questionEN: string;
+      type: string;
       sort: number | null;
-      status: 1 | 2;
-      scoringMethod: 1 | 2 | null;
+      status: 1 | 0;
+      scoringMethod: number | null;
     }>;
   }) {
     const cache = this.readDetailsCache();
@@ -553,9 +604,10 @@ export class ApplicationQuestionDetailsComponent {
           id: it.id ?? null,
           questionTH: (it.questionTH ?? '').trim(),
           questionEN: (it.questionEN ?? '').trim(),
+          type: (it.type ?? 'Answer'),
           sort: (it.sort ?? it.sort === 0) ? Number(it.sort) : null,
-          status: it.status, // 1/2 ตามที่คุณเก็บใน cache
-          scoringMethod: this.toScoringUnion(it.scoringMethod) ?? 1,
+          status: it.status,
+          scoringMethod: this.normalizeScoring(it.scoringMethod),
         })),
       });
     }
@@ -674,6 +726,15 @@ export class ApplicationQuestionDetailsComponent {
     // ล้างรายการ dirty ids
     this.clearDirty();
   }
+
+  getCellValue(row: any, field: string): any {
+    if (field === '__index') {
+      // แสดงตาม 'sort' (ไม่ใช่ลำดับ index ของอาร์เรย์)
+      return row?.sort ?? '';
+    }
+    return field.split('.').reduce((obj, key) => obj?.[key], row);
+  }
+
 
   toggleActive(): void {
     Promise.resolve().then(() => {
@@ -805,25 +866,18 @@ export class ApplicationQuestionDetailsComponent {
 
   private rebuildDetailsRowsFromForm() {
     const arr = this.detailsFA.getRawValue() as CategoryDetailForm[];
-    this.categoryDetailsRows = arr.map((it, idx) => ({
+    const catId = String(this.formDetails.get('selectedCategoryId')?.value ?? '');
+    this.categoryDetailsRows = arr.map((it) => ({
       id: it.id,
-      index: idx + 1,
+      // __index จะอ่านจาก row.sort ผ่าน getCellValue()
       questionTH: it.questionTH,
       questionEN: it.questionEN,
+      type: it.type,
       sort: it.sort,
       activeStatus: !!it.activeStatus,
-      scoringMethod: this.scoringLabel(it.scoringMethod),
-      textlinkActions: ['edit-inrow','delete'], // อาจปรับตามสิทธิ์จาก API
+      scoringMethod: (catId === '5') ? (it.scoringMethod === 2 ? 'Reverse' : 'Normal') : it.scoringMethod,
+      textlinkActions: ['edit-inrow','delete'],
     }));
-  }
-
-  private toScoringUnion(v: any): 1 | 2 | null {
-    if (v === 1 || v === '1' || v === 'Normal') return 1;
-    if (v === 2 || v === '2' || v === 'Reverse') return 2;
-    return null;
-  }
-  private scoringLabel(u: 1 | 2 | null): 'Normal' | 'Reverse' | '' {
-    return u === 2 ? 'Reverse' : u === 1 ? 'Normal' : '';
   }
 
   onFilterButtonClick(key: string) {
@@ -872,7 +926,7 @@ export class ApplicationQuestionDetailsComponent {
       };
     } else if (dirtyDetailsList.length > 1) {
       payload.selectedCategoryId = null;
-      payload.categoryDetailsList = dirtyDetailsList; // <-- ✅ หลายหมวด
+      payload.categoryDetailsList = dirtyDetailsList; // <-- หลายหมวด
     } else {
       // ไม่มี draft รายละเอียด ก็ไม่ต้องส่งส่วน details
       payload.selectedCategoryId = null;
@@ -908,9 +962,10 @@ export class ApplicationQuestionDetailsComponent {
       id: d.id ?? null,
       questionTH: (d.questionTH ?? '').trim(),
       questionEN: (d.questionEN ?? '').trim(),
+      type: (d.type ?? 'Answer'),
       sort: (d.sort ?? d.sort === 0) ? Number(d.sort) : null,
-      status: d.activeStatus ? 1 as const : 2 as const,
-      scoringMethod: this.toScoringUnion(d.scoringMethod) ?? 1,
+      status: d.activeStatus ? 1 as const : 0 as const,
+      scoringMethod: this.normalizeScoring(d.scoringMethod),
     }));
 
     // เคส "เพิ่มใหม่": ยังไม่มี selectedCategoryId (null) + อยู่ใน Add mode
@@ -958,9 +1013,16 @@ export class ApplicationQuestionDetailsComponent {
   }
 
   onAddQuestionClicked() {
-    console.log('Add button clicked');
     this.isAddingRow = true;
-    this.categoryDetailsTable.startInlineCreate({ activeStatus: false, status: 0, scoringMethod: 'Normal' }, 'bottom');
+
+    const catId = String(this.formDetails.get('selectedCategoryId')?.value ?? '');
+    if (catId === '5') {
+      this.categoryDetailsTable.startInlineCreate({ activeStatus: false, status: 0, type: 'Answer', scoringMethod: 'Normal' }, 'bottom');
+    } else if (catId === '2') {
+      this.categoryDetailsTable.startInlineCreate({ activeStatus: false, status: 0, type: 'Answer', scoringMethod: 1 }, 'bottom');
+    } else {
+      this.categoryDetailsTable.startInlineCreate({ activeStatus: false, status: 0, type: 'Answer' }, 'bottom');
+    }
   }
 
   onToggleChange(event: Event): void {
@@ -1091,54 +1153,39 @@ export class ApplicationQuestionDetailsComponent {
   onInlineSave(payload: any) {
     this.isAddingRow = false;
 
-    // 1) เก็บ sort เดิมทั้งหมด
+    // ลำดับใหม่ = ท้ายสุดเสมอ (เพราะไม่มี input sort แล้ว)
     const existingSorts = (this.detailsFA.getRawValue() as CategoryDetailForm[])
       .map(r => Number(r.sort))
       .filter(n => Number.isFinite(n) && n > 0);
-
     const maxSort = existingSorts.length ? Math.max(...existingSorts) : 0;
+    const finalSort = maxSort + 1;
 
-    // 2) อ่านค่าที่ผู้ใช้กรอก แล้วคำนวณ finalSort ตามกติกา
-    const req = Number(payload.sort);
-    let finalSort = Number.isFinite(req) && req >= 1 ? req : maxSort + 1; // ถ้ากรอกไม่ดี → ท้ายสุด
+    const catId = String(this.formDetails.get('selectedCategoryId')?.value ?? '');
 
-    if (existingSorts.includes(finalSort)) {
-      finalSort = maxSort + 1; // ถ้าซ้ำ → ท้ายสุด
+    // map scoring (ตามชนิดคอลัมน์)
+    let scoring: number | null = null;
+    if (catId === '5') {
+      scoring = (payload.scoringMethod === 'Reverse' || payload.scoringMethod === 2 || payload.scoringMethod === '2') ? 2 : 1;
+    } else if (catId === '2') {
+      const n = Number(payload.scoringMethod);
+      scoring = (Number.isFinite(n) && n >= 1) ? Math.floor(n) : 1; // default 1, ห้ามติดลบ
+    } else {
+      scoring = null;
     }
-    if (finalSort > maxSort + 1) {
-      finalSort = maxSort + 1; // ถ้ามากเกิน → ท้ายสุด
-    }
 
-    // 3) map scoring
-    const scoring: 1 | 2 | null =
-      payload.scoringMethod === 'Reverse' ? 2 :
-      payload.scoringMethod === 'Normal'  ? 1 :
-      (payload.scoringMethod === 2 || payload.scoringMethod === '2') ? 2 :
-      (payload.scoringMethod === 1 || payload.scoringMethod === '1') ? 1 :
-      1;
-
-    // 4) เตรียมข้อมูล
     const normalized: CategoryDetailForm = {
       id: payload.id ?? null,
       questionTH: (payload.questionTH ?? '').trim(),
       questionEN: (payload.questionEN ?? '').trim(),
+      type: (payload.type ?? 'Answer'),
       sort: finalSort,
       activeStatus: payload.activeStatus ?? (payload.status === 1),
       scoringMethod: scoring,
     };
 
-    // 5) คำนวณตำแหน่งแทรกตาม sort (default = ท้ายสุด)
-    let insertAt = this.detailsFA.length;
-    if (finalSort <= maxSort) {
-      const rows = (this.detailsFA.getRawValue() as CategoryDetailForm[]);
-      const idx = rows.findIndex(r => Number(r.sort) >= finalSort);
-      insertAt = idx === -1 ? this.detailsFA.length : idx;
-    }
+    // แทรกท้าย
+    this.detailsFA.insert(this.detailsFA.length, this.fb.group<CategoryDetailForm>(normalized as any), { emitEvent: false });
 
-    // 6) แทรกลง FormArray
-    this.detailsFA.insert(insertAt, this.fb.group<CategoryDetailForm>(normalized as any), { emitEvent: false });
-
-    // 7) อัปเดตตาราง + mark dirty
     this.rebuildDetailsRowsFromForm();
     this.categoryDetailsFG.markAsDirty();
     this.formDetails.markAsDirty();
@@ -1203,13 +1250,22 @@ export class ApplicationQuestionDetailsComponent {
   }
 
   onSelectChangedDetails(e: { rowIndex: number; field: string; value: string }) {
-    if (e.field !== 'scoringMethod') return;
     const idx = e.rowIndex;
     if (idx < 0 || idx >= this.detailsFA.length) return;
 
-    const numeric = e.value === 'Reverse' ? 2 : 1;
-    this.detailsFA.at(idx).patchValue({ scoringMethod: numeric }, { emitEvent: false });
+    if (e.field === 'scoringMethod') {
+      // ใช้เฉพาะเคส select (cat=5)
+      const numeric = e.value === 'Reverse' ? 2 : 1;
+      this.detailsFA.at(idx).patchValue({ scoringMethod: numeric }, { emitEvent: false });
+      return;
+    }
+
+    if (e.field === 'type') {
+      this.detailsFA.at(idx).patchValue({ type: e.value }, { emitEvent: false });
+      return;
+    }
   }
+
 
   onDetailsRowsReordered(e: { previousIndex: number; currentIndex: number }) {
     const { previousIndex, currentIndex } = e;
