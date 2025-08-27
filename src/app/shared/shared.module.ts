@@ -25,6 +25,9 @@ import { FilterCheckBoxComponent } from './components/filter-check-box/filter-ch
 import { FormDialogComponent } from './components/dialogs/form-dialog/form-dialog.component';
 import { CaptchaDialogComponent } from './components/dialogs/captcha-dialog/captcha-dialog.component';
 import { ConfirmLeaveDialogComponent } from './components/dialogs/confirm-leave-dialog/confirm-leave-dialog.component';
+import { OverlayModule } from '@angular/cdk/overlay';
+import { PortalModule } from '@angular/cdk/portal';
+import { ScrollingModule } from '@angular/cdk/scrolling';
 // import { PurchaseOrderDetailsFormComponent } from './components/forms/purchase-order-details-form/purchase-order-details-form.component';
 
 @NgModule({
@@ -55,7 +58,10 @@ import { ConfirmLeaveDialogComponent } from './components/dialogs/confirm-leave-
     MatFormFieldModule,
     MatInputModule,
     DragDropModule,
-  ],
+    OverlayModule,
+    PortalModule,
+    ScrollingModule,
+],
   exports: [
     HeaderContentComponent,
     HeaderMainComponent,

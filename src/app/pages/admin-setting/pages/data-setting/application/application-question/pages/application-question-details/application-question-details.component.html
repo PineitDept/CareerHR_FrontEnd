@@ -200,7 +200,7 @@
           [highlightRowIndex]="duplicateRowIndex"
           [isZeroOneStatus]="true"
           (deleteRowClicked)="onDeleteRowClicked($event)"
-          [requiredFooterFields]="['questionTH','questionEN','sort']"
+          [requiredFooterFields]="detailsRequiredFooterFields"
           (selectChanged)="onSelectChangedDetails($event)"
           [createDefaults]="tableCreateDefaults"
         ></app-tables>
