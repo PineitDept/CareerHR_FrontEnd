@@ -78,6 +78,8 @@ export class TablesComponent
   @Input() allowViewWhenDisabled: boolean = false;
   @Input() requiredFooterFields: string[] = [];
   @Input() draggableRows: boolean = false;
+  @Input() isConfirmDialogToggleRequired: boolean = false;
+  @Input() isConfirmDialogSaveRequired: boolean = false;
 
   @Output() selectionChanged = new EventEmitter<any[]>();
   @Output() rowClicked = new EventEmitter<any>();
@@ -531,7 +533,7 @@ export class TablesComponent
 
     checkbox.checked = !targetStatus;
 
-    if (!row._isNew && !this.isToggleAlert) {
+    if (!row._isNew && !this.isToggleAlert && !this.isConfirmDialogToggleRequired) {
       Promise.resolve().then(() => {
         const container = document.querySelector('.cdk-overlay-container');
         container?.classList.add('dimmed-overlay');
@@ -570,8 +572,8 @@ export class TablesComponent
           autoFocus: false,
           disableClose: true,
           data: {
-            title: 'Please contact the Human Resources Department',
-            message: `For change the status of this item, please contact our Human Resources Department for assistance.`,
+            title: 'Please contact the Information Technology Department',
+            message: `For change the status of this item, please contact our Information Technology Department for assistance.`,
             confirm: false
           }
         });
@@ -624,38 +626,50 @@ export class TablesComponent
   onClickSave(event: Event, row: any): void {
     event.stopPropagation();
 
-    Promise.resolve().then(() => {
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.add('dimmed-overlay');
-    });
+    if (!this.isConfirmDialogSaveRequired) {
+      Promise.resolve().then(() => {
+        const container = document.querySelector('.cdk-overlay-container');
+        container?.classList.add('dimmed-overlay');
+      });
 
-    const dialogRef = this.dialog.open(AlertDialogComponent, {
-      width: '496px',
-      panelClass: 'custom-dialog-container',
-      autoFocus: false,
-      disableClose: true,
-      data: {
-        title: 'Confirmation',
-        message: 'Are you sure you want to change the status of this item?',
-        confirm: true
-      }
-    });
+      const dialogRef = this.dialog.open(AlertDialogComponent, {
+        width: '496px',
+        panelClass: 'custom-dialog-container',
+        autoFocus: false,
+        disableClose: true,
+        data: {
+          title: 'Confirmation',
+          message: 'Are you sure you want to change the status of this item?',
+          confirm: true
+        }
+      });
 
-    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.remove('dimmed-overlay');
+      dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+        const container = document.querySelector('.cdk-overlay-container');
+        container?.classList.remove('dimmed-overlay');
 
-      if (confirmed) {
-        if (this.editingBuffer) Object.assign(row, this.editingBuffer);
+        if (confirmed) {
+          if (this.editingBuffer) Object.assign(row, this.editingBuffer);
 
-        this.editingRowId = null;
-        this.editRow = false;
-        this.editingBuffer = null;
-        this.cdr.detectChanges();
+          this.editingRowId = null;
+          this.editRow = false;
+          this.editingBuffer = null;
+          this.cdr.detectChanges();
 
-        this.editClicked.emit(row);
-      }
-    });
+          this.editClicked.emit(row);
+        }
+      });
+    } else {
+      if (this.editingBuffer) Object.assign(row, this.editingBuffer);
+
+      this.editingRowId = null;
+      this.editRow = false;
+      this.editingBuffer = null;
+      this.cdr.detectChanges();
+
+      this.editClicked.emit(row);
+      console.log('SaveInline', row);
+    }
   }
 
   onClickCancel(event: Event, row: any): void {
