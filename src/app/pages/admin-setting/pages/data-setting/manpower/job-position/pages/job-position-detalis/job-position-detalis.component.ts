@@ -1,17 +1,19 @@
-import { ChangeDetectorRef, Component, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, TemplateRef, ViewChild, ViewContainerRef } from '@angular/core';
 import { defaultFilterButtons, PreferredSkillsColumn, RequirementsColumns, ResponsibilitiesColumns } from '../../../../../../../../../app/constants/admin-setting/job-position.constants';
 import { JobPositionService } from '../../../../../../../../../app/services/admin-setting/job-position/job-position.service';
 import { ActivatedRoute } from '@angular/router';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { TablesComponent } from '../../../../../../../../shared/components/tables/tables.component';
+import { CdkDropdownComponent } from '../../../../../../../../shared/components/cdk-dropdown/cdk-dropdown.component';
 import { CaptchaDialogComponent } from '../../../../../../../../shared/components/dialogs/captcha-dialog/captcha-dialog.component';
-import { forkJoin } from 'rxjs';
+import { distinctUntilChanged, forkJoin, map } from 'rxjs';
 import { GeneralBenefitsService } from '../../../../../../../../services/admin-setting/general-benefits/general-benefits.service';
-import { IApiResponse, IBenefitsFilterRequest, IUniversityWithPositionsDto } from '../../../../../../../../interfaces/admin-setting/general-benefits.interface';
+import { IApiResponse, IBenefitsFilterRequest, IBenefitsWithPositionsDto, IComputerWithPositionsDto, ILanguageWithPositionsDto, IUniversityWithPositionsDto } from '../../../../../../../../interfaces/admin-setting/general-benefits.interface';
 import { QualityDialogComponent } from '../../../../../../../../shared/components/dialogs/quality-dialog/quality-dialog.component';
 import { JobPositionDetails } from '../../../../../../../../interfaces/admin-setting/job-position.interface';
-import { CdkOverlayOrigin, FlexibleConnectedPositionStrategy, OverlayRef } from '@angular/cdk/overlay';
+import { CdkOverlayOrigin, ConnectedPosition, FlexibleConnectedPositionStrategy, Overlay, OverlayRef, ScrollStrategyOptions } from '@angular/cdk/overlay';
+import { TemplatePortal } from '@angular/cdk/portal';
 
 type CategoryForm = {
   categoryId: number | string | null;
@@ -27,6 +29,37 @@ type CategoryDetailForm = {
 };
 
 type TableKey = 'resp' | 'req' | 'pref';
+type DropdownOption = { label: string; value: any; disabled?: boolean };
+type DropdownCtx = { control: FormControl; options: DropdownOption[]; multi: boolean; title?: string } | null;
+
+type JobPositionCache = {
+  form: {
+    namePosition: string;
+    education: any;
+    workingDetails: any;
+    minExperience: any;
+    maxExperience: any;
+    minSalary: any;
+    maxSalary: any;
+    qualityPst: any;
+    activeStatus: boolean;
+  };
+  selections: {
+    selectedIdsBenefits: number[];
+    selectedIdsLanguage: number[];
+    selectedIdsComputer: number[];
+    locations: number[];
+  };
+  lists: {
+    responsibilities: string[];
+    requirements: string[];
+    preferredSkills: string[];
+  };
+  isEditing: boolean;
+  ts: number;
+};
+
+@HostListener('window:beforeunload')
 
 @Component({
   selector: 'app-job-position-detalis',
@@ -61,7 +94,6 @@ export class JobPositionDetalisComponent {
   settingWelfareBenefits: any[] = [];
   settingLanguageSkills: any[] = [];
   settingComputerSkills: any[] = [];
-  pendingSelectedIds: number[] | null = null;
 
   preselectedbenefits: number[] | null = null;
   preselectedlanguageSkills: number[] | null = null;
@@ -83,15 +115,43 @@ export class JobPositionDetalisComponent {
 
   qualityControl = new FormControl(2);
 
-  locationsList = [
-    { id: 91, name: 'Bangkok' },
-    { id: 2, name: 'Samut Prakan' },
-    { id: 3, name: 'Chonburi' },
-    { id: 4, name: 'Saraburi' },
-  ];
+  locationsList: any;
 
   private overlayRef: OverlayRef | null = null;
   private positionStrategy!: FlexibleConnectedPositionStrategy;
+
+
+  dropdownCtx: DropdownCtx = null;
+  dropdownSearch = '';
+
+  educationOptions: DropdownOption[] = [
+    { label: "Bachelor's Degree or Higher", value: 'BD' },
+    { label: "Master's Degree or Higher", value: 'MD' },
+    { label: "High School or Higher", value: 'HS' },
+  ];
+
+  workingOptions: DropdownOption[] = [
+    { label: 'Full Time', value: 61 },
+    { label: 'Part Time', value: 62 },
+    { label: 'Contract', value: 63 },
+  ];
+
+  @ViewChild('dropdownOverlayTpl', { static: true }) dropdownOverlayTpl!: TemplateRef<any>;
+
+  overlayPositions: ConnectedPosition[] = [
+    { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 4 },
+    { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -4 },
+  ];
+
+  private readonly cacheKeyBase = 'job-position-details:';
+  private cacheKey(): string {
+    return `${this.cacheKeyBase}${this.idjobPst || 'new'}`;
+  }
+
+  @HostListener('window:beforeunload', ['$event'])
+  handleBeforeUnload(_: Event) {
+    this.saveCache();
+  }
 
   constructor(
     private jobPositionService: JobPositionService,
@@ -99,29 +159,62 @@ export class JobPositionDetalisComponent {
     private route: ActivatedRoute,
     private fb: FormBuilder,
     private dialog: MatDialog,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private overlay: Overlay,
+    private vcr: ViewContainerRef,
+    private sso: ScrollStrategyOptions,
   ) { }
 
   ngOnInit() {
     this.jobPositionService.setEMailType('job-position');
-
     this.initializeForm();
-
     this.formDetails.disable({ emitEvent: false });
-    this.setActionButtons('view');
 
-    this.formDetails.valueChanges.subscribe(() => {
-      if (!this.isEditing) return;
-      this.setButtonDisabled('save', !this.hasFormChanged());
-    });
+    // ⛳ เก็บทุกครั้งที่แก้ฟอร์ม (ไม่ต้องเช็ค isEditing สำหรับการ saveCache)
+    this.formDetails.valueChanges
+      .pipe(
+      // กันการยิงถี่ตอนพิมพ์
+      // ใช้ auditTime/ debounceTime ได้ตามชอบ
+    )
+      .subscribe(() => {
+        this.saveCache(); // << เก็บทุกครั้ง
+        // ปุ่ม Save จะเปิด/ปิดตาม hasFormChanged เฉพาะตอนอยู่ในโหมดแก้
+        if (this.isEditing) {
+          this.nextTick(() => this.setButtonDisabled('save', !this.hasFormChanged()));
+        }
+      });
 
+    // ⛳ ดูแลคอนโทรลที่เป็น array (dual-listbox / locations)
+    this.watchArrayControlForCaching('selectedIdsBenefits');
+    this.watchArrayControlForCaching('selectedIdsLanguage');
+    this.watchArrayControlForCaching('selectedIdsComputer');
+    this.watchArrayControlForCaching('locations');
+
+    // ที่เหลือตามเดิม
     this.route.queryParams.subscribe(params => {
       this.idjobPst = params['idjobPst'] || '';
       this.fetchBenefitsDetails();
       this.fetchLanguageDetails();
       this.fetchComputerDetails();
+      this.fetchLocationDetails();
       this.fetchJobDetails();
     });
+  }
+
+  ngAfterViewInit() {
+    this.nextTick(() => this.setActionButtons('view'));
+  }
+
+  private watchArrayControlForCaching(name: string) {
+    const ctrl = this.formDetails.get(name);
+    if (!ctrl) return;
+    ctrl.valueChanges
+      .pipe(
+        // ป้องกันกรณีคอมโพเนนต์ mutate array เดิม -> ทำให้เป็น array ใหม่เสมอ
+        map(v => Array.isArray(v) ? [...v] : v),
+        distinctUntilChanged((a, b) => this.stableStringify(a) === this.stableStringify(b))
+      )
+      .subscribe(() => this.saveCache());
   }
 
   initializeForm() {
@@ -152,6 +245,7 @@ export class JobPositionDetalisComponent {
       event.preventDefault();
       event.stopPropagation();
     }
+    this.saveCache();
   }
 
   toggleQuality(): void {
@@ -159,7 +253,6 @@ export class JobPositionDetalisComponent {
       const container = document.querySelector('.cdk-overlay-container');
       container?.classList.add('dimmed-overlay');
     });
-    console.log(this.formDetails.get('qualityPst')?.value, '=>this.formDetails')
 
     const dialogRef = this.dialog.open(QualityDialogComponent, {
       width: '350px',
@@ -175,9 +268,8 @@ export class JobPositionDetalisComponent {
 
       if (result !== false) {
         this.formDetails.get('qualityPst')?.setValue(result);
+        this.saveCache();
       }
-
-      console.log(this.formDetails.get('qualityPst')?.value, '=>this.formDetails last')
     });
 
   }
@@ -199,6 +291,7 @@ export class JobPositionDetalisComponent {
   }
 
   fetchJobDetails() {
+    console.log(this.idjobPst, '=>his.idjobPst')
     this.jobPositionService.getJobTemplateById(this.idjobPst).subscribe({
       next: (response) => {
         this.previousData = response;
@@ -207,10 +300,8 @@ export class JobPositionDetalisComponent {
 
         this.formDetails.patchValue({
           namePosition: response.namePosition,
-          education: response.ideducation === 'BD' ? `Bachelor's Degree or Higher` : ``,
-          workingDetails: response.workingDetails === 61 ? `Full Time` : ``,
-          // education: response.ideducation,
-          // workingDetails: response.workingDetails,
+          education: response.ideducation,
+          workingDetails: response.workingDetails,
           minExperience: response.experienceMin,
           maxExperience: response.experienceMax,
           minSalary: response.salaryMin,
@@ -231,12 +322,12 @@ export class JobPositionDetalisComponent {
           ? this.mapStringListToRows(response.preferredSkills)
           : [];
 
-        this.initialSnapshot = {
-          categoryRows: JSON.parse(JSON.stringify(this.categoryRows)),
-          responsibilitiesRows: JSON.parse(JSON.stringify(this.responsibilitiesRows)),
-          requirementsRows: JSON.parse(JSON.stringify(this.requirementsRows)),
-          preferredSkillsRows: JSON.parse(JSON.stringify(this.preferredSkillsRows)),
-        };
+        // this.initialSnapshot = {
+        //   categoryRows: JSON.parse(JSON.stringify(this.categoryRows)),
+        //   responsibilitiesRows: JSON.parse(JSON.stringify(this.responsibilitiesRows)),
+        //   requirementsRows: JSON.parse(JSON.stringify(this.requirementsRows)),
+        //   preferredSkillsRows: JSON.parse(JSON.stringify(this.preferredSkillsRows)),
+        // };
 
         this.cdr.detectChanges();
 
@@ -250,13 +341,44 @@ export class JobPositionDetalisComponent {
         this.tryApplyPreselect(this.settingLanguageSkills, 'idlanguage', this.preselectedlanguageSkills, 'selectedIdsLanguage');
         this.tryApplyPreselect(this.settingComputerSkills, 'idcpSkill', this.preselectedcomputerSkills, 'selectedIdsComputer');
 
-        this.initialSnapshot = this.buildSnapshot();
+        // this.initialSnapshot = this.buildSnapshot();
+        this.initialSnapshot = {
+          form: {
+            namePosition: response.namePosition ?? '',
+            education: response.ideducation ?? '',
+            workingDetails: response.workingDetails ?? '',
+            minExperience: response.experienceMin ?? '',
+            maxExperience: response.experienceMax ?? '',
+            minSalary: response.salaryMin ?? '',
+            maxSalary: response.salaryMax ?? '',
+            qualityPst: response.quality ?? '',
+            activeStatus: (response.status === 31),
+          },
+          selections: {
+            selectedIdsBenefits: this.preselectedbenefits,
+            selectedIdsLanguage: this.preselectedlanguageSkills,
+            selectedIdsComputer: this.preselectedcomputerSkills,
+            locations: this.toNumArr(response.locations),
+          },
+          lists: {
+            responsibilities: this.cleanStringList(response.responsibilities),
+            requirements: this.cleanStringList(response.requirements),
+            preferredSkills: this.cleanStringList(response.preferredSkills),
+          }
+        };
+
         this.cdr.markForCheck();
       },
       error: (error) => {
         console.error('Error fetching category types details:', error);
       },
     });
+  }
+
+  private cleanStringList(list: unknown): string[] {
+    return Array.isArray(list)
+      ? list.map(x => String(x ?? '').trim()).filter(Boolean)
+      : [];
   }
 
   protected currentFilterParams: IBenefitsFilterRequest = {
@@ -266,11 +388,13 @@ export class JobPositionDetalisComponent {
 
   fetchBenefitsDetails() {
     this.benefitsService.setBenefitType('general-benefits');
-    this.benefitsService.getBenefitsWeb<IApiResponse<IUniversityWithPositionsDto>>(this.currentFilterParams).subscribe({
+    this.benefitsService.getBenefitsWeb<IBenefitsWithPositionsDto>(this.currentFilterParams).subscribe({
       next: (res) => {
-        this.settingWelfareBenefits = (Array.isArray(res) ? res : ((res as any).items ?? (res as any).data ?? [])) as any[];
+        const list = Array.isArray(res) ? res : ((res as any)?.items ?? (res as any)?.data ?? []);
+        this.settingWelfareBenefits = (list as any[]).filter(x => Number(x?.status) !== 2);
 
-        this.tryApplyPreselect(this.settingWelfareBenefits, 'item', this.preselectedbenefits, 'selectedIdsBenefits');
+        // this.tryApplyPreselect(this.settingWelfareBenefits, 'item', this.preselectedbenefits, 'selectedIdsBenefits');
+        this.cdr.markForCheck();
       },
       error: (error) => {
         console.error('Error fetching category types details:', error);
@@ -280,11 +404,12 @@ export class JobPositionDetalisComponent {
 
   fetchLanguageDetails() {
     this.benefitsService.setBenefitType('language-skills');
-    this.benefitsService.getBenefitsWeb<IApiResponse<IUniversityWithPositionsDto>>(this.currentFilterParams).subscribe({
+    this.benefitsService.getBenefitsWeb<ILanguageWithPositionsDto>(this.currentFilterParams).subscribe({
       next: (res) => {
-        this.settingLanguageSkills = (Array.isArray(res) ? res : ((res as any).items ?? (res as any).data ?? [])) as any[];
+        const list = Array.isArray(res) ? res : ((res as any)?.items ?? (res as any)?.data ?? []);
+        this.settingLanguageSkills = (list as any[]).filter(x => Number(x?.status) !== 2);
 
-        this.tryApplyPreselect(this.settingLanguageSkills, 'idlanguage', this.preselectedlanguageSkills, 'selectedIdsLanguage');
+        // this.tryApplyPreselect(this.settingLanguageSkills, 'idlanguage', this.preselectedlanguageSkills, 'selectedIdsLanguage');
       },
       error: (error) => {
         console.error('Error fetching category types details:', error);
@@ -294,11 +419,25 @@ export class JobPositionDetalisComponent {
 
   fetchComputerDetails() {
     this.benefitsService.setBenefitType('computer-skills');
+    this.benefitsService.getBenefitsWeb<IComputerWithPositionsDto>(this.currentFilterParams).subscribe({
+      next: (res) => {
+        const list = Array.isArray(res) ? res : ((res as any)?.items ?? (res as any)?.data ?? []);
+        this.settingComputerSkills = (list as any[]).filter(x => Number(x?.status) !== 2);
+
+        // this.tryApplyPreselect(this.settingComputerSkills, 'idcpSkill', this.preselectedcomputerSkills, 'selectedIdsComputer');
+      },
+      error: (error) => {
+        console.error('Error fetching category types details:', error);
+      },
+    });
+  }
+
+  fetchLocationDetails() {
+    this.benefitsService.setBenefitType('location');
     this.benefitsService.getBenefitsWeb<IApiResponse<IUniversityWithPositionsDto>>(this.currentFilterParams).subscribe({
       next: (res) => {
-        this.settingComputerSkills = (Array.isArray(res) ? res : ((res as any).items ?? (res as any).data ?? [])) as any[];
-
-        this.tryApplyPreselect(this.settingComputerSkills, 'idcpSkill', this.preselectedcomputerSkills, 'selectedIdsComputer');
+        const list = Array.isArray(res) ? res : ((res as any)?.items ?? (res as any)?.data ?? []);
+        this.locationsList = (list as any[]).filter(x => x?.isActive !== false);
       },
       error: (error) => {
         console.error('Error fetching category types details:', error);
@@ -320,22 +459,16 @@ export class JobPositionDetalisComponent {
       .filter(id => validIds.has(id));
 
     selectedControl.setValue(filteredIds, { emitEvent: false });
+
+    const restored = this.restoreFromCacheIfAny?.() ?? false;
+    if (!restored) {
+    }
   }
 
   private mapStringListToRows(arr: string[]): any[] {
     return (arr ?? []).map((text, i) => ({
       message: text,
     }));
-  }
-
-  putEmailIDsDetails(id: number, payload: { message: string }) {
-    // this.jobPositionService.updateEmailTemplate(id, payload).subscribe({
-    //   next: (response) => {
-    //   },
-    //   error: (error) => {
-    //     console.error('Error fetching category types details:', error);
-    //   },
-    // });
   }
 
   onFilterButtonClick(key: string) {
@@ -357,12 +490,11 @@ export class JobPositionDetalisComponent {
   }
 
   onEditClicked() {
-    console.log('Edit button clicked');
-
     this.isEditing = true;
     this.formDetails.enable();
-    this.initialSnapshot = this.buildSnapshot();
-    this.setActionButtons('edit');
+    // this.initialSnapshot = this.buildSnapshot();
+
+    this.nextTick(() => this.setActionButtons('edit'));
   }
 
   private setActionButtons(mode: 'view' | 'edit') {
@@ -377,31 +509,81 @@ export class JobPositionDetalisComponent {
 
   private setButtonDisabled(key: string, disabled: boolean) {
     const set = new Set(this.disabledKeys);
-    if (disabled) set.add(key);
-    else set.delete(key);
+    disabled ? set.add(key) : set.delete(key);
     this.disabledKeys = Array.from(set);
+  }
+
+  private toNumArr(v: any): number[] {
+    return Array.isArray(v)
+      ? v.map(n => Number(n)).filter(n => Number.isFinite(n))
+      : [];
+  }
+
+  private extractMessages(rows: any[]): string[] {
+    return (rows ?? [])
+      .map(r => String(r?.message ?? '').trim())
+      .filter(Boolean);
+  }
+
+  private toRows(msgs: string[]): any[] {
+    return (msgs ?? []).map(m => ({ message: m }));
+  }
+
+
+  private buildSnapshot() {
+    const f = this.formDetails.getRawValue?.() ?? {};
+    return {
+      form: {
+        namePosition: f.namePosition ?? '',
+        education: f.education ?? '',
+        workingDetails: f.workingDetails ?? '',
+        minExperience: f.minExperience ?? '',
+        maxExperience: f.maxExperience ?? '',
+        minSalary: f.minSalary ?? '',
+        maxSalary: f.maxSalary ?? '',
+        qualityPst: f.qualityPst ?? '',
+        activeStatus: !!f.activeStatus,
+      },
+      selections: {
+        selectedIdsBenefits: this.toNumArr(this.formDetails.get('selectedIdsBenefits')?.value),
+        selectedIdsLanguage: this.toNumArr(this.formDetails.get('selectedIdsLanguage')?.value),
+        selectedIdsComputer: this.toNumArr(this.formDetails.get('selectedIdsComputer')?.value),
+        locations: this.toNumArr(this.locationsCtrl.value),
+      },
+      lists: {
+        responsibilities: this.extractMessages(this.responsibilitiesRows),
+        requirements: this.extractMessages(this.requirementsRows),
+        preferredSkills: this.extractMessages(this.preferredSkillsRows),
+      }
+    };
+  }
+
+  private stableStringify(x: any): string {
+    if (Array.isArray(x)) return '[' + x.map(v => this.stableStringify(v)).join(',') + ']';
+    if (x && typeof x === 'object') {
+      const keys = Object.keys(x).sort();
+      return '{' + keys.map(k => JSON.stringify(k) + ':' + this.stableStringify(x[k])).join(',') + '}';
+    }
+    return JSON.stringify(x);
   }
 
   private hasFormChanged(): boolean {
     if (!this.initialSnapshot) return false;
-    const current = {
-      categoryRows: this.categoryRows,
-      responsibilitiesRows: this.responsibilitiesRows,
-      requirementsRows: this.requirementsRows,
-      preferredSkillsRows: this.preferredSkillsRows,
-    };
-    const initial = {
-      categoryRows: this.initialSnapshot.categoryRows,
-      responsibilitiesRows: this.initialSnapshot.responsibilitiesRows,
-      requirementsRows: this.initialSnapshot.requirementsRows,
-      preferredSkillsRows: this.initialSnapshot.preferredSkillsRows,
-    };
-    return JSON.stringify(current) !== JSON.stringify(initial);
+    const current = this.buildSnapshot();
+
+    console.log(current, '=>current')
+    console.log(this.initialSnapshot, '=>this.initialSnapshot')
+
+    return this.stableStringify(current) !== this.stableStringify(this.initialSnapshot);
   }
 
   private nextIndex(rows: any[]): number {
     const maxIdx = rows.reduce((m, r) => Math.max(m, Number(r?.index) || 0), 0);
     return maxIdx + 1;
+  }
+
+  private nextTick(fn: () => void) {
+    Promise.resolve().then(fn);
   }
 
   // helper: คืนชื่อพร็อพของตารางตาม key
@@ -421,10 +603,10 @@ export class JobPositionDetalisComponent {
     const payload: JobPositionDetails = {
       idjobPst: +this.idjobPst,
       namePosition: formValue.namePosition ?? previousData.namePosition ?? '',
+      ideducation: formValue.education ?? previousData.ideducation ?? null,
       workingDetails: formValue.workingDetails ?? previousData.workingDetails ?? 0,
       experienceMin: formValue.minExperience ?? previousData.experienceMin ?? 0,
       experienceMax: formValue.maxExperience ?? previousData.experienceMax ?? 0,
-      ideducation: formValue.education ?? previousData.ideducation ?? null,
       salaryMin: formValue.minSalary ?? previousData.salaryMin ?? 0,
       salaryMax: formValue.maxSalary ?? previousData.salaryMax ?? 0,
       showSalary: (formValue.minSalary || formValue.maxSalary) ? 1 : previousData.showSalary ?? 0,
@@ -462,7 +644,7 @@ export class JobPositionDetalisComponent {
     this.isEditing = false;
     this.formDetails.disable({ emitEvent: false });
     this.initialSnapshot = this.buildSnapshot();
-    this.setActionButtons('view');
+    this.nextTick(() => this.setActionButtons('view'));
 
     // this.jobPositionService.updateJobPosition(this.idjobPst, payload).subscribe({
     //   next: () => {
@@ -471,44 +653,13 @@ export class JobPositionDetalisComponent {
     //     this.isEditing = false;
     //     this.setActionButtons('view');
     //     this.formDetails.disable({ emitEvent: false });
+    //     this.clearCache();
     //   },
     //   error: (err) => {
     //     console.error('เกิดข้อผิดพลาด:', err);
     //   }
     // });
   }
-
-  private buildSnapshot() {
-    const sortNums = (a: number[], uniq = true) => {
-      const arr = (a || []).slice().sort((x, y) => x - y);
-      return uniq ? Array.from(new Set(arr)) : arr;
-    };
-
-    return {
-      responsibilitiesRows: this.responsibilitiesRows,
-      requirementsRows: this.requirementsRows,
-      preferredSkillsRows: this.preferredSkillsRows,
-
-      selectedIdsBenefits: sortNums(this.formDetails.get('selectedIdsBenefits')?.value ?? []),
-      selectedIdsLanguage: sortNums(this.formDetails.get('selectedIdsLanguage')?.value ?? []),
-      selectedIdsComputer: sortNums(this.formDetails.get('selectedIdsComputer')?.value ?? []),
-      locations: sortNums(this.locationsCtrl.value ?? []),
-
-      form: {
-        namePosition: this.formDetails.get('namePosition')?.value ?? '',
-        education: this.formDetails.get('education')?.value ?? '',
-        workingDetails: this.formDetails.get('workingDetails')?.value ?? '',
-        minExperience: this.formDetails.get('minExperience')?.value ?? '',
-        maxExperience: this.formDetails.get('maxExperience')?.value ?? '',
-        minSalary: this.formDetails.get('minSalary')?.value ?? '',
-        maxSalary: this.formDetails.get('maxSalary')?.value ?? '',
-        qualityPst: this.formDetails.get('qualityPst')?.value ?? '',
-        activeStatus: !!this.formDetails.get('activeStatus')?.value,
-      }
-    };
-  }
-
-
 
   private findChangedRows(): any[] {
     const current = this.categoryRows;
@@ -539,7 +690,6 @@ export class JobPositionDetalisComponent {
   }
 
   onRowClicked(row: any, action: 'view' | 'edit') {
-    console.log('View row clicked:', row);
     this.isEnabledCardDetails = true;
     if (action === 'view') {
       this.isViewMode = true;
@@ -600,7 +750,7 @@ export class JobPositionDetalisComponent {
     return this.formDetails.get('categoryDetails') as FormGroup;
   }
   get detailsFA() {
-    return this.categoryDetailsFG.get('items') as any; // FormArray<FormGroup<CategoryDetailForm>>
+    return this.categoryDetailsFG.get('items') as any;
   }
 
   get isDisabled() {
@@ -612,7 +762,6 @@ export class JobPositionDetalisComponent {
   }
 
   onEditDetailsClicked() {
-    console.log('Edit Details button clicked');
     this.categoryDetailsFG.enable();
     this.isEditDetails = true;
   }
@@ -636,6 +785,7 @@ export class JobPositionDetalisComponent {
     this.formDetails.markAsDirty();
     this.setButtonDisabled('save', !this.hasFormChanged());
     this.cdr.markForCheck();
+    this.saveCache();
 
     queueMicrotask(() => {
       try {
@@ -689,6 +839,7 @@ export class JobPositionDetalisComponent {
       this.formDetails.markAsDirty();
       this.setButtonDisabled('save', !this.hasFormChanged());
       this.cdr.markForCheck();
+      this.saveCache();
     });
   }
 
@@ -701,6 +852,7 @@ export class JobPositionDetalisComponent {
 
     this.formDetails.markAsDirty();
     this.cdr.markForCheck();
+    this.saveCache();
   }
 
   // ปิดเฉพาะตัว
@@ -709,67 +861,109 @@ export class JobPositionDetalisComponent {
     this.fieldErrors = false;
   }
 
-  // toggleDropdown(rowIndex: number, field: string, origin: CdkOverlayOrigin, event?: Event) {
-  //   event?.stopPropagation();
-  //   const column = this.columns.find(c => c.field === field);
-  //   if (!column?.options) return;
 
-  //   this.openOverlay(origin, { rowIndex, field, options: column.options });
+
+  private buildCachePayload(): JobPositionCache {
+    const f = this.formDetails.getRawValue();
+
+    return {
+      form: {
+        namePosition: f.namePosition ?? '',
+        education: f.education ?? '',
+        workingDetails: f.workingDetails ?? '',
+        minExperience: f.minExperience ?? '',
+        maxExperience: f.maxExperience ?? '',
+        minSalary: f.minSalary ?? '',
+        maxSalary: f.maxSalary ?? '',
+        qualityPst: f.qualityPst ?? '',
+        activeStatus: !!f.activeStatus,
+      },
+      selections: {
+        selectedIdsBenefits: this.toNumArr(this.formDetails.get('selectedIdsBenefits')?.value),
+        selectedIdsLanguage: this.toNumArr(this.formDetails.get('selectedIdsLanguage')?.value),
+        selectedIdsComputer: this.toNumArr(this.formDetails.get('selectedIdsComputer')?.value),
+        locations: this.toNumArr(this.locationsCtrl.value),
+      },
+      lists: {
+        responsibilities: this.extractMessages(this.responsibilitiesRows),
+        requirements: this.extractMessages(this.requirementsRows),
+        preferredSkills: this.extractMessages(this.preferredSkillsRows),
+      },
+      isEditing: this.isEditing,
+      ts: Date.now(),
+    };
+  }
+
+  private saveCache(): void {
+    if (!this.formDetails || !this.initialSnapshot) return;
+    if (this.hasFormChanged()) {
+      const cache = this.buildCachePayload();
+      sessionStorage.setItem(this.cacheKey(), JSON.stringify(cache));
+    } else {
+      // sessionStorage.removeItem(this.cacheKey()); // กลับมาเท่า baseline → เคลียร์ cache
+    }
+  }
+
+  // public hasPendingDrafts(): boolean {
+  //   const cache = this.buildCachePayload();
+  //   sessionStorage.setItem(this.cacheKey(), JSON.stringify(cache));
   // }
 
-  // private openOverlay(
-  //   origin: CdkOverlayOrigin,
-  //   ctx: { rowIndex: number | null; field: string; options: string[] }
-  // ) {
-  //   const width = origin.elementRef.nativeElement.offsetWidth ?? 180;
+  private restoreFromCacheIfAny(): boolean {
+    const raw = sessionStorage.getItem(this.cacheKey());
+    if (!raw) return false;
 
-  //   if (!this.overlayRef) {
-  //     this.positionStrategy = this.overlay.position()
-  //       .flexibleConnectedTo(origin.elementRef)
-  //       .withPositions(this.overlayPositions)
-  //       .withFlexibleDimensions(false)
-  //       .withPush(true)
-  //       .withViewportMargin(8);
+    try {
+      const cache = JSON.parse(raw) as JobPositionCache;
 
-  //     this.overlayRef = this.overlay.create({
-  //       positionStrategy: this.positionStrategy,
-  //       hasBackdrop: true,
-  //       backdropClass: 'cdk-overlay-transparent-backdrop',
-  //       scrollStrategy: this.sso.reposition(),
-  //       panelClass: 'tw-z-[9999]',
-  //     });
+      // form fields
+      this.formDetails.patchValue(cache.form, { emitEvent: false });
 
-  //     this.overlayRef.backdropClick().subscribe(() => this.closeOverlay());
-  //     this.overlayRef.detachments().subscribe(() => this.closeOverlay());
-  //   } else {
+      // selections
+      this.formDetails.get('selectedIdsBenefits')?.setValue(cache.selections.selectedIdsBenefits ?? [], { emitEvent: false });
+      this.formDetails.get('selectedIdsLanguage')?.setValue(cache.selections.selectedIdsLanguage ?? [], { emitEvent: false });
+      this.formDetails.get('selectedIdsComputer')?.setValue(cache.selections.selectedIdsComputer ?? [], { emitEvent: false });
+      this.locationsCtrl.setValue(cache.selections.locations ?? [], { emitEvent: false });
 
-  //     this.positionStrategy.setOrigin(origin.elementRef);
-  //     this.overlayRef.updatePosition();
-  //   }
+      // lists -> rows
+      this.responsibilitiesRows = this.toRows(cache.lists.responsibilities);
+      this.requirementsRows = this.toRows(cache.lists.requirements);
+      this.preferredSkillsRows = this.toRows(cache.lists.preferredSkills);
 
-  //   const portal = new TemplatePortal(this.dropdownOverlayTpl, this.vcr, { $implicit: null, ctx, width } as any);
-  //   if (this.overlayRef.hasAttached()) this.overlayRef.detach();
-  //   this.overlayRef.attach(portal);
+      this.isEditing = !!cache.isEditing;
+      this.setActionButtons(this.isEditing ? 'edit' : 'view');
+      this.isEditing ? this.formDetails.enable({ emitEvent: false }) : this.formDetails.disable({ emitEvent: false });
+
+      // ถ้า dual-listbox ไม่ refresh เอง ให้ re-emit ค่าหน่อย
+      this.reemitControl('selectedIdsBenefits');
+      this.reemitControl('selectedIdsLanguage');
+      this.reemitControl('selectedIdsComputer');
+
+      this.cdr.markForCheck();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private reemitControl(name: string) {
+    const ctrl = this.formDetails.get(name);
+    if (!ctrl) return;
+    const v = ctrl.value;
+    ctrl.setValue(Array.isArray(v) ? [...v] : v, { emitEvent: false });
+  }
+
+
+  public clearDraftsForCurrentType(): void {
+    sessionStorage.removeItem(this.cacheKey());
+  }
+
+  onBeforeUnload() {
+    this.saveCache();
+  }
+
+  // ngOnDestroy() {
+  //   this.saveCache();
   // }
-
-  // isDropdownOpen(rowIndex: number, field: string): boolean {
-  //   return (
-  //     this.dropdownOverlay?.rowIndex === rowIndex &&
-  //     this.dropdownOverlay?.field === field
-  //   );
-  // }
-
-  // selectDropdownOption(rowIndex: number, field: string, value: string) {
-  //   const currentRows = this.rowsValue;
-  //   if (currentRows[rowIndex]) {
-  //     currentRows[rowIndex][field] = value;
-  //   }
-
-  //   this.selectChanged.emit({ rowIndex, field, value });
-
-  //   this.dropdownOverlay = null;
-  //   this.cdr.detectChanges();
-  // }
-
 }
 

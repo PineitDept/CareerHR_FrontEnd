@@ -19,3 +19,13 @@ export interface JobPositionDetails {
   computerSkills?: number[] | null;
   languageSkills?: number[] | null;
 }
+
+export interface DropdownOverlay {
+  visible: boolean;
+  rowIndex: number | null; // null = footer
+  field: string;
+  x: number;
+  y: number;
+  width: number;
+  options: string[];
+}

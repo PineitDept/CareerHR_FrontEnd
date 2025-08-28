@@ -31,37 +31,21 @@
                     <div class="tw-mb-1.5">
                         <label class="tw-text-sm tw-font-semibold">Education <span class="text-red">*</span></label>
                     </div>
-                    <input type="text"
-                        class="tw-w-full tw-bg-[#FFFFFF] tw-border tw-border-[#CED4DA] tw-rounded-lg tw-px-4 tw-py-2 tw-text-sm"
-                        [ngClass]="!isEditing ? 'isDisabled' : ''" formControlName="education" />
-
-                    <!-- <div class="tw-relative">
-                        <button cdkOverlayOrigin #origin="cdkOverlayOrigin"
-                            class="dropdown-button tw-border tw-border-gray-300 tw-rounded-md tw-px-3 tw-py-1 tw-w-full tw-text-sm tw-flex tw-items-center tw-justify-between tw-truncate tw-transition-all tw-duration-200 hover:tw-border-gray-400"
-                            [id]="'dropdown-button-' + i + '-' + column.field"
-                            (click)="toggleDropdown(i, column.field, origin, $event)"
-                            [attr.aria-expanded]="isDropdownOpen(i, column.field)" 
-                            [ngClass]="[isDisabledForm ? 'tw-bg-gray-100' : 'tw-bg-white']">
-                            <span class="tw-text-left tw-w-full tw-truncate"
-                                [class.tw-text-gray-400]="!getCellValue(row, column.field)">
-                                {{ getCellValue(row, column.field) || 'Select' }}
-                            </span>
-                            <app-icon name="chevron-down" [size]="16" fill="currentColor"
-                                [extraClass]="'tw-ml-2 tw-flex-shrink-0 tw-transition-transform tw-duration-200 ' + (isDropdownOpen(i, column.field) ? 'tw-rotate-180' : '')">
-                            </app-icon>
-                        </button>
-                    </div> -->
-
-
+                    <app-cdk-dropdown
+                        formControlName="education"
+                        [options]="educationOptions"
+                        placeholder="Select education">
+                    </app-cdk-dropdown>
                 </div>
                 <div class="tw-flex-1">
                     <div class="tw-mb-1.5">
-                        <label class="tw-text-sm tw-font-semibold">Working Details <span
-                                class="text-red">*</span></label>
+                        <label class="tw-text-sm tw-font-semibold">Working Details <span class="text-red">*</span></label>
                     </div>
-                    <input type="text"
-                        class="tw-w-full tw-bg-[#FFFFFF] tw-border tw-border-[#CED4DA] tw-rounded-lg tw-px-4 tw-py-2 tw-text-sm"
-                        [ngClass]="!isEditing ? 'isDisabled' : ''" formControlName="workingDetails" />
+                   <app-cdk-dropdown
+                        formControlName="workingDetails"
+                        [options]="workingOptions"
+                        placeholder="Select working type">
+                    </app-cdk-dropdown>
                 </div>
             </div>
 
@@ -107,14 +91,15 @@
 
 
             <div class="tw-mb-1.5">
-                <label class="tw-text-sm tw-font-semibold">Max Salary <span class="text-red">*</span></label>
+                <label class="tw-text-sm tw-font-semibold">Location <span class="text-red">*</span></label>
             </div>
             <div class="tw-flex tw-w-full tw-gap-6 !tw-mt-0" [ngClass]="isDisabled ? 'tw-pointer-events-none' : ''">
 
                 <label class="tw-flex tw-items-center" *ngFor="let loc of locationsList">
-                    <input class="tw-accent-blue-500/25 tw-relative tw-top-[1px]" type="checkbox" [disabled]="isDisabled" [checked]="locationsCtrl.value.includes(loc.id)"
-                        (change)="onLocationToggle(loc.id, $any($event.target).checked)" />
-                    <span class="tw-text-sm tw-ml-2">{{ loc.name }}</span>
+                    <input class="tw-accent-blue-500/25 tw-relative tw-top-[1px]" type="checkbox"
+                        [disabled]="isDisabled" [checked]="locationsCtrl.value.includes(loc.locationId)"
+                        (change)="onLocationToggle(loc.locationId, $any($event.target).checked)" />
+                    <span class="tw-text-sm tw-ml-2">{{ loc.locationName }}</span>
                 </label>
 
             </div>
@@ -299,7 +284,7 @@
             <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-mt-2">
 
                 <div class="tw-flex tw-items-center tw-justify-between">
-                    <label class="tw-text-lg tw-font-bold">Setting Welfare Benefits</label>
+                    <label class="tw-text-lg tw-font-bold">Setting Language Skills</label>
 
                     <!-- <button
                     type="button"
