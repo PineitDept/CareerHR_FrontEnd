@@ -28,6 +28,7 @@ import { ConfirmLeaveDialogComponent } from './components/dialogs/confirm-leave-
 import { OverlayModule } from '@angular/cdk/overlay';
 import { PortalModule } from '@angular/cdk/portal';
 import { ScrollingModule } from '@angular/cdk/scrolling';
+import { ConfirmChangesDialogComponent } from './components/dialogs/confirm-changes-dialog/confirm-changes-dialog.component';
 // import { PurchaseOrderDetailsFormComponent } from './components/forms/purchase-order-details-form/purchase-order-details-form.component';
 
 @NgModule({
@@ -46,6 +47,7 @@ import { ScrollingModule } from '@angular/cdk/scrolling';
     FormDialogComponent,
     CaptchaDialogComponent,
     ConfirmLeaveDialogComponent,
+    ConfirmChangesDialogComponent,
     // PurchaseOrderDetailsFormComponent
   ],
   imports: [
@@ -77,6 +79,7 @@ import { ScrollingModule } from '@angular/cdk/scrolling';
     FormDialogComponent,
     CaptchaDialogComponent,
     ConfirmLeaveDialogComponent,
+    ConfirmChangesDialogComponent,
     // PurchaseOrderDetailsFormComponent
   ]
 })
