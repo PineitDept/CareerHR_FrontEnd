@@ -260,7 +260,7 @@
                   <!-- toggle Content -->
                   <div *ngSwitchCase="'toggle'">
                     <label class="tw-inline-flex tw-items-center tw-cursor-pointer" (click)="$event.stopPropagation()">
-                      <input type="checkbox" value="" class="tw-sr-only tw-peer" [checked]="row.activeStatus" (click)="onToggleChange($event, row)">
+                      <input type="checkbox" value="" class="tw-sr-only tw-peer" [checked]="row.activeStatus && row.status!==32  && row.status!==0" (click)="onToggleChange($event, row)">
                       <div class="tw-relative tw-w-11 tw-h-6 peer-checked:tw-bg-[#00AA00] tw-bg-gray-200 tw-rounded-full tw-peer peer-checked:after:tw-translate-x-full rtl:peer-checked:after:tw--translate-x-full tw-border-white after:tw-content-[''] after:tw-absolute after:tw-top-[2px] after:tw-start-[2px] after:tw-bg-white after:tw-rounded-full after:tw-h-5 after:tw-w-5 after:tw-transition-all"
                         [ngClass]="{
                           'peer-checked:tw-bg-[#00AA00]/40': isDisabledForm

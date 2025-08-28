@@ -5,6 +5,7 @@ export interface AlertDialogData {
   selectedRows?: any[];
   columns?: any[];
   poType?: string[];
+  quality?: number;
 }
 
 export interface FormDialogData {
