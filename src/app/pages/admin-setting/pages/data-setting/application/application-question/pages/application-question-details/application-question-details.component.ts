@@ -9,7 +9,9 @@ import { animate, style, transition, trigger } from '@angular/animations';
 import { MatDialog } from '@angular/material/dialog';
 import { AlertDialogComponent } from '../../../../../../../../shared/components/dialogs/alert-dialog/alert-dialog.component';
 import { CaptchaDialogComponent } from '../../../../../../../../shared/components/dialogs/captcha-dialog/captcha-dialog.component';
-import { Subject, takeUntil } from 'rxjs';
+import { debounceTime, distinctUntilChanged, map, Subject, takeUntil } from 'rxjs';
+import { ConfirmChangesDialogComponent } from '../../../../../../../../shared/components/dialogs/confirm-changes-dialog/confirm-changes-dialog.component';
+import { ConfirmChangesData } from '../../../../../../../../shared/interfaces/dialog/dialog.interface';
 
 type CategoryForm = {
   categoryId: number | string | null;
@@ -40,6 +42,20 @@ interface DetailsSnapshot {
   }>;
 }
 
+type ChangeItem = {
+  entity: 'Category' | 'CategoryName' | 'Detail';
+  id?: string | number | null;
+  label: string;
+  field: string;
+  from: any;
+  to: any;
+};
+
+type ChangeGroup = {
+  section: 'Category Table' | 'Category Details';
+  items: ChangeItem[];
+};
+
 @Component({
   selector: 'app-application-question-details',
   templateUrl: './application-question-details.component.html',
@@ -64,38 +80,13 @@ export class ApplicationQuestionDetailsComponent {
   disabledKeys: string[] = [];
 
   categoryType: string = '';
-
   formDetails!: FormGroup;
 
   categoryColumns: Columns = [
-    {
-      header: 'No.',
-      field: 'index',
-      type: 'text',
-      align: 'center',
-      width: '4%'
-    },
-    {
-      header: 'Category Name',
-      field: 'categoryName',
-      type: 'text',
-      width: '71%'
-    },
-    {
-      header: 'Status',
-      field: 'activeStatus',
-      type: 'toggle',
-      align: 'center',
-      width: '7%'
-    },
-    {
-      header: 'Action',
-      field: 'textlink',
-      type: 'textlink',
-      align: 'center',
-      width: '18%',
-      textlinkActions: ['view','edit-card']
-    }
+    { header: 'No.', field: 'index', type: 'text', align: 'center', width: '4%' },
+    { header: 'Category Name', field: 'categoryName', type: 'text', width: '71%' },
+    { header: 'Status', field: 'activeStatus', type: 'toggle', align: 'center', width: '7%' },
+    { header: 'Action', field: 'textlink', type: 'textlink', align: 'center', width: '18%', textlinkActions: ['view','edit-card'] }
   ];
 
   baseCategoryDetailsColumns: Columns = [
@@ -124,10 +115,7 @@ export class ApplicationQuestionDetailsComponent {
     width: '10%',
   };
 
-  // ไว้ bind เข้า <app-tables>
   categoryDetailsColumns: Columns = [...this.baseCategoryDetailsColumns];
-
-  // default ค่าของ footer เวลา add แถว (ใช้กับ [createDefaults])
   tableCreateDefaults: any = {};
 
   categoryRows: any[] = [];
@@ -150,14 +138,28 @@ export class ApplicationQuestionDetailsComponent {
   private isProgrammaticUpdate = false;
 
   private DETAILS_CACHE_KEY = 'categoryDetailsCache';
-
   private CATEGORY_TYPE_DRAFT_PREFIX = 'categoryTypeDraft';
-
   private DIRTY_PREFIX = 'aqd:dirty';
 
   private destroy$ = new Subject<void>();
 
   detailsRequiredFooterFields: string[] = ['questionTH','questionEN','type'];
+
+  private pendingCategoryChanges: ChangeItem[] = [];
+  private pendingDetailsChanges: ChangeItem[] = [];
+
+  private baselineCategoriesById = new Map<string, { activeStatus: boolean; categoryName: string }>();
+  private baselineDetailsById = new Map<string, {
+    sort: number | null;
+    questionTH: string;
+    questionEN: string;
+    type: string;
+    activeStatus: boolean;
+    scoringMethod: number | null;
+  }>();
+
+  private pendingCategoryNameDraft: string | null = null;
+  private readonly DETAILS_BASELINE_STORE = 'aqd:detailsBaseline';
 
   constructor(
     private route: ActivatedRoute,
@@ -169,7 +171,6 @@ export class ApplicationQuestionDetailsComponent {
   ngOnInit() {
     this.initializeForm();
 
-    // เริ่มด้วย view-mode: ปิดการแก้ไขทั้งฟอร์ม
     this.formDetails.disable({ emitEvent: false });
     this.setActionButtons('view');
 
@@ -199,76 +200,51 @@ export class ApplicationQuestionDetailsComponent {
             activeStatus: true
           }
         }, { emitEvent: false });
-        // หลังดึงข้อมูลเสร็จ ให้ snapshot ค่าเริ่มต้นไว้ใช้เทียบภายหลัง
         this.fetchCategoryTypesDetails();
+      });
+
+    this.categoryDetailsFG.get('CategoryName')?.valueChanges
+      .pipe(
+        takeUntil(this.destroy$),
+        map(v => (v ?? '').trim()),
+        debounceTime(600),
+        distinctUntilChanged()
+      )
+      .subscribe((name) => {
+        if (!this.isEnabledCardDetails) return;
+        if (this.isProgrammaticUpdate) return;
+        this.pendingCategoryNameDraft = name;
       });
   }
 
   initializeForm() {
     this.formDetails = this.fb.group({
-      // ส่วนหัว (ซ้าย/ขวา)
       categoryType: this.fb.group({
         CategoryTypeName: [{ value: '', disabled: true }],
         activeStatus: [true],
       }),
-
-      // ตาราง Category (FormArray)
       categories: this.fb.array<FormGroup>([]),
-
-      // ส่วน "Category Details" ของ Category ที่เลือก
       selectedCategoryId: [null],
       categoryDetails: this.fb.group({
         CategoryName: [''],
-        items: this.fb.array<FormGroup>([]), // ตาราง details
+        items: this.fb.array<FormGroup>([]),
       }),
     });
   }
 
-  // ===== Helpers =====
-  get categoriesFA() {
-    return this.formDetails.get('categories') as any; // FormArray<FormGroup<CategoryForm>>
-  }
-  get categoryDetailsFG() {
-    return this.formDetails.get('categoryDetails') as FormGroup;
-  }
-  get detailsFA() {
-    return this.categoryDetailsFG.get('items') as any; // FormArray<FormGroup<CategoryDetailForm>>
-  }
+  get categoriesFA() { return this.formDetails.get('categories') as any; }
+  get categoryDetailsFG() { return this.formDetails.get('categoryDetails') as FormGroup; }
+  get detailsFA() { return this.categoryDetailsFG.get('items') as any; }
+  get isDisabled() { return this.categoryDetailsFG.disabled; }
 
-  get isDisabled() {
-    return this.categoryDetailsFG.disabled;
-  }
-
-  // พื้นฐาน (ไม่มี scoringMethod เพิ่มเติม)
   private baseWithTypeWidths: Record<string, string> = {
-    '__index': '4%',
-    'questionTH': '30%',
-    'questionEN': '30%',
-    'type': '12%',
-    'activeStatus': '8%',
-    'textlink': '16%',
+    '__index': '4%', 'questionTH': '30%', 'questionEN': '30%', 'type': '12%', 'activeStatus': '8%', 'textlink': '16%',
   };
-
-  // มี scoring แบบ select (categoryId = 5)
   private withScoringSelectWidths: Record<string, string> = {
-    '__index': '4%',
-    'questionTH': '24%',
-    'questionEN': '24%',
-    'type': '12%',
-    'scoringMethod': '12%',
-    'activeStatus': '8%',
-    'textlink': '16%',
+    '__index': '4%', 'questionTH': '24%', 'questionEN': '24%', 'type': '12%', 'scoringMethod': '12%', 'activeStatus': '8%', 'textlink': '16%',
   };
-
-  // มี scoring แบบ number (categoryId = 2)
   private withScoringNumberWidths: Record<string, string> = {
-    '__index': '4%',
-    'questionTH': '26%',
-    'questionEN': '26%',
-    'type': '12%',
-    'scoringMethod': '10%',
-    'activeStatus': '8%',
-    'textlink': '14%',
+    '__index': '4%', 'questionTH': '26%', 'questionEN': '26%', 'type': '12%', 'scoringMethod': '10%', 'activeStatus': '8%', 'textlink': '14%',
   };
 
   private applyWidths(cols: Columns, widths: Record<string,string>): Columns {
@@ -281,19 +257,19 @@ export class ApplicationQuestionDetailsComponent {
       const statusIdx = this.baseCategoryDetailsColumns.findIndex(c => c.field === 'activeStatus');
       const withScoring = [
         ...this.baseCategoryDetailsColumns.slice(0, statusIdx),
-        this.scoringColumnDef,                      // select Normal/Reverse
+        this.scoringColumnDef,
         ...this.baseCategoryDetailsColumns.slice(statusIdx),
       ];
       this.categoryDetailsColumns = this.applyWidths(withScoring, this.withScoringSelectWidths);
       this.tableCreateDefaults = { type: 'Answer', scoringMethod: 'Normal' };
-      this.detailsRequiredFooterFields = ['questionTH','questionEN','type']; // มี default ให้ scoring แล้ว
+      this.detailsRequiredFooterFields = ['questionTH','questionEN','type'];
       return;
     }
     if (id === '2') {
       const statusIdx = this.baseCategoryDetailsColumns.findIndex(c => c.field === 'activeStatus');
       const withNumber = [
         ...this.baseCategoryDetailsColumns.slice(0, statusIdx),
-        this.category2NumberColumn,                 // number (>=1, อนุญาตซ้ำ)
+        this.category2NumberColumn,
         ...this.baseCategoryDetailsColumns.slice(statusIdx),
       ];
       this.categoryDetailsColumns = this.applyWidths(withNumber, this.withScoringNumberWidths);
@@ -301,7 +277,6 @@ export class ApplicationQuestionDetailsComponent {
       this.detailsRequiredFooterFields = ['questionTH','questionEN','type','scoringMethod'];
       return;
     }
-    // default
     this.categoryDetailsColumns = this.applyWidths([...this.baseCategoryDetailsColumns], this.baseWithTypeWidths);
     this.tableCreateDefaults = { type: 'Answer' };
     this.detailsRequiredFooterFields = ['questionTH','questionEN','type'];
@@ -324,10 +299,10 @@ export class ApplicationQuestionDetailsComponent {
       id: d?.id ?? null,
       questionTH: d?.questionTH ?? '',
       questionEN: d?.questionEN ?? '',
-      type: (d?.type ?? 'Answer'),                                // default
+      type: (d?.type ?? 'Answer'),
       sort: d?.sort ?? null,
       activeStatus: d?.status === 1 ? true : false,
-      scoringMethod: this.normalizeScoring(d?.scoringMethod),     // number|null
+      scoringMethod: this.normalizeScoring(d?.scoringMethod),
     } as any);
   }
 
@@ -345,10 +320,9 @@ export class ApplicationQuestionDetailsComponent {
   private setActionButtons(mode: 'view' | 'edit') {
     if (mode === 'view') {
       this.filterButtons = [{ label: 'Edit', key: 'edit', color: '#000000' }];
-      this.disabledKeys = []; // ไม่มีอะไรให้ disable
+      this.disabledKeys = [];
     } else {
       this.filterButtons = [{ label: 'Save', key: 'save', color: '#000055' }];
-      // ตอนเข้าโหมดแก้ไขใหม่ ๆ ยังไม่เปลี่ยนค่า -> disable Save ไว้ก่อน
       this.disabledKeys = ['save'];
     }
   }
@@ -383,7 +357,7 @@ export class ApplicationQuestionDetailsComponent {
                     (r?.scoringMethod ?? null),
     }));
 
-    items.sort((a,b) =>
+    items.sort((a: any, b: any) =>
       (Number(a.id)||0)-(Number(b.id)||0) ||
       (a.sort ?? 0) - (b.sort ?? 0) ||
       a.questionTH.localeCompare(b.questionTH) ||
@@ -399,7 +373,6 @@ export class ApplicationQuestionDetailsComponent {
   }
 
   private clearFormArrayQuietly(fa: any) {
-    // หลีกเลี่ยง fa.clear({emitEvent:false}) ถ้าเวอร์ชัน Angular ไม่รองรับ options
     for (let i = fa.length - 1; i >= 0; i--) {
       fa.removeAt(i, { emitEvent: false });
     }
@@ -453,6 +426,7 @@ export class ApplicationQuestionDetailsComponent {
     const key = this.makeCacheKey(categoryId);
     if (cache[key]) {
       delete cache[key];
+      // ✅ ต้องเขียน "cache ทั้งก้อน" กลับ
       this.writeDetailsCache(cache);
     }
   }
@@ -466,7 +440,6 @@ export class ApplicationQuestionDetailsComponent {
     );
 
     if (idx > -1) {
-      // ไม่ให้กระทบ valueChanges ของฟอร์มหลัก
       this.categoriesFA.at(idx).patchValue({ categoryName: clean }, { emitEvent: false });
       this.rebuildCategoryRowsFromForm();
     }
@@ -476,7 +449,6 @@ export class ApplicationQuestionDetailsComponent {
     const cache = this.readDetailsCache();
     if (!cache || !Object.keys(cache).length) return;
 
-    // สร้าง index เดิม
     const indexById = new Map<string, number>();
     this.categoriesFA.controls.forEach((fg: FormGroup, i: number) => {
       const id = String(fg.value.categoryId);
@@ -491,7 +463,6 @@ export class ApplicationQuestionDetailsComponent {
 
       const cachedName = (cached?.CategoryName ?? '').trim();
 
-      // ถ้ามีอยู่แล้ว → อัปเดตชื่อ
       if (indexById.has(String(id))) {
         if (cachedName) {
           const idx = indexById.get(String(id))!;
@@ -500,7 +471,6 @@ export class ApplicationQuestionDetailsComponent {
         return;
       }
 
-      // ถ้ายังไม่มีในตาราง และเป็น temp id → "เพิ่มแถวใหม่" (แสดง Category ใหม่)
       if (this.isTempId(id)) {
         const fg = this.fb.group<CategoryForm>({
           categoryId: id,
@@ -508,12 +478,11 @@ export class ApplicationQuestionDetailsComponent {
           activeStatus: true,
         } as any);
         this.categoriesFA.push(fg, { emitEvent: false });
-        // อัปเดต index map กันพลาดหลายตัว
         indexById.set(String(id), this.categoriesFA.length - 1);
       }
     });
 
-    this.rebuildCategoryRowsFromForm(); // อัปเดตรายการซ้าย
+    this.rebuildCategoryRowsFromForm();
   }
 
   private lastSelectedKey(): string {
@@ -528,39 +497,28 @@ export class ApplicationQuestionDetailsComponent {
     try { return sessionStorage.getItem(this.lastSelectedKey()); } catch { return null; }
   }
 
-  // เรียกหลังโหลดรายการแล้ว (ใน fetchCategoryTypesDetails)
   private autoOpenLastSelectedIfAny() {
     const last = this.getLastSelected();
     if (!last) return;
-
     const row = this.categoryRows.find(r => String(r.categoryId) === String(last));
-    if (row) {
-      // เปิดแบบ view ก็ได้ (หรือ edit ตามต้องการ)
-      this.onRowClicked(row, 'view');
-    }
+    if (row) this.onRowClicked(row, 'view');
   }
 
   private categoryTypeDraftKey(): string {
     return `${this.CATEGORY_TYPE_DRAFT_PREFIX}:${this.categoryType || 'default'}`;
   }
-
   private readCategoryTypeDraft(): string | null {
     try { return sessionStorage.getItem(this.categoryTypeDraftKey()); } catch { return null; }
   }
-
   private writeCategoryTypeDraft(name: string) {
     try { sessionStorage.setItem(this.categoryTypeDraftKey(), name ?? ''); } catch {}
   }
-
   private clearCategoryTypeDraft() {
     try { sessionStorage.removeItem(this.categoryTypeDraftKey()); } catch {}
   }
-
   private applyCategoryTypeDraft() {
     const draft = (this.readCategoryTypeDraft() ?? '').trim();
     if (!draft) return;
-
-    // ไม่ให้กระตุ้น valueChanges โดยไม่จำเป็น
     this.formDetails.get('categoryType.CategoryTypeName')
       ?.patchValue(draft, { emitEvent: false });
   }
@@ -587,12 +545,12 @@ export class ApplicationQuestionDetailsComponent {
   }
 
   private collectDirtyDetailsForPayload() {
-    const ids = this.readDirty();                     // ["12","18",...]
+    const ids = this.readDirty();
     if (!ids.length) return [];
 
-    const cache = this.readDetailsCache();            // key: "<type>:<id>"
+    const cache = this.readDetailsCache();
     const type = this.categoryType || 'default';
-    const list = [];
+    const list: any[] = [];
 
     for (const id of ids) {
       const entry = cache[`${type}:${String(id)}`];
@@ -614,7 +572,6 @@ export class ApplicationQuestionDetailsComponent {
     return list;
   }
 
-  // === Temp Id helpers ===
   private createTempId(): string {
     return `tmp-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
   }
@@ -622,32 +579,32 @@ export class ApplicationQuestionDetailsComponent {
     return String(id).startsWith('tmp-');
   }
 
+  private hasAnyCachedDraftsForCurrentType(): boolean {
+    const type = this.categoryType || 'default';
+    const cache = this.readDetailsCache();
+    return Object.keys(cache).some(k => k.startsWith(`${type}:`));
+  }
+
   public hasPendingDrafts(): boolean {
     const hasDirty = (this.readDirty()?.length ?? 0) > 0;
     const nameDraft = (this.readCategoryTypeDraft() ?? '').trim();
-    return hasDirty || !!nameDraft;
+    const hasCache = this.hasAnyCachedDraftsForCurrentType();
+    return hasDirty || !!nameDraft || hasCache;
   }
 
   private reflectPendingDraftsUI() {
     const pending = this.hasPendingDrafts();
-
-    // ถ้าอยู่ในโหมดแก้ไขอยู่แล้ว → คงปุ่ม Save ไว้เสมอ
     if (this.isEditing) {
       this.setActionButtons('edit');
-      // เปิด/ปิดปุ่ม Save ตามเงื่อนไขจริง
       const enable = pending || this.hasFormChanged();
       this.setButtonDisabled('save', !enable);
       return;
     }
-
-    // ไม่ได้อยู่โหมดแก้ไข
     if (pending) {
-      // มี draft → เข้าสู่ edit-mode อัตโนมัติ และเปิดปุ่ม Save
       if (this.formDetails.disabled) this.enterEditMode('draft');
       this.setActionButtons('edit');
       this.setButtonDisabled('save', false);
     } else {
-      // ไม่มี draft และไม่ได้อยู่โหมดแก้ไข → โหมด view
       this.setActionButtons('view');
     }
   }
@@ -656,49 +613,53 @@ export class ApplicationQuestionDetailsComponent {
     this.isEditing = true;
     this.formDetails.enable({ emitEvent: false });
 
-    // การ์ด Details ยังล็อกไว้ก่อน ยกเว้นอยู่ใน Add mode หรือเพิ่งกด Edit Details
     if (this.isEnabledCardDetails && !this.isAddMode && !this.isEditDetails) {
       this.categoryDetailsFG.disable({ emitEvent: false });
     }
-
-    // บังคับให้ CategoryTypeName ยัง disabled เสมอ
-    this.formDetails.get('categoryType.CategoryTypeName')
-      ?.disable({ emitEvent: false });
+    this.formDetails.get('categoryType.CategoryTypeName')?.disable({ emitEvent: false });
 
     this.setActionButtons('edit');
-    // ถ้าเข้าเพราะผู้ใช้กด Edit → รอให้มีการแก้ก่อนถึง enable Save
-    // ถ้าเข้าเพราะมี draft → เปิดปุ่ม Save ให้กดได้เลย
     this.setButtonDisabled('save', source === 'user');
   }
 
   private findDetailsIndexByRow(row: any): number {
-    // 1) ถ้ามี id ให้ลองเทียบด้วย id ก่อน
-    if (row?.id != null) {
-      const byId = this.detailsFA.controls.findIndex((fg: { value: CategoryDetailForm; }) => (fg.value as CategoryDetailForm).id === row.id);
-      if (byId > -1) return byId;
-    }
-
-    // util สำหรับ normalize ค่า
+    // util
     const T = (v: any) => (v ?? '').toString().trim();
     const N = (v: any) => (v === undefined || v === null || v === '' ? null : Number(v));
     const B = (v: any) => !!v;
 
+    // 1) ถ้ามี id ให้ใช้ id ก่อน
+    if (row?.id != null) {
+      const byId = this.detailsFA.controls.findIndex(
+        (fg: { value: CategoryDetailForm; }) => (fg.value as CategoryDetailForm).id === row.id
+      );
+      if (byId > -1) return byId;
+    }
+
+    // 2) (สำคัญ) เคสแถวใหม่ id=null → จับด้วย sort ก่อน (sort เป็น unique ลำดับแสดงในตาราง)
+    const srt = N(row?.sort);
+    if (srt != null) {
+      const bySort = this.detailsFA.controls.findIndex(
+        (fg: { value: CategoryDetailForm; }) => N((fg.value as CategoryDetailForm).sort) === srt
+      );
+      if (bySort > -1) return bySort;
+    }
+
+    // 3) เผื่อกรณีเดิม: จับคู่ด้วย “เนื้อหา” (อาจไม่เจอถ้าค่าเปลี่ยนไปแล้ว)
     const qTH = T(row?.questionTH);
     const qEN = T(row?.questionEN);
-    const srt = N(row?.sort);
     const act = B(row?.activeStatus);
 
-    // 2) จับคู่ด้วยค่าเนื้อหา (normalize แล้ว)
-    let byContent = this.detailsFA.controls.findIndex((fg: { value: CategoryDetailForm; }) => {
+    const byContent = this.detailsFA.controls.findIndex((fg: { value: CategoryDetailForm; }) => {
       const v = fg.value as CategoryDetailForm;
       return T(v.questionTH) === qTH &&
             T(v.questionEN) === qEN &&
-            N(v.sort) === srt &&
+            N(v.sort)       === srt &&
             B(v.activeStatus) === act;
     });
     if (byContent > -1) return byContent;
 
-    // 3) เผื่อไว้: ใช้ index ที่โชว์ในตาราง (กรณีไม่มี sort/filter อื่น)
+    // 4) ฟอลแบ็กสุดท้าย: ถ้า row มี index ที่ตารางส่งมา
     if (typeof row?.index === 'number') {
       const guess = row.index - 1;
       if (guess >= 0 && guess < this.detailsFA.length) return guess;
@@ -708,10 +669,8 @@ export class ApplicationQuestionDetailsComponent {
   }
 
   public clearDraftsForCurrentType(): void {
-    // ล้าง draft ของชื่อ Category Type
     this.clearCategoryTypeDraft();
 
-    // ล้าง cache รายการ details ของประเภทปัจจุบัน
     const type = this.categoryType || 'default';
     const cache = this.readDetailsCache();
     let changed = false;
@@ -722,19 +681,13 @@ export class ApplicationQuestionDetailsComponent {
       }
     }
     if (changed) this.writeDetailsCache(cache);
-
-    // ล้างรายการ dirty ids
     this.clearDirty();
   }
 
   getCellValue(row: any, field: string): any {
-    if (field === '__index') {
-      // แสดงตาม 'sort' (ไม่ใช่ลำดับ index ของอาร์เรย์)
-      return row?.sort ?? '';
-    }
+    if (field === '__index') return row?.sort ?? '';
     return field.split('.').reduce((obj, key) => obj?.[key], row);
   }
-
 
   toggleActive(): void {
     Promise.resolve().then(() => {
@@ -758,41 +711,26 @@ export class ApplicationQuestionDetailsComponent {
       const container = document.querySelector('.cdk-overlay-container');
       container?.classList.remove('dimmed-overlay');
     });
-
-    // const categoryTypeCtrl = this.formDetails.get('categoryType')?.get('activeStatus');
-    // const currentStatus = !!categoryTypeCtrl?.value;
-    // categoryTypeCtrl?.setValue(!currentStatus);
-    // categoryTypeCtrl?.markAsDirty();
-    // categoryTypeCtrl?.markAsTouched();
   }
 
   onAddClicked() {
     this.isProgrammaticUpdate = true;
     try {
-      // เปิดการ์ด + สถานะโหมด
       this.isEnabledCardDetails = true;
       this.isAddMode = true;
       this.isViewMode = false;
       this.isEditMode = false;
-      this.isEditDetails = true; // ให้แก้รายละเอียดได้ทันทีในโหมด Add
+      this.isEditDetails = true;
 
-      // เปิดฟอร์มส่วน details แบบไม่ยิง event
       this.categoryDetailsFG.enable({ emitEvent: false });
-
-      // เคลียร์ค่าเลือก category เดิม
       this.formDetails.patchValue({ selectedCategoryId: null }, { emitEvent: false });
-
-      // รีเซ็ตหัวข้อของการ์ด details
       this.categoryDetailsFG.reset({ CategoryName: '' }, { emitEvent: false });
 
-      // ล้างรายการคำถามแบบเงียบ
       this.clearFormArrayQuietly(this.detailsFA);
       this.categoryDetailsRows = [];
 
-      // baseline สำหรับการ์ด details
       this.detailsBaseline = { name: '', items: [] };
 
-      // 🔑 สำคัญ: ถ่าย snapshot ใหม่ให้สถานะ “หลังเตรียม Add” เป็นจุดอ้างอิง
       this.initialSnapshot = this.formDetails.getRawValue();
       this.formDetails.markAsPristine();
 
@@ -804,47 +742,34 @@ export class ApplicationQuestionDetailsComponent {
 
   checkFormDetailsChanged(): boolean {
     const current = this.buildCurrentDetailsView();
-
-    // กรณี Add: ต้องมีชื่อ + มีอย่างน้อย 1 แถว
     if (this.isAddMode) {
       return current.name.length > 0 && current.items.length > 0;
     }
-
-    // กรณี Edit: ต้องมีความต่างจาก baseline
     if (this.isEditDetails) {
       if (!this.detailsBaseline) return false;
       return !this.isSameDetails(current, this.detailsBaseline);
     }
-
     return false;
   }
 
   fetchCategoryTypesDetails() {
     this.applicationQuestionService.getCategoryTypesInfoQuestionDetails(this.categoryType).subscribe({
       next: (response) => {
-        console.log('Category types details fetched successfully:', response);
-
         sessionStorage.setItem('categoryList', JSON.stringify(response ?? []));
 
-        // สร้าง FormArray ของ categories
         this.categoriesFA.clear({ emitEvent: false });
         (response ?? []).forEach((c: any) => this.categoriesFA.push(this.buildCategoryFG(c), { emitEvent: false }));
 
-        // จับ baseline จากข้อมูล "จริง" ก่อนวาง draft/cache
         this.formDetails.disable({ emitEvent: false });
         this.initialSnapshot = this.formDetails.getRawValue();
 
-        // วาง draft/cache ตามที่ผู้ใช้แก้ค้าง
         this.applyCachedNamesToCategoryList();
         this.applyCategoryTypeDraft();
 
-        // อัปเดตรายการซ้าย
         this.rebuildCategoryRowsFromForm();
+        this.rebuildBaselineForCategories();
 
-        // ถ้ามี draft → โชว์ปุ่ม Save ได้ทันที
         this.reflectPendingDraftsUI();
-
-        // เปิดรายการล่าสุดตามเดิม (จะไม่ไปรีเซ็ต snapshot ถ้ามี draft — ดูข้อ C)
         this.autoOpenLastSelectedIfAny();
       },
       error: (error) => {
@@ -860,7 +785,7 @@ export class ApplicationQuestionDetailsComponent {
       index: idx + 1,
       categoryName: it.categoryName ?? '-',
       activeStatus: !!it.activeStatus,
-      textlinkActions: ['view', 'edit-topopup'], // ปรับตามสิทธิ์ได้
+      textlinkActions: ['view', 'edit-topopup'],
     }));
   }
 
@@ -869,7 +794,6 @@ export class ApplicationQuestionDetailsComponent {
     const catId = String(this.formDetails.get('selectedCategoryId')?.value ?? '');
     this.categoryDetailsRows = arr.map((it) => ({
       id: it.id,
-      // __index จะอ่านจาก row.sort ผ่าน getCellValue()
       questionTH: it.questionTH,
       questionEN: it.questionEN,
       type: it.type,
@@ -882,80 +806,99 @@ export class ApplicationQuestionDetailsComponent {
 
   onFilterButtonClick(key: string) {
     switch (key) {
-      case 'edit':
-        this.onEditClicked();
-        break;
-      case 'save':
-        this.onSaveClicked();
-        break;
+      case 'edit': this.onEditClicked(); break;
+      case 'save': this.onSaveClicked(); break;
     }
   }
 
   onEditClicked() {
-    console.log('Edit button clicked');
-    // snapshot ตอนเริ่มแก้ไข
     this.initialSnapshot = this.formDetails.getRawValue();
-    // เข้าโหมดแก้ไข (มาจากการกดของผู้ใช้)
     this.enterEditMode('user');
   }
 
   onSaveClicked() {
     if (!this.hasFormChanged() && !this.hasPendingDrafts()) return;
 
-    const value = this.formDetails.getRawValue();
-    const dirtyDetailsList = this.collectDirtyDetailsForPayload();
+    const changeGroups = this.collectDiffsBeforeSave();
+    const total = changeGroups.reduce((acc, g) => acc + g.items.length, 0);
+    if (total === 0) return;
 
-    // รองรับทั้ง “อันเดียว” และ “หลายอัน”
-    const payload: any = {
-      categoryType: {
-        name: value.categoryType.CategoryTypeName,
-        isActive: !!value.categoryType.activeStatus,
-      },
-      categories: (value.categories ?? []).map((c: CategoryForm) => ({
-        categoryId: c.categoryId,
-        categoryName: c.categoryName,
-        isActive: !!c.activeStatus,
-      })),
-    };
+    Promise.resolve().then(() => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.add('dimmed-overlay');
+    });
 
-    if (dirtyDetailsList.length === 1) {
-      payload.selectedCategoryId = dirtyDetailsList[0].categoryId;
-      payload.categoryDetails = {
-        CategoryName: dirtyDetailsList[0].CategoryName,
-        items: dirtyDetailsList[0].items,
+    const dialogRef = this.dialog.open(ConfirmChangesDialogComponent, {
+      width: '856px',
+      panelClass: 'custom-dialog-container',
+      disableClose: true,
+      autoFocus: false,
+      data: {
+        title: 'Please confirm your changes',
+        groups: changeGroups,
+        confirm: true,
+      } as ConfirmChangesData
+    });
+
+    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+      console.log('Confirmed:', confirmed);
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.remove('dimmed-overlay');
+      if (!confirmed) return;
+
+      const value = this.formDetails.getRawValue();
+      const dirtyDetailsList = this.collectDirtyDetailsForPayload();
+
+      const payload: any = {
+        categoryType: {
+          name: value.categoryType.CategoryTypeName,
+          isActive: !!value.categoryType.activeStatus,
+        },
+        categories: (value.categories ?? []).map((c: CategoryForm) => ({
+          categoryId: c.categoryId,
+          categoryName: c.categoryName,
+          isActive: !!c.activeStatus,
+        })),
       };
-    } else if (dirtyDetailsList.length > 1) {
-      payload.selectedCategoryId = null;
-      payload.categoryDetailsList = dirtyDetailsList; // <-- หลายหมวด
-    } else {
-      // ไม่มี draft รายละเอียด ก็ไม่ต้องส่งส่วน details
-      payload.selectedCategoryId = null;
-      payload.categoryDetailsList = [];
-    }
 
-    console.log('SAVE payload:', payload);
-    // TODO: เรียก API จริง แล้วทำต่อเมื่อ success
+      if (dirtyDetailsList.length === 1) {
+        payload.selectedCategoryId = dirtyDetailsList[0].categoryId;
+        payload.categoryDetails = {
+          CategoryName: dirtyDetailsList[0].CategoryName,
+          items: dirtyDetailsList[0].items,
+        };
+      } else if (dirtyDetailsList.length > 1) {
+        payload.selectedCategoryId = null;
+        payload.categoryDetailsList = dirtyDetailsList;
+      } else {
+        payload.selectedCategoryId = null;
+        payload.categoryDetailsList = [];
+      }
 
-    // เคลียร์ draft และ cache ทั้งหมดหลังบันทึกสำเร็จ
-    this.clearCategoryTypeDraft();     // ล้าง draft ชื่อ Category Type
-    for (const d of dirtyDetailsList) {
-      this.deleteCachedDetails(d.categoryId);
-    }
-    this.clearDirty();                 // ล้างรายการ dirty ให้หมด
+      console.log('SAVE payload:', payload);
 
-    this.isEditing = false;
-    this.formDetails.disable({ emitEvent: false });
-    this.initialSnapshot = this.formDetails.getRawValue();
-    this.setActionButtons('view');
+      // this.clearCategoryTypeDraft();
+      // for (const d of dirtyDetailsList) this.deleteCachedDetails(d.categoryId);
+      // this.clearDirty();
+
+      // this.isEditing = false;
+      // this.formDetails.disable({ emitEvent: false });
+      // this.initialSnapshot = this.formDetails.getRawValue();
+      // this.setActionButtons('view');
+
+      // this.pendingCategoryChanges = [];
+      // this.pendingDetailsChanges = [];
+
+      // this.rebuildBaselineForCategories();
+      // this.rebuildBaselineForDetails();
+    });
   }
 
   onSaveDetailsClicked() {
-    console.log('Save Details button clicked');
     if (!this.checkFormDetailsChanged()) return;
 
     let categoryId = this.formDetails.get('selectedCategoryId')?.value;
 
-    // อ่านค่าจากฟอร์มปัจจุบันเพื่อนำไปแคช
     const name = (this.categoryDetailsFG.get('CategoryName')?.value || '').trim();
     const itemsFA = (this.detailsFA.getRawValue() || []) as CategoryDetailForm[];
     const itemsForCache = itemsFA.map(d => ({
@@ -968,15 +911,12 @@ export class ApplicationQuestionDetailsComponent {
       scoringMethod: this.normalizeScoring(d.scoringMethod),
     }));
 
-    // เคส "เพิ่มใหม่": ยังไม่มี selectedCategoryId (null) + อยู่ใน Add mode
     if (this.isAddMode && (categoryId == null)) {
       const tempId = this.createTempId();
       categoryId = tempId;
 
-      // 1) set selectedCategoryId เป็น temp id โดยไม่ยิง valueChanges
       this.formDetails.patchValue({ selectedCategoryId: tempId }, { emitEvent: false });
 
-      // 2) push แถวใหม่เข้า categories (เพื่อให้ตารางซ้ายแสดง Category ใหม่ทันที)
       const fg = this.fb.group<CategoryForm>({
         categoryId: tempId,
         categoryName: name || '-',
@@ -984,37 +924,30 @@ export class ApplicationQuestionDetailsComponent {
       } as any);
       this.categoriesFA.push(fg, { emitEvent: false });
       this.rebuildCategoryRowsFromForm();
-
-      // 3) จดจำ last selected ไว้เปิดอัตโนมัติหลังรีโหลด
       this.rememberLastSelected(tempId);
     }
 
-    // จากนี้เหมือนเดิม: เซฟลง cache + sync ชื่อ + markDirty
     this.setCachedDetails(categoryId, { CategoryName: name, items: itemsForCache });
     this.syncCategoryNameToList(categoryId, name);
     this.markDirty(categoryId);
 
-    // ปรับ baseline/สแน็ปช็อต
     this.detailsBaseline = this.buildCurrentDetailsView();
-
-    // ไม่แตะ initialSnapshot หลัก เพื่อให้ Save หลักยัง "พร้อมกด"
-    // อัปเดต UI ให้เห็นปุ่ม Save ได้ทันทีหลังเซฟ details
     this.reflectPendingDraftsUI();
 
     console.log('Saved to cache for categoryId=', categoryId);
-    // กลับไปเป็นโหมดอ่านอย่างเดียวของการ์ด details
-    this.categoryDetailsFG.disable({ emitEvent: false });
 
-    // โชว์ปุ่ม "Edit" อีกครั้ง (และซ่อน "Save Details")
+    this.categoryDetailsFG.disable({ emitEvent: false });
     this.isEditDetails = false;
-    this.isAddMode = false;     // จบ flow เพิ่มใหม่
-    this.isEditMode = true;     // ยังอยู่ในโหมดแก้ไขหลักของหน้า
-    this.isViewMode = false;    // เผื่อกรณี state เพี้ยน
+    this.isAddMode = false;
+    this.isEditMode = true;
+    this.isViewMode = false;
+
+    // เคลียร์ log รายละเอียดรอบนี้กันสับสน
+    this.pendingDetailsChanges = [];
   }
 
   onAddQuestionClicked() {
     this.isAddingRow = true;
-
     const catId = String(this.formDetails.get('selectedCategoryId')?.value ?? '');
     if (catId === '5') {
       this.categoryDetailsTable.startInlineCreate({ activeStatus: false, status: 0, type: 'Answer', scoringMethod: 'Normal' }, 'bottom');
@@ -1031,12 +964,10 @@ export class ApplicationQuestionDetailsComponent {
 
   onRowClicked(row: any, action: 'view' | 'edit') {
     this.rememberLastSelected(row?.categoryId);
-
     this.buildColumnsFor(row?.categoryId);
 
     this.isProgrammaticUpdate = true;
 
-    console.log('View row clicked:', row);
     this.isEnabledCardDetails = true;
     if (action === 'view') {
       this.isViewMode = true;
@@ -1061,57 +992,74 @@ export class ApplicationQuestionDetailsComponent {
     const cached = categoryId != null ? this.getCachedDetails(categoryId) : null;
 
     if (cached) {
-      // ===== โหลดจากแคช =====
-      console.log('Load details from cache for categoryId=', categoryId, cached);
-
-      // ตั้งชื่อหมวดหมู่จากแคช (เชื่อถือแคชเป็นหลัก)
       this.categoryDetailsFG.patchValue(
         { CategoryName: cached.CategoryName ?? row?.categoryName ?? '' },
         { emitEvent: false }
       );
 
-      // เคลียร์และเติมรายการจากแคช
       this.clearFormArrayQuietly(this.detailsFA);
       (cached.items ?? []).forEach((d: any) => {
-        // ใช้ buildDetailFG ที่รองรับ d.status === 1
         this.detailsFA.push(this.buildDetailFG(d), { emitEvent: false });
       });
       this.rebuildDetailsRowsFromForm();
 
-      // การ์ดยัง disabled (จนกว่าจะกด Edit Details)
       this.categoryDetailsFG.disable({ emitEvent: false });
 
-      // baseline/snapshot สำหรับการเทียบ diff และปิดปุ่ม Save บนสุด
-      this.detailsBaseline = this.buildCurrentDetailsView();
+      const savedBaseline = categoryId != null ? this.getBaselineFor(categoryId) : null;
+      this.detailsBaseline = savedBaseline ?? { name: row?.categoryName ?? '', items: [] };
 
-      // อย่ารื้อ baseline หลักถ้ามี draft ค้างอยู่
+      if (!savedBaseline && categoryId != null) {
+        this.applicationQuestionService.getQuestionsByCategory(categoryId).subscribe({
+          next: (resp) => {
+            const items = (resp ?? []).map((d: any) => ({
+              id: d?.id ?? null,
+              questionTH: (d?.questionTH ?? '').trim(),
+              questionEN: (d?.questionEN ?? '').trim(),
+              type: (d?.type ?? 'Answer'),
+              sort: (d?.sort ?? d?.sort === 0) ? Number(d.sort) : null,
+              activeStatus: d?.status === 1,
+              scoringMethod: this.normalizeScoring(d?.scoringMethod),
+            }));
+            const snap: DetailsSnapshot = {
+              name: (row?.categoryName ?? '').trim(),
+              items: items.sort((a: any, b: any) =>
+                (Number(a.id)||0)-(Number(b.id)||0) ||
+                (a.sort ?? 0) - (b.sort ?? 0)
+              ),
+            };
+            this.setBaselineFor(categoryId, snap);
+            this.detailsBaseline = snap;
+          },
+          error: (err) => console.warn('silent baseline fetch failed', err),
+        });
+      }
+
       if (!this.hasPendingDrafts()) {
         this.initialSnapshot = this.formDetails.getRawValue();
       }
 
-      // ปรับปุ่มให้สะท้อนสถานะปัจจุบัน
       this.reflectPendingDraftsUI();
 
       this.isProgrammaticUpdate = false;
-      return; // จบที่แคช ไม่ต้องยิง API
+      return;
     }
 
     this.applicationQuestionService.getQuestionsByCategory(row.categoryId).subscribe({
       next: (response) => {
-        console.log('Questions fetched successfully:', response);
-
         this.clearFormArrayQuietly(this.detailsFA);
         (response ?? []).forEach((d: any) => this.detailsFA.push(this.buildDetailFG(d), { emitEvent: false }));
         this.rebuildDetailsRowsFromForm();
 
         this.categoryDetailsFG.disable({ emitEvent: false });
         this.detailsBaseline = this.buildCurrentDetailsView();
+        if (row?.categoryId != null) {
+          this.setBaselineFor(row.categoryId, this.detailsBaseline);
+        }
 
         if (!this.hasPendingDrafts()) {
           this.initialSnapshot = this.formDetails.getRawValue();
           this.formDetails.markAsPristine();
         }
-        // จากนั้นสะท้อนสถานะปุ่มตาม draft
         this.reflectPendingDraftsUI();
       },
       error: (error) => {
@@ -1127,25 +1075,55 @@ export class ApplicationQuestionDetailsComponent {
     const row = e.row;
     const idx = this.categoriesFA.controls.findIndex((fg: FormGroup) => fg.value.categoryId === row.categoryId);
     if (idx > -1) {
-      this.categoriesFA.at(idx).patchValue({ activeStatus: e.checked });
-      e.checkbox.checked = e.checked; // sync ฝั่ง UI
+      const prev = !!(this.categoriesFA.at(idx).value as CategoryForm).activeStatus;
+      const next = !!e.checked;
+
+      this.categoriesFA.at(idx).patchValue({ activeStatus: next });
+      e.checkbox.checked = next;
       this.rebuildCategoryRowsFromForm();
+
+      if (prev !== next) {
+        const idKey = String(row.categoryId);
+        const label = `Category "${row.categoryName}"`;
+        this.pendingCategoryChanges.push({
+          entity: 'Category',
+          id: idKey,
+          label,
+          field: 'activeStatus',
+          from: prev,
+          to: next,
+        });
+      }
     }
   }
 
-  // toggle ในตาราง Category Details
   onToggleChangeDetails(e: { row: any; checked: boolean; checkbox: HTMLInputElement }) {
     const row = e.row;
     const idx = this.detailsFA.controls.findIndex((fg: FormGroup) => fg.value.id === row.id);
     if (idx > -1) {
-      this.detailsFA.at(idx).patchValue({ activeStatus: e.checked });
-      e.checkbox.checked = e.checked;
+      const prev = !!(this.detailsFA.at(idx).value as CategoryDetailForm).activeStatus;
+      const next = !!e.checked;
+
+      this.detailsFA.at(idx).patchValue({ activeStatus: next });
+      e.checkbox.checked = next;
       this.rebuildDetailsRowsFromForm();
+
+      if (prev !== next) {
+        const idKey = String(row?.id ?? `tmp-${idx+1}`);
+        const label = `Detail #${idx+1}`;
+        this.pendingDetailsChanges.push({
+          entity: 'Detail',
+          id: idKey,
+          label,
+          field: 'activeStatus',
+          from: prev,
+          to: next,
+        });
+      }
     }
   }
 
   onEditDetailsClicked() {
-    console.log('Edit Details button clicked');
     this.categoryDetailsFG.enable();
     this.isEditDetails = true;
   }
@@ -1153,7 +1131,6 @@ export class ApplicationQuestionDetailsComponent {
   onInlineSave(payload: any) {
     this.isAddingRow = false;
 
-    // ลำดับใหม่ = ท้ายสุดเสมอ (เพราะไม่มี input sort แล้ว)
     const existingSorts = (this.detailsFA.getRawValue() as CategoryDetailForm[])
       .map(r => Number(r.sort))
       .filter(n => Number.isFinite(n) && n > 0);
@@ -1162,13 +1139,12 @@ export class ApplicationQuestionDetailsComponent {
 
     const catId = String(this.formDetails.get('selectedCategoryId')?.value ?? '');
 
-    // map scoring (ตามชนิดคอลัมน์)
     let scoring: number | null = null;
     if (catId === '5') {
       scoring = (payload.scoringMethod === 'Reverse' || payload.scoringMethod === 2 || payload.scoringMethod === '2') ? 2 : 1;
     } else if (catId === '2') {
       const n = Number(payload.scoringMethod);
-      scoring = (Number.isFinite(n) && n >= 1) ? Math.floor(n) : 1; // default 1, ห้ามติดลบ
+      scoring = (Number.isFinite(n) && n >= 1) ? Math.floor(n) : 1;
     } else {
       scoring = null;
     }
@@ -1183,12 +1159,27 @@ export class ApplicationQuestionDetailsComponent {
       scoringMethod: scoring,
     };
 
-    // แทรกท้าย
     this.detailsFA.insert(this.detailsFA.length, this.fb.group<CategoryDetailForm>(normalized as any), { emitEvent: false });
 
     this.rebuildDetailsRowsFromForm();
     this.categoryDetailsFG.markAsDirty();
     this.formDetails.markAsDirty();
+
+    const label = `Detail #${finalSort}`;
+    this.pendingDetailsChanges = this.pendingDetailsChanges.filter(
+      it => !(it.entity === 'Detail' && it.field === 'NEW' && it.label === label)
+    );
+
+    const toText = this.formatNewRowAddedText(normalized, catId);
+
+    this.pendingDetailsChanges.push({
+      entity: 'Detail',
+      id: normalized.id ?? null,
+      label,
+      field: 'NEW',
+      from: '',
+      to: toText,
+    });
 
     setTimeout(() => {
       try {
@@ -1199,11 +1190,11 @@ export class ApplicationQuestionDetailsComponent {
       } catch {}
     }, 0);
 
-    console.log('Inline save payload:', payload, '→ added:', normalized);
+    // อย่าเขียน cache/markDirty ที่นี่ — ให้กด Save Details เท่านั้น
+    this.reflectPendingDraftsUI();
   }
 
   onDeleteRowClicked(row: any) {
-    console.log('Delete row clicked:', row);
     Promise.resolve().then(() => {
       const container = document.querySelector('.cdk-overlay-container');
       container?.classList.add('dimmed-overlay');
@@ -1224,19 +1215,11 @@ export class ApplicationQuestionDetailsComponent {
     dialogRef.afterClosed().subscribe(async (ok: boolean) => {
       const container = document.querySelector('.cdk-overlay-container');
       container?.classList.remove('dimmed-overlay');
+      if (!ok) return;
 
-      if (!ok) return; // ยกเลิกถ้า CAPTCHA ไม่ผ่าน/กด Cancel
-
-      // --- หา index ของแถวใน FormArray ---
       let idx = this.findDetailsIndexByRow(row);
+      if (idx < 0) return;
 
-      if (idx < 0) {
-        console.warn('Row not found in FormArray, skip delete.');
-        return;
-      }
-
-      // --- Optimistic update: ลบทันทีใน UI ---
-      const backup = this.detailsFA.at(idx).value as CategoryDetailForm;
       this.detailsFA.removeAt(idx);
       this.rebuildDetailsRowsFromForm();
       this.categoryDetailsFG.markAsDirty();
@@ -1253,8 +1236,32 @@ export class ApplicationQuestionDetailsComponent {
     const idx = e.rowIndex;
     if (idx < 0 || idx >= this.detailsFA.length) return;
 
+    const field = e.field;
+    const rowFG = this.detailsFA.at(idx);
+    const before = rowFG.value[field as keyof CategoryDetailForm];
+
+    if (String(before) !== String(e.value)) {
+      const idKey = String(rowFG.value.id ?? `tmp-${idx+1}`);
+      const label = `Detail #${idx+1}`;
+      const catId = String(this.formDetails.get('selectedCategoryId')?.value ?? '');
+      const normFrom = (field === 'scoringMethod' && catId === '5')
+        ? (+before === 2 ? 'Reverse' : 'Normal')
+        : before;
+      const normTo = (field === 'scoringMethod' && catId === '5')
+        ? (e.value === 'Reverse' ? 'Reverse' : 'Normal')
+        : e.value;
+
+      this.pendingDetailsChanges.push({
+        entity: 'Detail',
+        id: idKey,
+        label,
+        field: field === 'scoringMethod' ? 'scoringMethod' : 'type',
+        from: normFrom,
+        to: normTo,
+      });
+    }
+
     if (e.field === 'scoringMethod') {
-      // ใช้เฉพาะเคส select (cat=5)
       const numeric = e.value === 'Reverse' ? 2 : 1;
       this.detailsFA.at(idx).patchValue({ scoringMethod: numeric }, { emitEvent: false });
       return;
@@ -1266,11 +1273,8 @@ export class ApplicationQuestionDetailsComponent {
     }
   }
 
-
   onDetailsRowsReordered(e: { previousIndex: number; currentIndex: number }) {
     const { previousIndex, currentIndex } = e;
-
-    // 1) ย้าย control ใน FormArray ให้ลำดับตรงกับที่ลาก
     const fa = this.detailsFA;
     if (previousIndex === currentIndex || previousIndex < 0 || currentIndex < 0) return;
     if (previousIndex >= fa.length || currentIndex >= fa.length) return;
@@ -1279,15 +1283,349 @@ export class ApplicationQuestionDetailsComponent {
     fa.removeAt(previousIndex, { emitEvent: false });
     fa.insert(currentIndex, ctrl, { emitEvent: false });
 
-    // 2) อัปเดตค่า sort ของทุกแถว = index ใหม่ + 1
     for (let i = 0; i < fa.length; i++) {
       fa.at(i).patchValue({ sort: i + 1 }, { emitEvent: false });
     }
 
-    // 3) rebuild rows สำหรับตาราง + mark dirty
+    this.pendingDetailsChanges.push({
+      entity: 'Detail',
+      id: null,
+      label: `Row moved`,
+      field: '__index',
+      from: previousIndex + 1,
+      to: currentIndex + 1,
+    });
+
     this.rebuildDetailsRowsFromForm();
     this.categoryDetailsFG.markAsDirty();
     this.formDetails.markAsDirty();
+  }
+
+  private rebuildBaselineForCategories() {
+    this.baselineCategoriesById.clear();
+    const arr = this.categoriesFA.getRawValue() as CategoryForm[];
+    arr.forEach(c => {
+      this.baselineCategoriesById.set(String(c.categoryId), {
+        activeStatus: !!c.activeStatus,
+        categoryName: (c.categoryName ?? '').trim(),
+      });
+    });
+  }
+
+  private rebuildBaselineForDetails() {
+    this.baselineDetailsById.clear();
+    const rows = this.categoryDetailsRows || [];
+    rows.forEach(r => {
+      const idKey = String(r?.id ?? `tmp-${r?.__index ?? ''}`);
+      this.baselineDetailsById.set(idKey, {
+        sort: (r?.sort ?? null),
+        questionTH: (r?.questionTH ?? '').trim(),
+        questionEN: (r?.questionEN ?? '').trim(),
+        type: (r?.type ?? 'Answer'),
+        activeStatus: !!r?.activeStatus,
+        scoringMethod: (this.formDetails.get('selectedCategoryId')?.value == '5')
+          ? (r?.scoringMethod === 'Reverse' ? 2 : 1)
+          : (Number.isFinite(Number(r?.scoringMethod)) ? Number(r.scoringMethod) : null),
+      });
+    });
+  }
+
+  onInlineEditSave(updatedRow: any) {
+    const idx = this.findDetailsIndexByRow(updatedRow);
+    if (idx < 0) return;
+
+    const catId = String(this.formDetails.get('selectedCategoryId')?.value ?? '');
+    const before = this.detailsFA.at(idx).value as CategoryDetailForm;
+    const label  = `Detail #${idx + 1}`;
+
+    const patch: Partial<CategoryDetailForm> = {
+      questionTH: (updatedRow.questionTH ?? '').trim(),
+      questionEN: (updatedRow.questionEN ?? '').trim(),
+      type:       updatedRow.type ?? 'Answer',
+      activeStatus: !!(updatedRow.activeStatus ?? (updatedRow.status === 1)),
+      sort: this.normDetailField('__index', updatedRow.sort ?? before.sort, catId) as number | null,
+      scoringMethod: this.normDetailField('scoringMethod', updatedRow.scoringMethod ?? before.scoringMethod, catId) as number | null,
+    };
+
+    (['questionTH','questionEN','type','activeStatus','__index','scoringMethod'] as const).forEach((f) => {
+      const ov = this.normDetailField(f === '__index' ? '__index' : f, (before as any)[f === '__index' ? 'sort' : f], catId);
+      const nv = this.normDetailField(f, (patch as any)[f === '__index' ? 'sort' : f], catId);
+
+      if (ov !== nv) {
+        this.pendingDetailsChanges = this.pendingDetailsChanges.filter(
+          it => !(it.entity === 'Detail' && it.label === label && it.field === f)
+        );
+
+        const pretty = (x: any) =>
+          f === 'activeStatus' ? (x ? 'Active' : 'Inactive')
+        : f === 'scoringMethod' && catId === '5' ? (x === 2 ? 'Reverse' : 'Normal')
+        : x;
+
+        this.pendingDetailsChanges.push({
+          entity: 'Detail',
+          id: before.id ?? null,
+          label,
+          field: f,
+          from: pretty(ov),
+          to:   pretty(nv),
+        });
+      }
+    });
+
+    this.detailsFA.at(idx).patchValue(patch, { emitEvent: false });
+    this.rebuildDetailsRowsFromForm();
+    this.categoryDetailsFG.markAsDirty();
+    this.formDetails.markAsDirty();
+
+    // ❌ ไม่เขียน cache/markDirty ที่นี่
+    this.reflectPendingDraftsUI();
+  }
+
+  // ===== NEW: ใช้ snapshot จาก cache เพื่อคำนวณ diff ตอน Save ใหญ่ =====
+  private buildSnapshotFromCache(catId: string | number): DetailsSnapshot | null {
+    const cached = this.getCachedDetails(catId);
+    if (!cached) return null;
+
+    const items = (cached.items ?? []).map((d: any) => ({
+      id: d?.id ?? null,
+      questionTH: (d?.questionTH ?? '').trim(),
+      questionEN: (d?.questionEN ?? '').trim(),
+      type: (d?.type ?? 'Answer'),
+      sort: (d?.sort ?? d?.sort === 0) ? Number(d.sort) : null,
+      activeStatus: d?.status === 1 || d?.activeStatus === true,
+      scoringMethod: this.normalizeScoring(d?.scoringMethod),
+    }));
+
+    items.sort((a: any, b: any) =>
+      (Number(a.id)||0) - (Number(b.id)||0) ||
+      (a.sort ?? 0) - (b.sort ?? 0) ||
+      a.questionTH.localeCompare(b.questionTH) ||
+      a.questionEN.localeCompare(b.questionEN) ||
+      a.type.localeCompare(b.type)
+    );
+
+    return {
+      name: (cached.CategoryName ?? '').trim(),
+      items
+    };
+  }
+
+  private collectDiffsBeforeSave(): ChangeGroup[] {
+    const groups: ChangeGroup[] = [];
+
+    // 4.1 Category table
+    const catItems: ChangeItem[] = [];
+    const arr = this.categoriesFA.getRawValue() as CategoryForm[];
+    arr.forEach((c) => {
+      const idKey = String(c.categoryId);
+      const nowActive = !!c.activeStatus;
+      const nowName = (c.categoryName ?? '').trim();
+      const base = this.baselineCategoriesById.get(idKey);
+      if (base) {
+        if (base.activeStatus !== nowActive) {
+          catItems.push({
+            entity: 'Category',
+            id: idKey,
+            label: `Category "${nowName || base.categoryName || '-'}"`,
+            field: 'activeStatus',
+            from: base.activeStatus,
+            to: nowActive,
+          });
+        }
+        if (base.categoryName !== nowName) {
+          catItems.push({
+            entity: 'Category',
+            id: idKey,
+            label: `Category "${nowName || base.categoryName || '-'}"`,
+            field: 'categoryName',
+            from: base.categoryName,
+            to: nowName,
+          });
+        }
+      }
+    });
+    catItems.push(...this.pendingCategoryChanges);
+    if (catItems.length) {
+      groups.push({ section: 'Category Table', items: catItems });
+    }
+
+    // 4.2 Category Details — คิดจาก cache ของ dirty เท่านั้น
+    const detItems: ChangeItem[] = [];
+    const dirtyIds = this.readDirty();
+
+    dirtyIds.forEach((cid) => {
+      const baseline = this.getBaselineFor(cid) || { name: '', items: [] as any[] };
+      const currentFromCache = this.buildSnapshotFromCache(cid);
+      if (!currentFromCache) return;
+
+      if ((baseline.name ?? '').trim() !== currentFromCache.name) {
+        detItems.push({
+          entity: 'CategoryName',
+          label: 'Category Name',
+          field: 'CategoryName',
+          from: (baseline.name ?? '').trim(),
+          to: currentFromCache.name
+        });
+      }
+
+      const mapOld = new Map<string, any>();
+      (baseline.items ?? []).forEach((d: any, idx: number) => {
+        mapOld.set(this.makeDetailKey(d, idx), d);
+      });
+
+      currentFromCache.items.forEach((d: any, idx: number) => {
+        const key = this.makeDetailKey(d, idx);
+        const old = mapOld.get(key);
+        const label = `Detail #${(d?.sort ?? (idx + 1))}`;
+
+        if (!old) {
+          detItems.push({
+            entity: 'Detail',
+            id: d.id ?? null,
+            label,
+            field: 'NEW',
+            from: '',
+            to: this.formatNewRowAddedText(d, String(cid)),
+          });
+          return;
+        }
+
+        const catId = String(cid);
+        const pairs: Array<[string, any, any]> = [
+          ['__index', old.sort ?? null, d.sort ?? null],
+          ['questionTH', (old.questionTH ?? ''), (d.questionTH ?? '')],
+          ['questionEN', (old.questionEN ?? ''), (d.questionEN ?? '')],
+          ['type', (old.type ?? 'Answer'), (d.type ?? 'Answer')],
+          ['activeStatus', !!old.activeStatus, !!d.activeStatus],
+        ];
+        if (catId === '5' || catId === '2') {
+          pairs.push(['scoringMethod', (old.scoringMethod ?? null), (d.scoringMethod ?? null)]);
+        }
+
+        pairs.forEach(([field, from, to]) => {
+          if (String(from) !== String(to)) {
+            const prettyFrom = (field === 'scoringMethod' && catId === '5')
+              ? (Number(from) === 2 ? 'Reverse' : 'Normal')
+              : from;
+            const prettyTo = (field === 'scoringMethod' && catId === '5')
+              ? (Number(to) === 2 ? 'Reverse' : 'Normal')
+              : to;
+
+            detItems.push({
+              entity: 'Detail',
+              id: d.id ?? null,
+              label,
+              field,
+              from: prettyFrom,
+              to: prettyTo,
+            });
+          }
+        });
+      });
+    });
+
+    if (detItems.length) {
+      groups.push({ section: 'Category Details', items: detItems });
+    }
+
+    return groups;
+  }
+
+  onCategoryNameBlur() {
+    if (!this.isEnabledCardDetails) return;
+    if (this.isProgrammaticUpdate) return;
+
+    const oldName = (this.detailsBaseline?.name ?? '').trim();
+    const nowName = (this.pendingCategoryNameDraft ?? this.categoryDetailsFG.get('CategoryName')?.value ?? '').trim();
+
+    this.pendingDetailsChanges = this.pendingDetailsChanges.filter(
+      it => !(it.entity === 'CategoryName' && it.field === 'CategoryName')
+    );
+
+    if (oldName !== nowName) {
+      this.pendingDetailsChanges.push({
+        entity: 'CategoryName',
+        label: 'Category Name',
+        field: 'CategoryName',
+        from: oldName,
+        to: nowName,
+      });
+    }
+
+    this.pendingCategoryNameDraft = null;
+  }
+
+  private makeDetailKey(d: any, idx: number): string {
+    if (d?.id != null && d?.id !== '') return `id:${String(d.id)}`;
+    const th = (d?.questionTH ?? '').trim();
+    const en = (d?.questionEN ?? '').trim();
+    const s  = (d?.sort ?? idx + 1);
+    return `new:${th}|${en}|${s}`;
+  }
+
+  private normDetailField(field: string, val: any, catId: string) {
+    if (field === 'scoringMethod') {
+      if (catId === '5') {
+        if (val === 'Reverse' || val === 2 || val === '2') return 2;
+        if (val === 'Normal'  || val === 1 || val === '1') return 1;
+        return 1;
+      } else if (catId === '2') {
+        const n = Number(val);
+        return Number.isFinite(n) ? Math.max(1, Math.floor(n)) : null;
+      }
+      const n = Number(val);
+      return Number.isFinite(n) ? n : null;
+    }
+    if (field === 'activeStatus') return !!val;
+    if (field === '__index' || field === 'sort') return val == null ? null : Number(val);
+    return typeof val === 'string' ? val.trim() : val;
+  }
+
+  private formatNewRowAddedText(
+    item: { questionTH?: string; questionEN?: string; type?: string; scoringMethod?: number | string | null },
+    catId: string
+  ): string {
+    const parts = [
+      `TH: ${(item.questionTH ?? '').trim() || '-'}`,
+      `EN: ${(item.questionEN ?? '').trim() || '-'}`,
+      `Type: ${item.type ?? 'Answer'}`,
+    ];
+
+    if (catId === '5') {
+      const smNum = (item.scoringMethod === 2 || item.scoringMethod === '2') ? 2 : 1;
+      const smLabel = smNum === 2 ? 'Reverse' : 'Normal';
+      parts.push(`ScoringMethod: ${smLabel}`);
+    } else if (catId === '2') {
+      const n = Number(item.scoringMethod);
+      if (Number.isFinite(n)) parts.push(`ScoringMethod: ${n}`);
+    }
+
+    return `+ Added (${parts.join(', ')})`;
+  }
+
+  private readBaselineStore(): Record<string, DetailsSnapshot> {
+    try { return JSON.parse(sessionStorage.getItem(this.DETAILS_BASELINE_STORE) || '{}'); }
+    catch { return {}; }
+  }
+  private writeBaselineStore(store: Record<string, DetailsSnapshot>) {
+    try { sessionStorage.setItem(this.DETAILS_BASELINE_STORE, JSON.stringify(store)); } catch {}
+  }
+  private baselineKey(catId: number | string): string {
+    return `${this.categoryType || 'default'}:${String(catId)}`;
+  }
+  private setBaselineFor(catId: number | string, snap: DetailsSnapshot) {
+    const store = this.readBaselineStore();
+    store[this.baselineKey(catId)] = snap;
+    this.writeBaselineStore(store);
+  }
+  private getBaselineFor(catId: number | string): DetailsSnapshot | null {
+    const store = this.readBaselineStore();
+    return store[this.baselineKey(catId)] ?? null;
+  }
+  private deleteBaselineFor(catId: number | string) {
+    const store = this.readBaselineStore();
+    delete store[this.baselineKey(catId)];
+    this.writeBaselineStore(store);
   }
 
   ngOnDestroy() {

@@ -28,6 +28,7 @@ import { ConfirmLeaveDialogComponent } from './components/dialogs/confirm-leave-
 import { OverlayModule } from '@angular/cdk/overlay';
 import { PortalModule } from '@angular/cdk/portal';
 import { ScrollingModule } from '@angular/cdk/scrolling';
+import { ConfirmChangesDialogComponent } from './components/dialogs/confirm-changes-dialog/confirm-changes-dialog.component';
 import { DualListboxComponent } from './components/dual-listbox/dual-listbox.component';
 import { QualityDialogComponent } from './components/dialogs/quality-dialog/quality-dialog.component';
 import { CdkDropdownComponent } from './components/cdk-dropdown/cdk-dropdown.component';
@@ -48,6 +49,7 @@ import { CdkDropdownComponent } from './components/cdk-dropdown/cdk-dropdown.com
     FormDialogComponent,
     CaptchaDialogComponent,
     ConfirmLeaveDialogComponent,
+    ConfirmChangesDialogComponent,
     DualListboxComponent,
     QualityDialogComponent,
     CdkDropdownComponent,
@@ -81,6 +83,7 @@ import { CdkDropdownComponent } from './components/cdk-dropdown/cdk-dropdown.com
     FormDialogComponent,
     CaptchaDialogComponent,
     ConfirmLeaveDialogComponent,
+    ConfirmChangesDialogComponent,
     DualListboxComponent,
     OverlayModule,
     CdkDropdownComponent,
