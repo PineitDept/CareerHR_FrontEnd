@@ -28,6 +28,7 @@ import { ConfirmLeaveDialogComponent } from './components/dialogs/confirm-leave-
 import { OverlayModule } from '@angular/cdk/overlay';
 import { PortalModule } from '@angular/cdk/portal';
 import { ScrollingModule } from '@angular/cdk/scrolling';
+import { ConfirmChangesDialogComponent } from './components/dialogs/confirm-changes-dialog/confirm-changes-dialog.component';
 import { DualListboxComponent } from './components/dual-listbox/dual-listbox.component';
 import { QualityDialogComponent } from './components/dialogs/quality-dialog/quality-dialog.component';
 // import { PurchaseOrderDetailsFormComponent } from './components/forms/purchase-order-details-form/purchase-order-details-form.component';
@@ -48,6 +49,7 @@ import { QualityDialogComponent } from './components/dialogs/quality-dialog/qual
     FormDialogComponent,
     CaptchaDialogComponent,
     ConfirmLeaveDialogComponent,
+    ConfirmChangesDialogComponent,
     DualListboxComponent,
     QualityDialogComponent,
     // PurchaseOrderDetailsFormComponent
@@ -81,6 +83,7 @@ import { QualityDialogComponent } from './components/dialogs/quality-dialog/qual
     FormDialogComponent,
     CaptchaDialogComponent,
     ConfirmLeaveDialogComponent,
+    ConfirmChangesDialogComponent,
     DualListboxComponent,
     // PurchaseOrderDetailsFormComponent
   ]
