@@ -1,5 +1,4 @@
 import { Component, ViewChild } from '@angular/core';
-import { defaultDetailsFilterButtons } from '../../../../../../../../constants/admin-setting/application-question.constants';
 import { ActivatedRoute } from '@angular/router';
 import { ApplicationQuestionService } from '../../../../../../../../services/admin-setting/application-question/application-question.service';
 import { FormBuilder, FormGroup } from '@angular/forms';
@@ -76,7 +75,7 @@ export class ApplicationQuestionDetailsComponent {
   @ViewChild('categoryTable') categoryTable!: TablesComponent;
   @ViewChild('categoryDetailsTable') categoryDetailsTable!: TablesComponent;
 
-  filterButtons = defaultDetailsFilterButtons();
+  filterButtons: { label: string; key: string; color: string }[] = [];
   disabledKeys: string[] = [];
 
   categoryType: string = '';
@@ -86,7 +85,7 @@ export class ApplicationQuestionDetailsComponent {
     { header: 'No.', field: 'index', type: 'text', align: 'center', width: '4%' },
     { header: 'Category Name', field: 'categoryName', type: 'text', width: '71%' },
     { header: 'Status', field: 'activeStatus', type: 'toggle', align: 'center', width: '7%' },
-    { header: 'Action', field: 'textlink', type: 'textlink', align: 'center', width: '18%', textlinkActions: ['view','edit-card'] }
+    { header: 'Action', field: 'textlink', type: 'textlink', align: 'center', width: '18%', textlinkActions: ['view'] }
   ];
 
   baseCategoryDetailsColumns: Columns = [
@@ -317,14 +316,11 @@ export class ApplicationQuestionDetailsComponent {
     return Number.isFinite(Number(v)) ? Number(v) : null;
   }
 
-  private setActionButtons(mode: 'view' | 'edit') {
-    if (mode === 'view') {
-      this.filterButtons = [{ label: 'Edit', key: 'edit', color: '#000000' }];
-      this.disabledKeys = [];
-    } else {
-      this.filterButtons = [{ label: 'Save', key: 'save', color: '#000055' }];
-      this.disabledKeys = ['save'];
-    }
+  private setActionButtons(_mode?: 'view' | 'edit') {
+    // ไม่ว่าจะแบบไหน แสดงปุ่ม Save ปุ่มเดียว
+    this.filterButtons = [{ label: 'Save', key: 'save', color: '#000055' }];
+    // เริ่มต้นให้ปุ่ม Save ถูกปิดไว้ก่อน จนกว่าจะมี draft/การเปลี่ยนแปลง
+    this.disabledKeys = ['save'];
   }
 
   private setButtonDisabled(key: string, disabled: boolean) {
@@ -785,7 +781,7 @@ export class ApplicationQuestionDetailsComponent {
       index: idx + 1,
       categoryName: it.categoryName ?? '-',
       activeStatus: !!it.activeStatus,
-      textlinkActions: ['view', 'edit-topopup'],
+      textlinkActions: ['view'],
     }));
   }
 
@@ -806,14 +802,8 @@ export class ApplicationQuestionDetailsComponent {
 
   onFilterButtonClick(key: string) {
     switch (key) {
-      case 'edit': this.onEditClicked(); break;
       case 'save': this.onSaveClicked(); break;
     }
-  }
-
-  onEditClicked() {
-    this.initialSnapshot = this.formDetails.getRawValue();
-    this.enterEditMode('user');
   }
 
   onSaveClicked() {
