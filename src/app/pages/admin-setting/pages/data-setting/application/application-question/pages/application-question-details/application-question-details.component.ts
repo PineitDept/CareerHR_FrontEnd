@@ -901,6 +901,7 @@ export class ApplicationQuestionDetailsComponent {
       scoringMethod: this.normalizeScoring(d.scoringMethod),
     }));
 
+    // กรณี Add ใหม่ -> ออก temp id
     if (this.isAddMode && (categoryId == null)) {
       const tempId = this.createTempId();
       categoryId = tempId;
@@ -917,14 +918,29 @@ export class ApplicationQuestionDetailsComponent {
       this.rememberLastSelected(tempId);
     }
 
-    this.setCachedDetails(categoryId, { CategoryName: name, items: itemsForCache });
+    // เปรียบเทียบกับ "server baseline" ก่อนตัดสินใจ cache/dirty
+    const currentSnap = this.buildCurrentDetailsView(); // มุมมองล่าสุดบนฟอร์ม
+    const serverBaseline = this.getBaselineFor(categoryId) || { name: '', items: [] };
+    const equalsServer = this.isSameDetails(currentSnap, serverBaseline);
+
+    // อัปเดตชื่อใน list ให้ตรงก่อน (ไม่เกี่ยวกับ dirty)
     this.syncCategoryNameToList(categoryId, name);
-    this.markDirty(categoryId);
 
+    if (equalsServer) {
+      // ถ้าเท่ากับ baseline → ลบ draft และ unmark dirty ของหมวดหมู่นี้
+      this.deleteCachedDetails(categoryId);
+      this.unmarkDirty(categoryId);
+    } else {
+      // มีความต่างจาก baseline → เก็บเป็น draft และ mark dirty
+      this.setCachedDetails(categoryId, { CategoryName: name, items: itemsForCache });
+      this.markDirty(categoryId);
+    }
+
+    // ตั้ง baseline สำหรับปุ่ม Save Details รอบต่อไป (เทียบกับสถานะที่เพิ่งกดเซฟ)
     this.detailsBaseline = this.buildCurrentDetailsView();
-    this.reflectPendingDraftsUI();
+    this.reflectPendingDraftsUI(); // ← จะ disable ปุ่ม Save ใหญ่เองถ้าไม่มี draft/เปลี่ยนแปลงค้างอยู่
 
-    console.log('Saved to cache for categoryId=', categoryId);
+    console.log('Saved to cache for categoryId=', categoryId, 'equalsServer=', equalsServer);
 
     this.categoryDetailsFG.disable({ emitEvent: false });
     this.isEditDetails = false;
@@ -932,7 +948,6 @@ export class ApplicationQuestionDetailsComponent {
     this.isEditMode = true;
     this.isViewMode = false;
 
-    // เคลียร์ log รายละเอียดรอบนี้กันสับสน
     this.pendingDetailsChanges = [];
   }
 
@@ -1404,40 +1419,40 @@ export class ApplicationQuestionDetailsComponent {
     const groups: ChangeGroup[] = [];
 
     // 4.1 Category table
-    const catItems: ChangeItem[] = [];
-    const arr = this.categoriesFA.getRawValue() as CategoryForm[];
-    arr.forEach((c) => {
-      const idKey = String(c.categoryId);
-      const nowActive = !!c.activeStatus;
-      const nowName = (c.categoryName ?? '').trim();
-      const base = this.baselineCategoriesById.get(idKey);
-      if (base) {
-        if (base.activeStatus !== nowActive) {
-          catItems.push({
-            entity: 'Category',
-            id: idKey,
-            label: `Category "${nowName || base.categoryName || '-'}"`,
-            field: 'activeStatus',
-            from: base.activeStatus,
-            to: nowActive,
-          });
-        }
-        if (base.categoryName !== nowName) {
-          catItems.push({
-            entity: 'Category',
-            id: idKey,
-            label: `Category "${nowName || base.categoryName || '-'}"`,
-            field: 'categoryName',
-            from: base.categoryName,
-            to: nowName,
-          });
-        }
-      }
-    });
-    catItems.push(...this.pendingCategoryChanges);
-    if (catItems.length) {
-      groups.push({ section: 'Category Table', items: catItems });
-    }
+    // const catItems: ChangeItem[] = [];
+    // const arr = this.categoriesFA.getRawValue() as CategoryForm[];
+    // arr.forEach((c) => {
+    //   const idKey = String(c.categoryId);
+    //   const nowActive = !!c.activeStatus;
+    //   const nowName = (c.categoryName ?? '').trim();
+    //   const base = this.baselineCategoriesById.get(idKey);
+    //   if (base) {
+    //     if (base.activeStatus !== nowActive) {
+    //       catItems.push({
+    //         entity: 'Category',
+    //         id: idKey,
+    //         label: `Category "${nowName || base.categoryName || '-'}"`,
+    //         field: 'activeStatus',
+    //         from: base.activeStatus,
+    //         to: nowActive,
+    //       });
+    //     }
+    //     if (base.categoryName !== nowName) {
+    //       catItems.push({
+    //         entity: 'Category',
+    //         id: idKey,
+    //         label: `Category "${nowName || base.categoryName || '-'}"`,
+    //         field: 'categoryName',
+    //         from: base.categoryName,
+    //         to: nowName,
+    //       });
+    //     }
+    //   }
+    // });
+    // catItems.push(...this.pendingCategoryChanges);
+    // if (catItems.length) {
+    //   groups.push({ section: 'Category Table', items: catItems });
+    // }
 
     // 4.2 Category Details — คิดจาก cache ของ dirty เท่านั้น
     const detItems: ChangeItem[] = [];
@@ -1616,6 +1631,11 @@ export class ApplicationQuestionDetailsComponent {
     const store = this.readBaselineStore();
     delete store[this.baselineKey(catId)];
     this.writeBaselineStore(store);
+  }
+
+  private unmarkDirty(categoryId: number | string) {
+    const ids = this.readDirty().filter(id => String(id) !== String(categoryId));
+    this.writeDirty(ids);
   }
 
   ngOnDestroy() {
