@@ -193,6 +193,7 @@ export class ApplicationQuestionDetailsComponent {
       .pipe(takeUntil(this.destroy$))
       .subscribe(params => {
         this.categoryType = params['categoryType'] || '';
+        this.setColumnsFor();
         this.formDetails.patchValue({
           categoryType: {
             CategoryTypeName: this.categoryType,
@@ -714,6 +715,7 @@ export class ApplicationQuestionDetailsComponent {
     this.isProgrammaticUpdate = true;
     try {
       this.isEnabledCardDetails = true;
+      this.setColumnsFor();
       this.isAddMode = true;
       this.isViewMode = false;
       this.isEditMode = false;
