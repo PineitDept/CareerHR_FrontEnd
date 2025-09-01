@@ -21,7 +21,7 @@ export class EmailTemplateDetailsComponent {
   columns = defaultColumns();
   filterButtons = defaultFilterButtonsDetails();
   disabledKeys: string[] = [];
-  fieldErrors:boolean = false;
+  fieldErrors: boolean = false;
 
   EmailID: string = '';
   EmailSubject: string = '';
@@ -148,7 +148,7 @@ export class EmailTemplateDetailsComponent {
     });
   }
 
-  putEmailIDsDetails(payload: {subject: string, message: string}) {
+  putEmailIDsDetails(payload: { subject: string, message: string }) {
     this.emailTemplateService.updateEmailTemplate(this.EmailID, payload).subscribe({
       next: (response) => {
         this.setActionButtons('view');
@@ -204,33 +204,57 @@ export class EmailTemplateDetailsComponent {
   onSaveClicked() {
     if (!this.hasFormChanged() && !this.hasPendingDrafts()) return;
 
-    const value = this.formDetails.getRawValue();
+    Promise.resolve().then(() => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.add('dimmed-overlay');
+    });
 
-    // กันเซฟ subject ว่างตั้งแต่ฝั่ง UI
-    if (!String(value.subject || '').trim()) {
-      this.notificationService.error('Subject is required');
-      this.setButtonDisabled('save', true);
-      return;
-    }
+    const dialogRef = this.dialog.open(AlertDialogComponent, {
+      width: '496px',
+      panelClass: 'custom-dialog-container',
+      autoFocus: false,
+      disableClose: true,
+      data: {
+        title: 'Confirmation',
+        message: 'Are you sure you want to save this data?',
+        confirm: true
+      }
+    });
 
-    const payload = {
-      subject: value.subject,
-      emailContent: this.getInlineStyledHtml()
-    };
+    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.remove('dimmed-overlay');
 
-    // optimistic UI
-    this.isEditing = false;
-    this.formDetails.disable({ emitEvent: false });
-    this.initialSnapshot = this.formDetails.getRawValue();
-    this.setActionButtons('view');
+      if (confirmed) {
+        const value = this.formDetails.getRawValue();
 
-    // เคลียร์ draft ไว้ก่อน (จะถูกล้างซ้ำใน next: ของ API อีกที)
-    this.clearDraftsForCurrentType();
+        // กันเซฟ subject ว่างตั้งแต่ฝั่ง UI
+        // if (!String(value.subject || '').trim()) {
+        //   this.notificationService.error('Subject is required');
+        //   this.setButtonDisabled('save', true);
+        //   return;
+        // }
 
-    // ยิงอัปเดตจริง
-    this.putEmailIDsDetails({
-      subject: value.subject,
-      message: this.getInlineStyledHtml()
+        const payload = {
+          subject: value.subject,
+          emailContent: this.getInlineStyledHtml()
+        };
+
+        // optimistic UI
+        this.isEditing = false;
+        this.formDetails.disable({ emitEvent: false });
+        this.initialSnapshot = this.formDetails.getRawValue();
+        this.setActionButtons('view');
+
+        // เคลียร์ draft ไว้ก่อน (จะถูกล้างซ้ำใน next: ของ API อีกที)
+        this.clearDraftsForCurrentType();
+
+        // ยิงอัปเดตจริง
+        // this.putEmailIDsDetails({
+        //   subject: value.subject,
+        //   message: this.getInlineStyledHtml()
+        // });
+      }
     });
   }
 
@@ -306,10 +330,10 @@ export class EmailTemplateDetailsComponent {
     } catch { return null; }
   }
   private writeDraft(obj: { subject?: string; emailContent?: string }) {
-    try { sessionStorage.setItem(this.draftKey(), JSON.stringify(obj ?? {})); } catch {}
+    try { sessionStorage.setItem(this.draftKey(), JSON.stringify(obj ?? {})); } catch { }
   }
   private clearDraft() {
-    try { sessionStorage.removeItem(this.draftKey()); } catch {}
+    try { sessionStorage.removeItem(this.draftKey()); } catch { }
   }
   private writeDraftFromForm() {
     if (!this.EmailID) return; // ยังไม่รู้ key
@@ -344,11 +368,11 @@ export class EmailTemplateDetailsComponent {
     } catch { return []; }
   }
   private writeDirty(ids: string[]) {
-    try { sessionStorage.setItem(this.dirtyKey(), JSON.stringify(Array.from(new Set(ids.map(String))))); } catch {}
+    try { sessionStorage.setItem(this.dirtyKey(), JSON.stringify(Array.from(new Set(ids.map(String))))); } catch { }
   }
   private clearDirty() {
-    try { sessionStorage.removeItem(this.dirtyKey()); } catch {}
-  }  
+    try { sessionStorage.removeItem(this.dirtyKey()); } catch { }
+  }
 
   onAddClicked() {
     console.log('Add Category clicked');

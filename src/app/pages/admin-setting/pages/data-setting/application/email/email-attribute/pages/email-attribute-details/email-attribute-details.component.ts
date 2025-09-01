@@ -111,8 +111,9 @@ export class EmailAttributeDetailsComponent {
     });
 
     this.formDetails.disable({ emitEvent: false });
-    this.setActionButtons('view');
-
+    // this.setActionButtons('view');
+    this.setActionButtons('edit');
+    this.isEditing = true
     this.formDetails.valueChanges.subscribe(() => {
       if (!this.isEditing) return;
       this.setButtonDisabled('save', !this.hasFormChanged());
@@ -268,42 +269,64 @@ export class EmailAttributeDetailsComponent {
   }
 
   onSaveClicked() {
-    console.log('Save button clicked');
     if (!this.hasFormChanged()) return;
 
-    const changedRows = this.findChangedRows();
-
-    if (changedRows.length === 0) {
-      console.log('No changes detected in rows');
-      return;
-    }
-
-    console.log('Changed rows to update:', changedRows);
-
-    const updateCalls = changedRows.map(row => {
-      const payload = { message: row.message };
-      return this.emailTemplateService.updateEmailTemplate(row.id, payload);
+    Promise.resolve().then(() => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.add('dimmed-overlay');
     });
 
-    // ✅ รอให้ทุก API สำเร็จ แล้วค่อย fetch ใหม่
-    forkJoin(updateCalls).subscribe({
-      next: () => {
-        console.log('All rows updated successfully');
+    const dialogRef = this.dialog.open(AlertDialogComponent, {
+      width: '496px',
+      panelClass: 'custom-dialog-container',
+      autoFocus: false,
+      disableClose: true,
+      data: {
+        title: 'Confirmation',
+        message: 'Are you sure you want to save this data?',
+        confirm: true
+      }
+    });
 
-        this.isEditing = false;
-        this.formDetails.disable({ emitEvent: false });
+    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.remove('dimmed-overlay');
 
-        this.initialSnapshot = {
-          categoryRows: JSON.parse(JSON.stringify(this.categoryRows))
-        };
+      if (confirmed) {
+        const changedRows = this.findChangedRows();
 
-        this.setActionButtons('view');
+        if (changedRows.length === 0) {
+          console.log('No changes detected in rows');
+          return;
+        }
 
-        // ✅ ค่อย fetch ใหม่ หลังทุก PUT เสร็จ
-        this.fetchEmailIDsDetails();
-      },
-      error: (err) => {
-        console.error('Error updating rows:', err);
+        const updateCalls = changedRows.map(row => {
+          const payload = { message: row.message };
+          return this.emailTemplateService.updateEmailTemplate(row.id, payload);
+        });
+
+        forkJoin(updateCalls).subscribe({
+          next: () => {
+            console.log('All rows updated successfully');
+
+            this.isEditing = false;
+            this.formDetails.disable({ emitEvent: false });
+
+            this.initialSnapshot = {
+              categoryRows: JSON.parse(JSON.stringify(this.categoryRows))
+            };
+
+            // this.setActionButtons('view');
+            this.setActionButtons('edit');
+            this.isEditing = true
+
+            // ✅ ค่อย fetch ใหม่ หลังทุก PUT เสร็จ
+            this.fetchEmailIDsDetails();
+          },
+          error: (err) => {
+            console.error('Error updating rows:', err);
+          }
+        });
       }
     });
   }

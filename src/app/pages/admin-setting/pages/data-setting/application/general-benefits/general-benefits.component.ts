@@ -125,7 +125,7 @@ export class GeneralBenefitsComponent extends BaseGeneralBenefitsComponent<IBene
       },
       error: (err) => {
         this.loadingService.hide();
-        this.notificationService.error('A benefit with this name already exists.');
+        this.notificationService.error(err.error.error.Message);
         this.fieldErrors = true;
 
         setTimeout(() => {
@@ -169,7 +169,7 @@ export class GeneralBenefitsComponent extends BaseGeneralBenefitsComponent<IBene
       },
       error: (err) => {
         this.isAddingRow = true;
-        this.notificationService.error('A benefit with this name already exists.');
+        this.notificationService.error(err.error.error.Message);
         this.fieldErrors = true;
 
         const rows = [...this.ScreenRows];

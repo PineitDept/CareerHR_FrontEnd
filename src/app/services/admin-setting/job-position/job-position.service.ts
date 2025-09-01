@@ -45,6 +45,14 @@ export class JobPositionService {
     });
   }
 
+  // แก้ไขรายการ
+  postJobPosition(data: any): Observable<any> {
+    return this.apiService.post<any>(this.base, data, {
+      withAuth: true,
+      loading: true
+    });
+  }
+
   // PATCH: Toggle Active/Inactive Status
   toggleStatus(id: number): Observable<any> {
     return this.apiService.patch(`${this.base}/${id}/toggle-status`, {}, {
