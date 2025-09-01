@@ -3,3 +3,16 @@
     background: #E9ECEF;
     pointer-events: none;
 }
+
+/* Chrome / Safari / Edge (WebKit) */
+input[type="number"].no-spinners::-webkit-outer-spin-button,
+input[type="number"].no-spinners::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type="number"].no-spinners {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}

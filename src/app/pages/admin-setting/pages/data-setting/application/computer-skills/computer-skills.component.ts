@@ -125,7 +125,7 @@ export class ComputerSkillsComponent extends BaseGeneralBenefitsComponent<ICompu
       },
       error: (err) => {
         this.loadingService.hide();
-        this.notificationService.error('A benefit with this name already exists.');
+        this.notificationService.error('Computer Skills with this name already exists.');
         this.fieldErrors = true;
 
         setTimeout(() => {
@@ -169,7 +169,7 @@ export class ComputerSkillsComponent extends BaseGeneralBenefitsComponent<ICompu
       },
       error: (err) => {
         this.isAddingRow = true;
-        this.notificationService.error('A benefit with this name already exists.');
+        this.notificationService.error('Computer Skills with this name already exists.');
         this.fieldErrors = true;
 
         const rows = [...this.ScreenRows];

@@ -1,5 +1,5 @@
 export interface JobPositionDetails {
-  idjobPst: number;
+  idjobPst?: number;
   namePosition?: string | null;
   workingDetails: number;
   experienceMin: number;

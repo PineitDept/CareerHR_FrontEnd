@@ -14,6 +14,8 @@ import { QualityDialogComponent } from '../../../../../../../../shared/component
 import { JobPositionDetails } from '../../../../../../../../interfaces/admin-setting/job-position.interface';
 import { CdkOverlayOrigin, ConnectedPosition, FlexibleConnectedPositionStrategy, Overlay, OverlayRef, ScrollStrategyOptions } from '@angular/cdk/overlay';
 import { TemplatePortal } from '@angular/cdk/portal';
+import { AlertDialogComponent } from '../../../../../../../../shared/components/dialogs/alert-dialog/alert-dialog.component';
+import { NotificationService } from '../../../../../../../../shared/services/notification/notification.service';
 
 type CategoryForm = {
   categoryId: number | string | null;
@@ -163,6 +165,7 @@ export class JobPositionDetalisComponent {
     private overlay: Overlay,
     private vcr: ViewContainerRef,
     private sso: ScrollStrategyOptions,
+    private notificationService: NotificationService,
   ) { }
 
   ngOnInit() {
@@ -198,6 +201,19 @@ export class JobPositionDetalisComponent {
       this.fetchComputerDetails();
       this.fetchLocationDetails();
       this.fetchJobDetails();
+
+      if (this.idjobPst === '') {
+        setTimeout(() => {
+          this.isEditing = true
+          this.formDetails.enable();
+
+          const restored = this.restoreFromCacheIfAny?.() ?? false;
+          if (!restored || this.formDetails.get('qualityPst')?.value == '') {
+            this.formDetails.get('qualityPst')?.setValue(0)
+            this.nextTick(() => this.setActionButtons('edit'));
+          }
+        }, 100)
+      }
     });
   }
 
@@ -210,11 +226,9 @@ export class JobPositionDetalisComponent {
     if (!ctrl) return;
     ctrl.valueChanges
       .pipe(
-        // ป้องกันกรณีคอมโพเนนต์ mutate array เดิม -> ทำให้เป็น array ใหม่เสมอ
         map(v => Array.isArray(v) ? [...v] : v),
         distinctUntilChanged((a, b) => this.stableStringify(a) === this.stableStringify(b))
       )
-      .subscribe(() => this.saveCache());
   }
 
   initializeForm() {
@@ -226,7 +240,7 @@ export class JobPositionDetalisComponent {
       maxExperience: [''],
       minSalary: [''],
       maxSalary: [''],
-      qualityPst: [''],
+      qualityPst: [0],
       activeStatus: [false],
       selectedIdsBenefits: [] as number[],
       selectedIdsLanguage: [] as number[],
@@ -291,7 +305,6 @@ export class JobPositionDetalisComponent {
   }
 
   fetchJobDetails() {
-    console.log(this.idjobPst, '=>his.idjobPst')
     this.jobPositionService.getJobTemplateById(this.idjobPst).subscribe({
       next: (response) => {
         this.previousData = response;
@@ -331,8 +344,6 @@ export class JobPositionDetalisComponent {
 
         this.cdr.detectChanges();
 
-        console.log(response)
-
         this.preselectedbenefits = Array.isArray(response.benefits) ? response.benefits.map(Number) : [];
         this.preselectedlanguageSkills = Array.isArray(response.languageSkills) ? response.languageSkills.map(Number) : [];
         this.preselectedcomputerSkills = Array.isArray(response.computerSkills) ? response.computerSkills.map(Number) : [];
@@ -341,7 +352,6 @@ export class JobPositionDetalisComponent {
         this.tryApplyPreselect(this.settingLanguageSkills, 'idlanguage', this.preselectedlanguageSkills, 'selectedIdsLanguage');
         this.tryApplyPreselect(this.settingComputerSkills, 'idcpSkill', this.preselectedcomputerSkills, 'selectedIdsComputer');
 
-        // this.initialSnapshot = this.buildSnapshot();
         this.initialSnapshot = {
           form: {
             namePosition: response.namePosition ?? '',
@@ -351,7 +361,7 @@ export class JobPositionDetalisComponent {
             maxExperience: response.experienceMax ?? '',
             minSalary: response.salaryMin ?? '',
             maxSalary: response.salaryMax ?? '',
-            qualityPst: response.quality ?? '',
+            qualityPst: response.quality ?? 0,
             activeStatus: (response.status === 31),
           },
           selections: {
@@ -366,6 +376,11 @@ export class JobPositionDetalisComponent {
             preferredSkills: this.cleanStringList(response.preferredSkills),
           }
         };
+
+        const restored = this.restoreFromCacheIfAny?.() ?? false;
+        if (restored) {
+          // this.initialSnapshot = sessionStorage.getItem(this.cacheKey());
+        }
 
         this.cdr.markForCheck();
       },
@@ -569,11 +584,10 @@ export class JobPositionDetalisComponent {
 
   private hasFormChanged(): boolean {
     if (!this.initialSnapshot) return false;
+    if (this.isViewMode) return false;
+    // if (this.restoreFromCacheIfAny?.()) return false;
+
     const current = this.buildSnapshot();
-
-    console.log(current, '=>current')
-    console.log(this.initialSnapshot, '=>this.initialSnapshot')
-
     return this.stableStringify(current) !== this.stableStringify(this.initialSnapshot);
   }
 
@@ -596,97 +610,105 @@ export class JobPositionDetalisComponent {
   onSaveClicked() {
     if (!this.hasFormChanged()) return;
 
-    const formValue = this.formDetails.getRawValue();
+    Promise.resolve().then(() => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.add('dimmed-overlay');
+    });
 
-    const previousData: JobPositionDetails = this.previousData;
+    const dialogRef = this.dialog.open(AlertDialogComponent, {
+      width: '496px',
+      panelClass: 'custom-dialog-container',
+      autoFocus: false,
+      disableClose: true,
+      data: {
+        title: 'Confirmation',
+        message: 'Are you sure you want to save this data?',
+        confirm: true
+      }
+    });
 
-    const payload: JobPositionDetails = {
-      idjobPst: +this.idjobPst,
-      namePosition: formValue.namePosition ?? previousData.namePosition ?? '',
-      ideducation: formValue.education ?? previousData.ideducation ?? null,
-      workingDetails: formValue.workingDetails ?? previousData.workingDetails ?? 0,
-      experienceMin: formValue.minExperience ?? previousData.experienceMin ?? 0,
-      experienceMax: formValue.maxExperience ?? previousData.experienceMax ?? 0,
-      salaryMin: formValue.minSalary ?? previousData.salaryMin ?? 0,
-      salaryMax: formValue.maxSalary ?? previousData.salaryMax ?? 0,
-      showSalary: (formValue.minSalary || formValue.maxSalary) ? 1 : previousData.showSalary ?? 0,
-      quality: formValue.qualityPst ?? previousData.quality ?? 0,
-      status: formValue.activeStatus ? 31 : 32,
-      locations: formValue.locations?.length ? formValue.locations : (previousData.locations ?? []),
+    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.remove('dimmed-overlay');
 
-      responsibilities: this.responsibilitiesRows.length
-        ? this.responsibilitiesRows.map(row => row.message)
-        : previousData.responsibilities ?? [],
+      if (confirmed) {
+        const formValue = this.formDetails.getRawValue();
 
-      requirements: this.requirementsRows.length
-        ? this.requirementsRows.map(row => row.message)
-        : previousData.requirements ?? [],
+        const previousData: JobPositionDetails = this.previousData;
 
-      preferredSkills: this.preferredSkillsRows.length
-        ? this.preferredSkillsRows.map(row => row.message)
-        : previousData.preferredSkills ?? [],
+        const payload: JobPositionDetails = {
+          // idjobPst: +this.idjobPst,
+          namePosition: formValue.namePosition ?? previousData.namePosition ?? '',
+          ideducation: formValue.education ?? previousData.ideducation ?? null,
+          workingDetails: formValue.workingDetails ?? previousData.workingDetails ?? 0,
+          experienceMin: formValue.minExperience ?? previousData.experienceMin ?? 0,
+          experienceMax: formValue.maxExperience ?? previousData.experienceMax ?? 0,
+          salaryMin: formValue.minSalary ?? previousData.salaryMin ?? 0,
+          salaryMax: formValue.maxSalary ?? previousData.salaryMax ?? 0,
+          showSalary: (formValue.minSalary || formValue.maxSalary) ? 1 : previousData.showSalary ?? 0,
+          quality: formValue.qualityPst ?? previousData.quality ?? 0,
+          status: formValue.activeStatus ? 31 : 32,
+          locations: formValue.locations?.length ? formValue.locations : (previousData.locations ?? []),
 
-      benefits: formValue.selectedIdsBenefits?.length
-        ? formValue.selectedIdsBenefits
-        : previousData.benefits ?? [],
+          responsibilities: this.responsibilitiesRows.length
+            ? this.responsibilitiesRows.map(row => row.message)
+            : previousData.responsibilities ?? [],
 
-      computerSkills: formValue.selectedIdsComputer?.length
-        ? formValue.selectedIdsComputer
-        : previousData.computerSkills ?? [],
+          requirements: this.requirementsRows.length
+            ? this.requirementsRows.map(row => row.message)
+            : previousData.requirements ?? [],
 
-      languageSkills: formValue.selectedIdsLanguage?.length
-        ? formValue.selectedIdsLanguage
-        : previousData.languageSkills ?? [],
-    };
+          preferredSkills: this.preferredSkillsRows.length
+            ? this.preferredSkillsRows.map(row => row.message)
+            : previousData.preferredSkills ?? [],
 
-    console.log('🚀 ส่ง payload:', payload);
+          benefits: formValue.selectedIdsBenefits?.length
+            ? formValue.selectedIdsBenefits
+            : previousData.benefits ?? [],
 
-    this.isEditing = false;
-    this.formDetails.disable({ emitEvent: false });
-    this.initialSnapshot = this.buildSnapshot();
-    this.nextTick(() => this.setActionButtons('view'));
+          computerSkills: formValue.selectedIdsComputer?.length
+            ? formValue.selectedIdsComputer
+            : previousData.computerSkills ?? [],
 
-    // this.jobPositionService.updateJobPosition(this.idjobPst, payload).subscribe({
-    //   next: () => {
-    //     console.log('อัปเดตสำเร็จ');
-    //     this.fetchJobDetails();
-    //     this.isEditing = false;
-    //     this.setActionButtons('view');
-    //     this.formDetails.disable({ emitEvent: false });
-    //     this.clearCache();
-    //   },
-    //   error: (err) => {
-    //     console.error('เกิดข้อผิดพลาด:', err);
-    //   }
-    // });
-  }
+          languageSkills: formValue.selectedIdsLanguage?.length
+            ? formValue.selectedIdsLanguage
+            : previousData.languageSkills ?? [],
+        };
 
-  private findChangedRows(): any[] {
-    const current = this.categoryRows;
-    const initial = this.initialSnapshot?.categoryRows ?? [];
+        console.log('🚀 ส่ง payload:', payload);
 
-    const changed: any[] = [];
+        if (this.idjobPst !== '') {
+          this.jobPositionService.updateJobPosition(this.idjobPst, payload).subscribe({
+            next: () => {
+              this.isEditing = false;
+              this.formDetails.disable({ emitEvent: false });
+              this.initialSnapshot = this.buildSnapshot();
+              this.nextTick(() => this.setActionButtons('view'));
 
-    current.forEach((currRow, index) => {
-      const initRow = initial.find((row: any) => row.id === currRow.id);
+              this.clearDraftsForCurrentType();
+            },
+            error: (err) => {
+              this.notificationService.error(err.error.error.errors.NamePosition);
+            }
+          });
+        } else {
+          this.jobPositionService.postJobPosition(payload).subscribe({
+            next: () => {
+              this.isEditing = false;
+              this.formDetails.disable({ emitEvent: false });
+              this.initialSnapshot = this.buildSnapshot();
+              this.nextTick(() => this.setActionButtons('view'));
 
-      if (!initRow) {
-        // แถวใหม่
-        changed.push(currRow);
-      } else {
-        // เช็คว่า field ไหนเปลี่ยน
-        const hasChanged =
-          currRow.subject !== initRow.subject ||
-          currRow.message !== initRow.message ||
-          currRow.activeStatus !== initRow.activeStatus;
-
-        if (hasChanged) {
-          changed.push(currRow);
+              this.clearDraftsForCurrentType();
+            },
+            error: (err) => {
+              this.notificationService.error(err.error.error.errors.NamePosition);
+            }
+          });
         }
       }
     });
 
-    return changed;
   }
 
   onRowClicked(row: any, action: 'view' | 'edit') {
@@ -715,31 +737,7 @@ export class JobPositionDetalisComponent {
     if (idx > -1) {
       this.detailsFA.at(idx).patchValue({ activeStatus: e.checked });
       e.checkbox.checked = e.checked;
-      this.rebuildDetailsRowsFromForm();
     }
-  }
-
-  private rebuildDetailsRowsFromForm() {
-    // const arr = this.detailsFA.getRawValue() as CategoryDetailForm[];
-    // this.categoryDetailsRows = arr.map((it, idx) => ({
-    //   id: it.id,
-    //   index: idx + 1,
-    //   subject: it.subject,
-    //   message: it.message,
-    //   activeStatus: !!it.activeStatus,
-    //   textlinkActions: ['edit-inrow','delete'], // อาจปรับตามสิทธิ์จาก API
-    // }));
-  }
-
-  private rebuildCategoryRowsFromForm() {
-    const arr = this.categoriesFA.getRawValue() as CategoryForm[];
-    this.categoryRows = arr.map((it, idx) => ({
-      categoryId: it.categoryId,
-      index: idx + 1,
-      categoryName: it.categoryName ?? '-',
-      activeStatus: !!it.activeStatus,
-      textlinkActions: ['view', 'edit-topopup'], // ปรับตามสิทธิ์ได้
-    }));
   }
 
   get categoriesFA() {
@@ -961,9 +959,5 @@ export class JobPositionDetalisComponent {
   onBeforeUnload() {
     this.saveCache();
   }
-
-  // ngOnDestroy() {
-  //   this.saveCache();
-  // }
 }
 

@@ -10,7 +10,7 @@
 <form [formGroup]="formDetails">
     <div class="tw-grid tw-grid-cols-3 tw-gap-6 tw-px-6 tw-py-4 tw-bg-[#FFFFFF]">
         <!-- Left Panel -->
-        <div
+        <!-- <div
             class="tw-col-span-2 tw-space-y-4 tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
             <div>
                 <label class="tw-text-lg tw-font-bold">Email Attribute Detail</label>
@@ -25,10 +25,10 @@
                     class="tw-w-full tw-bg-[#FFFFFF] tw-border tw-border-[#CED4DA] tw-rounded-lg tw-px-4 tw-py-2 tw-text-sm isDisabled"
                     formControlName="subject"/>
             </div>
-        </div>
+        </div> -->
 
         <!-- Right Panel -->
-        <div class="tw-col-span-1 tw-space-y-6">
+        <!-- <div class="tw-col-span-1 tw-space-y-6">
             <div
                 class="tw-space-y-4 tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-h-full">
                 <div>
@@ -61,13 +61,14 @@
                     </p>
                 </div>
             </div>
-        </div>
+        </div> -->
 
         <div class="tw-col-span-3">
             <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-mt-2">
 
             <div class="tw-flex tw-items-center tw-justify-between">
-                <label class="tw-text-lg tw-font-bold">Setting Attribute</label>
+                <!-- <label class="tw-text-lg tw-font-bold">Setting Attribute</label> -->
+                <label class="tw-text-lg tw-font-bold">Email Attribute Detail</label>
 
                 <!-- <button
                     type="button"
@@ -86,6 +87,14 @@
             </div>
             <hr class="tw--mx-6 tw-mt-4">
             <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
+               <div class="tw-py-4 tw-px-6">
+                    <div class="tw-mb-1.5">
+                        <label class="tw-text-sm tw-font-semibold">Email Attribute Name <span class="text-red">*</span></label>
+                    </div>
+                    <input type="text"
+                        class="tw-w-full tw-bg-[#FFFFFF] tw-border tw-border-[#CED4DA] tw-rounded-lg tw-px-4 tw-py-2 tw-text-sm isDisabled"
+                        formControlName="subject"/>
+               </div>
                 <app-tables
                     #categoryTable
                     [rows]="categoryRows"
@@ -104,6 +113,7 @@
                     [highlightRowIndex]="duplicateRowIndex"
                     (deleteRowClicked)="onDeleteRowClicked($event)"
                     (editClicked)="handleEditRow($event)"
+                    [isConfirmDialogSaveRequired]="true"
                 ></app-tables>
             </div>
             </div>
