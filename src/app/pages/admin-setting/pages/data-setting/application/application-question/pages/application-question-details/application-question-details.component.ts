@@ -246,13 +246,15 @@ export class ApplicationQuestionDetailsComponent {
     '__index': '4%', 'questionTH': '26%', 'questionEN': '26%', 'type': '12%', 'scoringMethod': '10%', 'activeStatus': '8%', 'textlink': '14%',
   };
 
+  private get isQuiz2(): boolean   { return this.categoryType === 'Quiz2'; }
+  private get isAboutMe(): boolean { return this.categoryType === 'AboutMe'; }
+
   private applyWidths(cols: Columns, widths: Record<string,string>): Columns {
     return cols.map(c => ({ ...c, width: widths[c.field] ?? c.width }));
   }
 
-  private setColumnsFor(categoryId: number | string | null | undefined) {
-    const id = String(categoryId ?? '');
-    if (id === '5') {
+  private setColumnsFor() {
+    if (this.isQuiz2) {
       const statusIdx = this.baseCategoryDetailsColumns.findIndex(c => c.field === 'activeStatus');
       const withScoring = [
         ...this.baseCategoryDetailsColumns.slice(0, statusIdx),
@@ -264,7 +266,7 @@ export class ApplicationQuestionDetailsComponent {
       this.detailsRequiredFooterFields = ['questionTH','questionEN','type'];
       return;
     }
-    if (id === '2') {
+    if (this.isAboutMe) {
       const statusIdx = this.baseCategoryDetailsColumns.findIndex(c => c.field === 'activeStatus');
       const withNumber = [
         ...this.baseCategoryDetailsColumns.slice(0, statusIdx),
@@ -281,8 +283,8 @@ export class ApplicationQuestionDetailsComponent {
     this.detailsRequiredFooterFields = ['questionTH','questionEN','type'];
   }
 
-  private buildColumnsFor(categoryId: number | string) {
-    this.setColumnsFor(categoryId);
+  private buildColumnsFor() {
+    this.setColumnsFor();
   }
 
   private buildCategoryFG(c: any) {
@@ -340,7 +342,6 @@ export class ApplicationQuestionDetailsComponent {
 
   private buildCurrentDetailsView(): DetailsSnapshot {
     const name = (this.categoryDetailsFG.get('CategoryName')?.value || '').trim();
-    const catId = String(this.formDetails.get('selectedCategoryId')?.value ?? '');
 
     const items = (this.categoryDetailsRows || []).map(r => ({
       id: r?.id ?? null,
@@ -349,7 +350,7 @@ export class ApplicationQuestionDetailsComponent {
       type: (r?.type ?? 'Answer'),
       sort: (r?.sort ?? r?.sort === 0) ? Number(r.sort) : null,
       activeStatus: !!r?.activeStatus,
-      scoringMethod: (catId === '5') ? (r?.scoringMethod === 'Reverse' ? 2 : 1) :
+      scoringMethod: this.isQuiz2 ? (r?.scoringMethod === 'Reverse' ? 2 : 1) :
                     (r?.scoringMethod ?? null),
     }));
 
@@ -787,7 +788,6 @@ export class ApplicationQuestionDetailsComponent {
 
   private rebuildDetailsRowsFromForm() {
     const arr = this.detailsFA.getRawValue() as CategoryDetailForm[];
-    const catId = String(this.formDetails.get('selectedCategoryId')?.value ?? '');
     this.categoryDetailsRows = arr.map((it) => ({
       id: it.id,
       questionTH: it.questionTH,
@@ -795,7 +795,7 @@ export class ApplicationQuestionDetailsComponent {
       type: it.type,
       sort: it.sort,
       activeStatus: !!it.activeStatus,
-      scoringMethod: (catId === '5') ? (it.scoringMethod === 2 ? 'Reverse' : 'Normal') : it.scoringMethod,
+      scoringMethod: this.isQuiz2 ? (it.scoringMethod === 2 ? 'Reverse' : 'Normal') : it.scoringMethod,
       textlinkActions: ['edit-inrow','delete'],
     }));
   }
@@ -953,10 +953,9 @@ export class ApplicationQuestionDetailsComponent {
 
   onAddQuestionClicked() {
     this.isAddingRow = true;
-    const catId = String(this.formDetails.get('selectedCategoryId')?.value ?? '');
-    if (catId === '5') {
+    if (this.isQuiz2) {
       this.categoryDetailsTable.startInlineCreate({ activeStatus: false, status: 0, type: 'Answer', scoringMethod: 'Normal' }, 'bottom');
-    } else if (catId === '2') {
+    } else if (this.isAboutMe) {
       this.categoryDetailsTable.startInlineCreate({ activeStatus: false, status: 0, type: 'Answer', scoringMethod: 1 }, 'bottom');
     } else {
       this.categoryDetailsTable.startInlineCreate({ activeStatus: false, status: 0, type: 'Answer' }, 'bottom');
@@ -969,7 +968,7 @@ export class ApplicationQuestionDetailsComponent {
 
   onRowClicked(row: any, action: 'view' | 'edit') {
     this.rememberLastSelected(row?.categoryId);
-    this.buildColumnsFor(row?.categoryId);
+    this.buildColumnsFor();
 
     this.isProgrammaticUpdate = true;
 
@@ -986,7 +985,7 @@ export class ApplicationQuestionDetailsComponent {
       this.isEditDetails = false;
     }
 
-    this.setColumnsFor(row?.categoryId);
+    this.setColumnsFor();
 
     this.formDetails.patchValue({
       selectedCategoryId: row?.categoryId ?? null,
@@ -1142,12 +1141,10 @@ export class ApplicationQuestionDetailsComponent {
     const maxSort = existingSorts.length ? Math.max(...existingSorts) : 0;
     const finalSort = maxSort + 1;
 
-    const catId = String(this.formDetails.get('selectedCategoryId')?.value ?? '');
-
     let scoring: number | null = null;
-    if (catId === '5') {
+    if (this.isQuiz2) {
       scoring = (payload.scoringMethod === 'Reverse' || payload.scoringMethod === 2 || payload.scoringMethod === '2') ? 2 : 1;
-    } else if (catId === '2') {
+    } else if (this.isAboutMe) {
       const n = Number(payload.scoringMethod);
       scoring = (Number.isFinite(n) && n >= 1) ? Math.floor(n) : 1;
     } else {
@@ -1175,7 +1172,7 @@ export class ApplicationQuestionDetailsComponent {
       it => !(it.entity === 'Detail' && it.field === 'NEW' && it.label === label)
     );
 
-    const toText = this.formatNewRowAddedText(normalized, catId);
+    const toText = this.formatNewRowAddedText(normalized);
 
     this.pendingDetailsChanges.push({
       entity: 'Detail',
@@ -1248,11 +1245,10 @@ export class ApplicationQuestionDetailsComponent {
     if (String(before) !== String(e.value)) {
       const idKey = String(rowFG.value.id ?? `tmp-${idx+1}`);
       const label = `Detail #${idx+1}`;
-      const catId = String(this.formDetails.get('selectedCategoryId')?.value ?? '');
-      const normFrom = (field === 'scoringMethod' && catId === '5')
+      const normFrom = (field === 'scoringMethod' && this.isQuiz2)
         ? (+before === 2 ? 'Reverse' : 'Normal')
         : before;
-      const normTo = (field === 'scoringMethod' && catId === '5')
+      const normTo = (field === 'scoringMethod' && this.isQuiz2)
         ? (e.value === 'Reverse' ? 'Reverse' : 'Normal')
         : e.value;
 
@@ -1267,7 +1263,7 @@ export class ApplicationQuestionDetailsComponent {
     }
 
     if (e.field === 'scoringMethod') {
-      const numeric = e.value === 'Reverse' ? 2 : 1;
+      const numeric = this.isQuiz2 ? (e.value === 'Reverse' ? 2 : 1) : Number(e.value);
       this.detailsFA.at(idx).patchValue({ scoringMethod: numeric }, { emitEvent: false });
       return;
     }
@@ -1328,7 +1324,7 @@ export class ApplicationQuestionDetailsComponent {
         questionEN: (r?.questionEN ?? '').trim(),
         type: (r?.type ?? 'Answer'),
         activeStatus: !!r?.activeStatus,
-        scoringMethod: (this.formDetails.get('selectedCategoryId')?.value == '5')
+        scoringMethod: this.isQuiz2
           ? (r?.scoringMethod === 'Reverse' ? 2 : 1)
           : (Number.isFinite(Number(r?.scoringMethod)) ? Number(r.scoringMethod) : null),
       });
@@ -1339,7 +1335,6 @@ export class ApplicationQuestionDetailsComponent {
     const idx = this.findDetailsIndexByRow(updatedRow);
     if (idx < 0) return;
 
-    const catId = String(this.formDetails.get('selectedCategoryId')?.value ?? '');
     const before = this.detailsFA.at(idx).value as CategoryDetailForm;
     const label  = `Detail #${idx + 1}`;
 
@@ -1348,13 +1343,13 @@ export class ApplicationQuestionDetailsComponent {
       questionEN: (updatedRow.questionEN ?? '').trim(),
       type:       updatedRow.type ?? 'Answer',
       activeStatus: !!(updatedRow.activeStatus ?? (updatedRow.status === 1)),
-      sort: this.normDetailField('__index', updatedRow.sort ?? before.sort, catId) as number | null,
-      scoringMethod: this.normDetailField('scoringMethod', updatedRow.scoringMethod ?? before.scoringMethod, catId) as number | null,
+      sort: this.normDetailField('__index', updatedRow.sort ?? before.sort) as number | null,
+      scoringMethod: this.normDetailField('scoringMethod', updatedRow.scoringMethod ?? before.scoringMethod) as number | null,
     };
 
     (['questionTH','questionEN','type','activeStatus','__index','scoringMethod'] as const).forEach((f) => {
-      const ov = this.normDetailField(f === '__index' ? '__index' : f, (before as any)[f === '__index' ? 'sort' : f], catId);
-      const nv = this.normDetailField(f, (patch as any)[f === '__index' ? 'sort' : f], catId);
+      const ov = this.normDetailField(f === '__index' ? '__index' : f, (before as any)[f === '__index' ? 'sort' : f]);
+      const nv = this.normDetailField(f, (patch as any)[f === '__index' ? 'sort' : f]);
 
       if (ov !== nv) {
         this.pendingDetailsChanges = this.pendingDetailsChanges.filter(
@@ -1363,7 +1358,7 @@ export class ApplicationQuestionDetailsComponent {
 
         const pretty = (x: any) =>
           f === 'activeStatus' ? (x ? 'Active' : 'Inactive')
-        : f === 'scoringMethod' && catId === '5' ? (x === 2 ? 'Reverse' : 'Normal')
+        : f === 'scoringMethod' && this.isQuiz2 ? (x === 2 ? 'Reverse' : 'Normal')
         : x;
 
         this.pendingDetailsChanges.push({
@@ -1382,7 +1377,7 @@ export class ApplicationQuestionDetailsComponent {
     this.categoryDetailsFG.markAsDirty();
     this.formDetails.markAsDirty();
 
-    // ❌ ไม่เขียน cache/markDirty ที่นี่
+    // ไม่เขียน cache/markDirty ที่นี่
     this.reflectPendingDraftsUI();
   }
 
@@ -1457,6 +1452,7 @@ export class ApplicationQuestionDetailsComponent {
     // 4.2 Category Details — คิดจาก cache ของ dirty เท่านั้น
     const detItems: ChangeItem[] = [];
     const dirtyIds = this.readDirty();
+    const includeScoring = this.isQuiz2 || this.isAboutMe;
 
     dirtyIds.forEach((cid) => {
       const baseline = this.getBaselineFor(cid) || { name: '', items: [] as any[] };
@@ -1490,12 +1486,11 @@ export class ApplicationQuestionDetailsComponent {
             label,
             field: 'NEW',
             from: '',
-            to: this.formatNewRowAddedText(d, String(cid)),
+            to: this.formatNewRowAddedText(d),
           });
           return;
         }
 
-        const catId = String(cid);
         const pairs: Array<[string, any, any]> = [
           ['__index', old.sort ?? null, d.sort ?? null],
           ['questionTH', (old.questionTH ?? ''), (d.questionTH ?? '')],
@@ -1503,16 +1498,16 @@ export class ApplicationQuestionDetailsComponent {
           ['type', (old.type ?? 'Answer'), (d.type ?? 'Answer')],
           ['activeStatus', !!old.activeStatus, !!d.activeStatus],
         ];
-        if (catId === '5' || catId === '2') {
+        if (includeScoring) {
           pairs.push(['scoringMethod', (old.scoringMethod ?? null), (d.scoringMethod ?? null)]);
         }
 
         pairs.forEach(([field, from, to]) => {
           if (String(from) !== String(to)) {
-            const prettyFrom = (field === 'scoringMethod' && catId === '5')
+            const prettyFrom = (field === 'scoringMethod' && this.isQuiz2)
               ? (Number(from) === 2 ? 'Reverse' : 'Normal')
               : from;
-            const prettyTo = (field === 'scoringMethod' && catId === '5')
+            const prettyTo = (field === 'scoringMethod' && this.isQuiz2)
               ? (Number(to) === 2 ? 'Reverse' : 'Normal')
               : to;
 
@@ -1568,13 +1563,13 @@ export class ApplicationQuestionDetailsComponent {
     return `new:${th}|${en}|${s}`;
   }
 
-  private normDetailField(field: string, val: any, catId: string) {
+  private normDetailField(field: string, val: any) {
     if (field === 'scoringMethod') {
-      if (catId === '5') {
+      if (this.isQuiz2) {
         if (val === 'Reverse' || val === 2 || val === '2') return 2;
         if (val === 'Normal'  || val === 1 || val === '1') return 1;
         return 1;
-      } else if (catId === '2') {
+      } else if (this.isAboutMe) {
         const n = Number(val);
         return Number.isFinite(n) ? Math.max(1, Math.floor(n)) : null;
       }
@@ -1588,7 +1583,6 @@ export class ApplicationQuestionDetailsComponent {
 
   private formatNewRowAddedText(
     item: { questionTH?: string; questionEN?: string; type?: string; scoringMethod?: number | string | null },
-    catId: string
   ): string {
     const parts = [
       `TH: ${(item.questionTH ?? '').trim() || '-'}`,
@@ -1596,11 +1590,11 @@ export class ApplicationQuestionDetailsComponent {
       `Type: ${item.type ?? 'Answer'}`,
     ];
 
-    if (catId === '5') {
+    if (this.isQuiz2) {
       const smNum = (item.scoringMethod === 2 || item.scoringMethod === '2') ? 2 : 1;
       const smLabel = smNum === 2 ? 'Reverse' : 'Normal';
       parts.push(`ScoringMethod: ${smLabel}`);
-    } else if (catId === '2') {
+    } else if (this.isAboutMe) {
       const n = Number(item.scoringMethod);
       if (Number.isFinite(n)) parts.push(`ScoringMethod: ${n}`);
     }
