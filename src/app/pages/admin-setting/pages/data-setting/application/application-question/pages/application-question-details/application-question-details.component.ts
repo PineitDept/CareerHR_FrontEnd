@@ -51,7 +51,7 @@ type ChangeItem = {
 };
 
 type ChangeGroup = {
-  section: 'Category Table' | 'Category Details';
+  section: 'Category Table' | 'Category Details' | 'New Category';
   items: ChangeItem[];
 };
 
@@ -820,13 +820,15 @@ export class ApplicationQuestionDetailsComponent {
       container?.classList.add('dimmed-overlay');
     });
 
+    const isPureCreate = this.collectDirtyDetailsForPayload().length === 1 && this.isNewCategoryId(this.collectDirtyDetailsForPayload()[0].categoryId);
+
     const dialogRef = this.dialog.open(ConfirmChangesDialogComponent, {
       width: '856px',
       panelClass: 'custom-dialog-container',
       disableClose: true,
       autoFocus: false,
       data: {
-        title: 'Please confirm your changes',
+        title: isPureCreate ? 'Create new category?' : 'Please confirm your changes',
         groups: changeGroups,
         confirm: true,
       } as ConfirmChangesData
@@ -1456,6 +1458,60 @@ export class ApplicationQuestionDetailsComponent {
     const dirtyIds = this.readDirty();
     const includeScoring = this.isQuiz2 || this.isAboutMe;
 
+    // กรณีสร้างใหม่: ถ้ามี dirty แค่ 1 ตัว และเป็นของใหม่ → ทำ section 'New Category'
+    if (dirtyIds.length === 1 && this.isNewCategoryId(dirtyIds[0])) {
+      const cid = dirtyIds[0];
+      const currentFromCache = this.buildSnapshotFromCache(cid);
+      if (currentFromCache) {
+        const items: ChangeItem[] = [];
+
+        // แสดงชื่อ Category ที่จะสร้าง
+        items.push({
+          entity: 'CategoryName',
+          label: 'Category Name',
+          field: 'CREATE',
+          from: '',
+          to: currentFromCache.name || '(ไม่ระบุ)',
+        });
+
+        // แสดงสรุปรายการ Details ที่จะสร้างทั้งหมด (mark เป็น NEW)
+        currentFromCache.items.forEach((d, idx) => {
+          const label = `Detail #${d.sort ?? idx + 1}`;
+          const prettyScoring =
+            this.isQuiz2 ? (Number(d.scoringMethod) === 2 ? 'Reverse' : 'Normal') :
+            this.isAboutMe ? (Number(d.scoringMethod) || null) :
+            null;
+
+          const parts = [
+            `TH: ${d.questionTH || '-'}`,
+            `EN: ${d.questionEN || '-'}`,
+            `Type: ${d.type || 'Answer'}`,
+            `Status: ${d.activeStatus ? 'Active' : 'Inactive'}`
+          ];
+          if (includeScoring) {
+            parts.push(
+              this.isQuiz2
+                ? `ScoringMethod: ${prettyScoring}`
+                : `ScoringMethod: ${prettyScoring ?? '-'}`
+            );
+          }
+
+          items.push({
+            entity: 'Detail',
+            id: d.id ?? null,
+            label,
+            field: 'NEW',
+            from: '',
+            to: parts.join(', ')
+          });
+        });
+
+        groups.push({ section: 'New Category', items });
+        return groups; // ✅ โหมดสร้างใหม่ จบตรงนี้ ไม่ต้องทำ diff แบบแก้ไข
+      }
+    }
+
+    // ---------- โหมดแก้ไข ----------
     dirtyIds.forEach((cid) => {
       const baseline = this.getBaselineFor(cid) || { name: '', items: [] as any[] };
       const currentFromCache = this.buildSnapshotFromCache(cid);
@@ -1632,6 +1688,10 @@ export class ApplicationQuestionDetailsComponent {
   private unmarkDirty(categoryId: number | string) {
     const ids = this.readDirty().filter(id => String(id) !== String(categoryId));
     this.writeDirty(ids);
+  }
+
+  private isNewCategoryId(cid: string | number): boolean {
+    return this.isTempId(cid) || !this.getBaselineFor(cid);
   }
 
   ngOnDestroy() {

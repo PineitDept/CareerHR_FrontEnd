@@ -22,6 +22,7 @@ export class ConfirmChangesDialogComponent {
 
   prettyField(field: string): string {
     switch (field) {
+      case 'CREATE': return 'Create';
       case 'NEW': return 'New Row';
       case '__index': return 'Order';
       case 'questionTH': return 'Question (TH)';
