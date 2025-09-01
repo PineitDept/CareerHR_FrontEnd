@@ -49,8 +49,8 @@ getTrackingApplications(filter: ICandidateTrackingFilterRequest): Observable<Can
   
   const queryString = queryParts.join('&');
   const endpoint = queryString 
-    ? `api/Applicants/CandidateTracking?${queryString}`
-    : 'api/Applicants/CandidateTracking';
+    ? `Applicants/tracking?${queryString}`
+    : 'Applicants/tracking';
   
   return this.apiService.get<CandidatePagedResult<CandidateTracking>>(endpoint, {
     loading: true,
