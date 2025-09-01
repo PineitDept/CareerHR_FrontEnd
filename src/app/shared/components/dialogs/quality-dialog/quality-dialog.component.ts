@@ -16,8 +16,6 @@ export class QualityDialogComponent {
     public dialogRef: MatDialogRef<QualityDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: AlertDialogData
   ) {
-
-    console.log(data.quality, '=>data.quality')
     this.form = this.fb.group({
       qualityDialog: [data.quality ?? 0]
     });

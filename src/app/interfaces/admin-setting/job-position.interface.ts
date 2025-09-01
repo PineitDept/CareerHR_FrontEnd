@@ -1,5 +1,5 @@
 export interface JobPositionDetails {
-  idjobPst: number;
+  idjobPst?: number;
   namePosition?: string | null;
   workingDetails: number;
   experienceMin: number;
@@ -18,4 +18,14 @@ export interface JobPositionDetails {
   benefits?: number[] | null;
   computerSkills?: number[] | null;
   languageSkills?: number[] | null;
+}
+
+export interface DropdownOverlay {
+  visible: boolean;
+  rowIndex: number | null; // null = footer
+  field: string;
+  x: number;
+  y: number;
+  width: number;
+  options: string[];
 }
