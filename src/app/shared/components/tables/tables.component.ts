@@ -81,6 +81,7 @@ export class TablesComponent
   @Input() draggableRows: boolean = false;
   @Input() isConfirmDialogToggleRequired: boolean = false;
   @Input() isConfirmDialogSaveRequired: boolean = false;
+  @Input() tableFixed: boolean = true;
 
   @Output() selectionChanged = new EventEmitter<any[]>();
   @Output() rowClicked = new EventEmitter<any>();

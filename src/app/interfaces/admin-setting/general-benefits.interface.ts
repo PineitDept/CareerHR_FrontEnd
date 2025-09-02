@@ -105,6 +105,23 @@ export interface UniversityScreeningRow {
   activeStatus?: boolean;
 }
 
+export interface IInterviewrWithPositionsDto {
+  idEmployee: number;
+  fullName: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+}
+
+export interface InterviewrScreeningRow {
+  idEmployee: number;
+  fullName: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+}
+
+
 export interface IApiResponse<T> {
   items: T[];
   totalItems: number;
