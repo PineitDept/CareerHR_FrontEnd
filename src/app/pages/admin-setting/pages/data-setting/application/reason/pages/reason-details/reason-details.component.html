@@ -1,1 +1,13 @@
-<p>reason-details works!</p>
+<div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
+  <app-header-content [headerName]="'Reason Details'" [headerType]="''"></app-header-content>
+</div>
+
+<app-filter
+  [actionButtons]="filterButtons"
+  [disabledKeys]="disabledKeys"
+  [filterDynamicButton]="true"
+  (buttonClicked)="onFilterButtonClick($event)"
+></app-filter>
+
+<app-loading></app-loading>
+

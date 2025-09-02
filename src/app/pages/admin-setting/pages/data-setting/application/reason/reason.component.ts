@@ -70,7 +70,7 @@ export class ReasonComponent {
   fetchRecruitmentStages() {
     this.reasonService.getRecruitmentStages().subscribe({
       next: (response) => {
-        console.log('RecruitmentStages fetched successfully:', response);
+        console.log('Recruitment Stages fetched successfully:', response);
         this.recruitmentStagesRows = (response ?? []).map((item: any, idx: number) => ({
           ...item,
           activeStatus: item.isActive,
@@ -80,7 +80,7 @@ export class ReasonComponent {
         queueMicrotask(() => this.measureOverflow());
       },
       error: (error) => {
-        console.error('Error fetching category types:', error);
+        console.error('Error fetching Recruitment Stages:', error);
       }
     });
   }

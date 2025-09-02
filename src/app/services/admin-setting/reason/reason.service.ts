@@ -17,4 +17,11 @@ export class ReasonService {
       loading: true
     });
   }
+
+  getRecruitmentStagesWithReasons(processId: number): Observable<any> {
+    return this.apiService.get<any>(`RecruitmentStages/${processId}/categories/with-reasons`, {
+      withAuth: true,
+      loading: true
+    });
+  }
 }
