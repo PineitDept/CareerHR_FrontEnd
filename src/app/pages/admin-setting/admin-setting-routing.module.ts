@@ -72,7 +72,7 @@ const routes: Routes = [
         component: ReasonComponent
       },
       {
-        path: 'data-setting/application/reason-details',
+        path: 'data-setting/application/reason/details',
         component: ReasonDetailsComponent
       },
       {

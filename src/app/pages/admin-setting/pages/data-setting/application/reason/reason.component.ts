@@ -1,6 +1,7 @@
 import { Component, ElementRef, ViewChild } from '@angular/core';
 import { Columns } from '../../../../../../shared/interfaces/tables/column.interface';
 import { Router } from '@angular/router';
+import { ReasonService } from '../../../../../../services/admin-setting/reason/reason.service';
 
 @Component({
   selector: 'app-reason',
@@ -18,8 +19,8 @@ export class ReasonComponent {
       width: '10%',
     },
     {
-      header: 'Category Type',
-      field: 'categoryType',
+      header: 'Process Name',
+      field: 'stageName',
       type: 'text',
       width: '60%',
     },
@@ -45,13 +46,13 @@ export class ReasonComponent {
   private ro?: ResizeObserver;
 
   constructor(
-    // private applicationQuestionService: ApplicationQuestionService,
+    private reasonService: ReasonService,
     private router: Router,
   ) { }
 
   ngOnInit() {
     // Initialization logic can go here
-    // this.fetchCategoryTypes();
+    this.fetchRecruitmentStages();
   }
 
   ngAfterViewInit(): void {
@@ -66,13 +67,32 @@ export class ReasonComponent {
     this.hasOverflowY = el.scrollHeight > el.clientHeight;
   }
 
+  fetchRecruitmentStages() {
+    this.reasonService.getRecruitmentStages().subscribe({
+      next: (response) => {
+        console.log('RecruitmentStages fetched successfully:', response);
+        this.recruitmentStagesRows = (response ?? []).map((item: any, idx: number) => ({
+          ...item,
+          activeStatus: item.isActive,
+          no: idx + 1
+        }));
+        console.log('Processed recruitmentStagesRows:', this.recruitmentStagesRows);
+        queueMicrotask(() => this.measureOverflow());
+      },
+      error: (error) => {
+        console.error('Error fetching category types:', error);
+      }
+    });
+  }
+
   onViewRowClicked(row: any) {
     console.log('View row clicked:', row);
-    // const queryParams = {
-    //   categoryType: row.categoryType
-    // }
-    // console.log('Navigating to details with params:', queryParams);
-    // this.router.navigate(['/admin-setting/data-setting/application/application-question/details'], { queryParams });
+    const queryParams = {
+      processName: row.stageName.split(' ').join('-'),
+      processId: row.stageId
+    }
+    console.log('Navigating to details with params:', queryParams);
+    this.router.navigate(['/admin-setting/data-setting/application/reason/details'], { queryParams });
   }
 
   ngOnDestroy() {
