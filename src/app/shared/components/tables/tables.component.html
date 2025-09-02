@@ -44,7 +44,7 @@
               [class.wrap-text]="column.wrapText" [class.expanded]="!column.subColumn || isSubColumnVisible(column)"
               [class.collapsed]="column.subColumn && !isSubColumnVisible(column)" [style.width]="getColumnWidth(column)"
               [style.min-width]="getColumnMinWidth(column)" [style.max-width]="getColumnMaxWidth(column)"
-              
+
               (click)="onColumnClick(column)"
               [ngClass]="{
                 '!tw-rounded-tl-[4px]': first && !showCheckbox && !withinCard,
@@ -56,7 +56,6 @@
                 'tw-border-b tw-border-gray-200': withinCard,
               }"
             >
-
               <div class="header-content tw-flex tw-items-center tw-justify-center tw-gap-2"
                 [style.justify-content]="withinCard ? (column.align || 'left') : ''"
               >
@@ -67,13 +66,14 @@
                 <span class="column-header-text tw-font-medium tw-truncate">{{ column.header }}</span>
                 <!-- Sort Icon -->
                 <app-icon *ngIf="column.sortable" [name]="
-                sortStateValue[column.field] === 'asc'
-                  ? 'sort-down'
-                  : sortStateValue[column.field] === 'desc'
-                  ? 'sort-up'
-                  : 'sort'
-              " [size]="12" fill="currentColor">
-                </app-icon>
+                  sortStateValue[column.field] === 'asc'
+                    ? 'sort-down'
+                    : sortStateValue[column.field] === 'desc'
+                    ? 'sort-up'
+                    : 'sort'
+                  "
+                  [size]="12" fill="currentColor"
+                ></app-icon>
                 <!-- Toggle button for main columns -->
                 <button *ngIf="column.mainColumn && hasSubColumns(column.mainColumn)"
                   class="toggle-btn tw-ml-1 tw-p-1 tw-rounded tw-transition-all tw-duration-200 hover:tw-bg-red-800 tw-flex-shrink-0"
@@ -147,7 +147,7 @@
               ]"
             >
               <!-- Cell Content with Type Switching -->
-              <div class="cell-content"
+              <div class="cell-content tw-min-h-6"
                 [ngClass]="{
                   'tw-text-gray-600': isDisabledForm,
                   'tw-text-gray-800': !isDisabledForm
@@ -200,10 +200,15 @@
                   <!-- Select Dropdown -->
                   <div *ngSwitchCase="'select'" class="tw-relative">
                     <button
-                      class="dropdown-button tw-bg-white tw-border tw-border-gray-300 tw-rounded-md tw-px-3 tw-py-1 tw-w-full tw-text-sm tw-flex tw-items-center tw-justify-between tw-truncate tw-transition-all tw-duration-200 hover:tw-border-gray-400 focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-red-500 focus:tw-border-red-500"
+                      cdkOverlayOrigin
+                      #origin="cdkOverlayOrigin"
+                      class="dropdown-button tw-border tw-border-gray-300 tw-rounded-md tw-px-3 tw-py-1 tw-w-full tw-text-sm tw-flex tw-items-center tw-justify-between tw-truncate tw-transition-all tw-duration-200 hover:tw-border-gray-400"
                       [id]="'dropdown-button-' + i + '-' + column.field"
-                      (click)="toggleDropdown(i, column.field, $event)"
-                      [attr.aria-expanded]="isDropdownOpen(i, column.field)">
+                      (click)="toggleDropdown(i, column.field, origin, $event)"
+                      [attr.aria-expanded]="isDropdownOpen(i, column.field)"
+                      [ngClass]="[
+                        isDisabledForm ? 'tw-bg-gray-100' : 'tw-bg-white',
+                      ]">
                       <span class="tw-text-left tw-w-full tw-truncate"
                         [class.tw-text-gray-400]="!getCellValue(row, column.field)">
                         {{ getCellValue(row, column.field) || 'Select' }}
@@ -217,7 +222,8 @@
                   <!-- Button Content -->
                   <button *ngSwitchCase="'button'"
                     class="tw-text-white tw-px-3 tw-py-1 tw-rounded tw-font-medium tw-transition-all tw-duration-200 tw-min-w-[80px] disabled:tw-bg-gray-300 disabled:tw-cursor-not-allowed"
-                    [disabled]="!row.POType" (click)="onButtonClick(column, row, $event)" [ngClass]="{
+                    [disabled]="!row.POType" (click)="onButtonClick(column, row, $event)"
+                    [ngClass]="{
                       'tw-bg-blue-500 hover:tw-bg-blue-600': column.buttonText === 'Submit',
                       'tw-bg-purple-700 hover:tw-bg-purple-800': column.buttonText === 'Register',
                       'tw-bg-gray-500 hover:tw-bg-gray-600': !column.buttonText || (column.buttonText !== 'Submit' && column.buttonText !== 'Register')
@@ -254,7 +260,7 @@
                   <!-- toggle Content -->
                   <div *ngSwitchCase="'toggle'">
                     <label class="tw-inline-flex tw-items-center tw-cursor-pointer" (click)="$event.stopPropagation()">
-                      <input type="checkbox" value="" class="tw-sr-only tw-peer" [checked]="row.activeStatus" (click)="onToggleChange($event, row)">
+                      <input type="checkbox" value="" class="tw-sr-only tw-peer" [checked]="row.activeStatus && row.status!==32  && row.status!==0" (click)="onToggleChange($event, row)">
                       <div class="tw-relative tw-w-11 tw-h-6 peer-checked:tw-bg-[#00AA00] tw-bg-gray-200 tw-rounded-full tw-peer peer-checked:after:tw-translate-x-full rtl:peer-checked:after:tw--translate-x-full tw-border-white after:tw-content-[''] after:tw-absolute after:tw-top-[2px] after:tw-start-[2px] after:tw-bg-white after:tw-rounded-full after:tw-h-5 after:tw-w-5 after:tw-transition-all"
                         [ngClass]="{
                           'peer-checked:tw-bg-[#00AA00]/40': isDisabledForm
@@ -385,11 +391,19 @@
 
                 <!-- select -->
                 <ng-container *ngSwitchCase="'select'">
-                  <select class="tw-border tw-border-gray-300 tw-rounded tw-px-2 tw-py-1 tw-w-full"
-                          [(ngModel)]="footerRow[column.field]">
-                    <option [ngValue]="undefined">Select</option>
-                    <option *ngFor="let opt of (column.options || []); trackBy: trackByOption" [ngValue]="opt">{{ opt }}</option>
-                  </select>
+                  <button
+                    cdkOverlayOrigin #footerOrigin="cdkOverlayOrigin"
+                    class="dropdown-button tw-bg-white tw-border tw-border-gray-300 tw-rounded-md tw-px-3 tw-py-1 tw-w-full tw-text-sm tw-flex tw-items-center tw-justify-between tw-truncate tw-transition-all tw-duration-200 hover:tw-border-gray-400"
+                    [id]="'dropdown-button-footer-' + column.field"
+                    (click)="toggleFooterDropdown(column.field, footerOrigin, $event)"
+                    [attr.aria-expanded]="isFooterDropdownOpen(column.field)">
+                    <span class="tw-text-left tw-w-full tw-truncate" [class.tw-text-gray-400]="!footerRow[column.field]">
+                      {{ footerRow[column.field] || 'Select' }}
+                    </span>
+                    <app-icon name="chevron-down" [size]="16"
+                      fill="currentColor"
+                      [extraClass]="'tw-ml-2 tw-flex-shrink-0 tw-transition-transform tw-duration-200 ' + (isFooterDropdownOpen(column.field) ? 'tw-rotate-180' : '')">
+                    </app-icon> </button>
                 </ng-container>
 
                 <!-- date -->
@@ -406,9 +420,9 @@
                       class="tw-border tw-border-gray-300 tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white"
                       [ngClass]="footerErrors[column.field] ? 'tw-border-red-500' : 'tw-border-gray-300'"
                       [(ngModel)]="footerRow[column.field]"
-                      [attr.min]="column.field === 'sort' ? 1 : null"
-                      [attr.step]="column.field === 'sort' ? 1 : null"
-                      [attr.inputmode]="column.field === 'sort' ? 'numeric' : null"
+                      [attr.min]="(column.field === 'sort' || column.field === 'scoringMethod') ? 1 : null"
+                      [attr.step]="(column.field === 'sort' || column.field === 'scoringMethod') ? 1 : null"
+                      [attr.inputmode]="(column.field === 'sort' || column.field === 'scoringMethod') ? 'numeric' : null"
                       (keydown)="onFooterKeydown(column.field, $event)"
                       (input)="onFooterInput(column.field, $event)"
                       (blur)="onFooterBlur(column.field, $event)"
@@ -454,24 +468,20 @@
     </table>
   </div>
 
-  <!-- Enhanced Floating Dropdown Overlay -->
-  <div *ngIf="dropdownOverlay"
-    class="dropdown-overlay tw-absolute tw-bg-white tw-shadow-xl tw-rounded-lg tw-z-[9999] tw-max-h-[300px] tw-overflow-y-auto tw-min-w-[135px] tw-border tw-border-gray-200 tw-animate-fade-in"
-    [ngStyle]="{
-      top: dropdownOverlay.y + 'px',
-      left: dropdownOverlay.x + 'px',
-      width: dropdownOverlay.width + 'px'
-    }">
-    <ul class="tw-py-1">
-      <li *ngFor="let opt of dropdownOverlay.options; trackBy: trackByOption"
-        (click)="selectDropdownOption(dropdownOverlay.rowIndex, dropdownOverlay.field, opt)"
-        class="tw-px-4 tw-py-2 tw-text-sm tw-cursor-pointer tw-transition-colors tw-duration-150 hover:tw-bg-gray-100 tw-flex tw-items-center tw-justify-between"
-        [class.tw-bg-red-50]="getCellValue(rowsValue[dropdownOverlay.rowIndex], dropdownOverlay.field) === opt">
-        <span>{{ opt }}</span>
-        <app-icon *ngIf="getCellValue(rowsValue[dropdownOverlay.rowIndex], dropdownOverlay.field) === opt" name="check"
-          [size]="16" fill="currentColor" extraClass="tw-text-red-600">
-        </app-icon>
-      </li>
-    </ul>
-  </div>
+  <!-- Single reusable overlay -->
+  <ng-template #dropdownOverlayTpl let-ctx="ctx" let-width="width">
+    <div
+      class="tw-bg-white tw-shadow-xl tw-rounded-lg tw-max-h-[300px] tw-overflow-y-auto tw-min-w-[135px] tw-border tw-border-gray-200"
+      [style.width.px]="width">
+      <ul class="tw-py-1">
+        <li *ngFor="let opt of ctx.options; trackBy: trackByOption"
+          (click)="ctx.rowIndex === null ? selectFooterDropdownOption(ctx.field, opt) : selectDropdownOption(ctx.rowIndex, ctx.field, opt)"
+          class="tw-px-4 tw-py-2 tw-text-sm tw-cursor-pointer tw-transition-colors tw-duration-150 hover:tw-bg-gray-100 tw-flex tw-items-center tw-justify-between"
+          [class.tw-bg-[#E6F4FF]]="(ctx.rowIndex === null ? footerRow[ctx.field] : getCellValue(rowsValue[ctx.rowIndex], ctx.field)) === opt">
+          <span>{{ opt }}</span> <app-icon
+            *ngIf="(ctx.rowIndex === null ? footerRow[ctx.field] : getCellValue(rowsValue[ctx.rowIndex], ctx.field)) === opt"
+            name="check" [size]="16" fill="currentColor" extraClass="tw-text-[#1677FF]"> </app-icon> </li>
+      </ul>
+    </div>
+  </ng-template>
 </div>

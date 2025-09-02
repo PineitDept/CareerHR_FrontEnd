@@ -16,7 +16,7 @@ export class GeneralBenefitsService {
   constructor(private api: ApiService) {}
 
   // Set API base path depending on the benefit type
-  setBenefitType(type: 'general-benefits' | 'special-benefits' | 'computer-skills' | 'language-skills' | 'university') {
+  setBenefitType(type: 'general-benefits' | 'special-benefits' | 'computer-skills' | 'language-skills' | 'university' | 'location') {
     switch (type) {
       case 'general-benefits':
         this.base = 'InfoWelfareBenefit/info-welfare-benefits';
@@ -32,6 +32,9 @@ export class GeneralBenefitsService {
         break;
       case 'university':
         this.base = 'UniversityGrades';
+        break;
+      case 'location':
+        this.base = 'Location';
         break;
       default:
         throw new Error(`Unknown benefit type: ${type}`);

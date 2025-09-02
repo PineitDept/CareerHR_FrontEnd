@@ -22,6 +22,7 @@ import { EmailAttributeDetailsComponent } from './pages/data-setting/application
 import { WebPolicyDetailsComponent } from './pages/data-setting/application/web-policy/pages/web-policy-details/web-policy-details.component';
 import { ReasonComponent } from './pages/data-setting/application/reason/reason.component';
 import { ReasonDetailsComponent } from './pages/data-setting/application/reason/pages/reason-details/reason-details.component';
+import { JobPositionDetalisComponent } from './pages/data-setting/manpower/job-position/pages/job-position-detalis/job-position-detalis.component';
 
 const routes: Routes = [
   {
@@ -45,6 +46,11 @@ const routes: Routes = [
         component: JobPositionComponent
       },
       {
+        path: 'data-setting/manpower/job-position/details',
+        component: JobPositionDetalisComponent,
+        canDeactivate: [PendingDraftsGuard]
+      },
+      {
         path: 'data-setting/manpower/reason-request',
         component: ReasonRequestComponent
       },
@@ -54,7 +60,8 @@ const routes: Routes = [
       },
       {
         path: 'data-setting/application/web-policy/details',
-        component: WebPolicyDetailsComponent
+        component: WebPolicyDetailsComponent,
+        canDeactivate: [PendingDraftsGuard]
       },
       {
         path: 'data-setting/application/general-benefits',
@@ -99,7 +106,8 @@ const routes: Routes = [
       },
       {
         path: 'data-setting/application/email/email-template/details',
-        component: EmailTemplateDetailsComponent
+        component: EmailTemplateDetailsComponent,
+        canDeactivate: [PendingDraftsGuard]
       },
       {
         path: 'data-setting/application/email/email-attribute',

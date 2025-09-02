@@ -26,6 +26,7 @@ import { quillInitFactory } from '../../app.module';
 import { WebPolicyDetailsComponent } from './pages/data-setting/application/web-policy/pages/web-policy-details/web-policy-details.component';
 import { ReasonComponent } from './pages/data-setting/application/reason/reason.component';
 import { ReasonDetailsComponent } from './pages/data-setting/application/reason/pages/reason-details/reason-details.component';
+import { JobPositionDetalisComponent } from './pages/data-setting/manpower/job-position/pages/job-position-detalis/job-position-detalis.component';
 
 @NgModule({
   declarations: [
@@ -49,7 +50,8 @@ import { ReasonDetailsComponent } from './pages/data-setting/application/reason/
     EmailAttributeDetailsComponent,
     WebPolicyDetailsComponent,
     ReasonComponent,
-    ReasonDetailsComponent
+    ReasonDetailsComponent,
+    JobPositionDetalisComponent,
   ],
   imports: [
     CommonModule,

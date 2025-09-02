@@ -1,186 +1,58 @@
 <nav [style.width]="sidebarWidth"
-  class="tw-h-full tw-bg-[#121212] tw-text-white tw-flex tw-flex-col tw-justify-between tw-py-4 text-xs tw-overflow-hidden tw-transition-[width] tw-duration-300 tw-ease-in-out relative">
-  <!-- Toggle and Back -->
+  class="tw-h-full tw-bg-[#121212] tw-text-white tw-flex tw-flex-col tw-py-4 text-xs tw-transition-[width] tw-duration-300 tw-ease-in-out">
+
+  <!-- Toggle + Back -->
   <div class="tw-flex tw-gap-x-2 tw-px-4 tw-h-10">
     <div class="tw-cursor-pointer hover:tw-text-[#AA0000]" (click)="toggleSidebar()">
       <app-icon name="dashboard-square" [size]="24" />
     </div>
-    <div *ngIf="(activeMainMenu && isExpanded) || adminSettingSubMenu" class="tw-cursor-pointer hover:tw-text-[#AA0000]"
-      (click)="adminSettingSubMenu ? backToSubMenu() : backToMainMenu()">
+    <div *ngIf="menuStack.length > 0 && isExpanded" class="tw-cursor-pointer hover:tw-text-[#AA0000]"
+      (click)="backOneLevel()">
       <app-icon name="chevron-left" [size]="20" />
     </div>
   </div>
 
-  <!-- Menu Area: Main & Sub menu switch -->
-  <div class="tw-relative tw-flex-1 tw-mt-3">
-    <!-- Main Menu -->
-    <ul *ngIf="!activeMainMenu && !adminSettingSubMenu"
-      class="tw-absolute tw-top-0 tw-left-0 tw-w-full tw-transition-all tw-duration-300">
-      <li *ngFor="let item of mainMenu"
-        class="tw-flex tw-items-center tw-gap-x-2 tw-mb-2 tw-cursor-pointer tw-border-l-[4px] hover:tw-border-l-[4px] hover:tw-border-[#AA0000] tw-pl-4 tw-py-2 hover:tw-bg-white/10"
-        [ngClass]="{
-          'tw-border-[#AA0000] tw-bg-white/25': isRouteActive(item.path ?? ''),
-          'tw-border-transparent': !isRouteActive(item.path ?? '')
-        }"
-        (click)="onMainMenuClick(item.label)">
-        <app-icon [name]="item.icon" [size]="20" />
-        <span [class]="menuLabelClass">{{ item.label }}</span>
-      </li>
+  <!-- Drill-down area  -->
+  <div class="tw-flex-1 tw-mt-3 tw-overflow-y-auto">
+    <ul class="tw-w-full tw-transition-all tw-duration-300">
+
+      <li *ngIf="menuStack.length === 0" class="tw-hidden"></li>
+      <ng-container *ngIf="menuStack.length === 0; else levelView">
+        <li *ngFor="let item of rootMenus"
+          class="tw-flex tw-items-center tw-gap-x-2 tw-mb-2 tw-cursor-pointer tw-border-l-[4px] hover:tw-border-l-[4px] hover:tw-border-[#AA0000] tw-pl-4 tw-py-2 hover:tw-bg-white/10"
+          [ngClass]="{
+            'tw-border-[#AA0000] tw-bg-white/25':
+              (hasRootChildren(item.label) ? isNodeActiveAtDepth(0, item.label) : isRouteActive(item.path ?? '')),
+            'tw-border-transparent':
+              !(hasRootChildren(item.label) ? isNodeActiveAtDepth(0, item.label) : isRouteActive(item.path ?? ''))
+          }" (click)="onRootClick(item, $event)">
+          <app-icon [name]="item.icon" [size]="20" />
+          <span [class]="menuLabelClass">{{ item.label }}</span>
+        </li>
+      </ng-container>
+
+      <ng-template #levelView>
+        <li *ngFor="let n of currentNodes"
+          class="tw-flex tw-items-center tw-gap-x-2 tw-mb-2 tw-cursor-pointer tw-border-l-[4px] tw-pl-4 tw-py-2 hover:tw-bg-white/10"
+          [ngClass]="{
+            'tw-border-[#AA0000] tw-bg-white/25': isActiveForCurrentLevel(n),
+            'tw-border-transparent': !isActiveForCurrentLevel(n)
+          }" (click)="onNodeClick(n, $event)">
+          <app-icon [name]="n.icon" [size]="20" />
+          <span [class]="menuLabelClass">{{ n.label }}</span>
+        </li>
+      </ng-template>
     </ul>
-
-    <!-- Submenus -->
-    <!-- General submenu -->
-    <ng-container *ngIf="activeMainMenu && activeMainMenu !== 'Admin Setting'">
-      <ul class="tw-absolute tw-top-0 tw-left-0 tw-w-full tw-transition-all tw-duration-300">
-        <li *ngFor="let item of subMenus[activeMainMenu]" class="tw-mb-2">
-          <div class="tw-flex tw-items-center tw-gap-x-2 tw-cursor-pointer tw-border-l-[4px] hover:tw-border-l-[4px] hover:tw-border-[#AA0000] tw-pl-4 tw-py-2 hover:tw-bg-white/10"
-            [ngClass]="{
-              'tw-border-[#AA0000] tw-bg-white/25': isRouteActive(item.path ?? ''),
-              'tw-border-transparent': !isRouteActive(item.path ?? ''),
-            }"
-            (click)="item.children ? toggleNested(item.label) : navigateToSubPagePath(item.path!)">
-            <app-icon [name]="item.icon" [size]="20" />
-            <span [class]="menuLabelClass">{{ item.label }}</span>
-          </div>
-          <div *ngIf="item.children && expandedNestedMenus.has(item.label)"
-            class="tw-bg-white/5 tw-rounded-sm">
-            <ul class="tw-space-y-2">
-              <li *ngFor="let child of item.children"
-                class="tw-flex tw-items-center tw-gap-x-2 tw-cursor-pointer tw-border-l-[4px] hover:tw-border-l-[4px] hover:tw-border-[#AA0000] tw-pl-6 tw-py-2 hover:tw-bg-white/10"
-                [ngClass]="{
-                  'tw-border-[#AA0000] tw-bg-white/25': isRouteActive(child.path ?? ''),
-                  'tw-border-transparent': !isRouteActive(child.path ?? ''),
-                }"
-                (click)="navigateToSubPagePath(child.path!)"
-              >
-                <app-icon [name]="child.icon" [size]="16" />
-                <span [class]="menuLabelClass">{{ child.label }}</span>
-              </li>
-            </ul>
-          </div>
-        </li>
-      </ul>
-    </ng-container>
-
-    <!-- Admin Setting submenu level 1 -->
-    <ng-container *ngIf="activeMainMenu === 'Admin Setting' && !adminSettingSubMenu">
-      <ul class="tw-absolute tw-top-0 tw-left-0 tw-w-full tw-transition-all tw-duration-300">
-        <li *ngFor="let item of subMenus['Admin Setting']" class="tw-mb-2">
-          <div
-            class="tw-flex tw-items-center tw-gap-x-2 tw-cursor-pointer tw-border-l-[4px] hover:tw-border-l-[4px] hover:tw-border-[#AA0000] tw-pl-4 tw-py-2 hover:tw-bg-white/10"
-            [ngClass]="{
-              'tw-border-[#AA0000] tw-bg-white/25': item.label === 'Data Setting' && isRouteActive('admin-setting/data-setting'),
-              'tw-border-transparent': !(item.label === 'Data Setting' && isRouteActive('admin-setting/data-setting')),
-            }"
-            (click)="item.label === 'Data Setting' ? adminSettingSubMenu = 'Data Setting' : toggleNested(item.label)">
-            <app-icon [name]="item.icon" [size]="20" />
-            <span [class]="menuLabelClass">{{ item.label }}</span>
-          </div>
-          <!-- Handle Permissions and Data Setting submenu expand separately -->
-          <div *ngIf="item.label === 'Permissions' && item.children && expandedNestedMenus.has(item.label)"
-            class="tw-bg-white/5 tw-rounded-sm">
-            <ul class="tw-space-y-2">
-              <li *ngFor="let child of item.children"
-                class="tw-flex tw-items-center tw-gap-x-2 tw-cursor-pointer tw-border-l-[4px] hover:tw-border-l-[4px] hover:tw-border-[#AA0000] tw-pl-6 tw-py-2 hover:tw-bg-white/10"
-                [ngClass]="{
-                  'tw-border-[#AA0000] tw-bg-white/25': isRouteActive(child.path ?? ''),
-                  'tw-border-transparent': !isRouteActive(child.path ?? ''),
-                }"
-                (click)="navigateToSubPagePath(child.path!)"
-              >
-                <app-icon [name]="child.icon" [size]="16" />
-                <span [class]="menuLabelClass">{{ child.label }}</span>
-              </li>
-            </ul>
-          </div>
-        </li>
-      </ul>
-    </ng-container>
-
-    <!-- Admin Setting: Data Setting submenu -->
-    <ng-container *ngIf="adminSettingSubMenu === 'Data Setting' && !dataSettingSubMenu">
-      <ul class="tw-absolute tw-top-0 tw-left-0 tw-w-full tw-transition-all tw-duration-300">
-        <li *ngFor="let group of dataSettingChildren" class="tw-mb-2">
-          <div
-            class="tw-flex tw-items-center tw-gap-x-2 tw-cursor-pointer tw-border-l-[4px] hover:tw-border-l-[4px] hover:tw-border-[#AA0000] tw-pl-4 tw-py-2 hover:tw-bg-white/10"
-            [ngClass]="{
-              'tw-border-[#AA0000] tw-bg-white/25': group.label === 'Application' && isRouteActive('admin-setting/data-setting/application'),
-              'tw-border-transparent': !(group.label === 'Application' && isRouteActive('admin-setting/data-setting/application')),
-            }"
-            (click)="group.label === 'Application' ? dataSettingSubMenu = 'Application' : toggleNested(group.label)">
-            <app-icon [name]="group.icon" [size]="20" />
-            <span [class]="menuLabelClass">{{ group.label }}</span>
-          </div>
-          <div *ngIf="group.label === 'Manpower' && group.children && expandedNestedMenus.has(group.label)"
-            class="tw-bg-white/5 tw-rounded-sm">
-            <ul class="tw-space-y-2">
-              <li *ngFor="let item of group.children"
-                class="tw-flex tw-items-center tw-gap-x-2 tw-cursor-pointer tw-border-l-[4px] hover:tw-border-l-[4px] hover:tw-border-[#AA0000] tw-pl-6 tw-py-2 hover:tw-bg-white/10"
-                [ngClass]="{
-                  'tw-border-[#AA0000] tw-bg-white/25': isRouteActive(item.path ?? ''),
-                  'tw-border-transparent': !isRouteActive(item.path ?? ''),
-                }" (click)="navigateToSubPagePath(item.path!)">
-                <app-icon [name]="item.icon" [size]="16" />
-                <span [class]="menuLabelClass">{{ item.label }}</span>
-              </li>
-            </ul>
-          </div>
-        </li>
-      </ul>
-    </ng-container>
-
-    <!-- Admin Setting: Application submenu -->
-    <ng-container *ngIf="dataSettingSubMenu === 'Application'">
-      <ul class="tw-absolute tw-top-0 tw-left-0 tw-w-full tw-transition-all tw-duration-300">
-        <li *ngFor="let group of applicationSettingChildren" class="tw-mb-2">
-          <div
-            class="tw-flex tw-items-center tw-gap-x-2 tw-cursor-pointer tw-border-l-[4px] hover:tw-border-l-[4px] hover:tw-border-[#AA0000] tw-pl-4 tw-py-2 hover:tw-bg-white/10"
-            [ngClass]="{
-              'tw-border-[#AA0000] tw-bg-white/25':
-                (group.label !== 'Email' && !isRouteActive('admin-setting/data-setting/application/email')) &&
-                isRouteActive(group.path ?? '') ||
-                (group.label !== 'Email' && isRouteActive(group.path ?? '')),
-              'tw-border-transparent': !(
-                (group.label !== 'Email' && !isRouteActive('admin-setting/data-setting/application/email')) &&
-                isRouteActive(group.path ?? '') ||
-                (group.label !== 'Email' && isRouteActive(group.path ?? ''))
-              ),
-            }"
-            (click)="group.children ? toggleNested(group.label) : navigateToSubPagePath(group.path!)"
-          >
-            <app-icon [name]="group.icon" [size]="20" />
-            <span [class]="menuLabelClass">{{ group.label }}</span>
-          </div>
-          <div *ngIf="group.children && expandedNestedMenus.has(group.label)" class="tw-bg-white/5 tw-rounded-sm">
-            <ul class="tw-space-y-2">
-              <li *ngFor="let item of group.children"
-                class="tw-flex tw-items-center tw-gap-x-2 tw-cursor-pointer tw-border-l-[4px] hover:tw-border-l-[4px] hover:tw-border-[#AA0000] tw-pl-6 tw-py-2 hover:tw-bg-white/10"
-                [ngClass]="{
-                  'tw-border-[#AA0000] tw-bg-white/25': isRouteActive(item.path ?? ''),
-                  'tw-border-transparent': !isRouteActive(item.path ?? '')
-                }" (click)="navigateToSubPagePath(item.path!)">
-                <app-icon [name]="item.icon" [size]="16" />
-                <span [class]="menuLabelClass">{{ item.label }}</span>
-              </li>
-            </ul>
-          </div>
-        </li>
-      </ul>
-    </ng-container>
   </div>
 
-  <!-- Bottom Menu -->
-  <ul class="tw-mt-6">
-    <ng-container *ngFor="let item of bottomMenu">
-      <li *ngIf="!(activeMainMenu === 'Admin Setting' || adminSettingSubMenu) || item.label !== 'Admin Setting'"
-        class="tw-flex tw-items-center tw-mb-2 tw-gap-x-2 tw-cursor-pointer tw-border-l-[4px] hover:tw-border-l-[4px] hover:tw-border-[#AA0000] tw-pl-4 tw-py-2 hover:tw-bg-white/10"
-        [ngClass]="{
-          'tw-border-[#AA0000] tw-bg-white/25': item.label === 'Admin Setting' && isAdminSettingActive(),
-          'tw-border-transparent': !(item.label === 'Admin Setting' && isAdminSettingActive()),
-        }" (click)="item.label === 'Logout' ? logout() : onMainMenuClick(item.label)">
-        <app-icon [name]="item.icon" [size]="20" />
-        <span [class]="menuLabelClass">{{ item.label }}</span>
-      </li>
-    </ng-container>
+  <!-- Footer: bottomMenu -->
+  <ul class="tw-mt-4">
+    <li *ngFor="let item of bottomMenu" class="tw-flex tw-items-center tw-mb-2 tw-gap-x-2 tw-cursor-pointer tw-border-l-[4px] hover:tw-border-l-[4px] hover:tw-border-[#AA0000] tw-pl-4 tw-py-2 hover:tw-bg-white/10" 
+        [ngClass]="{'tw-border-[#AA0000] tw-bg-white/25': (hasRootChildren(item.label) ? isNodeActive(item.label) : isRouteActive(item.path ?? '')) || (item.label === 'Admin Setting' && isRouteActive('admin-setting')),
+                      'tw-border-transparent': !((hasRootChildren(item.label) ? isNodeActive(item.label) : isRouteActive(item.path ?? '')) || (item.label === 'Admin Setting' && isRouteActive('admin-setting'))),
+                      'tw-hidden': item.label === 'Admin Setting' && isUnderAdmin }" (click)="onRootClick(item, $event)">
+      <app-icon [name]="item.icon" [size]="20" />
+      <span [class]="menuLabelClass">{{ item.label }}</span>
+    </li>
   </ul>
 </nav>

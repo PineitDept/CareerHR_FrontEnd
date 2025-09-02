@@ -6,6 +6,7 @@ import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { AlertDialogComponent } from '../../../../../../../../../shared/components/dialogs/alert-dialog/alert-dialog.component';
 import { MatDialog } from '@angular/material/dialog';
 import { NotificationService } from '../../../../../../../../../shared/services/notification/notification.service';
+import { Subject, takeUntil, debounceTime } from 'rxjs';
 
 @Component({
   selector: 'app-email-template-details',
@@ -20,7 +21,7 @@ export class EmailTemplateDetailsComponent {
   columns = defaultColumns();
   filterButtons = defaultFilterButtonsDetails();
   disabledKeys: string[] = [];
-  fieldErrors:boolean = false;
+  fieldErrors: boolean = false;
 
   EmailID: string = '';
   EmailSubject: string = '';
@@ -30,6 +31,7 @@ export class EmailTemplateDetailsComponent {
 
   showHtml = false;
 
+  // ===== Quill config =====
   modules = {
     toolbar: [
       [{ header: [1, 2, 3, false] }],
@@ -49,6 +51,13 @@ export class EmailTemplateDetailsComponent {
     'color', 'background', 'font', 'size'
   ];
 
+  // ===== Draft/dirty control =====
+  private destroy$ = new Subject<void>();
+  private isProgrammaticUpdate = false;
+  private readyForDraft = false;
+  private DRAFT_PREFIX = 'emailtpl:draft';
+  private DIRTY_PREFIX = 'emailtpl:dirty';
+
   constructor(
     private emailTemplateService: EmailTemplateService,
     private route: ActivatedRoute,
@@ -60,25 +69,30 @@ export class EmailTemplateDetailsComponent {
   ngOnInit() {
     this.initializeForm();
 
-    // this.route.queryParams.subscribe(params => {
-    //   this.EmailID = params['id'] || '';
-    //   this.EmailSubject = params['subject'] || '';
-
-    //   if (this.EmailID) this.fetchEmailIDsDetails();
-    // });
     this.emailTemplateService.setEMailType('email-template');
-     this.route.queryParams.subscribe(params => {
-      this.EmailID = params['id'] || '';      
+    this.route.queryParams.subscribe(params => {
+      this.EmailID = params['id'] || '';
       this.fetchEmailIDsDetails();
     });
 
     this.formDetails.disable({ emitEvent: false });
     this.setActionButtons('view');
 
-    this.formDetails.valueChanges.subscribe(() => {
-      if (!this.isEditing) return;
-      this.setButtonDisabled('save', !this.hasFormChanged());
-    });
+    // เขียน draft อัตโนมัติเมื่อแก้ไข (หลังโหลดเสร็จ/รู้ EmailID แล้วเท่านั้น)
+    this.formDetails.valueChanges
+      .pipe(takeUntil(this.destroy$), debounceTime(150))
+      .subscribe(() => {
+        if (this.isProgrammaticUpdate) return;
+        if (!this.readyForDraft) return;
+        if (!this.isEditing) return;
+
+        const v = this.formDetails.getRawValue();
+        if (!v.subject && !v.emailContent) return; // กันเขียนค่าว่างทับ
+
+        this.writeDraftFromForm();
+        const enable = this.hasPendingDrafts() || this.hasFormChanged();
+        this.setButtonDisabled('save', !enable);
+      });
   }
 
   initializeForm() {
@@ -88,106 +102,171 @@ export class EmailTemplateDetailsComponent {
       emailContent: new FormControl('')
     });
   }
-  
-  toggleActive(): void {
+
+  // =================== Data Flow ===================
+  fetchEmailIDsDetails() {
+    this.emailTemplateService.getEmailTemplateById(this.EmailID).subscribe({
+      next: (response) => {
+        // รองรับ response เป็น array (ตามโค้ดเดิม)
+        const item = Array.isArray(response) ? response[0] : response;
+        this.isProgrammaticUpdate = true;
+        this.formDetails.patchValue({
+          subject: item?.subject ?? '',
+          emailContent: item?.message || ''
+        }, { emitEvent: false });
+        this.isProgrammaticUpdate = false;
+
+        // baseline (สำหรับ hasFormChanged)
+        this.initialSnapshot = this.formDetails.getRawValue();
+
+        // ถ้ามี draft ค้างของ EmailID นี้ → วางทับ
+        const draft = this.readDraft();
+        if (draft && (draft.subject || draft.emailContent)) {
+          this.isProgrammaticUpdate = true;
+          this.formDetails.patchValue({
+            subject: draft.subject ?? this.formDetails.get('subject')?.value,
+            emailContent: draft.emailContent ?? this.formDetails.get('emailContent')?.value  // ← inline
+          }, { emitEvent: false });
+          this.isProgrammaticUpdate = false;
+
+          this.enterEditMode('draft');
+          this.setActionButtons('edit');
+          this.setButtonDisabled('save', false);
+        } else {
+          this.formDetails.disable({ emitEvent: false });
+          this.setActionButtons('view');
+        }
+
+        // ตอนนี้ฟอร์มพร้อมแล้ว → เปิดให้เขียน draft ได้
+        this.readyForDraft = true;
+
+        this.questionSet = response ?? [];
+      },
+      error: (error) => {
+        console.error('Error fetching email template details:', error);
+      },
+    });
+  }
+
+  putEmailIDsDetails(payload: { subject: string, message: string }) {
+    this.emailTemplateService.updateEmailTemplate(this.EmailID, payload).subscribe({
+      next: (response) => {
+        this.setActionButtons('view');
+        this.isEditing = false;
+        this.formDetails.disable({ emitEvent: false });
+
+        // snapshot ใหม่หลังเซฟ
+        this.isProgrammaticUpdate = true;
+        this.initialSnapshot = this.formDetails.getRawValue();
+        this.isProgrammaticUpdate = false;
+
+        // ล้าง draft/dirty
+        this.clearDraftsForCurrentType();
+
+        this.questionSet = response ?? [];
+        this.notificationService?.success?.('Saved successfully');
+      },
+      error: (error) => {
+        this.setActionButtons('edit');
+        this.onEditClicked();
+        this.isEditing = true;
+        this.formDetails.enable();
+
+        this.notificationService.error(error.error.error);
+        // this.fieldErrors = true;
+
+        // setTimeout(()=>{ this.fieldErrors = false; },3000);
+      },
+    });
+  }
+
+  // =================== Toolbar actions ===================
+  onFilterButtonClick(key: string) {
+    switch (key) {
+      case 'edit':
+        this.setActionButtons('edit');
+        this.onEditClicked();
+        this.isEditing = true;
+        this.formDetails.enable();
+        this.setButtonDisabled('save', !this.hasFormChanged() && !this.hasPendingDrafts());
+        break;
+      case 'save':
+        this.onSaveClicked();
+        break;
+    }
+  }
+
+  onEditClicked() {
+    // snapshot ตอนเริ่มแก้ไข (รองรับ hasFormChanged)
+    this.initialSnapshot = this.formDetails.getRawValue();
+  }
+
+  onSaveClicked() {
+    if (!this.hasFormChanged() && !this.hasPendingDrafts()) return;
+
     Promise.resolve().then(() => {
       const container = document.querySelector('.cdk-overlay-container');
       container?.classList.add('dimmed-overlay');
     });
 
     const dialogRef = this.dialog.open(AlertDialogComponent, {
-      width: '640px',
+      width: '496px',
       panelClass: 'custom-dialog-container',
       autoFocus: false,
       disableClose: true,
       data: {
-        title: 'Please contact the Human Resources Department',
-        message: `For change the status of this category type, please contact our Human Resources Department for assistance.`,
-        confirm: false
+        title: 'Confirmation',
+        message: 'Are you sure you want to save this data?',
+        confirm: true
       }
     });
 
-    dialogRef.afterClosed().subscribe(() => {
+    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
       const container = document.querySelector('.cdk-overlay-container');
       container?.classList.remove('dimmed-overlay');
-    });
-  }
 
-  onAddClicked() {
-    console.log('Add Category clicked');
-  }
+      if (confirmed) {
+        const value = this.formDetails.getRawValue();
 
-  fetchEmailIDsDetails() {
-    this.emailTemplateService.getEmailTemplateById(this.EmailID).subscribe({
-      next: (response) => {
-        this.formDetails.patchValue({
-          subject: response[0].subject,
-          emailContent: response[0].message || ''
-        }, { emitEvent: false });
-        this.initialSnapshot = this.formDetails.getRawValue();
-        this.questionSet = response ?? [];
-      },
-      error: (error) => {
-        console.error('Error fetching category types details:', error);
-      },
-    });
-  }
+        // กันเซฟ subject ว่างตั้งแต่ฝั่ง UI
+        // if (!String(value.subject || '').trim()) {
+        //   this.notificationService.error('Subject is required');
+        //   this.setButtonDisabled('save', true);
+        //   return;
+        // }
 
-  putEmailIDsDetails(payload: {subject: string, message: string}) {
-    this.emailTemplateService.updateEmailTemplate(this.EmailID, payload).subscribe({
-      next: (response) => {
-        // this.formDetails.patchValue({
-        //   subject: response.subject,
-        //   emailContent: response.message || ''
-        // }, { emitEvent: false });
-        this.setActionButtons('view');
+        const payload = {
+          subject: value.subject,
+          emailContent: this.getInlineStyledHtml()
+        };
+
+        // optimistic UI
         this.isEditing = false;
         this.formDetails.disable({ emitEvent: false });
         this.initialSnapshot = this.formDetails.getRawValue();
+        this.setActionButtons('view');
 
-        this.questionSet = response ?? [];
-      },
-      error: (error) => {
-        console.error('Error fetching category types details:', error);
-        this.setActionButtons('edit');
-        this.onEditClicked();
-        this.isEditing = true;
-        this.formDetails.enable();
+        // เคลียร์ draft ไว้ก่อน (จะถูกล้างซ้ำใน next: ของ API อีกที)
+        this.clearDraftsForCurrentType();
 
-        this.notificationService.error('Subject is required');
-        this.fieldErrors = true;
-
-        setTimeout(()=>{
-          this.fieldErrors = false;
-        },3000)
-      },
+        // ยิงอัปเดตจริง
+        // this.putEmailIDsDetails({
+        //   subject: value.subject,
+        //   message: this.getInlineStyledHtml()
+        // });
+      }
     });
   }
 
-  onFilterButtonClick(key: string) {
-    switch (key) {
-      case 'edit':
-        this.setActionButtons('edit');
-        this.onEditClicked();
-        this.isEditing = true
-        this.formDetails.enable();
-        break;
-      case 'save':
-        this.onSaveClicked()
-        break;
-    }
-  }
-
-  onEditClicked() {
-    console.log('Edit button clicked');
-  }
-
+  // =================== Action Buttons & State ===================
   private setActionButtons(mode: 'view' | 'edit') {
     if (mode === 'view') {
       this.filterButtons = [{ label: 'Edit', key: 'edit', color: '#000000' }];
       this.disabledKeys = [];
     } else {
-      this.filterButtons = [{ label: 'Save', key: 'save', color: '#000055' }];
+      this.filterButtons = [
+        { label: 'Save', key: 'save', color: '#000055' },
+      ];
       this.disabledKeys = ['save'];
     }
   }
@@ -199,43 +278,107 @@ export class EmailTemplateDetailsComponent {
     this.disabledKeys = Array.from(set);
   }
 
+  private enterEditMode(source: 'user' | 'draft' = 'user') {
+    this.isEditing = true;
+    this.formDetails.enable({ emitEvent: false });
+    this.setActionButtons('edit');
+    this.setButtonDisabled('save', source === 'user');
+  }
+
+  // =================== Change & Draft helpers ===================
   private hasFormChanged(): boolean {
     if (!this.initialSnapshot) return false;
-    const current = this.formDetails.getRawValue();
-    return JSON.stringify(current) !== JSON.stringify(this.initialSnapshot);
+    const cur = this.formDetails.getRawValue();
+    const a = { subject: cur.subject, emailContent: cur.emailContent, activeStatus: cur.activeStatus };
+    const b = {
+      subject: this.initialSnapshot.subject,
+      emailContent: this.initialSnapshot.emailContent,
+      activeStatus: this.initialSnapshot.activeStatus
+    };
+    return JSON.stringify(a) !== JSON.stringify(b);
   }
 
-  onSaveClicked() {
-    console.log('Save button clicked');
-    // ไม่ให้กดถ้าไม่มีการเปลี่ยน
-    if (!this.hasFormChanged()) {
-      // กันเคสเผลอคลิกจากคีย์ลัดหรืออื่น ๆ
-      return;
-    }
+  public hasPendingDrafts(): boolean {
+    const d = this.readDraft();
+    if (d) {
+      const v = this.formDetails.getRawValue();
+      const inlineNow = this.getInlineStyledHtml(); // ← inline ปัจจุบันจาก editor
 
-    const value = this.formDetails.getRawValue();
-    const payload = {
-      subject: value.subject,
-      emailContent: this.getInlineStyledHtml()
+      if ((d.subject ?? '') !== (v.subject ?? '') || (d.emailContent ?? '') !== (inlineNow ?? '')) {
+        return true;
+      }
+      if ((d.subject ?? '') || (d.emailContent ?? '')) return true;
+    }
+    const hasDirty = (this.readDirty()?.length ?? 0) > 0;
+    return hasDirty;
+  }
+
+  public clearDraftsForCurrentType(): void {
+    this.clearDraft();
+    this.clearDirty();
+  }
+
+  // draft keys/ops
+  private draftKey(): string {
+    const id = this.EmailID || 'new';
+    return `${this.DRAFT_PREFIX}:${id}`;
+  }
+  private readDraft(): { subject?: string; emailContent?: string } | null {
+    try {
+      const raw = sessionStorage.getItem(this.draftKey());
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  }
+  private writeDraft(obj: { subject?: string; emailContent?: string }) {
+    try { sessionStorage.setItem(this.draftKey(), JSON.stringify(obj ?? {})); } catch { }
+  }
+  private clearDraft() {
+    try { sessionStorage.removeItem(this.draftKey()); } catch { }
+  }
+  private writeDraftFromForm() {
+    if (!this.EmailID) return; // ยังไม่รู้ key
+
+    const v = this.formDetails.getRawValue();
+    const inlineHtml = this.getInlineStyledHtml(); // ← ใช้ค่า inline แล้ว
+
+    const draft = {
+      subject: (v?.subject ?? '').trim(),
+      emailContent: inlineHtml,                   // ← เก็บแบบ inline
     };
 
-    console.log('SAVE payload:', payload);
-    // ปิดโหมดแก้ไข + รีเซ็ตสถานะปุ่ม
-    this.isEditing = false;
-    this.formDetails.disable({ emitEvent: false });
+    // ไม่เขียนค่าว่างล้วน
+    if (!draft.subject && !draft.emailContent) return;
 
-    // จับ snapshot ใหม่หลังเซฟสำเร็จ (ให้สถานะล่าสุดคือ baseline)
-    this.initialSnapshot = this.formDetails.getRawValue();
+    // กันการเขียนซ้ำ
+    const old = this.readDraft();
+    if (old && old.subject === draft.subject && old.emailContent === draft.emailContent) return;
 
-    // กลับไปโหมด view: โชว์เฉพาะปุ่ม Edit
-    this.setActionButtons('view');
-
-    this.putEmailIDsDetails({
-      subject: value.subject,
-      message: this.getInlineStyledHtml()
-    })
+    this.writeDraft(draft);
   }
 
+  // dirty keys/ops (เผื่อในอนาคตจะมีส่วนอื่น ๆ)
+  private dirtyKey(): string {
+    const id = this.EmailID || 'new';
+    return `${this.DIRTY_PREFIX}:${id}`;
+  }
+  private readDirty(): string[] {
+    try {
+      const raw = sessionStorage.getItem(this.dirtyKey());
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  }
+  private writeDirty(ids: string[]) {
+    try { sessionStorage.setItem(this.dirtyKey(), JSON.stringify(Array.from(new Set(ids.map(String))))); } catch { }
+  }
+  private clearDirty() {
+    try { sessionStorage.removeItem(this.dirtyKey()); } catch { }
+  }
+
+  onAddClicked() {
+    console.log('Add Category clicked');
+  }
+
+  // =================== Inline Style Extractor ===================
   getInlineStyledHtml() {
     const data = this.formDetails.get('emailContent')?.value;
     if (!data) return '';
@@ -302,7 +445,7 @@ export class EmailTemplateDetailsComponent {
       }
     });
 
-    // ✅ FIX สำหรับรูปภาพที่ resize
+    // รูปภาพที่ถูก resize → ย้าย width/height เป็น attribute
     const images = container.querySelectorAll('img');
     images.forEach(img => {
       const image = img as HTMLImageElement;
@@ -319,4 +462,38 @@ export class EmailTemplateDetailsComponent {
     return container.innerHTML;
   }
 
+  // =================== Dialog (ตัวอย่างสถานะ) ===================
+  toggleActive(): void {
+    Promise.resolve().then(() => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.add('dimmed-overlay');
+    });
+
+    const dialogRef = this.dialog.open(AlertDialogComponent, {
+      width: '640px',
+      panelClass: 'custom-dialog-container',
+      autoFocus: false,
+      disableClose: true,
+      data: {
+        title: 'Please contact the Human Resources Department',
+        message: `For change the status of this category type, please contact our Human Resources Department for assistance.`,
+        confirm: false
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(() => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.remove('dimmed-overlay');
+    });
+  }
+
+  // =================== Lifecycle ===================
+  ngOnDestroy() {
+    // ถ้าต้องการบันทึกครั้งสุดท้ายตอนออก ให้เปิด block นี้
+    // if (this.isEditing && this.readyForDraft) {
+    //   this.writeDraftFromForm();
+    // }
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 }

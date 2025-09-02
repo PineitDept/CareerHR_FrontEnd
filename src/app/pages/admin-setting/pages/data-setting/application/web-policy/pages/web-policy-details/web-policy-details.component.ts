@@ -6,6 +6,8 @@ import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { AlertDialogComponent } from '../../../../../../../../../app/shared/components/dialogs/alert-dialog/alert-dialog.component';
 import { MatDialog } from '@angular/material/dialog';
 import { NotificationService } from '../../../../../../../../shared/services/notification/notification.service';
+// 🔹 NEW: rxjs สำหรับจัดการ subscription + valueChanges
+import { Subject, takeUntil, debounceTime } from 'rxjs';
 
 @Component({
   selector: 'app-web-policy-details',
@@ -15,6 +17,14 @@ import { NotificationService } from '../../../../../../../../shared/services/not
 export class WebPolicyDetailsComponent {
   isEditing = false;
   private initialSnapshot: any = null;
+
+  // 🔹 หมายเหตุ: categoryType มีไว้ให้คีย์รูปแบบเดียวกับคอมโพเนนต์ก่อนหน้าได้
+  categoryType: string = '';
+
+  // ====== Draft / Dirty Keys (ปรับให้เฉพาะหน้า Email นี้) ======
+  // ใช้ EmailID เป็นส่วนประกอบคีย์ เพื่อแยก draft ต่อเทมเพลต
+  private DRAFT_PREFIX = 'webpolicy:draft';            // 🔹 NEW
+  private DIRTY_PREFIX = 'webpolicy:dirty';            // 🔹 NEW
 
   formDetails!: FormGroup;
   columns = defaultColumns();
@@ -27,8 +37,12 @@ export class WebPolicyDetailsComponent {
   questionSet: any[] = [];
 
   categoryRows: any[] = [];
-
   showHtml = false;
+
+  // 🔹 NEW: จัดการ lifecycle ของ subscription + กัน loop valueChanges
+  private destroy$ = new Subject<void>();
+  private isProgrammaticUpdate = false;
+  private readyForDraft = false;
 
   modules = {
     toolbar: [
@@ -61,7 +75,7 @@ export class WebPolicyDetailsComponent {
     this.initializeForm();
 
     this.emailTemplateService.setEMailType('content-policy');
-     this.route.queryParams.subscribe(params => {
+    this.route.queryParams.subscribe(params => {
       this.EmailID = params['id'] || '';
       this.fetchEmailIDsDetails();
     });
@@ -69,9 +83,19 @@ export class WebPolicyDetailsComponent {
     this.formDetails.disable({ emitEvent: false });
     this.setActionButtons('view');
 
-    this.formDetails.valueChanges.subscribe(() => {
-      if (!this.isEditing) return;
-      this.setButtonDisabled('save', !this.hasFormChanged());
+    // 🔹 NEW: บันทึก draft ทุกครั้งที่ผู้ใช้แก้ค่า (ระหว่างโหมดแก้ไข)
+    this.formDetails.valueChanges
+    .pipe(takeUntil(this.destroy$), debounceTime(150))
+    .subscribe(() => {
+      if (this.isProgrammaticUpdate) return;
+      if (!this.readyForDraft) return;             // ✅ รอให้โหลดข้อมูล/ตั้ง EmailID ก่อน
+      if (!this.isEditing) return;                 // ✅ เขียน draft เฉพาะตอนแก้ไข
+      const v = this.formDetails.getRawValue();
+      if (!v.subject && !v.emailContent) return;   // ✅ กันเขียนค่าว่างทับ
+
+      this.writeDraftFromForm();
+      const enable = this.hasPendingDrafts() || this.hasFormChanged();
+      this.setButtonDisabled('save', !enable);
     });
   }
 
@@ -82,7 +106,126 @@ export class WebPolicyDetailsComponent {
       emailContent: new FormControl('')
     });
   }
-  
+
+  // ============== Draft / Dirty Helpers (แพทเทิร์นที่ต้องการ) ==============
+
+  // 🔹 คีย์ draft ต่อ EmailID
+  private draftKey(): string {
+    const id = this.EmailID || 'new';
+    return `${this.DRAFT_PREFIX}:${id}`;
+  }
+
+  // 🔹 อ่าน/เขียน/ลบ draft
+  private readDraft(): { subject?: string; emailContent?: string } | null {
+    try {
+      const raw = sessionStorage.getItem(this.draftKey());
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
+  private writeDraft(obj: { subject?: string; emailContent?: string }) {
+    try {
+      sessionStorage.setItem(this.draftKey(), JSON.stringify(obj ?? {}));
+    } catch {}
+  }
+  private clearDraft() {
+    try { sessionStorage.removeItem(this.draftKey()); } catch {}
+  }
+
+  private writeDraftFromForm() {
+    if (!this.EmailID) return; // ✅ ยังไม่รู้ key อย่างเป็นทางการ
+    const v = this.formDetails.getRawValue();
+    const draft = {
+      subject: (v?.subject ?? '').trim(),
+      emailContent: (v?.emailContent ?? '')
+    };
+
+    // ✅ กันเคสเขียน {} หรือค่าว่างล้วนๆ ทับของเดิม
+    if (!draft.subject && !draft.emailContent) return;
+
+    // ✅ กันการเขียนซ้ำกับของเดิมใน storage โดยไม่จำเป็น
+    const old = this.readDraft();
+    if (old && old.subject === draft.subject && old.emailContent === draft.emailContent) {
+      return;
+    }
+
+    this.writeDraft(draft);
+  }
+
+  // 🔹 hasFormChanged: เทียบกับ snapshot ล่าสุดจากเซิร์ฟเวอร์/หลังบันทึก
+  private hasFormChanged(): boolean {
+    if (!this.initialSnapshot) return false;
+    const current = this.formDetails.getRawValue();
+    return JSON.stringify(current) !== JSON.stringify(this.initialSnapshot);
+  }
+
+  // 🔹 hasPendingDrafts: มี draft เก็บไว้ หรือ dirty IDs (เผื่อขยายในอนาคต)
+  public hasPendingDrafts(): boolean {
+    const d = this.readDraft();
+    // ถ้ามีค่าบางอย่างใน draft และมันต่างจาก snapshot → ถือว่ามี draft
+    if (d) {
+      const curr = this.formDetails.getRawValue();
+      if ((d.subject ?? '') !== (curr.subject ?? '') || (d.emailContent ?? '') !== (curr.emailContent ?? '')) {
+        return true;
+      }
+      // กรณี user reload หน้าและยังมี draft ค้าง → ก็ถือว่ามี pending
+      if ((d.subject ?? '') || (d.emailContent ?? '')) return true;
+    }
+    const hasDirty = (this.readDirty()?.length ?? 0) > 0;
+    return hasDirty;
+  }
+
+  // 🔹 clearDraftsForCurrentType: เคลียร์ draft/dirty สำหรับ EmailID ปัจจุบัน
+  public clearDraftsForCurrentType(): void {
+    this.clearDraft();              // ลบ draft เนื้อหาอีเมลของ EmailID นี้
+    this.clearDirty();              // ลบรายการ dirty (ถ้ามี)
+  }
+
+  // 🔹 ส่วน dirty (เผื่อรองรับหลายส่วนในอนาคต)
+  private dirtyKey(): string {
+    const id = this.EmailID || 'new';
+    return `${this.DIRTY_PREFIX}:${id}`;
+  }
+  private readDirty(): string[] {
+    try {
+      const raw = sessionStorage.getItem(this.dirtyKey());
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  }
+  private writeDirty(ids: string[]) {
+    try { sessionStorage.setItem(this.dirtyKey(), JSON.stringify(Array.from(new Set(ids.map(String))))); } catch {}
+  }
+  private clearDirty() {
+    try { sessionStorage.removeItem(this.dirtyKey()); } catch {}
+  }
+
+  // 🔹 สะท้อนสถานะปุ่มตาม draft/changed
+  private reflectPendingDraftsUI() {
+    const pending = this.hasPendingDrafts();
+    if (this.isEditing) {
+      this.setActionButtons('edit');
+      const enable = pending || this.hasFormChanged();
+      this.setButtonDisabled('save', !enable);
+      return;
+    }
+    if (pending) {
+      this.enterEditMode('draft');
+      this.setActionButtons('edit');
+      this.setButtonDisabled('save', false);
+    } else {
+      this.setActionButtons('view');
+    }
+  }
+
+  private enterEditMode(source: 'user' | 'draft' = 'user') {
+    this.isEditing = true;
+    this.formDetails.enable({ emitEvent: false });
+    this.setActionButtons('edit');
+    this.setButtonDisabled('save', source === 'user'); // user ต้องแก้อะไรก่อนจึงค่อย enable
+  }
+
+  // =================== UI / Dialog ===================
   toggleActive(): void {
     Promise.resolve().then(() => {
       const container = document.querySelector('.cdk-overlay-container');
@@ -111,14 +254,42 @@ export class WebPolicyDetailsComponent {
     console.log('Add Category clicked');
   }
 
+  // =================== Data Flow ===================
   fetchEmailIDsDetails() {
     this.emailTemplateService.getEmailTemplateById(this.EmailID).subscribe({
       next: (response) => {
+        // เติมค่าจาก API
+        this.isProgrammaticUpdate = true;
         this.formDetails.patchValue({
           subject: response.subject,
           emailContent: response.message || ''
         }, { emitEvent: false });
+        this.isProgrammaticUpdate = false;
+
+        // baseline (สำหรับ hasFormChanged)
         this.initialSnapshot = this.formDetails.getRawValue();
+
+        /// ... patch จาก API → set initialSnapshot → (ถ้ามี) วาง draft
+        const draft = this.readDraft();
+        if (draft && (draft.subject || draft.emailContent)) {
+          this.isProgrammaticUpdate = true;
+          this.formDetails.patchValue({
+            subject: draft.subject ?? this.formDetails.get('subject')?.value,
+            emailContent: draft.emailContent ?? this.formDetails.get('emailContent')?.value
+          }, { emitEvent: false });
+          this.isProgrammaticUpdate = false;
+
+          this.enterEditMode('draft');
+          this.setActionButtons('edit');
+          this.setButtonDisabled('save', false);
+        } else {
+          this.formDetails.disable({ emitEvent: false });
+          this.setActionButtons('view');
+        }
+
+        // ✅ ตอนนี้ฟอร์มพร้อมแล้ว ค่อยอนุญาตให้เขียน draft
+        this.readyForDraft = true;
+
         this.questionSet = response ?? [];
       },
       error: (error) => {
@@ -130,30 +301,34 @@ export class WebPolicyDetailsComponent {
   putEmailIDsDetails(payload: {subject: string, message: string}) {
     this.emailTemplateService.updateEmailTemplate(this.EmailID, payload).subscribe({
       next: (response) => {
-        // this.formDetails.patchValue({
-        //   subject: response.subject,
-        //   emailContent: response.message || ''
-        // }, { emitEvent: false });
+        // ปิดโหมดแก้ไข
         this.setActionButtons('view');
         this.isEditing = false;
         this.formDetails.disable({ emitEvent: false });
+
+        // อัปเดต snapshot ใหม่ (state ล่าสุดหลังเซฟ)
+        this.isProgrammaticUpdate = true;
         this.initialSnapshot = this.formDetails.getRawValue();
+        this.isProgrammaticUpdate = false;
+
+        // ล้าง draft/dirty หลังบันทึกสำเร็จ
+        this.clearDraftsForCurrentType();
 
         this.questionSet = response ?? [];
       },
       error: (error) => {
-        console.error('Error fetching category types details:', error);
+        // เปิดโหมดแก้ไขต่อ
         this.setActionButtons('edit');
         this.onEditClicked();
         this.isEditing = true;
         this.formDetails.enable();
 
-        this.notificationService.error('Subject is required');
-        this.fieldErrors = true;
+        this.notificationService.error(error.error.error);
+        // this.fieldErrors = true;
 
-        setTimeout(()=>{
-          this.fieldErrors = false;
-        },3000)
+        // setTimeout(()=>{
+        //   this.fieldErrors = false;
+        // },3000)
       },
     });
   }
@@ -163,17 +338,51 @@ export class WebPolicyDetailsComponent {
       case 'edit':
         this.setActionButtons('edit');
         this.onEditClicked();
-        this.isEditing = true
+        this.isEditing = true;
         this.formDetails.enable();
+        // เข้าสู่โหมดแก้ไขด้วยมือ → Save จะ disabled จนกว่าจะมีการแก้
+        this.setButtonDisabled('save', !this.hasFormChanged() && !this.hasPendingDrafts());
         break;
       case 'save':
-        this.onSaveClicked()
+        this.onSaveClicked();
         break;
     }
   }
 
   onEditClicked() {
-    console.log('Edit button clicked');
+    // จับ snapshot ตอนเริ่มแก้ไข (รองรับ hasFormChanged)
+    this.initialSnapshot = this.formDetails.getRawValue();
+  }
+
+  onSaveClicked() {
+    console.log('Save button clicked');
+
+    if (!this.hasFormChanged() && !this.hasPendingDrafts()) {
+      return; // ไม่มีอะไรเปลี่ยน หรือไม่มี draft
+    }
+
+    const value = this.formDetails.getRawValue();
+    const payload = {
+      subject: value.subject,
+      emailContent: this.getInlineStyledHtml()
+    };
+
+    // ปิดโหมดแก้ไขชั่วคราว (optimistic)
+    this.isEditing = false;
+    this.formDetails.disable({ emitEvent: false });
+
+    // จับ snapshot ใหม่ (optimistic) เพื่อให้ UI มองว่าเท่ากับ baseline
+    this.initialSnapshot = this.formDetails.getRawValue();
+    this.setActionButtons('view');
+
+    // เคลียร์ draft ไว้ก่อน (จะถูกล้างซ้ำใน next: ของ API อีกที)
+    this.clearDraftsForCurrentType();
+
+    // ยิงอัปเดตจริง
+    this.putEmailIDsDetails({
+      subject: value.subject,
+      message: this.getInlineStyledHtml()
+    });
   }
 
   private setActionButtons(mode: 'view' | 'edit') {
@@ -193,43 +402,7 @@ export class WebPolicyDetailsComponent {
     this.disabledKeys = Array.from(set);
   }
 
-  private hasFormChanged(): boolean {
-    if (!this.initialSnapshot) return false;
-    const current = this.formDetails.getRawValue();
-    return JSON.stringify(current) !== JSON.stringify(this.initialSnapshot);
-  }
-
-  onSaveClicked() {
-    console.log('Save button clicked');
-    // ไม่ให้กดถ้าไม่มีการเปลี่ยน
-    if (!this.hasFormChanged()) {
-      // กันเคสเผลอคลิกจากคีย์ลัดหรืออื่น ๆ
-      return;
-    }
-
-    const value = this.formDetails.getRawValue();
-    const payload = {
-      subject: value.subject,
-      emailContent: this.getInlineStyledHtml()
-    };
-
-    console.log('SAVE payload:', payload);
-    // ปิดโหมดแก้ไข + รีเซ็ตสถานะปุ่ม
-    this.isEditing = false;
-    this.formDetails.disable({ emitEvent: false });
-
-    // จับ snapshot ใหม่หลังเซฟสำเร็จ (ให้สถานะล่าสุดคือ baseline)
-    this.initialSnapshot = this.formDetails.getRawValue();
-
-    // กลับไปโหมด view: โชว์เฉพาะปุ่ม Edit
-    this.setActionButtons('view');
-
-    this.putEmailIDsDetails({
-      subject: value.subject,
-      message: this.getInlineStyledHtml()
-    })
-  }
-
+  // =================== Inline Style Extractor ===================
   getInlineStyledHtml() {
     const data = this.formDetails.get('emailContent')?.value;
     if (!data) return '';
@@ -296,7 +469,7 @@ export class WebPolicyDetailsComponent {
       }
     });
 
-    // ✅ FIX สำหรับรูปภาพที่ resize
+    // ✅ รูปภาพที่ resize ให้ embed width/height เป็นแอตทริบิวต์
     const images = container.querySelectorAll('img');
     images.forEach(img => {
       const image = img as HTMLImageElement;
@@ -311,5 +484,14 @@ export class WebPolicyDetailsComponent {
     });
 
     return container.innerHTML;
+  }
+
+  // =================== Lifecycle ===================
+  ngOnDestroy() {
+    // if (this.isEditing && this.readyForDraft) {
+    //   this.writeDraftFromForm();
+    // }
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

@@ -102,6 +102,7 @@
           [withinCard]="true"
           [isDisabledForm]="!isEditing"
           [allowViewWhenDisabled]="true"
+          [isConfirmDialogToggleRequired]="true"
           (viewRowClicked)="onRowClicked($event, 'view')"
           (toggleChange)="onToggleChangeCategory($event)"
           (editCardClicked)="onRowClicked($event, 'edit')"
@@ -159,7 +160,9 @@
         </div>
         <input type="text"
           class="tw-w-full tw-bg-[#FFFFFF] tw-border tw-border-[#CED4DA] tw-rounded-lg tw-px-4 tw-py-2 tw-text-sm disabled:tw-text-[#6C757D] disabled:tw-bg-[#E9ECEF]"
-          formControlName="CategoryName" />
+          formControlName="CategoryName"
+          (blur)="onCategoryNameBlur()"
+          (keydown.enter)="onCategoryNameBlur()"/>
       </div>
       <div class="tw-flex tw-items-center tw-justify-between tw-mb-4">
         <div></div>
@@ -200,9 +203,12 @@
           [highlightRowIndex]="duplicateRowIndex"
           [isZeroOneStatus]="true"
           (deleteRowClicked)="onDeleteRowClicked($event)"
-          [requiredFooterFields]="['questionTH','questionEN','sort']"
+          [requiredFooterFields]="detailsRequiredFooterFields"
           (selectChanged)="onSelectChangedDetails($event)"
           [createDefaults]="tableCreateDefaults"
+          [isConfirmDialogToggleRequired]="true"
+          [isConfirmDialogSaveRequired]="true"
+          (editClicked)="onInlineEditSave($event)"
         ></app-tables>
       </div>
     </div>
