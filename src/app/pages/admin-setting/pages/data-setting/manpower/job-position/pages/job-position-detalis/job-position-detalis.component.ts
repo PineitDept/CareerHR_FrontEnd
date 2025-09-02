@@ -928,9 +928,16 @@ export class JobPositionDetalisComponent {
       this.requirementsRows = this.toRows(cache.lists.requirements);
       this.preferredSkillsRows = this.toRows(cache.lists.preferredSkills);
 
-      this.isEditing = !!cache.isEditing;
-      this.setActionButtons(this.isEditing ? 'edit' : 'view');
-      this.isEditing ? this.formDetails.enable({ emitEvent: false }) : this.formDetails.disable({ emitEvent: false });
+      // this.isEditing = !!cache.isEditing;
+      // this.setActionButtons(this.isEditing ? 'edit' : 'view');
+      // this.isEditing ? this.formDetails.enable({ emitEvent: false }) : this.formDetails.disable({ emitEvent: false });
+
+      setTimeout(() => {
+        this.isEditing = true;
+        this.setActionButtons('edit');
+        this.disabledKeys = [];
+        this.isEditing ? this.formDetails.enable({ emitEvent: false }) : this.formDetails.disable({ emitEvent: false });
+      })
 
       // ถ้า dual-listbox ไม่ refresh เอง ให้ re-emit ค่าหน่อย
       this.reemitControl('selectedIdsBenefits');
