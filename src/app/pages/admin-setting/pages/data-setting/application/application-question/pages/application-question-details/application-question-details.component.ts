@@ -1,5 +1,4 @@
 import { Component, ViewChild } from '@angular/core';
-import { defaultDetailsFilterButtons } from '../../../../../../../../constants/admin-setting/application-question.constants';
 import { ActivatedRoute } from '@angular/router';
 import { ApplicationQuestionService } from '../../../../../../../../services/admin-setting/application-question/application-question.service';
 import { FormBuilder, FormGroup } from '@angular/forms';
@@ -12,6 +11,7 @@ import { CaptchaDialogComponent } from '../../../../../../../../shared/component
 import { debounceTime, distinctUntilChanged, map, Subject, takeUntil } from 'rxjs';
 import { ConfirmChangesDialogComponent } from '../../../../../../../../shared/components/dialogs/confirm-changes-dialog/confirm-changes-dialog.component';
 import { ConfirmChangesData } from '../../../../../../../../shared/interfaces/dialog/dialog.interface';
+import { NotificationService } from '../../../../../../../../shared/services/notification/notification.service';
 
 type CategoryForm = {
   categoryId: number | string | null;
@@ -52,8 +52,28 @@ type ChangeItem = {
 };
 
 type ChangeGroup = {
-  section: 'Category Table' | 'Category Details';
+  section: 'Category Table' | 'Category Details' | 'New Category';
   items: ChangeItem[];
+};
+ 
+// ===== Payload types =====
+type QuestionPayload = {
+  id: number;              // 0 เมื่อเป็นแถวใหม่
+  questionTH: string;
+  questionEN: string;
+  type: string;
+  sort: number | 0;
+  scoringMethod: number | 0 | null;
+  isActive: boolean;
+  isDeleted: boolean;
+};
+
+type CategorySavePayload = {
+  categoryId: number;      // 0 เมื่อเป็น category ใหม่ (temp id)
+  categoryName: string;
+  categoryType: string;    // this.categoryType
+  isCategoryActive: boolean;
+  questions: QuestionPayload[];
 };
 
 @Component({
@@ -76,7 +96,7 @@ export class ApplicationQuestionDetailsComponent {
   @ViewChild('categoryTable') categoryTable!: TablesComponent;
   @ViewChild('categoryDetailsTable') categoryDetailsTable!: TablesComponent;
 
-  filterButtons = defaultDetailsFilterButtons();
+  filterButtons: { label: string; key: string; color: string }[] = [];
   disabledKeys: string[] = [];
 
   categoryType: string = '';
@@ -86,7 +106,7 @@ export class ApplicationQuestionDetailsComponent {
     { header: 'No.', field: 'index', type: 'text', align: 'center', width: '4%' },
     { header: 'Category Name', field: 'categoryName', type: 'text', width: '71%' },
     { header: 'Status', field: 'activeStatus', type: 'toggle', align: 'center', width: '7%' },
-    { header: 'Action', field: 'textlink', type: 'textlink', align: 'center', width: '18%', textlinkActions: ['view','edit-card'] }
+    { header: 'Action', field: 'textlink', type: 'textlink', align: 'center', width: '18%', textlinkActions: ['view'] }
   ];
 
   baseCategoryDetailsColumns: Columns = [
@@ -166,6 +186,7 @@ export class ApplicationQuestionDetailsComponent {
     private applicationQuestionService: ApplicationQuestionService,
     private fb: FormBuilder,
     private dialog: MatDialog,
+    private notify: NotificationService,
   ) { }
 
   ngOnInit() {
@@ -194,6 +215,7 @@ export class ApplicationQuestionDetailsComponent {
       .pipe(takeUntil(this.destroy$))
       .subscribe(params => {
         this.categoryType = params['categoryType'] || '';
+        this.setColumnsFor();
         this.formDetails.patchValue({
           categoryType: {
             CategoryTypeName: this.categoryType,
@@ -247,13 +269,15 @@ export class ApplicationQuestionDetailsComponent {
     '__index': '4%', 'questionTH': '26%', 'questionEN': '26%', 'type': '12%', 'scoringMethod': '10%', 'activeStatus': '8%', 'textlink': '14%',
   };
 
+  private get isQuiz2(): boolean   { return this.categoryType === 'Quiz2'; }
+  private get isAboutMe(): boolean { return this.categoryType === 'AboutMe'; }
+
   private applyWidths(cols: Columns, widths: Record<string,string>): Columns {
     return cols.map(c => ({ ...c, width: widths[c.field] ?? c.width }));
   }
 
-  private setColumnsFor(categoryId: number | string | null | undefined) {
-    const id = String(categoryId ?? '');
-    if (id === '5') {
+  private setColumnsFor() {
+    if (this.isQuiz2) {
       const statusIdx = this.baseCategoryDetailsColumns.findIndex(c => c.field === 'activeStatus');
       const withScoring = [
         ...this.baseCategoryDetailsColumns.slice(0, statusIdx),
@@ -265,7 +289,7 @@ export class ApplicationQuestionDetailsComponent {
       this.detailsRequiredFooterFields = ['questionTH','questionEN','type'];
       return;
     }
-    if (id === '2') {
+    if (this.isAboutMe) {
       const statusIdx = this.baseCategoryDetailsColumns.findIndex(c => c.field === 'activeStatus');
       const withNumber = [
         ...this.baseCategoryDetailsColumns.slice(0, statusIdx),
@@ -282,8 +306,8 @@ export class ApplicationQuestionDetailsComponent {
     this.detailsRequiredFooterFields = ['questionTH','questionEN','type'];
   }
 
-  private buildColumnsFor(categoryId: number | string) {
-    this.setColumnsFor(categoryId);
+  private buildColumnsFor() {
+    this.setColumnsFor();
   }
 
   private buildCategoryFG(c: any) {
@@ -317,14 +341,11 @@ export class ApplicationQuestionDetailsComponent {
     return Number.isFinite(Number(v)) ? Number(v) : null;
   }
 
-  private setActionButtons(mode: 'view' | 'edit') {
-    if (mode === 'view') {
-      this.filterButtons = [{ label: 'Edit', key: 'edit', color: '#000000' }];
-      this.disabledKeys = [];
-    } else {
-      this.filterButtons = [{ label: 'Save', key: 'save', color: '#000055' }];
-      this.disabledKeys = ['save'];
-    }
+  private setActionButtons(_mode?: 'view' | 'edit') {
+    // ไม่ว่าจะแบบไหน แสดงปุ่ม Save ปุ่มเดียว
+    this.filterButtons = [{ label: 'Save', key: 'save', color: '#000055' }];
+    // เริ่มต้นให้ปุ่ม Save ถูกปิดไว้ก่อน จนกว่าจะมี draft/การเปลี่ยนแปลง
+    this.disabledKeys = ['save'];
   }
 
   private setButtonDisabled(key: string, disabled: boolean) {
@@ -344,7 +365,6 @@ export class ApplicationQuestionDetailsComponent {
 
   private buildCurrentDetailsView(): DetailsSnapshot {
     const name = (this.categoryDetailsFG.get('CategoryName')?.value || '').trim();
-    const catId = String(this.formDetails.get('selectedCategoryId')?.value ?? '');
 
     const items = (this.categoryDetailsRows || []).map(r => ({
       id: r?.id ?? null,
@@ -353,7 +373,7 @@ export class ApplicationQuestionDetailsComponent {
       type: (r?.type ?? 'Answer'),
       sort: (r?.sort ?? r?.sort === 0) ? Number(r.sort) : null,
       activeStatus: !!r?.activeStatus,
-      scoringMethod: (catId === '5') ? (r?.scoringMethod === 'Reverse' ? 2 : 1) :
+      scoringMethod: this.isQuiz2 ? (r?.scoringMethod === 'Reverse' ? 2 : 1) :
                     (r?.scoringMethod ?? null),
     }));
 
@@ -717,6 +737,7 @@ export class ApplicationQuestionDetailsComponent {
     this.isProgrammaticUpdate = true;
     try {
       this.isEnabledCardDetails = true;
+      this.setColumnsFor();
       this.isAddMode = true;
       this.isViewMode = false;
       this.isEditMode = false;
@@ -785,13 +806,12 @@ export class ApplicationQuestionDetailsComponent {
       index: idx + 1,
       categoryName: it.categoryName ?? '-',
       activeStatus: !!it.activeStatus,
-      textlinkActions: ['view', 'edit-topopup'],
+      textlinkActions: ['view'],
     }));
   }
 
   private rebuildDetailsRowsFromForm() {
     const arr = this.detailsFA.getRawValue() as CategoryDetailForm[];
-    const catId = String(this.formDetails.get('selectedCategoryId')?.value ?? '');
     this.categoryDetailsRows = arr.map((it) => ({
       id: it.id,
       questionTH: it.questionTH,
@@ -799,21 +819,15 @@ export class ApplicationQuestionDetailsComponent {
       type: it.type,
       sort: it.sort,
       activeStatus: !!it.activeStatus,
-      scoringMethod: (catId === '5') ? (it.scoringMethod === 2 ? 'Reverse' : 'Normal') : it.scoringMethod,
+      scoringMethod: this.isQuiz2 ? (it.scoringMethod === 2 ? 'Reverse' : 'Normal') : it.scoringMethod,
       textlinkActions: ['edit-inrow','delete'],
     }));
   }
 
   onFilterButtonClick(key: string) {
     switch (key) {
-      case 'edit': this.onEditClicked(); break;
       case 'save': this.onSaveClicked(); break;
     }
-  }
-
-  onEditClicked() {
-    this.initialSnapshot = this.formDetails.getRawValue();
-    this.enterEditMode('user');
   }
 
   onSaveClicked() {
@@ -828,13 +842,15 @@ export class ApplicationQuestionDetailsComponent {
       container?.classList.add('dimmed-overlay');
     });
 
+    const isPureCreate = this.collectDirtyDetailsForPayload().length === 1 && this.isNewCategoryId(this.collectDirtyDetailsForPayload()[0].categoryId);
+
     const dialogRef = this.dialog.open(ConfirmChangesDialogComponent, {
       width: '856px',
       panelClass: 'custom-dialog-container',
       disableClose: true,
       autoFocus: false,
       data: {
-        title: 'Please confirm your changes',
+        title: isPureCreate ? 'Create new category?' : 'Please confirm your changes',
         groups: changeGroups,
         confirm: true,
       } as ConfirmChangesData
@@ -846,36 +862,91 @@ export class ApplicationQuestionDetailsComponent {
       container?.classList.remove('dimmed-overlay');
       if (!confirmed) return;
 
-      const value = this.formDetails.getRawValue();
-      const dirtyDetailsList = this.collectDirtyDetailsForPayload();
+      // const value = this.formDetails.getRawValue();
+      // const dirtyDetailsList = this.collectDirtyDetailsForPayload();
 
-      const payload: any = {
-        categoryType: {
-          name: value.categoryType.CategoryTypeName,
-          isActive: !!value.categoryType.activeStatus,
+      // const payload: any = {
+      //   categoryType: {
+      //     name: value.categoryType.CategoryTypeName,
+      //     isActive: !!value.categoryType.activeStatus,
+      //   },
+      //   categories: (value.categories ?? []).map((c: CategoryForm) => ({
+      //     categoryId: c.categoryId,
+      //     categoryName: c.categoryName,
+      //     isActive: !!c.activeStatus,
+      //   })),
+      // };
+
+      // if (dirtyDetailsList.length === 1) {
+      //   payload.selectedCategoryId = dirtyDetailsList[0].categoryId;
+      //   payload.categoryDetails = {
+      //     CategoryName: dirtyDetailsList[0].CategoryName,
+      //     items: dirtyDetailsList[0].items,
+      //   };
+      // } else if (dirtyDetailsList.length > 1) {
+      //   payload.selectedCategoryId = null;
+      //   payload.categoryDetailsList = dirtyDetailsList;
+      // } else {
+      //   payload.selectedCategoryId = null;
+      //   payload.categoryDetailsList = [];
+      // }
+
+      const dirtyIds = this.readDirty();
+      if (!dirtyIds.length) return;
+
+      const payloads: CategorySavePayload[] = [];
+
+      dirtyIds.forEach((cid) => {
+        const current = this.buildSnapshotFromCache(cid)
+          || (String(this.formDetails.get('selectedCategoryId')?.value) === String(cid)
+                ? this.buildCurrentDetailsView()
+                : null);
+
+        const baseline = this.getBaselineFor(cid) || { name: '', items: [] };
+
+        if (current) {
+          payloads.push(this.buildCategorySavePayload(cid, current, baseline));
+        }
+      });
+
+      // ถ้าแน่ใจว่าจะส่งทีละ category → ส่ง payloads[0]
+      // แต่ถ้าอยากรองรับหลาย category ให้ส่งทั้ง array ไปยัง service
+      const body: any = (payloads.length === 1) ? payloads[0] : { categories: payloads };
+
+      console.log('SAVE body:', body);
+
+      this.applicationQuestionService.saveApplicationQuestionDetails(body).subscribe({
+        next: (res) => {
+          // เคลียร์ draft/caches/baseline ของ category ที่เพิ่งบันทึก
+          dirtyIds.forEach((cid) => {
+            this.deleteCachedDetails(cid);
+            this.deleteBaselineFor(cid);
+          });
+          this.clearDirty();
+          this.clearCategoryTypeDraft();
+
+          // รีเซ็ตสถานะหน้าจอ
+          this.isEditing = false;
+          this.formDetails.disable({ emitEvent: false });
+          this.initialSnapshot = this.formDetails.getRawValue();
+          this.setActionButtons('view');
+
+          this.pendingCategoryChanges = [];
+          this.pendingDetailsChanges = [];
+
+          // โหลดข้อมูลใหม่ให้ baseline sync กับ server
+          this.fetchCategoryTypesDetails();
+
+          this.notify.success('Your changes have been saved successfully.');
         },
-        categories: (value.categories ?? []).map((c: CategoryForm) => ({
-          categoryId: c.categoryId,
-          categoryName: c.categoryName,
-          isActive: !!c.activeStatus,
-        })),
-      };
+        error: (err) => {
+          // แจ้ง error แบบอ่านง่าย
+          const msg = err?.error?.message || err?.message || 'Something went wrong while saving.';
+          this.notify.error(msg);
+        }
+      });
 
-      if (dirtyDetailsList.length === 1) {
-        payload.selectedCategoryId = dirtyDetailsList[0].categoryId;
-        payload.categoryDetails = {
-          CategoryName: dirtyDetailsList[0].CategoryName,
-          items: dirtyDetailsList[0].items,
-        };
-      } else if (dirtyDetailsList.length > 1) {
-        payload.selectedCategoryId = null;
-        payload.categoryDetailsList = dirtyDetailsList;
-      } else {
-        payload.selectedCategoryId = null;
-        payload.categoryDetailsList = [];
-      }
-
-      console.log('SAVE payload:', payload);
+      // console.log('SAVE payload:', payload);
 
       // this.clearCategoryTypeDraft();
       // for (const d of dirtyDetailsList) this.deleteCachedDetails(d.categoryId);
@@ -911,6 +982,7 @@ export class ApplicationQuestionDetailsComponent {
       scoringMethod: this.normalizeScoring(d.scoringMethod),
     }));
 
+    // กรณี Add ใหม่ -> ออก temp id
     if (this.isAddMode && (categoryId == null)) {
       const tempId = this.createTempId();
       categoryId = tempId;
@@ -927,14 +999,29 @@ export class ApplicationQuestionDetailsComponent {
       this.rememberLastSelected(tempId);
     }
 
-    this.setCachedDetails(categoryId, { CategoryName: name, items: itemsForCache });
+    // เปรียบเทียบกับ "server baseline" ก่อนตัดสินใจ cache/dirty
+    const currentSnap = this.buildCurrentDetailsView(); // มุมมองล่าสุดบนฟอร์ม
+    const serverBaseline = this.getBaselineFor(categoryId) || { name: '', items: [] };
+    const equalsServer = this.isSameDetails(currentSnap, serverBaseline);
+
+    // อัปเดตชื่อใน list ให้ตรงก่อน (ไม่เกี่ยวกับ dirty)
     this.syncCategoryNameToList(categoryId, name);
-    this.markDirty(categoryId);
 
+    if (equalsServer) {
+      // ถ้าเท่ากับ baseline → ลบ draft และ unmark dirty ของหมวดหมู่นี้
+      this.deleteCachedDetails(categoryId);
+      this.unmarkDirty(categoryId);
+    } else {
+      // มีความต่างจาก baseline → เก็บเป็น draft และ mark dirty
+      this.setCachedDetails(categoryId, { CategoryName: name, items: itemsForCache });
+      this.markDirty(categoryId);
+    }
+
+    // ตั้ง baseline สำหรับปุ่ม Save Details รอบต่อไป (เทียบกับสถานะที่เพิ่งกดเซฟ)
     this.detailsBaseline = this.buildCurrentDetailsView();
-    this.reflectPendingDraftsUI();
+    this.reflectPendingDraftsUI(); // ← จะ disable ปุ่ม Save ใหญ่เองถ้าไม่มี draft/เปลี่ยนแปลงค้างอยู่
 
-    console.log('Saved to cache for categoryId=', categoryId);
+    console.log('Saved to cache for categoryId=', categoryId, 'equalsServer=', equalsServer);
 
     this.categoryDetailsFG.disable({ emitEvent: false });
     this.isEditDetails = false;
@@ -942,16 +1029,14 @@ export class ApplicationQuestionDetailsComponent {
     this.isEditMode = true;
     this.isViewMode = false;
 
-    // เคลียร์ log รายละเอียดรอบนี้กันสับสน
     this.pendingDetailsChanges = [];
   }
 
   onAddQuestionClicked() {
     this.isAddingRow = true;
-    const catId = String(this.formDetails.get('selectedCategoryId')?.value ?? '');
-    if (catId === '5') {
+    if (this.isQuiz2) {
       this.categoryDetailsTable.startInlineCreate({ activeStatus: false, status: 0, type: 'Answer', scoringMethod: 'Normal' }, 'bottom');
-    } else if (catId === '2') {
+    } else if (this.isAboutMe) {
       this.categoryDetailsTable.startInlineCreate({ activeStatus: false, status: 0, type: 'Answer', scoringMethod: 1 }, 'bottom');
     } else {
       this.categoryDetailsTable.startInlineCreate({ activeStatus: false, status: 0, type: 'Answer' }, 'bottom');
@@ -964,7 +1049,7 @@ export class ApplicationQuestionDetailsComponent {
 
   onRowClicked(row: any, action: 'view' | 'edit') {
     this.rememberLastSelected(row?.categoryId);
-    this.buildColumnsFor(row?.categoryId);
+    this.buildColumnsFor();
 
     this.isProgrammaticUpdate = true;
 
@@ -981,7 +1066,7 @@ export class ApplicationQuestionDetailsComponent {
       this.isEditDetails = false;
     }
 
-    this.setColumnsFor(row?.categoryId);
+    this.setColumnsFor();
 
     this.formDetails.patchValue({
       selectedCategoryId: row?.categoryId ?? null,
@@ -1137,12 +1222,10 @@ export class ApplicationQuestionDetailsComponent {
     const maxSort = existingSorts.length ? Math.max(...existingSorts) : 0;
     const finalSort = maxSort + 1;
 
-    const catId = String(this.formDetails.get('selectedCategoryId')?.value ?? '');
-
     let scoring: number | null = null;
-    if (catId === '5') {
+    if (this.isQuiz2) {
       scoring = (payload.scoringMethod === 'Reverse' || payload.scoringMethod === 2 || payload.scoringMethod === '2') ? 2 : 1;
-    } else if (catId === '2') {
+    } else if (this.isAboutMe) {
       const n = Number(payload.scoringMethod);
       scoring = (Number.isFinite(n) && n >= 1) ? Math.floor(n) : 1;
     } else {
@@ -1170,7 +1253,7 @@ export class ApplicationQuestionDetailsComponent {
       it => !(it.entity === 'Detail' && it.field === 'NEW' && it.label === label)
     );
 
-    const toText = this.formatNewRowAddedText(normalized, catId);
+    const toText = this.formatNewRowAddedText(normalized);
 
     this.pendingDetailsChanges.push({
       entity: 'Detail',
@@ -1243,11 +1326,10 @@ export class ApplicationQuestionDetailsComponent {
     if (String(before) !== String(e.value)) {
       const idKey = String(rowFG.value.id ?? `tmp-${idx+1}`);
       const label = `Detail #${idx+1}`;
-      const catId = String(this.formDetails.get('selectedCategoryId')?.value ?? '');
-      const normFrom = (field === 'scoringMethod' && catId === '5')
+      const normFrom = (field === 'scoringMethod' && this.isQuiz2)
         ? (+before === 2 ? 'Reverse' : 'Normal')
         : before;
-      const normTo = (field === 'scoringMethod' && catId === '5')
+      const normTo = (field === 'scoringMethod' && this.isQuiz2)
         ? (e.value === 'Reverse' ? 'Reverse' : 'Normal')
         : e.value;
 
@@ -1262,7 +1344,7 @@ export class ApplicationQuestionDetailsComponent {
     }
 
     if (e.field === 'scoringMethod') {
-      const numeric = e.value === 'Reverse' ? 2 : 1;
+      const numeric = this.isQuiz2 ? (e.value === 'Reverse' ? 2 : 1) : Number(e.value);
       this.detailsFA.at(idx).patchValue({ scoringMethod: numeric }, { emitEvent: false });
       return;
     }
@@ -1323,7 +1405,7 @@ export class ApplicationQuestionDetailsComponent {
         questionEN: (r?.questionEN ?? '').trim(),
         type: (r?.type ?? 'Answer'),
         activeStatus: !!r?.activeStatus,
-        scoringMethod: (this.formDetails.get('selectedCategoryId')?.value == '5')
+        scoringMethod: this.isQuiz2
           ? (r?.scoringMethod === 'Reverse' ? 2 : 1)
           : (Number.isFinite(Number(r?.scoringMethod)) ? Number(r.scoringMethod) : null),
       });
@@ -1334,7 +1416,6 @@ export class ApplicationQuestionDetailsComponent {
     const idx = this.findDetailsIndexByRow(updatedRow);
     if (idx < 0) return;
 
-    const catId = String(this.formDetails.get('selectedCategoryId')?.value ?? '');
     const before = this.detailsFA.at(idx).value as CategoryDetailForm;
     const label  = `Detail #${idx + 1}`;
 
@@ -1343,13 +1424,13 @@ export class ApplicationQuestionDetailsComponent {
       questionEN: (updatedRow.questionEN ?? '').trim(),
       type:       updatedRow.type ?? 'Answer',
       activeStatus: !!(updatedRow.activeStatus ?? (updatedRow.status === 1)),
-      sort: this.normDetailField('__index', updatedRow.sort ?? before.sort, catId) as number | null,
-      scoringMethod: this.normDetailField('scoringMethod', updatedRow.scoringMethod ?? before.scoringMethod, catId) as number | null,
+      sort: this.normDetailField('__index', updatedRow.sort ?? before.sort) as number | null,
+      scoringMethod: this.normDetailField('scoringMethod', updatedRow.scoringMethod ?? before.scoringMethod) as number | null,
     };
 
     (['questionTH','questionEN','type','activeStatus','__index','scoringMethod'] as const).forEach((f) => {
-      const ov = this.normDetailField(f === '__index' ? '__index' : f, (before as any)[f === '__index' ? 'sort' : f], catId);
-      const nv = this.normDetailField(f, (patch as any)[f === '__index' ? 'sort' : f], catId);
+      const ov = this.normDetailField(f === '__index' ? '__index' : f, (before as any)[f === '__index' ? 'sort' : f]);
+      const nv = this.normDetailField(f, (patch as any)[f === '__index' ? 'sort' : f]);
 
       if (ov !== nv) {
         this.pendingDetailsChanges = this.pendingDetailsChanges.filter(
@@ -1358,7 +1439,7 @@ export class ApplicationQuestionDetailsComponent {
 
         const pretty = (x: any) =>
           f === 'activeStatus' ? (x ? 'Active' : 'Inactive')
-        : f === 'scoringMethod' && catId === '5' ? (x === 2 ? 'Reverse' : 'Normal')
+        : f === 'scoringMethod' && this.isQuiz2 ? (x === 2 ? 'Reverse' : 'Normal')
         : x;
 
         this.pendingDetailsChanges.push({
@@ -1377,7 +1458,7 @@ export class ApplicationQuestionDetailsComponent {
     this.categoryDetailsFG.markAsDirty();
     this.formDetails.markAsDirty();
 
-    // ❌ ไม่เขียน cache/markDirty ที่นี่
+    // ไม่เขียน cache/markDirty ที่นี่
     this.reflectPendingDraftsUI();
   }
 
@@ -1414,45 +1495,100 @@ export class ApplicationQuestionDetailsComponent {
     const groups: ChangeGroup[] = [];
 
     // 4.1 Category table
-    const catItems: ChangeItem[] = [];
-    const arr = this.categoriesFA.getRawValue() as CategoryForm[];
-    arr.forEach((c) => {
-      const idKey = String(c.categoryId);
-      const nowActive = !!c.activeStatus;
-      const nowName = (c.categoryName ?? '').trim();
-      const base = this.baselineCategoriesById.get(idKey);
-      if (base) {
-        if (base.activeStatus !== nowActive) {
-          catItems.push({
-            entity: 'Category',
-            id: idKey,
-            label: `Category "${nowName || base.categoryName || '-'}"`,
-            field: 'activeStatus',
-            from: base.activeStatus,
-            to: nowActive,
-          });
-        }
-        if (base.categoryName !== nowName) {
-          catItems.push({
-            entity: 'Category',
-            id: idKey,
-            label: `Category "${nowName || base.categoryName || '-'}"`,
-            field: 'categoryName',
-            from: base.categoryName,
-            to: nowName,
-          });
-        }
-      }
-    });
-    catItems.push(...this.pendingCategoryChanges);
-    if (catItems.length) {
-      groups.push({ section: 'Category Table', items: catItems });
-    }
+    // const catItems: ChangeItem[] = [];
+    // const arr = this.categoriesFA.getRawValue() as CategoryForm[];
+    // arr.forEach((c) => {
+    //   const idKey = String(c.categoryId);
+    //   const nowActive = !!c.activeStatus;
+    //   const nowName = (c.categoryName ?? '').trim();
+    //   const base = this.baselineCategoriesById.get(idKey);
+    //   if (base) {
+    //     if (base.activeStatus !== nowActive) {
+    //       catItems.push({
+    //         entity: 'Category',
+    //         id: idKey,
+    //         label: `Category "${nowName || base.categoryName || '-'}"`,
+    //         field: 'activeStatus',
+    //         from: base.activeStatus,
+    //         to: nowActive,
+    //       });
+    //     }
+    //     if (base.categoryName !== nowName) {
+    //       catItems.push({
+    //         entity: 'Category',
+    //         id: idKey,
+    //         label: `Category "${nowName || base.categoryName || '-'}"`,
+    //         field: 'categoryName',
+    //         from: base.categoryName,
+    //         to: nowName,
+    //       });
+    //     }
+    //   }
+    // });
+    // catItems.push(...this.pendingCategoryChanges);
+    // if (catItems.length) {
+    //   groups.push({ section: 'Category Table', items: catItems });
+    // }
 
     // 4.2 Category Details — คิดจาก cache ของ dirty เท่านั้น
     const detItems: ChangeItem[] = [];
     const dirtyIds = this.readDirty();
+    const includeScoring = this.isQuiz2 || this.isAboutMe;
 
+    // กรณีสร้างใหม่: ถ้ามี dirty แค่ 1 ตัว และเป็นของใหม่ → ทำ section 'New Category'
+    if (dirtyIds.length === 1 && this.isNewCategoryId(dirtyIds[0])) {
+      const cid = dirtyIds[0];
+      const currentFromCache = this.buildSnapshotFromCache(cid);
+      if (currentFromCache) {
+        const items: ChangeItem[] = [];
+
+        // แสดงชื่อ Category ที่จะสร้าง
+        items.push({
+          entity: 'CategoryName',
+          label: 'Category Name',
+          field: 'CREATE',
+          from: '',
+          to: currentFromCache.name || '(ไม่ระบุ)',
+        });
+
+        // แสดงสรุปรายการ Details ที่จะสร้างทั้งหมด (mark เป็น NEW)
+        currentFromCache.items.forEach((d, idx) => {
+          const label = `Detail #${d.sort ?? idx + 1}`;
+          const prettyScoring =
+            this.isQuiz2 ? (Number(d.scoringMethod) === 2 ? 'Reverse' : 'Normal') :
+            this.isAboutMe ? (Number(d.scoringMethod) || null) :
+            null;
+
+          const parts = [
+            `TH: ${d.questionTH || '-'}`,
+            `EN: ${d.questionEN || '-'}`,
+            `Type: ${d.type || 'Answer'}`,
+            `Status: ${d.activeStatus ? 'Active' : 'Inactive'}`
+          ];
+          if (includeScoring) {
+            parts.push(
+              this.isQuiz2
+                ? `ScoringMethod: ${prettyScoring}`
+                : `ScoringMethod: ${prettyScoring ?? '-'}`
+            );
+          }
+
+          items.push({
+            entity: 'Detail',
+            id: d.id ?? null,
+            label,
+            field: 'NEW',
+            from: '',
+            to: parts.join(', ')
+          });
+        });
+
+        groups.push({ section: 'New Category', items });
+        return groups; // ✅ โหมดสร้างใหม่ จบตรงนี้ ไม่ต้องทำ diff แบบแก้ไข
+      }
+    }
+
+    // ---------- โหมดแก้ไข ----------
     dirtyIds.forEach((cid) => {
       const baseline = this.getBaselineFor(cid) || { name: '', items: [] as any[] };
       const currentFromCache = this.buildSnapshotFromCache(cid);
@@ -1485,12 +1621,13 @@ export class ApplicationQuestionDetailsComponent {
             label,
             field: 'NEW',
             from: '',
-            to: this.formatNewRowAddedText(d, String(cid)),
+            to: this.formatNewRowAddedText(d),
           });
           return;
         }
 
-        const catId = String(cid);
+        mapOld.delete(key);
+
         const pairs: Array<[string, any, any]> = [
           ['__index', old.sort ?? null, d.sort ?? null],
           ['questionTH', (old.questionTH ?? ''), (d.questionTH ?? '')],
@@ -1498,16 +1635,16 @@ export class ApplicationQuestionDetailsComponent {
           ['type', (old.type ?? 'Answer'), (d.type ?? 'Answer')],
           ['activeStatus', !!old.activeStatus, !!d.activeStatus],
         ];
-        if (catId === '5' || catId === '2') {
+        if (includeScoring) {
           pairs.push(['scoringMethod', (old.scoringMethod ?? null), (d.scoringMethod ?? null)]);
         }
 
         pairs.forEach(([field, from, to]) => {
           if (String(from) !== String(to)) {
-            const prettyFrom = (field === 'scoringMethod' && catId === '5')
+            const prettyFrom = (field === 'scoringMethod' && this.isQuiz2)
               ? (Number(from) === 2 ? 'Reverse' : 'Normal')
               : from;
-            const prettyTo = (field === 'scoringMethod' && catId === '5')
+            const prettyTo = (field === 'scoringMethod' && this.isQuiz2)
               ? (Number(to) === 2 ? 'Reverse' : 'Normal')
               : to;
 
@@ -1522,6 +1659,31 @@ export class ApplicationQuestionDetailsComponent {
           }
         });
       });
+
+      // อะไรที่ยังเหลือใน mapOld = "ถูกลบ"
+      for (const old of mapOld.values()) {
+        const label = `Detail #${old?.sort ?? '-'}`;
+        const parts = [
+          `TH: ${old?.questionTH || '-'}`,
+          `EN: ${old?.questionEN || '-'}`,
+          `Type: ${old?.type || 'Answer'}`,
+          `Status: ${old?.activeStatus ? 'Active' : 'Inactive'}`
+        ];
+        if (includeScoring) {
+          const pretty = this.isQuiz2 ? (Number(old?.scoringMethod) === 2 ? 'Reverse' : 'Normal')
+                                      : (Number(old?.scoringMethod) || '-');
+          parts.push(`ScoringMethod: ${pretty}`);
+        }
+
+        detItems.push({
+          entity: 'Detail',
+          id: old?.id ?? null,
+          label,
+          field: 'DELETE',
+          from: parts.join(', '),
+          to: '(deleted)',
+        });
+      }
     });
 
     if (detItems.length) {
@@ -1563,13 +1725,13 @@ export class ApplicationQuestionDetailsComponent {
     return `new:${th}|${en}|${s}`;
   }
 
-  private normDetailField(field: string, val: any, catId: string) {
+  private normDetailField(field: string, val: any) {
     if (field === 'scoringMethod') {
-      if (catId === '5') {
+      if (this.isQuiz2) {
         if (val === 'Reverse' || val === 2 || val === '2') return 2;
         if (val === 'Normal'  || val === 1 || val === '1') return 1;
         return 1;
-      } else if (catId === '2') {
+      } else if (this.isAboutMe) {
         const n = Number(val);
         return Number.isFinite(n) ? Math.max(1, Math.floor(n)) : null;
       }
@@ -1583,7 +1745,6 @@ export class ApplicationQuestionDetailsComponent {
 
   private formatNewRowAddedText(
     item: { questionTH?: string; questionEN?: string; type?: string; scoringMethod?: number | string | null },
-    catId: string
   ): string {
     const parts = [
       `TH: ${(item.questionTH ?? '').trim() || '-'}`,
@@ -1591,11 +1752,11 @@ export class ApplicationQuestionDetailsComponent {
       `Type: ${item.type ?? 'Answer'}`,
     ];
 
-    if (catId === '5') {
+    if (this.isQuiz2) {
       const smNum = (item.scoringMethod === 2 || item.scoringMethod === '2') ? 2 : 1;
       const smLabel = smNum === 2 ? 'Reverse' : 'Normal';
       parts.push(`ScoringMethod: ${smLabel}`);
-    } else if (catId === '2') {
+    } else if (this.isAboutMe) {
       const n = Number(item.scoringMethod);
       if (Number.isFinite(n)) parts.push(`ScoringMethod: ${n}`);
     }
@@ -1626,6 +1787,140 @@ export class ApplicationQuestionDetailsComponent {
     const store = this.readBaselineStore();
     delete store[this.baselineKey(catId)];
     this.writeBaselineStore(store);
+  }
+
+  private unmarkDirty(categoryId: number | string) {
+    const ids = this.readDirty().filter(id => String(id) !== String(categoryId));
+    this.writeDirty(ids);
+  }
+
+  private isNewCategoryId(cid: string | number): boolean {
+    return this.isTempId(cid) || !this.getBaselineFor(cid);
+  }
+
+  // ===== Helpers สำหรับ payload =====
+  private toNumberOrZero(v: any): number {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  private getCategoryActiveFlag(catId: string | number): boolean {
+    const idx = this.categoriesFA.controls.findIndex(
+      (fg: FormGroup) => String(fg.value.categoryId) === String(catId)
+    );
+    if (idx > -1) {
+      return !!(this.categoriesFA.at(idx).value as CategoryForm).activeStatus;
+    }
+    // ไม่มีในรายการ (เช่นยังเป็น temp ใหม่ ๆ)
+    return true;
+  }
+
+  /** ทำ mapping เป็น key สำหรับจับคู่ระหว่าง baseline และ current
+   *  priority: ใช้ id ก่อน → ถ้าไม่มี id ใช้ composite key จาก TH|EN|sort
+   */
+  private detailKeyForCompare(d: {
+    id?: any; questionTH?: string; questionEN?: string; sort?: any;
+  }, idx: number) {
+    if (d?.id != null && d?.id !== '') return `id:${String(d.id)}`;
+    const th = (d?.questionTH ?? '').trim();
+    const en = (d?.questionEN ?? '').trim();
+    const s  = (d?.sort ?? idx + 1);
+    return `new:${th}|${en}|${s}`;
+  }
+
+  /** สร้าง payload ของ "หนึ่ง category" จาก snapshot (current) + baseline เพื่อตรวจ isDeleted */
+  private buildCategorySavePayload(
+    catId: string | number,
+    current: DetailsSnapshot,
+    baseline: DetailsSnapshot | null
+  ): CategorySavePayload {
+    const categoryIdNum = this.isTempId(catId) ? 0 : this.toNumberOrZero(catId);
+    const isCategoryActive = this.getCategoryActiveFlag(catId);
+
+    // ===== เตรียม map สำหรับเทียบ diff =====
+    // 1) baseline จัด map ตาม id (ของที่มาจากเซิร์ฟเวอร์ควรมี id)
+    const baselineById = new Map<number, any>();
+    (baseline?.items ?? []).forEach((b: any) => {
+      const idNum = this.toNumberOrZero(b?.id);
+      if (idNum > 0) baselineById.set(idNum, b);
+    });
+
+    // 2) สำหรับหา "ถูกลบ": ใช้ key แบบเดียวกับที่ใช้ในโค้ดเดิม
+    const baseMapForDelete = new Map<string, any>();
+    (baseline?.items ?? []).forEach((d: any, idx: number) => {
+      baseMapForDelete.set(this.detailKeyForCompare(d, idx), d);
+    });
+
+    const questions: QuestionPayload[] = [];
+
+    // ===== 1) วิ่ง current → คัดเฉพาะ "เพิ่มใหม่" หรือ "แก้ไข" =====
+    (current.items ?? []).forEach((d: any, idx: number) => {
+      const idNum = this.toNumberOrZero(d?.id);
+      const curKey = this.detailKeyForCompare(d, idx);
+      // ใช้ id เป็นหลักในการเทียบว่ามีของเดิมไหม
+      const old = idNum > 0 ? baselineById.get(idNum) : null;
+
+      // เอา key ออกจากชุดฐาน เพื่อเหลือแต่ "ถูกลบ"
+      if (baseMapForDelete.has(curKey)) baseMapForDelete.delete(curKey);
+
+      const changed = this.isDetailChanged(d, old);
+      if (!changed) return; // ไม่เปลี่ยน → ไม่ต้องส่ง
+
+      questions.push({
+        id: idNum > 0 ? idNum : 0, // แถวใหม่ให้ 0
+        questionTH: (d?.questionTH ?? '').trim(),
+        questionEN: (d?.questionEN ?? '').trim(),
+        type: (d?.type ?? 'Answer'),
+        sort: this.toNumberOrZero(d?.sort) || 0,
+        scoringMethod: this.toNumberOrZero(d?.scoringMethod), // null/NaN → 0
+        isActive: !!d?.activeStatus,
+        isDeleted: false,
+      });
+    });
+
+    // ===== 2) ที่เหลือใน baseMapForDelete = "ถูกลบ" =====
+    Array.from(baseMapForDelete.values()).forEach((old: any) => {
+      questions.push({
+        id: this.toNumberOrZero(old?.id) || 0,
+        questionTH: (old?.questionTH ?? '').trim(),
+        questionEN: (old?.questionEN ?? '').trim(),
+        type: (old?.type ?? 'Answer'),
+        sort: this.toNumberOrZero(old?.sort) || 0,
+        scoringMethod: this.toNumberOrZero(old?.scoringMethod),
+        isActive: !!old?.activeStatus, // ค่าเดิมก่อนโดนลบ
+        isDeleted: true,
+      });
+    });
+
+    // หมายเหตุ: ถ้าแก้แค่ชื่อ category (baseline.name != current.name) แต่รายละเอียดไม่เปลี่ยน
+    // questions จะเป็น [] ตามต้องการอยู่แล้ว
+    return {
+      categoryId: categoryIdNum,
+      categoryName: (current?.name ?? '').trim(),
+      categoryType: this.categoryType || '',
+      isCategoryActive,
+      questions,
+    };
+  }
+
+  private isDetailChanged(current: any, baseline: any): boolean {
+    if (!baseline) return true; // ไม่มีของเดิม แปลว่า "เพิ่มใหม่"
+    const trim = (s:any) => (typeof s === 'string' ? s.trim() : s);
+
+    const curSort = this.toNumberOrZero(current?.sort);
+    const oldSort = this.toNumberOrZero(baseline?.sort);
+
+    const curScore = this.toNumberOrZero(current?.scoringMethod);
+    const oldScore = this.toNumberOrZero(baseline?.scoringMethod);
+
+    return (
+      trim(current?.questionTH) !== trim(baseline?.questionTH) ||
+      trim(current?.questionEN) !== trim(baseline?.questionEN) ||
+      (current?.type ?? 'Answer') !== (baseline?.type ?? 'Answer') ||
+      curSort !== oldSort ||
+      !!current?.activeStatus !== !!baseline?.activeStatus ||
+      curScore !== oldScore
+    );
   }
 
   ngOnDestroy() {

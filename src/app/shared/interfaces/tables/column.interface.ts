@@ -2,7 +2,7 @@ export interface Column {
   header: string;           // Displayed column header name
   field: string;           // Field name to map with row data
   type?: 'text' | 'badge' | 'number' | 'select' | 'button' | 'date' | 'dateWithTime' | 'list' | 'icon' | 'expandable' | 'toggle' | 'textlink'; // Column type
-  textlinkActions?: Array<'view' | 'edit-topopup' | 'edit-card' | 'edit-inrow' | 'save' | 'cancel' | 'delete'>; // type: textlink
+  textlinkActions?: Array<'view' | 'edit-topopup' | 'edit-inrow' | 'save' | 'cancel' | 'delete'>; // type: textlink
   width?: string;
   minWidth?: string;
   maxWidth?: string;

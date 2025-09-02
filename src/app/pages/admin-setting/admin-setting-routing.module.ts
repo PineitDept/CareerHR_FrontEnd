@@ -20,6 +20,8 @@ import { EmailTemplateDetailsComponent } from './pages/data-setting/application/
 import { PendingDraftsGuard } from '../../guards/pending-draft.guard';
 import { EmailAttributeDetailsComponent } from './pages/data-setting/application/email/email-attribute/pages/email-attribute-details/email-attribute-details.component';
 import { WebPolicyDetailsComponent } from './pages/data-setting/application/web-policy/pages/web-policy-details/web-policy-details.component';
+import { ReasonComponent } from './pages/data-setting/application/reason/reason.component';
+import { ReasonDetailsComponent } from './pages/data-setting/application/reason/pages/reason-details/reason-details.component';
 import { JobPositionDetalisComponent } from './pages/data-setting/manpower/job-position/pages/job-position-detalis/job-position-detalis.component';
 import { InterviewerListComponent } from './pages/data-setting/interviewer/interviewer-list/interviewer-list.component';
 import { InterviewerTeamsComponent } from './pages/data-setting/interviewer/interviewer-teams/interviewer-teams.component';
@@ -67,6 +69,14 @@ const routes: Routes = [
       {
         path: 'data-setting/application/general-benefits',
         component: GeneralBenefitsComponent
+      },
+      {
+        path: 'data-setting/application/reason',
+        component: ReasonComponent
+      },
+      {
+        path: 'data-setting/application/reason/details',
+        component: ReasonDetailsComponent
       },
       {
         path: 'data-setting/application/application-question',
