@@ -11,6 +11,7 @@ import { CaptchaDialogComponent } from '../../../../../../../../shared/component
 import { debounceTime, distinctUntilChanged, map, Subject, takeUntil } from 'rxjs';
 import { ConfirmChangesDialogComponent } from '../../../../../../../../shared/components/dialogs/confirm-changes-dialog/confirm-changes-dialog.component';
 import { ConfirmChangesData } from '../../../../../../../../shared/interfaces/dialog/dialog.interface';
+import { NotificationService } from '../../../../../../../../shared/services/notification/notification.service';
 
 type CategoryForm = {
   categoryId: number | string | null;
@@ -53,6 +54,26 @@ type ChangeItem = {
 type ChangeGroup = {
   section: 'Category Table' | 'Category Details' | 'New Category';
   items: ChangeItem[];
+};
+ 
+// ===== Payload types =====
+type QuestionPayload = {
+  id: number;              // 0 เมื่อเป็นแถวใหม่
+  questionTH: string;
+  questionEN: string;
+  type: string;
+  sort: number | 0;
+  scoringMethod: number | 0 | null;
+  isActive: boolean;
+  isDeleted: boolean;
+};
+
+type CategorySavePayload = {
+  categoryId: number;      // 0 เมื่อเป็น category ใหม่ (temp id)
+  categoryName: string;
+  categoryType: string;    // this.categoryType
+  isCategoryActive: boolean;
+  questions: QuestionPayload[];
 };
 
 @Component({
@@ -165,6 +186,7 @@ export class ApplicationQuestionDetailsComponent {
     private applicationQuestionService: ApplicationQuestionService,
     private fb: FormBuilder,
     private dialog: MatDialog,
+    private notify: NotificationService,
   ) { }
 
   ngOnInit() {
@@ -840,36 +862,91 @@ export class ApplicationQuestionDetailsComponent {
       container?.classList.remove('dimmed-overlay');
       if (!confirmed) return;
 
-      const value = this.formDetails.getRawValue();
-      const dirtyDetailsList = this.collectDirtyDetailsForPayload();
+      // const value = this.formDetails.getRawValue();
+      // const dirtyDetailsList = this.collectDirtyDetailsForPayload();
 
-      const payload: any = {
-        categoryType: {
-          name: value.categoryType.CategoryTypeName,
-          isActive: !!value.categoryType.activeStatus,
+      // const payload: any = {
+      //   categoryType: {
+      //     name: value.categoryType.CategoryTypeName,
+      //     isActive: !!value.categoryType.activeStatus,
+      //   },
+      //   categories: (value.categories ?? []).map((c: CategoryForm) => ({
+      //     categoryId: c.categoryId,
+      //     categoryName: c.categoryName,
+      //     isActive: !!c.activeStatus,
+      //   })),
+      // };
+
+      // if (dirtyDetailsList.length === 1) {
+      //   payload.selectedCategoryId = dirtyDetailsList[0].categoryId;
+      //   payload.categoryDetails = {
+      //     CategoryName: dirtyDetailsList[0].CategoryName,
+      //     items: dirtyDetailsList[0].items,
+      //   };
+      // } else if (dirtyDetailsList.length > 1) {
+      //   payload.selectedCategoryId = null;
+      //   payload.categoryDetailsList = dirtyDetailsList;
+      // } else {
+      //   payload.selectedCategoryId = null;
+      //   payload.categoryDetailsList = [];
+      // }
+
+      const dirtyIds = this.readDirty();
+      if (!dirtyIds.length) return;
+
+      const payloads: CategorySavePayload[] = [];
+
+      dirtyIds.forEach((cid) => {
+        const current = this.buildSnapshotFromCache(cid)
+          || (String(this.formDetails.get('selectedCategoryId')?.value) === String(cid)
+                ? this.buildCurrentDetailsView()
+                : null);
+
+        const baseline = this.getBaselineFor(cid) || { name: '', items: [] };
+
+        if (current) {
+          payloads.push(this.buildCategorySavePayload(cid, current, baseline));
+        }
+      });
+
+      // ถ้าแน่ใจว่าจะส่งทีละ category → ส่ง payloads[0]
+      // แต่ถ้าอยากรองรับหลาย category ให้ส่งทั้ง array ไปยัง service
+      const body: any = (payloads.length === 1) ? payloads[0] : { categories: payloads };
+
+      console.log('SAVE body:', body);
+
+      this.applicationQuestionService.saveApplicationQuestionDetails(body).subscribe({
+        next: (res) => {
+          // เคลียร์ draft/caches/baseline ของ category ที่เพิ่งบันทึก
+          dirtyIds.forEach((cid) => {
+            this.deleteCachedDetails(cid);
+            this.deleteBaselineFor(cid);
+          });
+          this.clearDirty();
+          this.clearCategoryTypeDraft();
+
+          // รีเซ็ตสถานะหน้าจอ
+          this.isEditing = false;
+          this.formDetails.disable({ emitEvent: false });
+          this.initialSnapshot = this.formDetails.getRawValue();
+          this.setActionButtons('view');
+
+          this.pendingCategoryChanges = [];
+          this.pendingDetailsChanges = [];
+
+          // โหลดข้อมูลใหม่ให้ baseline sync กับ server
+          this.fetchCategoryTypesDetails();
+
+          this.notify.success('Your changes have been saved successfully.');
         },
-        categories: (value.categories ?? []).map((c: CategoryForm) => ({
-          categoryId: c.categoryId,
-          categoryName: c.categoryName,
-          isActive: !!c.activeStatus,
-        })),
-      };
+        error: (err) => {
+          // แจ้ง error แบบอ่านง่าย
+          const msg = err?.error?.message || err?.message || 'Something went wrong while saving.';
+          this.notify.error(msg);
+        }
+      });
 
-      if (dirtyDetailsList.length === 1) {
-        payload.selectedCategoryId = dirtyDetailsList[0].categoryId;
-        payload.categoryDetails = {
-          CategoryName: dirtyDetailsList[0].CategoryName,
-          items: dirtyDetailsList[0].items,
-        };
-      } else if (dirtyDetailsList.length > 1) {
-        payload.selectedCategoryId = null;
-        payload.categoryDetailsList = dirtyDetailsList;
-      } else {
-        payload.selectedCategoryId = null;
-        payload.categoryDetailsList = [];
-      }
-
-      console.log('SAVE payload:', payload);
+      // console.log('SAVE payload:', payload);
 
       // this.clearCategoryTypeDraft();
       // for (const d of dirtyDetailsList) this.deleteCachedDetails(d.categoryId);
@@ -1549,6 +1626,8 @@ export class ApplicationQuestionDetailsComponent {
           return;
         }
 
+        mapOld.delete(key);
+
         const pairs: Array<[string, any, any]> = [
           ['__index', old.sort ?? null, d.sort ?? null],
           ['questionTH', (old.questionTH ?? ''), (d.questionTH ?? '')],
@@ -1580,6 +1659,31 @@ export class ApplicationQuestionDetailsComponent {
           }
         });
       });
+
+      // อะไรที่ยังเหลือใน mapOld = "ถูกลบ"
+      for (const old of mapOld.values()) {
+        const label = `Detail #${old?.sort ?? '-'}`;
+        const parts = [
+          `TH: ${old?.questionTH || '-'}`,
+          `EN: ${old?.questionEN || '-'}`,
+          `Type: ${old?.type || 'Answer'}`,
+          `Status: ${old?.activeStatus ? 'Active' : 'Inactive'}`
+        ];
+        if (includeScoring) {
+          const pretty = this.isQuiz2 ? (Number(old?.scoringMethod) === 2 ? 'Reverse' : 'Normal')
+                                      : (Number(old?.scoringMethod) || '-');
+          parts.push(`ScoringMethod: ${pretty}`);
+        }
+
+        detItems.push({
+          entity: 'Detail',
+          id: old?.id ?? null,
+          label,
+          field: 'DELETE',
+          from: parts.join(', '),
+          to: '(deleted)',
+        });
+      }
     });
 
     if (detItems.length) {
@@ -1692,6 +1796,131 @@ export class ApplicationQuestionDetailsComponent {
 
   private isNewCategoryId(cid: string | number): boolean {
     return this.isTempId(cid) || !this.getBaselineFor(cid);
+  }
+
+  // ===== Helpers สำหรับ payload =====
+  private toNumberOrZero(v: any): number {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  private getCategoryActiveFlag(catId: string | number): boolean {
+    const idx = this.categoriesFA.controls.findIndex(
+      (fg: FormGroup) => String(fg.value.categoryId) === String(catId)
+    );
+    if (idx > -1) {
+      return !!(this.categoriesFA.at(idx).value as CategoryForm).activeStatus;
+    }
+    // ไม่มีในรายการ (เช่นยังเป็น temp ใหม่ ๆ)
+    return true;
+  }
+
+  /** ทำ mapping เป็น key สำหรับจับคู่ระหว่าง baseline และ current
+   *  priority: ใช้ id ก่อน → ถ้าไม่มี id ใช้ composite key จาก TH|EN|sort
+   */
+  private detailKeyForCompare(d: {
+    id?: any; questionTH?: string; questionEN?: string; sort?: any;
+  }, idx: number) {
+    if (d?.id != null && d?.id !== '') return `id:${String(d.id)}`;
+    const th = (d?.questionTH ?? '').trim();
+    const en = (d?.questionEN ?? '').trim();
+    const s  = (d?.sort ?? idx + 1);
+    return `new:${th}|${en}|${s}`;
+  }
+
+  /** สร้าง payload ของ "หนึ่ง category" จาก snapshot (current) + baseline เพื่อตรวจ isDeleted */
+  private buildCategorySavePayload(
+    catId: string | number,
+    current: DetailsSnapshot,
+    baseline: DetailsSnapshot | null
+  ): CategorySavePayload {
+    const categoryIdNum = this.isTempId(catId) ? 0 : this.toNumberOrZero(catId);
+    const isCategoryActive = this.getCategoryActiveFlag(catId);
+
+    // ===== เตรียม map สำหรับเทียบ diff =====
+    // 1) baseline จัด map ตาม id (ของที่มาจากเซิร์ฟเวอร์ควรมี id)
+    const baselineById = new Map<number, any>();
+    (baseline?.items ?? []).forEach((b: any) => {
+      const idNum = this.toNumberOrZero(b?.id);
+      if (idNum > 0) baselineById.set(idNum, b);
+    });
+
+    // 2) สำหรับหา "ถูกลบ": ใช้ key แบบเดียวกับที่ใช้ในโค้ดเดิม
+    const baseMapForDelete = new Map<string, any>();
+    (baseline?.items ?? []).forEach((d: any, idx: number) => {
+      baseMapForDelete.set(this.detailKeyForCompare(d, idx), d);
+    });
+
+    const questions: QuestionPayload[] = [];
+
+    // ===== 1) วิ่ง current → คัดเฉพาะ "เพิ่มใหม่" หรือ "แก้ไข" =====
+    (current.items ?? []).forEach((d: any, idx: number) => {
+      const idNum = this.toNumberOrZero(d?.id);
+      const curKey = this.detailKeyForCompare(d, idx);
+      // ใช้ id เป็นหลักในการเทียบว่ามีของเดิมไหม
+      const old = idNum > 0 ? baselineById.get(idNum) : null;
+
+      // เอา key ออกจากชุดฐาน เพื่อเหลือแต่ "ถูกลบ"
+      if (baseMapForDelete.has(curKey)) baseMapForDelete.delete(curKey);
+
+      const changed = this.isDetailChanged(d, old);
+      if (!changed) return; // ไม่เปลี่ยน → ไม่ต้องส่ง
+
+      questions.push({
+        id: idNum > 0 ? idNum : 0, // แถวใหม่ให้ 0
+        questionTH: (d?.questionTH ?? '').trim(),
+        questionEN: (d?.questionEN ?? '').trim(),
+        type: (d?.type ?? 'Answer'),
+        sort: this.toNumberOrZero(d?.sort) || 0,
+        scoringMethod: this.toNumberOrZero(d?.scoringMethod), // null/NaN → 0
+        isActive: !!d?.activeStatus,
+        isDeleted: false,
+      });
+    });
+
+    // ===== 2) ที่เหลือใน baseMapForDelete = "ถูกลบ" =====
+    Array.from(baseMapForDelete.values()).forEach((old: any) => {
+      questions.push({
+        id: this.toNumberOrZero(old?.id) || 0,
+        questionTH: (old?.questionTH ?? '').trim(),
+        questionEN: (old?.questionEN ?? '').trim(),
+        type: (old?.type ?? 'Answer'),
+        sort: this.toNumberOrZero(old?.sort) || 0,
+        scoringMethod: this.toNumberOrZero(old?.scoringMethod),
+        isActive: !!old?.activeStatus, // ค่าเดิมก่อนโดนลบ
+        isDeleted: true,
+      });
+    });
+
+    // หมายเหตุ: ถ้าแก้แค่ชื่อ category (baseline.name != current.name) แต่รายละเอียดไม่เปลี่ยน
+    // questions จะเป็น [] ตามต้องการอยู่แล้ว
+    return {
+      categoryId: categoryIdNum,
+      categoryName: (current?.name ?? '').trim(),
+      categoryType: this.categoryType || '',
+      isCategoryActive,
+      questions,
+    };
+  }
+
+  private isDetailChanged(current: any, baseline: any): boolean {
+    if (!baseline) return true; // ไม่มีของเดิม แปลว่า "เพิ่มใหม่"
+    const trim = (s:any) => (typeof s === 'string' ? s.trim() : s);
+
+    const curSort = this.toNumberOrZero(current?.sort);
+    const oldSort = this.toNumberOrZero(baseline?.sort);
+
+    const curScore = this.toNumberOrZero(current?.scoringMethod);
+    const oldScore = this.toNumberOrZero(baseline?.scoringMethod);
+
+    return (
+      trim(current?.questionTH) !== trim(baseline?.questionTH) ||
+      trim(current?.questionEN) !== trim(baseline?.questionEN) ||
+      (current?.type ?? 'Answer') !== (baseline?.type ?? 'Answer') ||
+      curSort !== oldSort ||
+      !!current?.activeStatus !== !!baseline?.activeStatus ||
+      curScore !== oldScore
+    );
   }
 
   ngOnDestroy() {

@@ -31,4 +31,11 @@ export class ApplicationQuestionService {
       loading: true
     });
   }
+
+  saveApplicationQuestionDetails(body: any): Observable<any> {
+    return this.apiService.post<any>('InfoQuestion/form/save', body, {
+      withAuth: true,
+      loading: true
+    });
+  }
 }
