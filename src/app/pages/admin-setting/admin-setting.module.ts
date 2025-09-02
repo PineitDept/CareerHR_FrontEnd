@@ -25,6 +25,9 @@ import { EmailAttributeDetailsComponent } from './pages/data-setting/application
 import { quillInitFactory } from '../../app.module';
 import { WebPolicyDetailsComponent } from './pages/data-setting/application/web-policy/pages/web-policy-details/web-policy-details.component';
 import { JobPositionDetalisComponent } from './pages/data-setting/manpower/job-position/pages/job-position-detalis/job-position-detalis.component';
+import { InterviewerListComponent } from './pages/data-setting/interviewer/interviewer-list/interviewer-list.component';
+import { InterviewerTeamsComponent } from './pages/data-setting/interviewer/interviewer-teams/interviewer-teams.component';
+import { InterviewerTeamsDetailsComponent } from './pages/data-setting/interviewer/interviewer-teams/pages/interviewer-teams-details/interviewer-teams-details.component';
 
 @NgModule({
   declarations: [
@@ -47,7 +50,10 @@ import { JobPositionDetalisComponent } from './pages/data-setting/manpower/job-p
     EmailTemplateDetailsComponent,
     EmailAttributeDetailsComponent,
     WebPolicyDetailsComponent,
-    JobPositionDetalisComponent
+    JobPositionDetalisComponent,
+    InterviewerListComponent,
+    InterviewerTeamsComponent,
+    InterviewerTeamsDetailsComponent
   ],
   imports: [
     CommonModule,
