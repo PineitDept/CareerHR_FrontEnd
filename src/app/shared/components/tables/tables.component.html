@@ -7,7 +7,7 @@
   }"
 >
   <div class="tw-shadow-sm tw-border tw-border-gray-200"
-    [ngClass]="withinCard ? 'tw-overflow-hidden' : 'tw-overflow-clip tw-rounded-md'"
+    [ngClass]="withinCard ? '' : 'tw-overflow-clip tw-rounded-md'"
   >
     <table class="tw-w-full tw-text-sm tw-text-left tw-border-separate tw-border-spacing-0"  [ngClass]="tableFixed ? 'tw-table-fixed' : ''">
       <thead>
@@ -200,6 +200,7 @@
                   <!-- Select Dropdown -->
                   <div *ngSwitchCase="'select'" class="tw-relative">
                     <button
+                      type="button"
                       cdkOverlayOrigin
                       #origin="cdkOverlayOrigin"
                       class="dropdown-button tw-border tw-border-gray-300 tw-rounded-md tw-px-3 tw-py-1 tw-w-full tw-text-sm tw-flex tw-items-center tw-justify-between tw-truncate tw-transition-all tw-duration-200 hover:tw-border-gray-400"
@@ -287,13 +288,13 @@
                       <app-icon name="pen-to-square" [size]="20"></app-icon> <span>Edit</span>
                     </a>
 
-                    <a *ngIf="column.textlinkActions?.includes('edit-card')" href="javascript:void(0)"
+                    <!-- <a *ngIf="column.textlinkActions?.includes('edit-card')" href="javascript:void(0)"
                       class="tw-text-[#D97706] hover:tw-text-[#a7671e] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
                       [class.tw-pointer-events-none]="isDisabledForm"
                       [class.tw-opacity-50]="isDisabledForm"
                       (click)="onClickEditCard($event, row)">
                       <app-icon name="pen-to-square" [size]="20"></app-icon> <span>Edit</span>
-                    </a>
+                    </a> -->
 
                     <a *ngIf="column.textlinkActions?.includes('edit-inrow') && editingRowId !== i+1 && !row._isNew"
                       class="tw-text-[#D97706] hover:tw-text-[#a7671e] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
@@ -392,6 +393,7 @@
                 <!-- select -->
                 <ng-container *ngSwitchCase="'select'">
                   <button
+                    type="button"
                     cdkOverlayOrigin #footerOrigin="cdkOverlayOrigin"
                     class="dropdown-button tw-bg-white tw-border tw-border-gray-300 tw-rounded-md tw-px-3 tw-py-1 tw-w-full tw-text-sm tw-flex tw-items-center tw-justify-between tw-truncate tw-transition-all tw-duration-200 hover:tw-border-gray-400"
                     [id]="'dropdown-button-footer-' + column.field"

@@ -12,9 +12,9 @@
 <app-loading></app-loading>
 
 <form [formGroup]="formDetails">
-  <div class="tw-grid tw-grid-cols-3 tw-gap-6 tw-px-6 tw-py-4 tw-bg-[#FFFFFF]" formGroupName="categoryType">
+  <!-- <div class="tw-grid tw-grid-cols-3 tw-gap-6 tw-px-6 tw-py-4 tw-bg-[#FFFFFF]" formGroupName="categoryType"> -->
     <!-- Left Panel -->
-    <div
+    <!-- <div
       class="tw-col-span-2 tw-space-y-4 tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
       <div>
         <label class="tw-text-lg tw-font-bold">Category Type</label>
@@ -29,10 +29,10 @@
           class="tw-w-full tw-bg-[#FFFFFF] tw-border tw-border-[#CED4DA] tw-rounded-lg tw-px-4 tw-py-2 tw-text-sm disabled:tw-text-[#6C757D] disabled:tw-bg-[#E9ECEF]"
           formControlName="CategoryTypeName" />
       </div>
-    </div>
+    </div> -->
 
     <!-- Right Panel -->
-    <div class="tw-col-span-1 tw-space-y-6">
+    <!-- <div class="tw-col-span-1 tw-space-y-6">
       <div
         class="tw-space-y-4 tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
         <div>
@@ -66,8 +66,8 @@
           </p>
         </div>
       </div>
-    </div>
-  </div>
+    </div> -->
+  <!-- </div> -->
 
   <div class="tw-px-6 tw-pb-4 tw-bg-[#FFFFFF]">
     <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-mt-2">
@@ -81,15 +81,20 @@
           class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-azure hover:bg-azure-dark
           tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
             tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-azure focus-visible:ring-azure"
-          [ngClass]="{
-            'tw-pointer-events-none tw-opacity-50': !isEditing
-          }"
           aria-label="Add Category">
           <app-icon [name]="'plus'" [size]="18" extraClass="tw-text-white"></app-icon>
           <span class="tw-font-semibold">Add</span>
         </button>
       </div>
       <hr class="tw--mx-6 tw-mt-4">
+      <div class="tw-my-4" formGroupName="categoryType">
+        <div class="tw-mb-1.5">
+          <label class="tw-text-sm tw-font-semibold">Category Type Name</label>
+        </div>
+        <input type="text"
+          class="tw-w-full tw-bg-[#FFFFFF] tw-border tw-border-[#CED4DA] tw-rounded-lg tw-px-4 tw-py-2 tw-text-sm disabled:tw-text-[#6C757D] disabled:tw-bg-[#E9ECEF]"
+          formControlName="CategoryTypeName" />
+      </div>
       <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
         <app-tables
           #categoryTable
@@ -100,12 +105,11 @@
           [hasOverflowY]="false"
           [enableRowClick]="false"
           [withinCard]="true"
-          [isDisabledForm]="!isEditing"
+          [isDisabledForm]="true"
           [allowViewWhenDisabled]="true"
           [isConfirmDialogToggleRequired]="true"
           (viewRowClicked)="onRowClicked($event, 'view')"
           (toggleChange)="onToggleChangeCategory($event)"
-          (editCardClicked)="onRowClicked($event, 'edit')"
         ></app-tables>
       </div>
     </div>
@@ -128,11 +132,8 @@
             class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-orange hover:bg-orange-dark
             tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
               tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-orange focus-visible:ring-orange"
-            [ngClass]="{
-              'tw-pointer-events-none tw-opacity-50': !isEditing
-            }"
             aria-label="Edit Details"
-            *ngIf="!isViewMode && isEditMode && !isEditDetails"
+            *ngIf="!isAddMode && !isEditDetails"
           >
             <app-icon [name]="'pencil'" [size]="18" extraClass="tw-text-white"></app-icon>
             <span class="tw-font-semibold">Edit</span>
@@ -146,7 +147,7 @@
                   disabled:tw-cursor-not-allowed disabled:tw-bg-gray-400"
             aria-label="Save Details"
             [disabled]="!checkFormDetailsChanged()"
-            *ngIf="!isViewMode && (isAddMode || isEditDetails)"
+            *ngIf="isAddMode || isEditDetails"
           >
             <app-icon [name]="'download'" [size]="18" extraClass="tw-text-white"></app-icon>
             <span class="tw-font-semibold">Save</span>
@@ -176,13 +177,12 @@
           [ngClass]="{
             'tw-pointer-events-none tw-opacity-50': !isEditDetails && !isAddMode
           }"
-          aria-label="Add Question"
-          *ngIf="!isViewMode">
+          aria-label="Add Question">
           <app-icon [name]="'plus'" [size]="18" extraClass="tw-text-white"></app-icon>
           <span class="tw-font-semibold">Add Question</span>
         </button>
       </div>
-      <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
+      <div class="tw--mx-6 tw-rounded-b-xl tw-max-h-[calc(100vh-330px)] tw-overflow-y-auto">
         <app-tables
           #categoryDetailsTable
           [rows]="categoryDetailsRows"
