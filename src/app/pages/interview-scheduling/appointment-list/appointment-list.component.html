@@ -1,0 +1,17 @@
+<div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
+  <app-header-content
+    [headerName]="'Appointment Calendar'"
+    [headerType]="'search'"
+    [searchByOptions]="searchByOptions"
+    [searchForm]="searchForm"
+  ></app-header-content>
+</div>
+<app-loading></app-loading>
+
+
+    <!-- (search)="onSearch($event)"
+    (clearSearch)="onClearSearch()" -->
+
+<app-filter
+  [filterDate]="true"
+></app-filter>
