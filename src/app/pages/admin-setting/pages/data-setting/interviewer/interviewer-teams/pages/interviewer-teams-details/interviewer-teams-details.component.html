@@ -49,7 +49,7 @@
                         peer-checked:after:tw-translate-x-full rtl:peer-checked:after:tw--translate-x-full"
                             (click)="onUserToggleRequested($event)" tabindex="0" (keyup.enter)="onUserToggleRequested()"
                             (keyup.space)="onUserToggleRequested($event)" aria-controls="isActive"
-                            [ngClass]="!isEditing ? 'isDisabled tw-opacity-40' : ''">
+                            [ngClass]="!isEditing || isAddMode ? 'isDisabled tw-opacity-40' : ''">
                         </div>
 
                         <span id="activeStatusLabel" class="tw-text-sm tw-font-semibold">Active</span>
