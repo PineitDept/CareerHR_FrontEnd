@@ -1,9 +1,10 @@
 export interface InterviewerDetails {
     // teamId: number;
     teamName: string;
-    isActive: boolean;
+    isActive?: boolean;
     members?: any;
     appointmentCount?: number;
+    interviewerIds?: number[];
 }
 
 export interface DropdownOverlay {
