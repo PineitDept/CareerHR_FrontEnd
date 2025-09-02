@@ -21,6 +21,9 @@ import { PendingDraftsGuard } from '../../guards/pending-draft.guard';
 import { EmailAttributeDetailsComponent } from './pages/data-setting/application/email/email-attribute/pages/email-attribute-details/email-attribute-details.component';
 import { WebPolicyDetailsComponent } from './pages/data-setting/application/web-policy/pages/web-policy-details/web-policy-details.component';
 import { JobPositionDetalisComponent } from './pages/data-setting/manpower/job-position/pages/job-position-detalis/job-position-detalis.component';
+import { InterviewerListComponent } from './pages/data-setting/interviewer/interviewer-list/interviewer-list.component';
+import { InterviewerTeamsComponent } from './pages/data-setting/interviewer/interviewer-teams/interviewer-teams.component';
+import { InterviewerTeamsDetailsComponent } from './pages/data-setting/interviewer/interviewer-teams/pages/interviewer-teams-details/interviewer-teams-details.component';
 
 const routes: Routes = [
   {
@@ -106,6 +109,19 @@ const routes: Routes = [
       {
         path: 'data-setting/application/email/email-attribute/details',
         component: EmailAttributeDetailsComponent
+      },
+      {
+        path: 'data-setting/interviewer/interviewer-list',
+        component: InterviewerListComponent
+      },
+      {
+        path: 'data-setting/interviewer/interviewer-teams',
+        component: InterviewerTeamsComponent
+      },
+      {
+        path: 'data-setting/interviewer/interviewer-teams/details',
+        component: InterviewerTeamsDetailsComponent,
+        canDeactivate: [PendingDraftsGuard]
       },
     ],
   }
