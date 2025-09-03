@@ -1,0 +1,49 @@
+<div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
+  <app-header-content
+    [headerName]="'Appointment Calendar'"
+    [headerType]="''"
+  ></app-header-content>
+</div>
+<app-loading></app-loading>
+
+<app-filter
+  [filterDate]="true"
+  [filterDateRange]="filterDateRange"
+  [DateCalendar]="true"
+  (dateRangeSelected)="onDateRangeSelected($event)"
+></app-filter>
+
+<!-- <select (change)="onFilterChange($event)">
+      <option value="all">All</option>
+      <option value="interview1">interview1</option>
+      <option value="interview2">interview2</option>
+      <option value="onboard">onboard</option>
+</select> -->
+
+<div class="tw-m-6 tw-mt-0 tw-grid tw-grid-cols-4 tw-gap-6">
+    <div class="tw-col-span-3">
+        <app-calendar [events]="filteredEvents" [DateSelected]="startDate"></app-calendar>
+    </div>
+
+    <div class="tw-col-span-1 tw-mt-[48px]">
+        <div #filter>
+            <app-filter-check-box
+                [items]="filterItems"
+                [config]="filterConfig"
+                [directCol]="true"
+                (selected)="onFiltersSelected($event)" 
+            >
+            </app-filter-check-box>
+        </div>
+
+        <div class="tw-px-6 tw-flex tw-gap-4">
+            <p class="tw-mb-1"><strong>Notice:</strong></p>
+            <ul class="notice-list">
+                <li class="tw-flex tw-items-center tw-mb-1"><span class="dot dot-blue"></span> Interview 1</li>
+                <li class="tw-flex tw-items-center tw-mb-1"><span class="dot dot-orange"></span> Interview 2</li>
+                <li class="tw-flex tw-items-center"><span class="dot dot-green"></span> Onboarded</li>
+            </ul>
+        </div>
+
+    </div>
+</div>

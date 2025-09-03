@@ -3,6 +3,8 @@ import { MenuItem } from "../../interfaces/menu/menu.interface";
 export const MAIN_MENU: MenuItem[] = [
     { label: 'Manpower', icon: 'user', path: 'manpower' },
     { label: 'Applications Form', icon: 'hand-taking-user', path: 'applications' },
+    { label: 'Interview Scheduling', icon: 'calendar-days', path: 'interview-scheduling' },
+    { label: 'Offer Employment', icon: 'dollar-circle', path: 'offer-employment' },
 ];
 
 export const BOTTOM_MENU: MenuItem[] = [
@@ -20,6 +22,11 @@ export const SUB_MENUS: Partial<Record<string, MenuItem[]>> = {
         { label: 'All Applications', icon: 'notebook', path: 'applications/all-applications' },
         { label: 'Application Screening', icon: 'search-plus', path: 'applications/screening' },
         { label: 'Application Tracking', icon: 'route', path: 'applications/tracking' },
+    ],
+    'Interview Scheduling': [
+        { label: 'Appointment Calendar', icon: 'calendar-days', path: 'interview-scheduling/appointment-calendar' },
+        { label: 'Interview Round 1', icon: 'pen-to-square', path: 'interview-scheduling/interview-round-1' },
+        { label: 'Interview Round 2', icon: 'pen-to-square', path: 'interview-scheduling/interview-round-2' },
     ],
     'Admin Setting': [
         {
