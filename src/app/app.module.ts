@@ -17,6 +17,7 @@ import { ApiInterceptorFn } from './shared/interceptors/api/api.interceptor';
 import { SharedModule } from './shared/shared.module';
 import { ApplicationComponent } from './pages/application/application.component';
 import { InterviewSchedulingComponent } from './pages/interview-scheduling/interview-scheduling.component';
+import { OfferEmploymentComponent } from './pages/offer-employment/offer-employment.component';
 
 export function quillInitFactory() {
   return () =>
@@ -31,7 +32,8 @@ export function quillInitFactory() {
     AuthLayoutComponent,
     IndexComponent,
     ApplicationComponent,
-    InterviewSchedulingComponent
+    InterviewSchedulingComponent,
+    OfferEmploymentComponent
   ],
   imports: [
     BrowserModule,

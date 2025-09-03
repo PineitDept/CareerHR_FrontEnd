@@ -1,7 +1,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { InterviewSchedulingComponent } from './interview-scheduling.component';
-import { AppointmentListComponent } from './appointment-list/appointment-list.component';
+import { AppointmentCalendarComponent } from './appointment-calendar/appointment-calendar.component';
 import { InterviewRound1Component } from './interview-round-1/interview-round-1.component';
 import { InterviewRound2Component } from './interview-round-2/interview-round-2.component';
 
@@ -11,8 +11,8 @@ const routes: Routes = [
     component: InterviewSchedulingComponent,
     children: [
       {
-        path: 'appointment-list',
-        component: AppointmentListComponent,
+        path: 'appointment-calendar',
+        component: AppointmentCalendarComponent,
       },
       {
         path: 'interview-round-1',
