@@ -30,7 +30,7 @@
   </div>
 
   <!------ Accept ------>
-  <div class="tw-px-6 tw-pb-4 tw-bg-[#FFFFFF]">
+  <div class="tw-px-6 tw-pb-4 tw-bg-[#FFFFFF]" *ngIf="categoryAcceptRows.length > 0">
     <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-mt-2">
 
       <div class="tw-flex tw-items-center tw-justify-between">
@@ -38,11 +38,13 @@
 
         <button
           type="button"
-          (click)="onAddAcceptClicked()"
+          (click)="onAddClicked('Accept')"
           class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-azure hover:bg-azure-dark
           tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
             tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-azure focus-visible:ring-azure"
-
+          [ngClass]="{
+            'tw-pointer-events-none tw-opacity-50': !isEditMode
+          }"
           aria-label="Add Category">
           <app-icon [name]="'plus'" [size]="18" extraClass="tw-text-white"></app-icon>
           <span class="tw-font-semibold">Add</span>
@@ -59,13 +61,24 @@
           [hasOverflowY]="false"
           [enableRowClick]="false"
           [withinCard]="true"
+          (createInlineSave)="onInlineSave($event, 'Accept')"
+          (createInlineCancel)="onInlineCancel('Accept')"
+          [isAddMode]="isAddingAcceptRow"
+          [fieldErrors]="fieldAcceptErrors"
+          [highlightRowIndex]="duplicateAcceptRowIndex"
+          (deleteRowClicked)="onDeleteRowClicked($event, 'Accept')"
+          [requiredFooterFields]="detailsRequiredFooterFields"
+          [isConfirmDialogSaveRequired]="false"
+          [isReasonSave]="true"
+          (editClicked)="onInlineEditSave($event, 'Accept')"
+          [isDisabledForm]="!isEditMode"
         ></app-tables>
       </div>
     </div>
   </div>
 
   <!------ Decline ------>
-  <div class="tw-px-6 tw-pb-4 tw-bg-[#FFFFFF]">
+  <div class="tw-px-6 tw-pb-4 tw-bg-[#FFFFFF]" *ngIf="categoryDeclineRows.length > 0">
     <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-mt-2">
 
       <div class="tw-flex tw-items-center tw-justify-between">
@@ -73,11 +86,13 @@
 
         <button
           type="button"
-          (click)="onAddDeclineClicked()"
+          (click)="onAddClicked('Decline')"
           class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-azure hover:bg-azure-dark
           tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
             tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-azure focus-visible:ring-azure"
-
+          [ngClass]="{
+            'tw-pointer-events-none tw-opacity-50': !isEditMode
+          }"
           aria-label="Add Category">
           <app-icon [name]="'plus'" [size]="18" extraClass="tw-text-white"></app-icon>
           <span class="tw-font-semibold">Add</span>
@@ -94,13 +109,24 @@
           [hasOverflowY]="false"
           [enableRowClick]="false"
           [withinCard]="true"
+          (createInlineSave)="onInlineSave($event, 'Decline')"
+          (createInlineCancel)="onInlineCancel('Decline')"
+          [isAddMode]="isAddingDeclineRow"
+          [fieldErrors]="fieldDeclineErrors"
+          [highlightRowIndex]="duplicateDeclineRowIndex"
+          (deleteRowClicked)="onDeleteRowClicked($event, 'Decline')"
+          [requiredFooterFields]="detailsRequiredFooterFields"
+          [isConfirmDialogSaveRequired]="false"
+          [isReasonSave]="true"
+          (editClicked)="onInlineEditSave($event, 'Decline')"
+          [isDisabledForm]="!isEditMode"
         ></app-tables>
       </div>
     </div>
   </div>
 
   <!------ No-Show ------>
-  <div class="tw-px-6 tw-pb-4 tw-bg-[#FFFFFF]">
+  <div class="tw-px-6 tw-pb-4 tw-bg-[#FFFFFF]" *ngIf="categoryNoShowRows.length > 0">
     <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-mt-2">
 
       <div class="tw-flex tw-items-center tw-justify-between">
@@ -108,11 +134,13 @@
 
         <button
           type="button"
-          (click)="onAddNoShowClicked()"
+          (click)="onAddClicked('No-Show')"
           class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-azure hover:bg-azure-dark
           tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
             tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-azure focus-visible:ring-azure"
-
+          [ngClass]="{
+            'tw-pointer-events-none tw-opacity-50': !isEditMode
+          }"
           aria-label="Add Category">
           <app-icon [name]="'plus'" [size]="18" extraClass="tw-text-white"></app-icon>
           <span class="tw-font-semibold">Add</span>
@@ -129,13 +157,24 @@
           [hasOverflowY]="false"
           [enableRowClick]="false"
           [withinCard]="true"
+          (createInlineSave)="onInlineSave($event, 'No-Show')"
+          (createInlineCancel)="onInlineCancel('No-Show')"
+          [isAddMode]="isAddingNoShowRow"
+          [fieldErrors]="fieldNoShowErrors"
+          [highlightRowIndex]="duplicateNoShowRowIndex"
+          (deleteRowClicked)="onDeleteRowClicked($event, 'No-Show')"
+          [requiredFooterFields]="detailsRequiredFooterFields"
+          [isConfirmDialogSaveRequired]="false"
+          [isReasonSave]="true"
+          (editClicked)="onInlineEditSave($event, 'No-Show')"
+          [isDisabledForm]="!isEditMode"
         ></app-tables>
       </div>
     </div>
   </div>
 
   <!------ On Hold ------>
-  <div class="tw-px-6 tw-pb-4 tw-bg-[#FFFFFF]">
+  <div class="tw-px-6 tw-pb-4 tw-bg-[#FFFFFF]" *ngIf="categoryOnHoldRows.length > 0">
     <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-mt-2">
 
       <div class="tw-flex tw-items-center tw-justify-between">
@@ -143,11 +182,13 @@
 
         <button
           type="button"
-          (click)="onAddOnHoldClicked()"
+          (click)="onAddClicked('On Hold')"
           class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-azure hover:bg-azure-dark
           tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
             tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-azure focus-visible:ring-azure"
-
+          [ngClass]="{
+            'tw-pointer-events-none tw-opacity-50': !isEditMode
+          }"
           aria-label="Add Category">
           <app-icon [name]="'plus'" [size]="18" extraClass="tw-text-white"></app-icon>
           <span class="tw-font-semibold">Add</span>
@@ -164,6 +205,65 @@
           [hasOverflowY]="false"
           [enableRowClick]="false"
           [withinCard]="true"
+          (createInlineSave)="onInlineSave($event, 'On Hold')"
+          (createInlineCancel)="onInlineCancel('On Hold')"
+          [isAddMode]="isAddingOnHoldRow"
+          [fieldErrors]="fieldOnHoldErrors"
+          [highlightRowIndex]="duplicateOnHoldRowIndex"
+          (deleteRowClicked)="onDeleteRowClicked($event, 'On Hold')"
+          [requiredFooterFields]="detailsRequiredFooterFields"
+          [isConfirmDialogSaveRequired]="false"
+          [isReasonSave]="true"
+          (editClicked)="onInlineEditSave($event, 'On Hold')"
+          [isDisabledForm]="!isEditMode"
+        ></app-tables>
+      </div>
+    </div>
+  </div>
+
+  <!------ Onboarded ------>
+  <div class="tw-px-6 tw-pb-4 tw-bg-[#FFFFFF]" *ngIf="categoryOnboardedRows.length > 0">
+    <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-mt-2">
+
+      <div class="tw-flex tw-items-center tw-justify-between">
+        <label class="tw-text-lg tw-font-bold">Onboarded</label>
+
+        <button
+          type="button"
+          (click)="onAddClicked('Onboarded')"
+          class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-azure hover:bg-azure-dark
+          tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
+            tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-azure focus-visible:ring-azure"
+          [ngClass]="{
+            'tw-pointer-events-none tw-opacity-50': !isEditMode
+          }"
+          aria-label="Add Category">
+          <app-icon [name]="'plus'" [size]="18" extraClass="tw-text-white"></app-icon>
+          <span class="tw-font-semibold">Add</span>
+        </button>
+      </div>
+      <hr class="tw--mx-6 tw-mt-4">
+      <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
+        <app-tables
+          #categoryOnboardedTable
+          [rows]="categoryOnboardedRows"
+          [columns]="categoryColumns"
+          [showCheckbox]="false"
+          [splitRows]="false"
+          [hasOverflowY]="false"
+          [enableRowClick]="false"
+          [withinCard]="true"
+          (createInlineSave)="onInlineSave($event, 'Onboarded')"
+          (createInlineCancel)="onInlineCancel('Onboarded')"
+          [isAddMode]="isAddingOnboardedRow"
+          [fieldErrors]="fieldOnboardedErrors"
+          [highlightRowIndex]="duplicateOnboardedRowIndex"
+          (deleteRowClicked)="onDeleteRowClicked($event, 'Onboarded')"
+          [requiredFooterFields]="detailsRequiredFooterFields"
+          [isConfirmDialogSaveRequired]="false"
+          [isReasonSave]="true"
+          (editClicked)="onInlineEditSave($event, 'Onboarded')"
+          [isDisabledForm]="!isEditMode"
         ></app-tables>
       </div>
     </div>

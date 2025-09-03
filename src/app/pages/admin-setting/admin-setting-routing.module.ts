@@ -76,7 +76,8 @@ const routes: Routes = [
       },
       {
         path: 'data-setting/application/reason/details',
-        component: ReasonDetailsComponent
+        component: ReasonDetailsComponent,
+        canDeactivate: [PendingDraftsGuard]
       },
       {
         path: 'data-setting/application/application-question',
