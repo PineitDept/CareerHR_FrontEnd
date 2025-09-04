@@ -1,3 +1,6 @@
+<!-- sentinel สำหรับ back-to-top -->
+<div id="page-top-sentinel" class="tw-h-px tw-w-px tw-opacity-0" aria-hidden="true"></div>
+
 <div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
   <app-header-content [headerName]="'Reason Details'" [headerType]="''"></app-header-content>
 </div>
@@ -14,259 +17,127 @@
 <form [formGroup]="formDetails">
   <div class="tw-px-6 tw-pb-4 tw-bg-[#FFFFFF]">
     <div class="tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+      <div class="tw-flex tw-items-center tw-justify-between">
+        <label class="tw-text-lg tw-font-bold">Process Detail</label>
 
-      <label class="tw-text-lg tw-font-bold">Process Detail</label>
+        <button
+          type="button"
+          (click)="onAddReasonCategoryClicked()"
+          class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-dark-blue hover:bg-navy-blue
+                 tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
+                 tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-dark-blue focus-visible:ring-dark-blue"
+          [disabled]="!isEditMode || hasIncompleteNewCategory"
+          [ngClass]="{ 'tw-pointer-events-none tw-opacity-50': !isEditMode || hasIncompleteNewCategory }"
+          aria-label="Add Category">
+          <app-icon [name]="'plus'" [size]="18" extraClass="tw-text-white"></app-icon>
+          <span class="tw-font-semibold">Add Reason Category</span>
+        </button>
+      </div>
+
       <hr class="tw--mx-6 tw-mt-4">
 
       <div class="tw-mt-4">
         <div class="tw-mb-1.5">
           <label class="tw-text-sm tw-font-semibold">Process Name</label>
         </div>
-        <input type="text"
+        <input
+          type="text"
           class="tw-w-full tw-bg-[#FFFFFF] tw-border tw-border-[#CED4DA] tw-rounded-lg tw-px-4 tw-py-2 tw-text-sm disabled:tw-text-[#6C757D] disabled:tw-bg-[#E9ECEF]"
           formControlName="processName" />
       </div>
     </div>
   </div>
 
-  <!------ Accept ------>
-  <div class="tw-px-6 tw-pb-4 tw-bg-[#FFFFFF]" *ngIf="categoryAcceptRows.length > 0">
-    <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-mt-2">
+  <!-- ============ Dynamic Reason Categories ============ -->
+  <ng-container *ngFor="let cat of categoryBlocks; let i = index">
+    <div class="tw-px-6 tw-pb-4 tw-bg-[#FFFFFF]">
+      <div
+        #catBlock
+        class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-mt-2"
+        [attr.data-key]="cat.key"
+        [formGroup]="getCategoryFormAt(i)">
 
-      <div class="tw-flex tw-items-center tw-justify-between">
-        <label class="tw-text-lg tw-font-bold">Accept</label>
+        <div class="tw-flex tw-items-center tw-justify-between">
+          <!-- ชื่อหมวด: หมวดใหม่ถ้ายังแก้ชื่ออยู่ => input + check, ไม่งั้น => label (+ ปุ่มแก้ชื่อเฉพาะหมวดใหม่) -->
+          <ng-container *ngIf="cat.isNew && cat.isEditingName; else categoryTitleView">
+            <div class="tw-flex tw-items-center tw-gap-2">
+              <input
+                type="text"
+                placeholder="Category Name"
+                class="tw-w-[260px] tw-bg-[#FFFFFF] tw-border tw-border-[#CED4DA] tw-rounded-lg tw-px-3 tw-py-1.5 tw-text-sm
+                      disabled:tw-text-[#6C757D] disabled:tw-bg-[#E9ECEF]"
+                formControlName="categoryName"
+                [disabled]="!isEditMode" />
+              <button type="button"
+                      class="tw-inline-flex tw-items-center tw-justify-center tw-rounded-md tw-h-8 tw-w-8 bg-emerald-600 hover:bg-emerald-700 tw-text-white"
+                      [ngClass]="{ 'tw-pointer-events-none tw-opacity-50': !isEditMode }"
+                      (click)="onConfirmCategoryName(i)"
+                      aria-label="Confirm category name">
+                <app-icon [name]="'check-square'" [size]="16" extraClass="text-persian-green hover:text-persian-green-dark"></app-icon>
+              </button>
+            </div>
+          </ng-container>
 
-        <button
-          type="button"
-          (click)="onAddClicked('Accept')"
-          class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-azure hover:bg-azure-dark
-          tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
-            tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-azure focus-visible:ring-azure"
-          [ngClass]="{
-            'tw-pointer-events-none tw-opacity-50': !isEditMode
-          }"
-          aria-label="Add Category">
-          <app-icon [name]="'plus'" [size]="18" extraClass="tw-text-white"></app-icon>
-          <span class="tw-font-semibold">Add</span>
-        </button>
-      </div>
-      <hr class="tw--mx-6 tw-mt-4">
-      <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
-        <app-tables
-          #categoryAcceptTable
-          [rows]="categoryAcceptRows"
-          [columns]="categoryColumns"
-          [showCheckbox]="false"
-          [splitRows]="false"
-          [hasOverflowY]="false"
-          [enableRowClick]="false"
-          [withinCard]="true"
-          (createInlineSave)="onInlineSave($event, 'Accept')"
-          (createInlineCancel)="onInlineCancel('Accept')"
-          [isAddMode]="isAddingAcceptRow"
-          [fieldErrors]="fieldAcceptErrors"
-          [highlightRowIndex]="duplicateAcceptRowIndex"
-          (deleteRowClicked)="onDeleteRowClicked($event, 'Accept')"
-          [requiredFooterFields]="detailsRequiredFooterFields"
-          [isConfirmDialogSaveRequired]="false"
-          [isReasonSave]="true"
-          (editClicked)="onInlineEditSave($event, 'Accept')"
-          [isDisabledForm]="!isEditMode"
-        ></app-tables>
-      </div>
-    </div>
-  </div>
+          <ng-template #categoryTitleView>
+            <div class="tw-flex tw-items-center tw-gap-2">
+              <label class="tw-text-lg tw-font-bold">{{ cat.displayName }}</label>
+              <button *ngIf="cat.isNew"
+                      type="button"
+                      class="tw-inline-flex tw-items-center tw-justify-center tw-rounded-md tw-h-8 tw-w-8 bg-slate-600 hover:bg-slate-700 tw-text-white"
+                      [ngClass]="{ 'tw-pointer-events-none tw-opacity-50': !isEditMode }"
+                      (click)="onEditCategoryName(i)"
+                      aria-label="Edit category name">
+                <app-icon [name]="'pen-to-square'" [size]="16" extraClass="text-orange hover:text-orange"></app-icon>
+              </button>
+            </div>
+          </ng-template>
 
-  <!------ Decline ------>
-  <div class="tw-px-6 tw-pb-4 tw-bg-[#FFFFFF]" *ngIf="categoryDeclineRows.length > 0">
-    <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-mt-2">
+          <button
+            type="button"
+            (click)="onAddRowClicked(i)"
+            class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-azure hover:bg-azure-dark
+                  tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
+                  tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-azure focus-visible:ring-azure"
+            [ngClass]="{ 'tw-pointer-events-none tw-opacity-50': !isEditMode }"
+            aria-label="Add Reason">
+            <app-icon [name]="'plus'" [size]="18" extraClass="tw-text-white"></app-icon>
+            <span class="tw-font-semibold">Add</span>
+          </button>
+        </div>
 
-      <div class="tw-flex tw-items-center tw-justify-between">
-        <label class="tw-text-lg tw-font-bold">Decline</label>
+        <hr class="tw--mx-6 tw-mt-4">
 
-        <button
-          type="button"
-          (click)="onAddClicked('Decline')"
-          class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-azure hover:bg-azure-dark
-          tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
-            tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-azure focus-visible:ring-azure"
-          [ngClass]="{
-            'tw-pointer-events-none tw-opacity-50': !isEditMode
-          }"
-          aria-label="Add Category">
-          <app-icon [name]="'plus'" [size]="18" extraClass="tw-text-white"></app-icon>
-          <span class="tw-font-semibold">Add</span>
-        </button>
-      </div>
-      <hr class="tw--mx-6 tw-mt-4">
-      <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
-        <app-tables
-          #categoryDeclineTable
-          [rows]="categoryDeclineRows"
-          [columns]="categoryColumns"
-          [showCheckbox]="false"
-          [splitRows]="false"
-          [hasOverflowY]="false"
-          [enableRowClick]="false"
-          [withinCard]="true"
-          (createInlineSave)="onInlineSave($event, 'Decline')"
-          (createInlineCancel)="onInlineCancel('Decline')"
-          [isAddMode]="isAddingDeclineRow"
-          [fieldErrors]="fieldDeclineErrors"
-          [highlightRowIndex]="duplicateDeclineRowIndex"
-          (deleteRowClicked)="onDeleteRowClicked($event, 'Decline')"
-          [requiredFooterFields]="detailsRequiredFooterFields"
-          [isConfirmDialogSaveRequired]="false"
-          [isReasonSave]="true"
-          (editClicked)="onInlineEditSave($event, 'Decline')"
-          [isDisabledForm]="!isEditMode"
-        ></app-tables>
+        <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
+          <app-tables
+            [rows]="cat.rows"
+            [columns]="categoryColumns"
+            [showCheckbox]="false"
+            [splitRows]="false"
+            [hasOverflowY]="false"
+            [enableRowClick]="false"
+            [withinCard]="true"
+            (createInlineSave)="onInlineSave($event, i)"
+            (createInlineCancel)="onInlineCancel(i)"
+            [isAddMode]="cat.isAdding"
+            [fieldErrors]="cat.fieldErrors"
+            [highlightRowIndex]="cat.duplicateIndex"
+            (deleteRowClicked)="onDeleteRowClicked($event, i)"
+            [requiredFooterFields]="detailsRequiredFooterFields"
+            [isConfirmDialogSaveRequired]="false"
+            [isReasonSave]="true"
+            (editClicked)="onInlineEditSave($event, i)"
+            [isDisabledForm]="!isEditMode"
+          ></app-tables>
+        </div>
       </div>
     </div>
-  </div>
-
-  <!------ No-Show ------>
-  <div class="tw-px-6 tw-pb-4 tw-bg-[#FFFFFF]" *ngIf="categoryNoShowRows.length > 0">
-    <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-mt-2">
-
-      <div class="tw-flex tw-items-center tw-justify-between">
-        <label class="tw-text-lg tw-font-bold">No-Show</label>
-
-        <button
-          type="button"
-          (click)="onAddClicked('No-Show')"
-          class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-azure hover:bg-azure-dark
-          tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
-            tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-azure focus-visible:ring-azure"
-          [ngClass]="{
-            'tw-pointer-events-none tw-opacity-50': !isEditMode
-          }"
-          aria-label="Add Category">
-          <app-icon [name]="'plus'" [size]="18" extraClass="tw-text-white"></app-icon>
-          <span class="tw-font-semibold">Add</span>
-        </button>
-      </div>
-      <hr class="tw--mx-6 tw-mt-4">
-      <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
-        <app-tables
-          #categoryNoShowTable
-          [rows]="categoryNoShowRows"
-          [columns]="categoryColumns"
-          [showCheckbox]="false"
-          [splitRows]="false"
-          [hasOverflowY]="false"
-          [enableRowClick]="false"
-          [withinCard]="true"
-          (createInlineSave)="onInlineSave($event, 'No-Show')"
-          (createInlineCancel)="onInlineCancel('No-Show')"
-          [isAddMode]="isAddingNoShowRow"
-          [fieldErrors]="fieldNoShowErrors"
-          [highlightRowIndex]="duplicateNoShowRowIndex"
-          (deleteRowClicked)="onDeleteRowClicked($event, 'No-Show')"
-          [requiredFooterFields]="detailsRequiredFooterFields"
-          [isConfirmDialogSaveRequired]="false"
-          [isReasonSave]="true"
-          (editClicked)="onInlineEditSave($event, 'No-Show')"
-          [isDisabledForm]="!isEditMode"
-        ></app-tables>
-      </div>
-    </div>
-  </div>
-
-  <!------ On Hold ------>
-  <div class="tw-px-6 tw-pb-4 tw-bg-[#FFFFFF]" *ngIf="categoryOnHoldRows.length > 0">
-    <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-mt-2">
-
-      <div class="tw-flex tw-items-center tw-justify-between">
-        <label class="tw-text-lg tw-font-bold">On Hold</label>
-
-        <button
-          type="button"
-          (click)="onAddClicked('On Hold')"
-          class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-azure hover:bg-azure-dark
-          tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
-            tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-azure focus-visible:ring-azure"
-          [ngClass]="{
-            'tw-pointer-events-none tw-opacity-50': !isEditMode
-          }"
-          aria-label="Add Category">
-          <app-icon [name]="'plus'" [size]="18" extraClass="tw-text-white"></app-icon>
-          <span class="tw-font-semibold">Add</span>
-        </button>
-      </div>
-      <hr class="tw--mx-6 tw-mt-4">
-      <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
-        <app-tables
-          #categoryOnHoldTable
-          [rows]="categoryOnHoldRows"
-          [columns]="categoryColumns"
-          [showCheckbox]="false"
-          [splitRows]="false"
-          [hasOverflowY]="false"
-          [enableRowClick]="false"
-          [withinCard]="true"
-          (createInlineSave)="onInlineSave($event, 'On Hold')"
-          (createInlineCancel)="onInlineCancel('On Hold')"
-          [isAddMode]="isAddingOnHoldRow"
-          [fieldErrors]="fieldOnHoldErrors"
-          [highlightRowIndex]="duplicateOnHoldRowIndex"
-          (deleteRowClicked)="onDeleteRowClicked($event, 'On Hold')"
-          [requiredFooterFields]="detailsRequiredFooterFields"
-          [isConfirmDialogSaveRequired]="false"
-          [isReasonSave]="true"
-          (editClicked)="onInlineEditSave($event, 'On Hold')"
-          [isDisabledForm]="!isEditMode"
-        ></app-tables>
-      </div>
-    </div>
-  </div>
-
-  <!------ Onboarded ------>
-  <div class="tw-px-6 tw-pb-4 tw-bg-[#FFFFFF]" *ngIf="categoryOnboardedRows.length > 0">
-    <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-mt-2">
-
-      <div class="tw-flex tw-items-center tw-justify-between">
-        <label class="tw-text-lg tw-font-bold">Onboarded</label>
-
-        <button
-          type="button"
-          (click)="onAddClicked('Onboarded')"
-          class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-azure hover:bg-azure-dark
-          tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
-            tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-azure focus-visible:ring-azure"
-          [ngClass]="{
-            'tw-pointer-events-none tw-opacity-50': !isEditMode
-          }"
-          aria-label="Add Category">
-          <app-icon [name]="'plus'" [size]="18" extraClass="tw-text-white"></app-icon>
-          <span class="tw-font-semibold">Add</span>
-        </button>
-      </div>
-      <hr class="tw--mx-6 tw-mt-4">
-      <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
-        <app-tables
-          #categoryOnboardedTable
-          [rows]="categoryOnboardedRows"
-          [columns]="categoryColumns"
-          [showCheckbox]="false"
-          [splitRows]="false"
-          [hasOverflowY]="false"
-          [enableRowClick]="false"
-          [withinCard]="true"
-          (createInlineSave)="onInlineSave($event, 'Onboarded')"
-          (createInlineCancel)="onInlineCancel('Onboarded')"
-          [isAddMode]="isAddingOnboardedRow"
-          [fieldErrors]="fieldOnboardedErrors"
-          [highlightRowIndex]="duplicateOnboardedRowIndex"
-          (deleteRowClicked)="onDeleteRowClicked($event, 'Onboarded')"
-          [requiredFooterFields]="detailsRequiredFooterFields"
-          [isConfirmDialogSaveRequired]="false"
-          [isReasonSave]="true"
-          (editClicked)="onInlineEditSave($event, 'Onboarded')"
-          [isDisabledForm]="!isEditMode"
-        ></app-tables>
-      </div>
-    </div>
-  </div>
-
+  </ng-container>
 </form>
+
+<!-- Floating Back-to-Top -->
+<app-back-to-top
+  [sentinelSelector]="'#page-top-sentinel'"
+  [buttonClass]="'tw-fixed tw-bottom-6 tw-right-6 tw-rounded-full tw-h-14 tw-w-14 tw-flex tw-items-center tw-justify-center tw-shadow-xl bg-red-blood hover:bg-maroon-1 tw-text-white tw-z-[60]'"
+  [iconName]="'arrow-upward'"
+  [iconSize]="26">
+</app-back-to-top>

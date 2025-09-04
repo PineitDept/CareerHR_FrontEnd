@@ -24,4 +24,11 @@ export class ReasonService {
       loading: true
     });
   }
+
+  updateReasonsOfRecruitmentStage(body: any): Observable<any> {
+    return this.apiService.post<any>(`RecruitmentReasons/bulk-update`, body, {
+      withAuth: true,
+      loading: true
+    });
+  }
 }

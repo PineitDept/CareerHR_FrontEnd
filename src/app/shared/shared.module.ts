@@ -32,6 +32,7 @@ import { ConfirmChangesDialogComponent } from './components/dialogs/confirm-chan
 import { DualListboxComponent } from './components/dual-listbox/dual-listbox.component';
 import { QualityDialogComponent } from './components/dialogs/quality-dialog/quality-dialog.component';
 import { CdkDropdownComponent } from './components/cdk-dropdown/cdk-dropdown.component';
+import { BackToTopComponent } from './components/back-to-top/back-to-top.component';
 
 @NgModule({
   declarations: [
@@ -53,6 +54,7 @@ import { CdkDropdownComponent } from './components/cdk-dropdown/cdk-dropdown.com
     DualListboxComponent,
     QualityDialogComponent,
     CdkDropdownComponent,
+    BackToTopComponent,
   ],
   imports: [
     CommonModule,
@@ -87,7 +89,7 @@ import { CdkDropdownComponent } from './components/cdk-dropdown/cdk-dropdown.com
     DualListboxComponent,
     OverlayModule,
     CdkDropdownComponent,
-    // PurchaseOrderDetailsFormComponent
+    BackToTopComponent,
   ]
 })
 export class SharedModule { }
