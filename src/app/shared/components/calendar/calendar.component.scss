@@ -79,17 +79,22 @@
     color: #00AA00;
 }
 
+::ng-deep .event-decline {
+    background: #70343536;
+}
+
+::ng-deep .event-decline .fc-event-title {
+    color: #9e4e4f;
+    // text-decoration: line-through;
+}
+
 ::ng-deep .event-cancel {
     background: #dddddd7a;
-    cursor: none;
-    pointer-events: none;
 }
 
 ::ng-deep .event-cancel .fc-event-title {
     color: #b3b3b3;
     text-decoration: line-through;
-    cursor: none;
-    pointer-events: none;
 }
 
 ::ng-deep .event-interview1.fc-event:hover {
@@ -108,4 +113,36 @@
     opacity: 0.8;
     background: #aaffaa6e;
     cursor: pointer;
+}
+
+::ng-deep .fc-button-group .fc-button {
+    background: #E9ECEF;
+    color: #333;
+    font-family: "Sarabun", sans-serif;
+    border: 0;
+}
+
+::ng-deep .fc-button-group .fc-button:hover,
+::ng-deep .fc .fc-button-primary:not(:disabled).fc-button-active, 
+::ng-deep .fc .fc-button-primary:not(:disabled):active {
+    background: #66070927;
+    color: #333;
+}
+
+::ng-deep .fc .fc-button-primary:not(:disabled).fc-button-active {
+    background: #660708;
+    color: #fff;
+}
+
+::ng-deep .fc .fc-button-primary:not(:disabled).fc-button-active:focus,
+::ng-deep .fc .fc-button-primary:not(:disabled):active:focus {
+    box-shadow: none;
+}
+
+::ng-deep .fc .fc-day-other {
+    opacity: 0.5;
+}
+
+::ng-deep .fc .fc-day-other .fc-daygrid-day-top {
+    opacity: 0.4;
 }
