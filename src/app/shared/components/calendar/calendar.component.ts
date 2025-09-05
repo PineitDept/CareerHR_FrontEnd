@@ -15,7 +15,8 @@ import { Router } from '@angular/router';
 
 type EventItem = {
   user: string;
-  teaminterview?: string;
+  teamId?: number;
+  teamName?: string;
   time: string;
   date: string;
   classNames?: string[];
@@ -63,7 +64,7 @@ export class CalendarComponent implements AfterViewInit {
   ngOnChanges(changes: SimpleChanges) {
     if (changes['events']) {
       const mappedEvents = this.events.map(e => {
-        const teamPart = e.teaminterview ? `(${e.teaminterview}) ` : '';
+        const teamPart = e.teamName ? `(${e.teamName}) ` : '';
         let titleEvent = `${teamPart}${e.time} ${e.user}`;
         let eventType = '';
 
