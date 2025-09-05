@@ -1,1 +1,28 @@
-<p>interview-round-2 works!</p>
+<div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
+  <app-header-content
+    [headerName]="'Appointment Interview 2'"
+    [headerType]="'search'"
+    [searchByOptions]="searchByOptions"
+    [searchForm]="searchForm"
+  ></app-header-content>
+</div>
+<app-loading></app-loading>
+
+
+    <!-- (search)="onSearch($event)"
+    (clearSearch)="onClearSearch()" -->
+
+<app-filter
+  [filterDate]="true"
+  [filterDateRange]="filterDateRange"
+  (dateRangeSelected)="onDateRangeSelected($event)"
+></app-filter>
+
+<app-tab-menus [tabs]="tabMenus"></app-tab-menus>
+
+<!-- <app-tab-menus
+  [tabs]="tabMenus"
+  [activeTab]="activeTab"
+  (tabChanged)="onTabChanged($event)"
+></app-tab-menus> -->
+

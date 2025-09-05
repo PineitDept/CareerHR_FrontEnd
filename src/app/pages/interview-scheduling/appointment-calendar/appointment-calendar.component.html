@@ -13,24 +13,18 @@
   (dateRangeSelected)="onDateRangeSelected($event)"
 ></app-filter>
 
-<!-- <select (change)="onFilterChange($event)">
-      <option value="all">All</option>
-      <option value="interview1">interview1</option>
-      <option value="interview2">interview2</option>
-      <option value="onboard">onboard</option>
-</select> -->
-
 <div class="tw-m-6 tw-mt-0 tw-grid tw-grid-cols-4 tw-gap-6">
     <div class="tw-col-span-3">
         <app-calendar [events]="filteredEvents" [DateSelected]="startDate"></app-calendar>
     </div>
 
-    <div class="tw-col-span-1 tw-mt-[48px]">
+    <div class="tw-col-span-1 tw-mt-[48px] tw-m-[-24px]">
         <div #filter>
             <app-filter-check-box
                 [items]="filterItems"
                 [config]="filterConfig"
                 [directCol]="true"
+                [canScroll]="true"
                 (selected)="onFiltersSelected($event)" 
             >
             </app-filter-check-box>

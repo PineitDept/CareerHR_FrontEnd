@@ -34,6 +34,7 @@ import { QualityDialogComponent } from './components/dialogs/quality-dialog/qual
 import { CdkDropdownComponent } from './components/cdk-dropdown/cdk-dropdown.component';
 import { FullCalendarModule } from '@fullcalendar/angular';
 import { CalendarComponent } from './components/calendar/calendar.component';
+import { register } from 'swiper/element/bundle';
 
 @NgModule({
   declarations: [

@@ -1,0 +1,25 @@
+.box-shadow {
+    border: 1px solid #DEE2E6;
+    overflow: hidden;
+    // background: #F8F9FA;
+    background: #fff;
+    min-width: 380px;
+}
+
+.tag {
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 20px;
+    font-weight: 600;
+}
+
+.tag.tag-green {
+    color: #005500;
+    background: #AAFFAA;
+}
+
+.grid-cols-auto {
+    grid-template-columns: auto auto auto auto;
+}
