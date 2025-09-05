@@ -31,4 +31,18 @@ export class ReasonService {
       loading: true
     });
   }
+
+  getUnmappedReasonCategories(id: number): Observable<any> {
+    return this.apiService.get<any>(`ReasonCategories/unmapped/stages/${id}`, {
+      withAuth: true,
+      loading: true
+    });
+  }
+
+  getReasonByCategoryId(id: number): Observable<any> {
+    return this.apiService.get<any>(`RecruitmentReasons/by-category/${id}`, {
+      withAuth: true,
+      loading: true
+    });
+  }
 }

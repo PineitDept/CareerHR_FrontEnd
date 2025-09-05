@@ -9,6 +9,7 @@ import { CaptchaDialogComponent } from '../../../../../../../../shared/component
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { NotificationService } from '../../../../../../../../shared/services/notification/notification.service';
+import { ConnectedPosition } from '@angular/cdk/overlay';
 dayjs.extend(utc);
 
 type CategoryKey = string;
@@ -53,6 +54,15 @@ interface CategoryBlock {
   active: boolean; // แทน isActive ของกล่อง (อ่านจาก meta ตอน fetch, เริ่มต้น true สำหรับหมวดใหม่)
 }
 
+interface UnmappedCategory {
+  categoryId: number;
+  categoryName: string;
+  categoryType: string;
+  isActive: boolean;
+  createdAt: string;
+  recruitmentReasonsCount: number;
+}
+
 @Component({
   selector: 'app-reason-details',
   templateUrl: './reason-details.component.html',
@@ -84,6 +94,25 @@ export class ReasonDetailsComponent {
   categoryBlocks: CategoryBlock[] = [];
 
   @ViewChildren('catBlock') catBlockEls!: QueryList<ElementRef<HTMLElement>>;
+
+  // ====== STATE: เก็บรายการ unmapped + dropdown ต่อ index ======
+  unmappedAll: UnmappedCategory[] = [];
+  filteredUnmapped: Partial<Record<number, UnmappedCategory[]>> = {};
+  selectedUnmapped: Record<number, UnmappedCategory | null> = {};
+  activeUnmappedIndex: Record<number, number> = {};  // ไว้ไฮไลท์ option ระหว่างกดลูกศร
+  private unmappedOpenFor: number | null = null;
+
+  // ตำแหน่ง overlay (บน/ล่าง)
+  overlayPositions: ConnectedPosition[] = [
+    { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top' },
+    { originX: 'start', originY: 'top',    overlayX: 'start', overlayY: 'bottom' },
+  ];
+
+  /** กัน onBlur ทำงานทับระหว่างกดเลือก option */
+  private suppressNextBlur = false;
+
+  // ===== เก็บความกว้าง overlay ต่อ index =====
+  overlayWidth: Record<number, number> = {};
 
   constructor(
     private route: ActivatedRoute,
@@ -263,6 +292,8 @@ export class ReasonDetailsComponent {
           this.categoriesForm.push(this.createCategoryFormGroup(display, /*isNew*/ false));
         });
 
+        this.loadUnmappedReasonCategories();
+
         // 2) สร้าง snapshot ฝั่ง server
         this.initialSnapshot = this.computeSnapshot();
         this.formDetails.markAsPristine();
@@ -284,6 +315,17 @@ export class ReasonDetailsComponent {
       },
     });
   }
+
+  private loadUnmappedReasonCategories() {
+    this.reasonService.getUnmappedReasonCategories(this.processId).subscribe({
+      next: (res: UnmappedCategory[]) => {
+        this.unmappedAll = Array.isArray(res) ? res : [];
+        this.seedSelectedFromState();
+      },
+      error: () => { this.unmappedAll = []; }
+    });
+  }
+
 
   // กู้ draft: ถ้า snapshot draft ≠ server → ใช้ draft ทับ + เข้าสู่โหมดแก้ไข
   private tryRestoreDraftAfterFetch(): boolean {
@@ -376,7 +418,9 @@ export class ReasonDetailsComponent {
           meta: null,
           rows: rr,
           isNew: true,
-          isEditingName: !display,
+          isEditingName: (typeof b?.draftIsEditingName === 'boolean')
+                          ? !!b.draftIsEditingName
+                          : true,
           isAdding: false,
           fieldErrors: false,
           duplicateIndex: null,
@@ -459,6 +503,25 @@ export class ReasonDetailsComponent {
 
     // อัปเดตค่าในคอนโทรลแต่ไม่ปล่อย valueChanges (กัน side-effects)
     ctrl?.setValue(name, { emitEvent: false });
+
+    // ====== ใหม่: ถ้าชื่อตรงกับ option ใน dropdown ให้ใช้ categoryId ไปดึงเหตุผลมาเติม ======
+    // 1) หา option ที่เลือก/ตรงชื่อ
+    const selected = this.selectedUnmapped[index]
+      ?? this.unmappedAll.find(x => (x.categoryName || '').trim().toLowerCase() === name.toLowerCase());
+
+    if (selected) {
+      // 2) อัปเดต meta ให้การ์ด (new category) อ้างไปยัง category จริง
+      this.categoryBlocks[index].meta = {
+        categoryId: selected.categoryId,
+        categoryName: selected.categoryName,
+        categoryType: selected.categoryType,
+        isActive: selected.isActive,
+        isUnMatch: false,
+      };
+
+      // 3) ดึง reasons ของ category นี้มาเติม (merge กันซ้ำ)
+      this.fetchAndFillReasonsFor(index, selected.categoryId, selected.categoryName);
+    }
 
     // ถือว่าเป็นการแก้ไขจริงแล้ว
     this.formDetails.markAsDirty();
@@ -658,6 +721,9 @@ export class ReasonDetailsComponent {
 
         isUnMatch: false,                         // ปกติ “ยังไม่ได้ unmatch”
         canUnmatch: cb.meta?.isUnMatch ?? false,  // สิทธิ์กด unmatch
+
+        // ===== เก็บสถานะแก้ชื่อเฉพาะหมวดใหม่ไว้ใน draft =====
+        draftIsEditingName: cb.isNew ? cb.isEditingName : undefined,
 
         rejectionReasons: (cb.rows || []).map((r: ReasonEntry) => ({
           reasonId: r.reasonId,
@@ -876,6 +942,292 @@ export class ReasonDetailsComponent {
     this.formDetails.markAsDirty();
     this.updateSaveState();
   }
+
+  isUnmappedOpen(i: number): boolean {
+    return this.unmappedOpenFor === i;
+  }
+
+  openUnmappedDropdown(i: number, _origin?: any) {
+    const current = (this.getCategoryFormAt(i).get('categoryName')?.value || '').toString();
+    this.applyUnmappedFilter(i, current);
+    this.updateOverlayWidth(i);
+    this.unmappedOpenFor = i;
+    this.activeUnmappedIndex[i] = 0;
+
+    // กันพลาด: seed เฉพาะ index ที่กำลังเปิด
+    if (!this.selectedUnmapped[i]) {
+      const cb = this.categoryBlocks[i];
+      const name = (cb?.displayName || '').trim().toLowerCase();
+      let match: UnmappedCategory | undefined;
+
+      if (cb?.meta?.categoryId) {
+        match = this.unmappedAll.find(x => x.categoryId === cb.meta!.categoryId);
+      }
+      if (!match && name) {
+        match = this.unmappedAll.find(
+          x => (x.categoryName || '').trim().toLowerCase() === name
+        );
+      }
+      if (match) this.selectedUnmapped[i] = match;
+    }
+  }
+
+  toggleUnmappedDropdown(i: number, _origin: any, ev: MouseEvent) {
+    ev.stopPropagation();
+    if (this.isUnmappedOpen(i)) this.closeUnmappedDropdown();
+    else this.openUnmappedDropdown(i);
+  }
+
+  closeUnmappedDropdown() {
+    this.unmappedOpenFor = null;
+  }
+
+  private applyUnmappedFilter(i: number, term: string) {
+    const t = (term || '').trim().toLowerCase();
+    const list = !t
+      ? this.unmappedAll
+      : this.unmappedAll.filter(x =>
+          (x.categoryName || '').toLowerCase().includes(t) ||
+          (x.categoryType || '').toLowerCase().includes(t) ||
+          String(x.categoryId).includes(t)
+        );
+    this.filteredUnmapped[i] = list.slice(0, 200); // กันรายการยาวเกิน
+  }
+
+  /**
+   * เมื่อพิมพ์ในช่องชื่อ category (new category)
+   * - filter รายการ
+   * - ถ้าเคยเลือก option ไว้ แล้วพิมพ์ไม่ตรง → เคลียร์ selection
+   * - ถ้า input ว่าง → เคลียร์ selection
+   */
+  onNewCategoryInput(index: number, ev: Event) {
+    const value = (ev.target as HTMLInputElement).value || '';
+
+    // sync display name ใน state
+    this.categoryBlocks[index].displayName = value;
+
+    // filter dropdown ตามค่าปัจจุบัน
+    this.applyUnmappedFilter(index, value);
+
+    // เปิด dropdown ถ้ายังไม่เปิด (เพื่อให้เห็นผลการ filter)
+    if (!this.isUnmappedOpen(index)) this.openUnmappedDropdown(index);
+
+    // เคส: ล้างข้อความหมด → เคลียร์ selection/active
+    if (!value.trim()) {
+      this.clearSelectedForIndex(index);
+      return;
+    }
+
+    // ถ้าเคยเลือก option แต่ข้อความที่พิมพ์ไม่ตรงกับที่เลือก → เคลียร์ selection
+    const sel = this.selectedUnmapped[index];
+    if (sel && sel.categoryName.trim().toLowerCase() !== value.trim().toLowerCase()) {
+      this.clearSelectedForIndex(index);
+    }
+  }
+
+  selectUnmappedCategory(index: number, opt: UnmappedCategory) {
+    this.selectedUnmapped[index] = opt;
+
+    // ใส่ชื่อลง form control (ไม่ emit valueChanges เพื่อไม่รบกวน)
+    const ctrl = this.getCategoryFormAt(index).get('categoryName');
+    ctrl?.setValue(opt.categoryName, { emitEvent: false });
+
+    // sync displayName
+    this.categoryBlocks[index].displayName = opt.categoryName;
+
+    // set meta (แม้เป็นหมวดใหม่ แต่เรารู้ id เดิมของ category นี้แล้ว)
+    this.categoryBlocks[index].meta = {
+      categoryId: opt.categoryId,
+      categoryName: opt.categoryName,
+      categoryType: opt.categoryType,
+      isActive: opt.isActive,
+      isUnMatch: false, // ไม่เกี่ยวกับ unmatch ใน flow นี้
+    };
+
+    // ปิด dropdown + mark dirty
+    this.closeUnmappedDropdown();
+    this.formDetails.markAsDirty();
+    this.updateSaveState();
+  }
+
+  moveActiveOption(i: number, delta: number) {
+    if (!this.isUnmappedOpen(i)) return;
+    const list = this.filteredUnmapped[i] || [];
+    if (!list.length) return;
+    const next = (this.activeUnmappedIndex[i] ?? 0) + delta;
+    const max = list.length - 1;
+    this.activeUnmappedIndex[i] = Math.max(0, Math.min(max, next));
+  }
+
+  confirmActiveOption(i: number) {
+    if (!this.isUnmappedOpen(i)) return;
+    const list = this.filteredUnmapped[i] || [];
+    const k = this.activeUnmappedIndex[i] ?? 0;
+    if (list[k]) this.selectUnmappedCategory(i, list[k]);
+  }
+
+  trackByUnmapped = (_: number, item: UnmappedCategory) => item.categoryId;
+
+  /**
+   * เคลียร์ selection ของ dropdown + meta สำหรับ index ที่กำหนด
+   */
+  private clearSelectedForIndex(index: number) {
+    this.selectedUnmapped[index] = null;
+
+    // ถ้าเป็น new category และเคยผูก meta จาก option มาก่อน ให้ล้างออก
+    if (this.categoryBlocks[index]?.isNew) {
+      this.categoryBlocks[index].meta = null;
+    }
+
+    // resetไฮไลท์รายการ
+    this.activeUnmappedIndex[index] = 0;
+  }
+
+  onNewCategoryBlur(index: number) {
+    if (this.suppressNextBlur) {
+      // ผู้ใช้กำลังกดเลือกใน dropdown → ไม่ต้องปิด/เคลียร์
+      return;
+    }
+
+    const ctrl = this.getCategoryFormAt(index).get('categoryName');
+    const value = (ctrl?.value || '').toString().trim();
+
+    if (!value) {
+      this.clearSelectedForIndex(index);
+      this.closeUnmappedDropdown();
+      return;
+    }
+
+    const match = this.unmappedAll.find(
+      x => (x.categoryName || '').trim().toLowerCase() === value.toLowerCase()
+    );
+
+    if (match) {
+      this.selectUnmappedCategory(index, match);
+    } else {
+      this.clearSelectedForIndex(index);
+    }
+
+    this.closeUnmappedDropdown();
+  }
+
+  /** เลือก option ตั้งแต่ mousedown และกัน blur */
+  onOptionMouseDown(index: number, opt: UnmappedCategory, ev: MouseEvent) {
+    ev.preventDefault();                 // กันเสียโฟกัส → ไม่เกิด blur
+    this.suppressNextBlur = true;        // กันไว้เผื่อบาง browser ยังยิง blur
+    this.selectUnmappedCategory(index, opt);
+    // ปล่อย flag ใน task ถัดไป
+    setTimeout(() => (this.suppressNextBlur = false));
+  }
+
+  // ===== หา element ของ input categoryName ในการ์ดที่ index =====
+  private getCategoryNameInputEl(index: number): HTMLInputElement | null {
+    const el = this.catBlockEls?.toArray()[index]?.nativeElement;
+    return (el?.querySelector('input[formControlName="categoryName"]') as HTMLInputElement) || null;
+  }
+
+  // ===== คำนวณและเก็บความกว้าง overlay ตามความกว้าง input =====
+  private updateOverlayWidth(index: number) {
+    const input = this.getCategoryNameInputEl(index);
+    if (input) {
+      // + ปุ่ม dropdown  (8px gap + 32px ปุ่ม) = เผื่อเล็กน้อยถ้าต้องรวมทั้งกลุ่ม
+      const w = input.getBoundingClientRect().width;
+      this.overlayWidth[index] = Math.max(180, Math.round(w)); // กันเล็กเกิน
+    }
+  }
+
+  // ===== อัปเดตความกว้างเมื่อ resize ถ้าดรอปดาวน์เปิดอยู่ =====
+  @HostListener('window:resize')
+  onWindowResize() {
+    if (this.unmappedOpenFor !== null) {
+      this.updateOverlayWidth(this.unmappedOpenFor);
+    }
+  }
+
+  // ใช้กู้ค่า selection กลับมาจาก meta/displayName
+  private seedSelectedFromState() {
+    this.categoryBlocks.forEach((cb, i) => {
+      if (!cb.isNew) return;                   // สนใจเฉพาะหมวดใหม่ที่ยังแก้ชื่อ
+      if (this.selectedUnmapped[i]) return;    // ถ้ามีแล้วไม่ต้องทำซ้ำ
+
+      const name = (cb.displayName || '').trim().toLowerCase();
+      let match: UnmappedCategory | undefined;
+
+      // 1) จับคู่ด้วย categoryId ก่อน (แม่นสุด)
+      if (cb.meta?.categoryId) {
+        match = this.unmappedAll.find(x => x.categoryId === cb.meta!.categoryId);
+      }
+
+      // 2) ไม่เจอ → ลองจับคู่ด้วยชื่อ
+      if (!match && name) {
+        match = this.unmappedAll.find(
+          x => (x.categoryName || '').trim().toLowerCase() === name
+        );
+      }
+
+      if (match) {
+        this.selectedUnmapped[i] = match;
+        // อัปเดต meta ให้ครบ (กันเคส meta เดิมเป็น null)
+        cb.meta = {
+          categoryId: match.categoryId,
+          categoryName: match.categoryName,
+          categoryType: match.categoryType,
+          isActive: match.isActive,
+          isUnMatch: false,
+        };
+      }
+    });
+  }
+
+  private mapApiReasonsToRows(list: any[], fallbackCat: { id: number; name: string }): ReasonEntry[] {
+    return (Array.isArray(list) ? list : []).map((r: any) => ({
+      reasonId: r?.reasonId,
+      categoryId: r?.categoryId ?? fallbackCat.id,
+      categoryName: r?.categoryName ?? fallbackCat.name,
+      reasonText: (r?.reasonText || '').toString(),
+      isActive: !!r?.isActive,
+      isDeleted: !!r?.isDeleted,   // ตามสเปก API: false = ห้ามลบ
+      createdAt: r?.createdAt ?? null,
+    }));
+  }
+
+  /** ดึง reasons ของ categoryId แล้ว merge ใส่การ์ด index (กันซ้ำด้วย reasonText แบบ case-insensitive) */
+  private fetchAndFillReasonsFor(index: number, catId: number, catName: string) {
+    const cb = this.categoryBlocks[index];
+    if (!cb) return;
+
+    this.reasonService.getReasonByCategoryId(catId).subscribe({
+      next: (res: any[]) => {
+        const fetched = this.mapApiReasonsToRows(res, { id: catId, name: catName });
+
+        // รวมกับที่ผู้ใช้อาจกรอกไว้แล้ว (ให้ของเดิมอยู่นำหน้า, กันซ้ำด้วย reasonText)
+        const seen = new Set<string>();
+        const normalize = (s: string) => (s || '').trim().toLowerCase();
+
+        const merged: ReasonEntry[] = [];
+        // ของเดิมก่อน
+        for (const row of cb.rows || []) {
+          const key = normalize(row.reasonText);
+          if (!seen.has(key)) { seen.add(key); merged.push(row); }
+        }
+        // ของที่ดึงมา
+        for (const row of fetched) {
+          const key = normalize(row.reasonText);
+          if (!seen.has(key)) { seen.add(key); merged.push(row); }
+        }
+
+        cb.rows = merged;
+        cb.isAdding = false;
+        this.formDetails.markAsDirty();
+        this.updateSaveState();
+      },
+      error: () => {
+        // ดึงไม่สำเร็จ -> แจ้งเตือนแบบไม่บล็อกต่อ
+        this.notify.error('Could not load reasons for selected category.');
+      }
+    });
+  }
+
 
   ngOnDestroy(): void {
     this.destroy$.next();
