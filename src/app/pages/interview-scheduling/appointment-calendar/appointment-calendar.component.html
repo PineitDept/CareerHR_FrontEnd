@@ -10,6 +10,7 @@
   [filterDate]="true"
   [filterDateRange]="filterDateRange"
   [DateCalendar]="true"
+  (DateToday)="onTodayClick()"
   (dateRangeSelected)="onDateRangeSelected($event)"
 ></app-filter>
 
@@ -36,6 +37,7 @@
                 <li class="tw-flex tw-items-center tw-mb-1"><span class="dot dot-blue"></span> Interview 1</li>
                 <li class="tw-flex tw-items-center tw-mb-1"><span class="dot dot-orange"></span> Interview 2</li>
                 <li class="tw-flex tw-items-center"><span class="dot dot-green"></span> Onboarded</li>
+                <li class="tw-flex tw-items-center"><span class="dot dot-red"></span> Decline</li>
             </ul>
         </div>
 

@@ -32,6 +32,7 @@ export class FilterComponent {
   @Output() buttonClicked = new EventEmitter<string>();
   @Output() dateRangeSelected = new EventEmitter<{ startDate: string; endDate: string }>();
   @Output() gradeSelected = new EventEmitter<string>();
+  @Output() DateToday = new EventEmitter<Date>();
 
   currentYear = new Date().getFullYear();
   currentMonth = new Date().getMonth(); // 0-indexed
@@ -65,7 +66,9 @@ export class FilterComponent {
   ) { }
 
   ngOnInit() {
-    this.emitDateRange();
+    if (!this.DateCalendar) {
+      this.emitDateRange();
+    }
 
     const storedGradeIndex = localStorage.getItem('benefitsFiterSettings_Grade');
     const value = this.allGrade[Number(storedGradeIndex)]
@@ -162,6 +165,17 @@ export class FilterComponent {
   onAllListClick() {
     this.selectedMonth = 'All';
     this.emitDateRange(true);
+  }
+
+  onClickToday() {
+    const today = new Date();
+
+    this.selectedYear = String(today.getFullYear());
+    this.selectedMonth = this.allMonths[today.getMonth()];
+
+    this.emitDateRange();
+
+    this.DateToday.emit();
   }
 
   emitDateRange(isAllList = false) {
