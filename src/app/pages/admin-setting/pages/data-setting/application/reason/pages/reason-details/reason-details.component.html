@@ -92,17 +92,77 @@
             </div>
           </ng-template>
 
-          <button
-            type="button"
-            (click)="onAddRowClicked(i)"
-            class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-azure hover:bg-azure-dark
-                  tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
-                  tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-azure focus-visible:ring-azure"
-            [ngClass]="{ 'tw-pointer-events-none tw-opacity-50': !isEditMode }"
-            aria-label="Add Reason">
-            <app-icon [name]="'plus'" [size]="18" extraClass="tw-text-white"></app-icon>
-            <span class="tw-font-semibold">Add</span>
-          </button>
+          <div class="tw-flex tw-items-center tw-gap-2">
+            <button
+              type="button"
+              (click)="onAddRowClicked(i)"
+              class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-azure hover:bg-azure-dark
+                    tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
+                    tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-azure focus-visible:ring-azure"
+              [ngClass]="{ 'tw-pointer-events-none tw-opacity-50': !isEditMode || !cat.active }"
+              aria-label="Add Reason">
+              <app-icon [name]="'plus'" [size]="18" extraClass="tw-text-white"></app-icon>
+              <span class="tw-font-semibold">Add</span>
+            </button>
+
+            <!-- ปุ่ม Unmatch -->
+            <button
+              type="button"
+              (mouseenter)="onUnmatchHover($event, true)"
+              (mouseleave)="onUnmatchHover($event, false)"
+              (click)="onUnmatchClicked(i)"
+              class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
+                    tw-shadow-[0_2px_6px_rgba(255,77,79,0.35)] focus:ring-dark-red focus-visible:ring-dark-red"
+              [style.background]="'#FF4D4F'"
+              [disabled]="!isEditMode || !cat.meta?.isUnMatch || !cat.active"
+              [ngClass]="{
+                'tw-pointer-events-none tw-opacity-50': !isEditMode || !cat.meta?.isUnMatch || !cat.active
+              }"
+            >
+              <app-icon [name]="'ban'" [size]="16" extraClass="tw-text-white"></app-icon>
+              <span class="tw-font-semibold">Unmatch</span>
+            </button>
+
+            <!-- ปุ่ม Cancel — แสดงเฉพาะ New Category -->
+            <button
+              *ngIf="cat.isNew"
+              type="button"
+              (click)="onCancelNewCategory(i)"
+              class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
+                    bg-gray-dark-3 hover:bg-gray-dark-2 focus:ring-gray-dark-3 focus-visible:ring-gray-dark-3"
+              [disabled]="!isEditMode"
+              [ngClass]="{
+                'tw-pointer-events-none tw-opacity-50': !isEditMode
+              }"
+              aria-label="Cancel new category"
+              title="Cancel this new category">
+              <app-icon [name]="'xmark'" [size]="16" extraClass="tw-text-white"></app-icon>
+              <span class="tw-font-semibold">Cancel</span>
+            </button>
+
+            <!-- Toggle Active -->
+            <label class="tw-inline-flex tw-items-center tw-cursor-pointer"
+                  (click)="$event.stopPropagation()"
+                  [attr.title]="cat.active ? 'Active' : 'Inactive'">
+              <input
+                type="checkbox"
+                class="tw-sr-only tw-peer"
+                [checked]="cat.active"
+                [disabled]="!isEditMode"
+                (click)="onToggleChange($event, i)"
+                [attr.aria-checked]="cat.active"
+                role="switch" />
+              <div
+                class="tw-relative tw-w-11 tw-h-6 tw-rounded-full tw-bg-gray-200 tw-border-white
+                      after:tw-content-[''] after:tw-absolute after:tw-top-[2px] after:tw-start-[2px]
+                      after:tw-h-5 after:tw-w-5 after:tw-rounded-full after:tw-bg-white after:tw-transition-all
+                      peer-checked:tw-bg-[#00AA00] rtl:peer-checked:after:tw--translate-x-full peer-checked:after:tw-translate-x-full"
+                [ngClass]="{
+                  'peer-checked:tw-bg-[#00AA00]/40 tw-cursor-default': !isEditMode
+                }">
+              </div>
+            </label>
+          </div>
         </div>
 
         <hr class="tw--mx-6 tw-mt-4">
@@ -126,7 +186,7 @@
             [isConfirmDialogSaveRequired]="false"
             [isReasonSave]="true"
             (editClicked)="onInlineEditSave($event, i)"
-            [isDisabledForm]="!isEditMode"
+            [isDisabledForm]="!isEditMode || !cat.active"
           ></app-tables>
         </div>
       </div>
