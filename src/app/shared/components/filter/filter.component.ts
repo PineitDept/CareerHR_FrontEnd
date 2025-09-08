@@ -1,3 +1,4 @@
+import { formatDate } from '@angular/common';
 import {
   Component,
   ElementRef,
@@ -23,9 +24,10 @@ export class FilterComponent {
   @Input() filterDynamicButton: boolean = false;
   @Input() filterDate: boolean = true;
   @Input() filterOurCompany: boolean = false;
-  @Input() filterDateRange: { month: string; year: string} = { month: '', year: '' };
+  @Input() filterDateRange: { month: string; year: string } = { month: '', year: '' };
   @Input() disabledFilterDateRange: boolean = false;
   @Input() GradeSelect: boolean = false;
+  @Input() DateCalendar: boolean = false;
 
   @Output() buttonClicked = new EventEmitter<string>();
   @Output() dateRangeSelected = new EventEmitter<{ startDate: string; endDate: string }>();
@@ -47,6 +49,8 @@ export class FilterComponent {
   selectedMonth = 'All';
   selectedCompany = 'All';
   selectedGrade = 'All Grade';
+  currentMonthName: string | undefined;
+  formattedToday: string | undefined;
 
   isYearOpen = false;
   isMonthOpen = false;
@@ -58,7 +62,7 @@ export class FilterComponent {
 
   constructor(
     private router: Router
-  ) {}
+  ) { }
 
   ngOnInit() {
     this.emitDateRange();
@@ -66,6 +70,16 @@ export class FilterComponent {
     const storedGradeIndex = localStorage.getItem('benefitsFiterSettings_Grade');
     const value = this.allGrade[Number(storedGradeIndex)]
     this.selectedGrade = value;
+
+    if (this.DateCalendar) {
+      this.months = this.allMonths
+
+      const today = new Date();
+      this.selectedMonth = this.months[today.getMonth()];
+
+      this.formattedToday = formatDate(today, 'yyyy-MM-dd', 'en-US');
+      this.dateRangeSelected.emit({ startDate: this.formattedToday, endDate: this.formattedToday });
+    }
   }
 
   onBackClick() {
@@ -106,11 +120,17 @@ export class FilterComponent {
       this.selectedYear = value;
       this.months = this.getMonthsByYear(value);
       // if (value !== String(this.currentYear)) {
-        this.selectedMonth = 'All';
+      this.selectedMonth = 'All';
       // } else {
       //   this.selectedMonth = this.allMonths[this.currentMonth];
       // }
       this.isYearOpen = false;
+
+      if (this.DateCalendar) {
+        this.months = this.allMonths
+        this.selectedMonth = 'January';
+      }
+
     } else if (type === 'month') {
       this.selectedMonth = value;
       this.isMonthOpen = false;
@@ -130,7 +150,13 @@ export class FilterComponent {
       ? this.allMonths.slice(0, this.currentMonth + 1)
       : [...this.allMonths];
 
-    return ['All', ...baseMonths];
+    if (this.DateCalendar) {
+      return this.allMonths;
+    } else {
+      return ['All', ...baseMonths];
+    }
+
+    // return ['All', ...baseMonths];
   }
 
   onAllListClick() {

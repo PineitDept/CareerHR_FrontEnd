@@ -46,7 +46,7 @@ export class InterviewerTeamsComponent {
       next: (response) => {
         this.rows = (response.items ?? []).map((item: any, idx: number) => ({
           ...item,
-          activeStatus: true,
+          activeStatus: item.isActive,
           no: idx + 1
         }));
         queueMicrotask(() => this.measureOverflow());
@@ -96,15 +96,16 @@ export class InterviewerTeamsComponent {
     checked: boolean;
     checkbox: HTMLInputElement;
   }) {
-    // this.interviewerService.toggleStatus(row.teamId).subscribe({
-    //   next: () => {
-    //     checkbox.checked = checked;
-    //     if ('isActive' in row) row.isActive = checked;
-    //     if ('activeStatus' in row) row.activeStatus = checked;
-    //   },
-    //   error: () => {
-    //     console.error('Toggle failed');
-    //   }
-    // });
+    const payload = {teamName: row.teamName, isActive: checked}
+    this.interviewerService.updateTeam(row.teamId, payload).subscribe({
+      next: () => {
+        checkbox.checked = checked;
+        if ('isActive' in row) row.isActive = checked;
+        if ('activeStatus' in row) row.activeStatus = checked;
+      },
+      error: () => {
+        console.error('Toggle failed');
+      }
+    });
   }
 }

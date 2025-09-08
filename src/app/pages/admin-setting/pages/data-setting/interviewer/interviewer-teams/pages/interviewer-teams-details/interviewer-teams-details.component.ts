@@ -118,6 +118,7 @@ export class InterviewerTeamsDetailsComponent {
             this.fetchInterviewerTeamDetails(true);
           } else {
             this.initialSnapshot = this.emptyBaseline();
+            this.isAddMode = true;
           }
         } else {
           if (this.teamId) {
@@ -127,6 +128,7 @@ export class InterviewerTeamsDetailsComponent {
             this.isEditing = true;
             this.formDetails.enable({ emitEvent: false });
             this.setActionButtons('edit');
+            this.isAddMode = true;
           }
         }
       });
@@ -150,7 +152,7 @@ export class InterviewerTeamsDetailsComponent {
   initializeForm() {
     this.formDetails = this.fb.group({
       teamName: [''],
-      isActive: [false],
+      isActive: [true],
       selectedIdsInterviewer: [] as number[],
     });
   }
@@ -175,7 +177,7 @@ export class InterviewerTeamsDetailsComponent {
 
   private emptyBaseline() {
     return {
-      form: { teamName: '', isActive: false },
+      form: { teamName: '', isActive: true },
       selections: { selectedIdsInterviewer: [] as number[] }
     };
   }
@@ -356,41 +358,41 @@ export class InterviewerTeamsDetailsComponent {
 
         const payload: InterviewerDetails = {
           teamName: formValue.teamName ?? previousData.teamName ?? '',
-          isActive: formValue.isActive ? true : false,
-          // members: formValue.selectedIdsInterviewer?.length
-          //   ? formValue.selectedIdsInterviewer
-          //   : previousData.members ?? []
+          isActive: formValue.isActive ? true : false
         };
 
         console.log('🚀 ส่ง payload:', payload);
 
-        const oldIds = (this.previousData.members ?? []).map((m: any) => Number(m.interviewerId));
+
         const newIds = this.formDetails.get('selectedIdsInterviewer')?.value ?? [];
 
-        const idsToAdd = newIds.filter((id: number) => !oldIds.includes(id));
-        const idsToRemove = oldIds.filter((id: number) => !newIds.includes(id));
-
-        const addRequests = idsToAdd.map((id: number) =>
-          this.interviewerService.addTeamMember(this.teamId, id)
-        );
-        const removeRequests = idsToRemove.map((id: number) =>
-          this.interviewerService.removeTeamMember(this.teamId, id)
-        );
-
-        const allRequests = [...addRequests, ...removeRequests];
-
-        if (allRequests.length) {
-          forkJoin(allRequests).subscribe({
-            next: () => {
-              console.log('อัปเดตสมาชิกทีมเรียบร้อย');
-            },
-            error: (err) => {
-              console.error('อัปเดตสมาชิกล้มเหลว', err);
-            }
-          });
-        }
-
         if (this.teamId !== '') {
+
+          const oldIds = (this.previousData.members ?? []).map((m: any) => Number(m.interviewerId));
+
+          const idsToAdd = newIds.filter((id: number) => !oldIds.includes(id));
+          const idsToRemove = oldIds.filter((id: number) => !newIds.includes(id));
+
+          const addRequests = idsToAdd.map((id: number) =>
+            this.interviewerService.addTeamMember(this.teamId, id)
+          );
+          const removeRequests = idsToRemove.map((id: number) =>
+            this.interviewerService.removeTeamMember(this.teamId, id)
+          );
+
+          const allRequests = [...addRequests, ...removeRequests];
+
+          if (allRequests.length) {
+            forkJoin(allRequests).subscribe({
+              next: () => {
+                console.log('อัปเดตสมาชิกทีมเรียบร้อย');
+              },
+              error: (err) => {
+                console.error('อัปเดตสมาชิกล้มเหลว', err);
+              }
+            });
+          }
+
           this.interviewerService.updateTeam(this.teamId, payload).subscribe({
             next: () => {
               this.isEditing = false;
@@ -404,7 +406,14 @@ export class InterviewerTeamsDetailsComponent {
             }
           });
         } else {
-          this.interviewerService.createTeam(payload).subscribe({
+          const filteredInterviewers = this.settingInterviewer.filter(i => newIds.includes(i.idEmployee));
+
+          const payloadCreate: InterviewerDetails = {
+            teamName: formValue.teamName ?? previousData.teamName ?? '',
+            interviewerIds: newIds,
+          };
+
+          this.interviewerService.createTeam(payloadCreate).subscribe({
             next: () => {
               this.isEditing = false;
               this.formDetails.disable({ emitEvent: false });

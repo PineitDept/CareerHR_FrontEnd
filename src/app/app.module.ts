@@ -1,4 +1,4 @@
-import { NgModule, APP_INITIALIZER  } from '@angular/core';
+import { NgModule, APP_INITIALIZER } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -16,6 +16,8 @@ import { IndexComponent } from './pages/index/index.component';
 import { ApiInterceptorFn } from './shared/interceptors/api/api.interceptor';
 import { SharedModule } from './shared/shared.module';
 import { ApplicationComponent } from './pages/application/application.component';
+import { InterviewSchedulingComponent } from './pages/interview-scheduling/interview-scheduling.component';
+import { OfferEmploymentComponent } from './pages/offer-employment/offer-employment.component';
 
 export function quillInitFactory() {
   return () =>
@@ -30,6 +32,8 @@ export function quillInitFactory() {
     AuthLayoutComponent,
     IndexComponent,
     ApplicationComponent,
+    InterviewSchedulingComponent,
+    OfferEmploymentComponent
   ],
   imports: [
     BrowserModule,

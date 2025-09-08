@@ -33,6 +33,8 @@ import { DualListboxComponent } from './components/dual-listbox/dual-listbox.com
 import { QualityDialogComponent } from './components/dialogs/quality-dialog/quality-dialog.component';
 import { CdkDropdownComponent } from './components/cdk-dropdown/cdk-dropdown.component';
 import { BackToTopComponent } from './components/back-to-top/back-to-top.component';
+import { FullCalendarModule } from '@fullcalendar/angular';
+import { CalendarComponent } from './components/calendar/calendar.component';
 
 @NgModule({
   declarations: [
@@ -55,6 +57,7 @@ import { BackToTopComponent } from './components/back-to-top/back-to-top.compone
     QualityDialogComponent,
     CdkDropdownComponent,
     BackToTopComponent,
+    CalendarComponent,
   ],
   imports: [
     CommonModule,
@@ -69,6 +72,7 @@ import { BackToTopComponent } from './components/back-to-top/back-to-top.compone
     OverlayModule,
     PortalModule,
     ScrollingModule,
+    FullCalendarModule
 ],
   exports: [
     HeaderContentComponent,
@@ -90,6 +94,9 @@ import { BackToTopComponent } from './components/back-to-top/back-to-top.compone
     OverlayModule,
     CdkDropdownComponent,
     BackToTopComponent,
+    // PurchaseOrderDetailsFormComponent
+    CalendarComponent,
+    FullCalendarModule
   ]
 })
 export class SharedModule { }
