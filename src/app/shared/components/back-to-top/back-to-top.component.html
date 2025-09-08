@@ -1,0 +1,10 @@
+<button
+  *ngIf="show"
+  type="button"
+  (click)="onClick()"
+  [attr.aria-label]="ariaLabel"
+  [ngClass]="buttonClass"
+  class="tw-select-none"
+>
+  <app-icon [name]="iconName" [size]="iconSize" extraClass="tw-text-white"></app-icon>
+</button>

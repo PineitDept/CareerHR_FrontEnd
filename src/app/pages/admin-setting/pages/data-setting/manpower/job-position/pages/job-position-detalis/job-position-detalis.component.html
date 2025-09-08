@@ -181,7 +181,7 @@
                         (createInlineSave)="onInlineSave($event, 'resp', ResponsibilitiesTable)"
                         (createInlineCancel)="onInlineCancel('resp')" [fieldErrors]="fieldErrors"
                         [highlightRowIndex]="duplicateRowIndex" (deleteRowClicked)="onDeleteRowClicked($event, 'resp')"
-                        (editClicked)="handleEditRow($event)" [isConfirmDialogSaveRequired]="true"
+                        (editClicked)="handleEditRow($event)" [isConfirmDialogSaveRequired]="false"
                         [draggableRows]="!isDisabled"></app-tables>
                 </div>
             </div>
@@ -211,7 +211,7 @@
                         [isAddMode]="addState.req" (createInlineSave)="onInlineSave($event, 'req', RequirementsTable)"
                         (createInlineCancel)="onInlineCancel('req')" [fieldErrors]="fieldErrors"
                         [highlightRowIndex]="duplicateRowIndex" (deleteRowClicked)="onDeleteRowClicked($event, 'req')"
-                        (editClicked)="handleEditRow($event)" [isConfirmDialogSaveRequired]="true"
+                        (editClicked)="handleEditRow($event)" [isConfirmDialogSaveRequired]="false"
                         [draggableRows]="!isDisabled"></app-tables>
                 </div>
             </div>
@@ -242,7 +242,7 @@
                         (createInlineSave)="onInlineSave($event, 'pref', PreferredSkillsTable)"
                         (createInlineCancel)="onInlineCancel('pref')" [fieldErrors]="fieldErrors"
                         [highlightRowIndex]="duplicateRowIndex" (deleteRowClicked)="onDeleteRowClicked($event, 'pref')"
-                        (editClicked)="handleEditRow($event)" [isConfirmDialogSaveRequired]="true"
+                        (editClicked)="handleEditRow($event)" [isConfirmDialogSaveRequired]="false"
                         [draggableRows]="!isDisabled"></app-tables>
                 </div>
             </div>

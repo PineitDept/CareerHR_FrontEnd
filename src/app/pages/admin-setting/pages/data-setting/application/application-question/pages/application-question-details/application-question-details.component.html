@@ -107,7 +107,7 @@
           [withinCard]="true"
           [isDisabledForm]="true"
           [allowViewWhenDisabled]="true"
-          [isConfirmDialogToggleRequired]="true"
+          [isConfirmDialogToggleRequired]="false"
           (viewRowClicked)="onRowClicked($event, 'view')"
           (toggleChange)="onToggleChangeCategory($event)"
         ></app-tables>
@@ -206,8 +206,8 @@
           [requiredFooterFields]="detailsRequiredFooterFields"
           (selectChanged)="onSelectChangedDetails($event)"
           [createDefaults]="tableCreateDefaults"
-          [isConfirmDialogToggleRequired]="true"
-          [isConfirmDialogSaveRequired]="true"
+          [isConfirmDialogToggleRequired]="false"
+          [isConfirmDialogSaveRequired]="false"
           (editClicked)="onInlineEditSave($event)"
         ></app-tables>
       </div>

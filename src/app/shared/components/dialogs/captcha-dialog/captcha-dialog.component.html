@@ -23,14 +23,22 @@
       </button>
     </div>
 
+    <!-- แจ้งผู้ใช้ -->
+    <div class="tw-text-xs tw-text-gray-500">Matching is case-sensitive.</div>
+
     <!-- ช่องกรอก -->
     <div>
       <input type="text"
-             class="tw-bg-gray-light-4 tw-border tw-border-[#ADB5BD] tw-rounded-[8px] tw-w-full tw-px-4 tw-py-2 tw-text-sm tw-text-[#495057] placeholder:tw-text-[#ADB5BD] focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-[#ADB5BD]"
-             placeholder="Type the word above"
-             [(ngModel)]="input"
-             autocomplete="off"
-             (keyup.enter)="matched && confirm()"/>
+            class="tw-bg-gray-light-4 tw-border tw-border-[#ADB5BD] tw-rounded-[8px] tw-w-full tw-px-4 tw-py-2 tw-text-sm tw-text-[#495057] placeholder:tw-text-[#ADB5BD] focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-[#ADB5BD]"
+            placeholder="Type the word above"
+            [(ngModel)]="input"
+            autocomplete="off"
+            autocapitalize="off"
+            autocorrect="off"
+            spellcheck="false"
+            inputmode="text"
+            [attr.maxlength]="length"
+            (keyup.enter)="matched && confirm()"/>
 
       <div *ngIf="input && !matched" class="tw-text-red-600 tw-text-sm tw-mt-1">
         The code doesn’t match. Try again.

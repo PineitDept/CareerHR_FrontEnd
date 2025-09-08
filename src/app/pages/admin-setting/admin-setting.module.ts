@@ -30,6 +30,9 @@ import { JobPositionDetalisComponent } from './pages/data-setting/manpower/job-p
 import { InterviewerListComponent } from './pages/data-setting/interviewer/interviewer-list/interviewer-list.component';
 import { InterviewerTeamsComponent } from './pages/data-setting/interviewer/interviewer-teams/interviewer-teams.component';
 import { InterviewerTeamsDetailsComponent } from './pages/data-setting/interviewer/interviewer-teams/pages/interviewer-teams-details/interviewer-teams-details.component';
+import { OverlayModule } from '@angular/cdk/overlay';
+import { PortalModule } from '@angular/cdk/portal';
+import { ScrollingModule } from '@angular/cdk/scrolling';
 
 @NgModule({
   declarations: [
@@ -65,7 +68,10 @@ import { InterviewerTeamsDetailsComponent } from './pages/data-setting/interview
     SharedModule,
     FormsModule,
     ReactiveFormsModule,
-    QuillModule.forRoot()
+    QuillModule.forRoot(),
+    OverlayModule,
+    PortalModule,
+    ScrollingModule,
   ],
    providers: [
     { provide: APP_INITIALIZER, useFactory: quillInitFactory, multi: true },
