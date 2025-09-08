@@ -1,13 +1,18 @@
-import { Component, computed, ElementRef, EventEmitter, Output, signal, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, computed, ElementRef, EventEmitter, Output, signal, ViewChild } from '@angular/core';
 import { defaultColumns, defaultFilterButtons } from '../../../constants/admin-setting/interviewer.constants';
 import { InterviewerService } from '../../../services/admin-setting/interviewer/interviewer.service';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { DateRange, SearchForm } from '../../../interfaces/interview-scheduling/interview.interface';
 import { FilterConfig, GroupedCheckboxOption } from '../../../shared/components/filter-check-box/filter-check-box.component';
 import { CalendarOptions } from '@fullcalendar/core/index.js';
 import { defaultColumnsPolicy } from '../../../constants/admin-setting/email-template.constants';
 import { TabMenu } from '../../../interfaces/Application/application.interface';
 import { DropdownOption } from '../../../shared/components/cdk-dropdown/cdk-dropdown.component';
+import { FormBuilder, FormGroup } from '@angular/forms';
+import { MatDialog } from '@angular/material/dialog';
+import { AlertDialogComponent } from '../../../shared/components/dialogs/alert-dialog/alert-dialog.component';
+import { forkJoin } from 'rxjs';
+import { SelectDialogComponent } from '../../../shared/components/dialogs/select-dialog/select-dialog.component';
 
 const SEARCH_OPTIONS: string[] = [
   'Applicant ID',
@@ -21,6 +26,14 @@ const SEARCH_OPTIONS: string[] = [
 })
 
 export class InterviewRound1Component {
+  slideConfig = {
+    variableWidth: true,
+    slidesPerView: 'auto',
+    spaceBetween: 16,
+    freeMode: true,
+    infinite: false,
+    arrows: true
+  };
 
   educationOptions: DropdownOption[] = [
     { label: "Bachelor's Degree or Higher", value: 'BD' },
@@ -128,11 +141,11 @@ export class InterviewRound1Component {
   constructor(
     private interviewerService: InterviewerService,
     private router: Router,
+    private route: ActivatedRoute,
+    private fb: FormBuilder,
+    private dialog: MatDialog,
+    private cdr: ChangeDetectorRef
   ) { }
-
-  ngOnInit() {
-    // this.fetchTeamID();
-  }
 
   // fetchTeamID() {
   //   this.interviewerService.getAllTeams().subscribe({
@@ -195,6 +208,83 @@ export class InterviewRound1Component {
       }
 
       return scheduledTypeMatch && interviewTeamMatch;
+    });
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  formDetails!: FormGroup;
+  dataOptions = [
+    { value: 1, label: 'AAAAA' },
+    { value: 2, label: 'BBBBB' },
+    { value: 3, label: 'CCCCC' },
+    { value: 4, label: 'DDDDD' },
+  ]
+  dropdownConfigs: any[] = []
+
+  ngOnInit() {
+    // this.fetchTeamID();
+    this.dropdownConfigs = [
+      {
+        type: 'single',
+        label: 'Position',
+        placeholder: 'Position',
+        options: this.dataOptions,
+      },
+      {
+        type: 'multi',
+        label: 'History',
+        options: this.dataOptions,
+      }
+    ];
+  }
+
+  onAdPoscitionClick() {
+    Promise.resolve().then(() => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.add('dimmed-overlay');
+    });
+
+    const dialogRef = this.dialog.open(SelectDialogComponent, {
+      width: '480px',
+      data: {
+        title: 'Job Position',
+        quality: 0,
+        confirm: true,
+        options: this.dataOptions,
+        dropdownConfigs: this.dropdownConfigs
+      }
+    });
+
+    dialogRef.afterClosed().subscribe((result: boolean) => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.remove('dimmed-overlay');
+
+      if (result) {
+        console.log('Selected values from dialog:', result);
+      }
     });
   }
 

@@ -34,7 +34,8 @@ import { QualityDialogComponent } from './components/dialogs/quality-dialog/qual
 import { CdkDropdownComponent } from './components/cdk-dropdown/cdk-dropdown.component';
 import { FullCalendarModule } from '@fullcalendar/angular';
 import { CalendarComponent } from './components/calendar/calendar.component';
-import { register } from 'swiper/element/bundle';
+import { SlickCarouselModule } from 'ngx-slick-carousel';
+import { SelectDialogComponent } from './components/dialogs/select-dialog/select-dialog.component';
 
 @NgModule({
   declarations: [
@@ -57,6 +58,7 @@ import { register } from 'swiper/element/bundle';
     QualityDialogComponent,
     CdkDropdownComponent,
     CalendarComponent,
+    SelectDialogComponent,
   ],
   imports: [
     CommonModule,
@@ -71,7 +73,8 @@ import { register } from 'swiper/element/bundle';
     OverlayModule,
     PortalModule,
     ScrollingModule,
-    FullCalendarModule
+    FullCalendarModule,
+    SlickCarouselModule
 ],
   exports: [
     HeaderContentComponent,
@@ -94,7 +97,8 @@ import { register } from 'swiper/element/bundle';
     CdkDropdownComponent,
     // PurchaseOrderDetailsFormComponent
     CalendarComponent,
-    FullCalendarModule
+    FullCalendarModule,
+    SlickCarouselModule
   ]
 })
 export class SharedModule { }

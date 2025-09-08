@@ -25,8 +25,9 @@ export class CdkDropdownComponent implements ControlValueAccessor {
   @Input() options: Opt[] = [];
   @Input() placeholder = 'Select';
   @Input() panelMaxHeight = 240;
+  @Input() label: string = '';
+  @Input() require: boolean = false;
 
-  // ❗อย่า bind [value] จากข้างนอกเมื่อใช้ formControlName
   value: any = null;
   disabledSelected = false;
 
@@ -46,8 +47,10 @@ export class CdkDropdownComponent implements ControlValueAccessor {
     { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 6 },
     { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -6 },
   ];
+
   private ro?: ResizeObserver;
   private _triggerEl?: HTMLElement;
+  private _overlayEl?: HTMLElement;
 
   @HostListener('window:resize')
   onWindowResize() {
@@ -55,6 +58,17 @@ export class CdkDropdownComponent implements ControlValueAccessor {
       const w = this._triggerEl.getBoundingClientRect().width;
       this.overlayRef.updateSize({ width: w });
       this.overlayRef.updatePosition();
+    }
+  }
+
+  // ✅ Detect outside click
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+    const isInsideTrigger = this._triggerEl?.contains(target);
+    const isInsideOverlay = this._overlayEl?.contains(target);
+    if (!isInsideTrigger && !isInsideOverlay) {
+      this.close();
     }
   }
 
@@ -70,12 +84,15 @@ export class CdkDropdownComponent implements ControlValueAccessor {
     this.value = obj;
     this.cdr.markForCheck();
   }
+
   registerOnChange(fn: any): void {
     this.onChange = fn;
   }
+
   registerOnTouched(fn: any): void {
     this.onTouched = fn;
   }
+
   setDisabledState(isDisabled: boolean): void {
     this.disabledSelected = isDisabled;
     this.cdr.markForCheck();
@@ -93,6 +110,7 @@ export class CdkDropdownComponent implements ControlValueAccessor {
 
   open(triggerEl: HTMLElement) {
     if (this.disabledSelected || this.isOpen) return;
+
     const w = triggerEl.getBoundingClientRect().width;
     this.positionStrategy = this.overlay.position()
       .flexibleConnectedTo(triggerEl)
@@ -101,18 +119,9 @@ export class CdkDropdownComponent implements ControlValueAccessor {
       .withPush(true)
       .withViewportMargin(8);
 
-    // this.overlayRef = this.overlay.create({
-    //   positionStrategy: this.positionStrategy,
-    //   hasBackdrop: true,
-    //   backdropClass: 'cdk-overlay-transparent-backdrop',
-    //   // scrollStrategy: this.overlay.scrollStrategies.reposition(),
-    //   width: w, // ✅ เท่าปุ่มตั้งแต่แรก
-    // });
-
     this.overlayRef = this.overlay.create({
       positionStrategy: this.positionStrategy,
-      hasBackdrop: true,
-      backdropClass: 'cdk-overlay-transparent-backdrop',
+      hasBackdrop: false, // ❌ อย่าใช้ backdrop ถ้าอยู่ใน dialog เดี๋ยวซ้อนกัน
       scrollStrategy: this.sso.reposition(),
       panelClass: 'tw-block',
     });
@@ -120,36 +129,38 @@ export class CdkDropdownComponent implements ControlValueAccessor {
     const portal = new TemplatePortal(this.panelTpl, this.vcr);
     this.overlayRef.attach(portal);
 
-    // ✅ sync ขนาดหลัง attach (ให้แน่ใจว่า layout เสร็จ)
     const sync = () => {
-      const w = triggerEl.getBoundingClientRect().width;
-      this.overlayRef!.updateSize({ width: w });   // หรือ { minWidth: w } ถ้าอยากให้ขยายได้
+      const width = triggerEl.getBoundingClientRect().width;
+      this.overlayRef!.updateSize({ width });
       this.overlayRef!.updatePosition();
     };
-    // ทำทันที 1 ครั้ง + ถัดไปด้วย microtask เผื่อ style เพิ่งวิ่งเข้า
     sync();
     Promise.resolve().then(sync);
 
-    // ✅ ติดตามการเปลี่ยนแปลงความกว้างปุ่มแบบเรียลไทม์
     this.ro = new ResizeObserver(sync);
     this.ro.observe(triggerEl);
 
-    this.overlayRef.backdropClick().subscribe(() => this.close());
-    this.overlayRef.detachments().subscribe(() => this.close());
-
     this.activeIndex = Math.max(0, this.items.findIndex(i => this.isEqual(i.value, this.value)));
     this.isOpen = true;
+
+    // ✅ เก็บ element references สำหรับตรวจ outside click
     this._triggerEl = triggerEl;
+    this._overlayEl = this.overlayRef.overlayElement;
+
     this.cdr.markForCheck();
   }
 
   close() {
     if (!this.isOpen) return;
+
     this.ro?.disconnect();
     this.ro = undefined;
     this.overlayRef?.detach();
     this.isOpen = false;
     this.activeIndex = -1;
+    this._triggerEl = undefined;
+    this._overlayEl = undefined;
+
     this.onTouched();
     this.cdr.markForCheck();
   }
@@ -157,9 +168,8 @@ export class CdkDropdownComponent implements ControlValueAccessor {
   selectAt(idx: number) {
     const it = this.items[idx];
     if (!it) return;
-    this.value = it.value;
 
-    // แจ้งทั้ง FormControl และ output เผื่อคนอยากฟัง event
+    this.value = it.value;
     this.onChange(this.value);
     this.valueChange.emit(this.value);
 
@@ -168,6 +178,7 @@ export class CdkDropdownComponent implements ControlValueAccessor {
 
   onTriggerKeydown(e: KeyboardEvent, triggerEl: HTMLElement) {
     if (this.disabledSelected) return;
+
     switch (e.key) {
       case 'Enter':
       case ' ':
@@ -207,5 +218,7 @@ export class CdkDropdownComponent implements ControlValueAccessor {
     }
   }
 
-  isEqual(a: any, b: any) { return String(a) === String(b); }
+  isEqual(a: any, b: any) {
+    return String(a) === String(b);
+  }
 }

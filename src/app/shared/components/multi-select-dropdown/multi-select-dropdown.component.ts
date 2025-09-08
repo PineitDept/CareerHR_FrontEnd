@@ -1,4 +1,4 @@
-import { Component, ElementRef, EventEmitter, HostListener, Input, Output } from '@angular/core';
+import { Component, ElementRef, EventEmitter, HostListener, Input, Output, ViewChild } from '@angular/core';
 import { ControlValueAccessor } from '@angular/forms';
 
 export interface SelectOption {
@@ -17,23 +17,26 @@ export class MultiSelectDropdownComponent implements ControlValueAccessor {
   @Input() label?: string;
   @Input() required: boolean = false;
   @Input() disabled: boolean = false;
-  
+
   @Output() selectionChange = new EventEmitter<SelectOption[]>();
+
+  @ViewChild('triggerEl') triggerElRef!: ElementRef<HTMLElement>;
 
   selectedOptions: SelectOption[] = [];
   searchTerm: string = '';
   isOpen: boolean = false;
   highlightedIndex: number = -1;
-  
-  private onChange = (value: any) => {};
-  private onTouched = () => {};
+  dropdownStyles: Record<string, string> = {};
 
-  constructor(private elementRef: ElementRef) {}
+  private onChange = (value: any) => { };
+  private onTouched = () => { };
+
+  constructor(private elementRef: ElementRef) { }
 
   // ControlValueAccessor implementation
   writeValue(value: string[] | null): void {
     if (value && Array.isArray(value)) {
-      this.selectedOptions = this.options.filter(option => 
+      this.selectedOptions = this.options.filter(option =>
         value.includes(option.value)
       );
     } else {
@@ -58,21 +61,32 @@ export class MultiSelectDropdownComponent implements ControlValueAccessor {
     if (!this.searchTerm) {
       return this.options;
     }
-    
+
     return this.options.filter(option =>
       option.label.toLowerCase().includes(this.searchTerm.toLowerCase())
     );
   }
 
   openDropdown(): void {
-    if (!this.disabled) {
-      this.isOpen = true;
-      this.highlightedIndex = -1;
+    if (this.disabled) return;
+
+    const triggerEl = this.triggerElRef?.nativeElement;
+    if (triggerEl) {
+      const rect = triggerEl.getBoundingClientRect();
+      this.dropdownStyles = {
+        top: `${rect.bottom + 8}px`,
+        left: `${rect.left}px`,
+        width: `${rect.width}px`,
+      };
     }
+
+    this.isOpen = true;
+    this.highlightedIndex = -1;
   }
 
   closeDropdown(): void {
     this.isOpen = false;
+    this.dropdownStyles = {};
     this.highlightedIndex = -1;
     this.onTouched();
   }
@@ -147,7 +161,7 @@ export class MultiSelectDropdownComponent implements ControlValueAccessor {
     }
 
     const maxIndex = this.filteredOptions.length - 1;
-    
+
     if (direction > 0) {
       this.highlightedIndex = this.highlightedIndex < maxIndex ? this.highlightedIndex + 1 : 0;
     } else {
@@ -169,7 +183,7 @@ export class MultiSelectDropdownComponent implements ControlValueAccessor {
     if (!this.searchTerm) {
       return text;
     }
-    
+
     const regex = new RegExp(`(${this.searchTerm})`, 'gi');
     return text.replace(regex, '<mark class="bg-yellow-200">$1</mark>');
   }

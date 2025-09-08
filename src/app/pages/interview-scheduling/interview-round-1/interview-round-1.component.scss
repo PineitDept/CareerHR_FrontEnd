@@ -1,9 +1,20 @@
 .box-shadow {
     border: 1px solid #DEE2E6;
-    overflow: hidden;
-    // background: #F8F9FA;
+    // overflow: hidden;
     background: #fff;
     min-width: 380px;
+}
+
+.flex-box {
+    display: flex;
+    align-items: center;
+}
+
+.flex-box-col {
+    display: flex;
+    justify-content: space-between;
+    flex-direction: column;
+    height: 100%;
 }
 
 .tag {
@@ -22,4 +33,27 @@
 
 .grid-cols-auto {
     grid-template-columns: auto auto auto auto;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.carousel {
+  margin: 20px auto;
+  width: 80%;
+}
+
+.slide {
+  padding: 10px;
+  min-width: 360px;
+}
+
+::ng-deep .slick-next::before,
+::ng-deep .slick-prev::before {
+    color: #333;
+}
+
+::ng-deep .slick-disabled {
+    opacity: 0.8;
 }

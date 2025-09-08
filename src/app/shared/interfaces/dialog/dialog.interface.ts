@@ -5,6 +5,8 @@ export interface AlertDialogData {
   selectedRows?: any[];
   columns?: any[];
   poType?: string[];
+  options?: any[];
+  dropdownConfigs?: any[];
   quality?: number;
 }
 
