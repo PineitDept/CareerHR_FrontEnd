@@ -24,7 +24,7 @@ export interface ConfirmChangesData {
   groups: Array<{
     section: string;
     items: Array<{
-      entity: 'Category' | 'CategoryName' | 'Detail';
+      entity?: string;
       id?: string | number | null;
       label: string;
       field: string; // '__index', 'questionTH', 'type', ...

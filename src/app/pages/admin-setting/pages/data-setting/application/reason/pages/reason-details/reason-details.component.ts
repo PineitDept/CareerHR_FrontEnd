@@ -10,6 +10,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { NotificationService } from '../../../../../../../../shared/services/notification/notification.service';
 import { ConnectedPosition } from '@angular/cdk/overlay';
+import { ConfirmChangesDialogComponent } from '../../../../../../../../shared/components/dialogs/confirm-changes-dialog/confirm-changes-dialog.component';
 dayjs.extend(utc);
 
 type CategoryKey = string;
@@ -24,7 +25,7 @@ interface CategoryMeta {
 
 interface ReasonEntry {
   reasonId?: number;
-  categoryId: number;
+  categoryId: number | null;   // <<< รองรับ null ตอน detached
   categoryName: string;
   reasonText: string;
   isActive: boolean;
@@ -113,6 +114,8 @@ export class ReasonDetailsComponent {
 
   // ===== เก็บความกว้าง overlay ต่อ index =====
   overlayWidth: Record<number, number> = {};
+
+  private initialPayloadForDiff: { processName: string; reasons: any[] } | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -238,14 +241,47 @@ export class ReasonDetailsComponent {
       return; // ยกเลิก save
     }
 
-    const payload = this.getFormPayload();
-    console.log('SAVE payload:', payload);
-    // TODO: persist
+    // === สร้าง summary สำหรับยืนยัน ===
+    const groups = this.buildChangeSummary();
 
-    this.initialSnapshot = this.computeSnapshot();
-    this.formDetails.markAsPristine();
-    this.removeDraft();
-    this.updateSaveState();
+    // ถ้าไม่มีอะไรเปลี่ยนเลย ก็ไม่ต้องคอนเฟิร์ม
+    if (!groups.length) {
+      this.notify.info('No changes to save.');
+      return;
+    }
+
+    Promise.resolve().then(() => {
+      document.querySelector('.cdk-overlay-container')?.classList.add('dimmed-overlay');
+    });
+
+    const dialogRef = this.dialog.open(ConfirmChangesDialogComponent, {
+      width: '860px',
+      panelClass: 'custom-dialog-container',
+      disableClose: true,
+      data: {
+        title: 'Confirm Changes',
+        groups,
+      }
+    });
+
+    dialogRef.afterClosed().subscribe((ok: boolean) => {
+      document.querySelector('.cdk-overlay-container')?.classList.remove('dimmed-overlay');
+      if (!ok) return;
+
+      const payload = this.getFormPayload();
+      console.log('SAVE payload:', payload);
+
+      // TODO: call API ที่แท้จริง
+      // this.reasonService.saveReasons(this.processId, payload).subscribe(...)
+
+      // รีเฟรช baseline และสถานะฟอร์ม
+      this.initialSnapshot = this.computeSnapshot();
+      this.initialPayloadForDiff = payload;
+      this.formDetails.markAsPristine();
+      this.removeDraft();
+      this.updateSaveState();
+      this.notify.success('Saved successfully.');
+    });
   }
 
   // ================= โหลดข้อมูล =================
@@ -296,6 +332,7 @@ export class ReasonDetailsComponent {
 
         // 2) สร้าง snapshot ฝั่ง server
         this.initialSnapshot = this.computeSnapshot();
+        this.initialPayloadForDiff = this.getFormPayload();
         this.formDetails.markAsPristine();
 
         // 3) พยายามกู้ draft; ถ้ากู้ไม่ได้ → view mode
@@ -504,7 +541,7 @@ export class ReasonDetailsComponent {
     // อัปเดตค่าในคอนโทรลแต่ไม่ปล่อย valueChanges (กัน side-effects)
     ctrl?.setValue(name, { emitEvent: false });
 
-    // ====== ใหม่: ถ้าชื่อตรงกับ option ใน dropdown ให้ใช้ categoryId ไปดึงเหตุผลมาเติม ======
+    // ====== ถ้าชื่อตรงกับ option ใน dropdown ให้ใช้ categoryId ไปดึงเหตุผลมาเติม ======
     // 1) หา option ที่เลือก/ตรงชื่อ
     const selected = this.selectedUnmapped[index]
       ?? this.unmappedAll.find(x => (x.categoryName || '').trim().toLowerCase() === name.toLowerCase());
@@ -526,6 +563,7 @@ export class ReasonDetailsComponent {
     // ถือว่าเป็นการแก้ไขจริงแล้ว
     this.formDetails.markAsDirty();
     this.updateSaveState();
+    this.ensureLinkState(index);
   }
 
   onEditCategoryName(index: number) {
@@ -614,7 +652,7 @@ export class ReasonDetailsComponent {
     if (dupIdx >= 0) { cat.fieldErrors = true; cat.duplicateIndex = dupIdx; return; }
 
     const categoryName = this.getCategoryName(index);
-    const categoryId   = cat.meta?.categoryId ?? 0;
+    const categoryId   = cat.meta?.categoryId ?? null;  // <<< ถ้า detached = null
 
     const newReason: ReasonEntry = {
       reasonText: (payload.reasonText || '').trim(),
@@ -651,21 +689,24 @@ export class ReasonDetailsComponent {
     cat.fieldErrors = false;
     cat.duplicateIndex = null;
 
-    const prevText = (rows[idx].reasonText || '').trim();
     const nextText = (updatedRow.reasonText || '').trim();
 
-    // ไม่เปลี่ยนจริง → ไม่ต้อง mark dirty
-    if (prevText === nextText) return;
-
+    // กันซ้ำตามเดิม
     const dupIdx = this.findDupIndex(rows, nextText, idx);
     if (dupIdx >= 0) { cat.fieldErrors = true; cat.duplicateIndex = dupIdx; return; }
 
+    // อัปเดตให้เป็น reference ใหม่เสมอ
     const next = [...rows];
     next[idx] = { ...rows[idx], reasonText: nextText };
     cat.rows = next;
 
-    this.formDetails.markAsDirty();
+    // เรียกเสมอ เพื่อให้ snapshot ล่าสุดถูกเขียน/ลบ draft ให้ตรง
     this.updateSaveState();
+
+    // (ถ้าต้องการให้ปุ่ม Save เปิดเฉพาะต่างจาก baseline)
+    // ไม่ต้อง markAsDirty ที่นี่ก็ได้ ปล่อยให้ updateSaveState ใช้ snapshot เทียบเอง
+    // แต่ถ้าต้องการเปิดปุ่ม Save เมื่อแก้แม้เท่ากับ baseline ให้ปล่อย markAsDirty:
+    // this.formDetails.markAsDirty();
   }
 
   onDeleteRowClicked(row: ReasonEntry, index: number) {
@@ -714,7 +755,7 @@ export class ReasonDetailsComponent {
     const normal = this.categoryBlocks.map((cb, i) => {
       const name = this.getCategoryName(i);
       return {
-        categoryId: cb.meta?.categoryId ?? 0,
+        categoryId: cb.meta?.categoryId ?? null,
         categoryName: name || cb.meta?.categoryName || cb.displayName || '',
         categoryType: cb.meta?.categoryType ?? (name || cb.displayName || ''),
         isActive: cb.active,// ใช้ active จากกล่อง
@@ -727,11 +768,11 @@ export class ReasonDetailsComponent {
 
         rejectionReasons: (cb.rows || []).map((r: ReasonEntry) => ({
           reasonId: r.reasonId,
-          categoryId: cb.meta?.categoryId ?? 0,
+          categoryId: (r as any).categoryId ?? cb.meta?.categoryId ?? null,
           categoryName: name || cb.meta?.categoryName || '',
           reasonText: r.reasonText,
           isActive: r.isActive ?? true,
-          isDeleted: r.isDeleted ?? true,
+          isDeleted: r.isDeleted, // <<< เคารพค่าของ row (detached = true, ของ API = ตาม server)
           createdAt: r.createdAt ?? null,
         })),
       };
@@ -766,7 +807,7 @@ export class ReasonDetailsComponent {
 
   private computeSnapshotFromReasons(reasons: any[]): string {
     const blocks = (reasons || []).map(b => ({
-      categoryId: b.categoryId ?? 0,
+      categoryId: (b.categoryId ?? null), // <<< เก็บ null ไว้ตามจริง
       categoryName: this.normalizeName(b.categoryName || b.categoryType || ''),
       isActive: !!b.isActive,     // track การเปลี่ยน active
       // เก็บไว้ได้แต่ไม่ใช้เป็นเงื่อนไขลบหมวดปกติ
@@ -784,9 +825,21 @@ export class ReasonDetailsComponent {
 
   private updateSaveState() {
     if (!this.isEditMode) return;
-    const changed = this.formDetails.dirty || (this.initialSnapshot !== this.computeSnapshot());
-    if (changed) this.persistDraft(); else this.removeDraft();
-    this.setSaveEnabled(changed);
+
+    const snapChanged = (this.initialSnapshot !== this.computeSnapshot());
+
+    if (snapChanged) {
+      // มีความเปลี่ยนแปลงจริง
+      this.persistDraft();
+      this.setSaveEnabled(true);
+      // ให้ฟอร์ม dirty เสมอเมื่อมี diff (เพื่อป้องกันกรณีบางที่ไม่ได้ markAsDirty)
+      if (!this.formDetails.dirty) this.formDetails.markAsDirty();
+    } else {
+      // ไม่มี diff แล้ว → ลบ draft + ปิดปุ่ม + รีเซ็ตสถานะฟอร์ม
+      this.removeDraft();
+      this.setSaveEnabled(false);
+      if (this.formDetails.dirty) this.formDetails.markAsPristine();
+    }
   }
 
   private validateNewCategoriesBeforeSave(): {
@@ -1014,15 +1067,17 @@ export class ReasonDetailsComponent {
 
     // เคส: ล้างข้อความหมด → เคลียร์ selection/active
     if (!value.trim()) {
-      this.clearSelectedForIndex(index);
+      this.clearSelectedForIndex(index, value);
       return;
     }
 
     // ถ้าเคยเลือก option แต่ข้อความที่พิมพ์ไม่ตรงกับที่เลือก → เคลียร์ selection
     const sel = this.selectedUnmapped[index];
     if (sel && sel.categoryName.trim().toLowerCase() !== value.trim().toLowerCase()) {
-      this.clearSelectedForIndex(index);
+      this.clearSelectedForIndex(index, value);
     }
+
+    this.ensureLinkState(index);
   }
 
   selectUnmappedCategory(index: number, opt: UnmappedCategory) {
@@ -1048,6 +1103,7 @@ export class ReasonDetailsComponent {
     this.closeUnmappedDropdown();
     this.formDetails.markAsDirty();
     this.updateSaveState();
+    this.ensureLinkState(index); // trigger link + fetch/merge ทันทีถ้าชื่อตรง
   }
 
   moveActiveOption(i: number, delta: number) {
@@ -1071,15 +1127,22 @@ export class ReasonDetailsComponent {
   /**
    * เคลียร์ selection ของ dropdown + meta สำหรับ index ที่กำหนด
    */
-  private clearSelectedForIndex(index: number) {
+  private clearSelectedForIndex(index: number, nextName?: string) {
+    const cb = this.categoryBlocks[index];
+    if (!cb) return;
+    const wasLinked = !!cb.meta; // เคยลิงก์มาก่อนหรือไม่
+
     this.selectedUnmapped[index] = null;
 
-    // ถ้าเป็น new category และเคยผูก meta จาก option มาก่อน ให้ล้างออก
-    if (this.categoryBlocks[index]?.isNew) {
-      this.categoryBlocks[index].meta = null;
+    if (cb.isNew) {
+      if (wasLinked) {
+        // <<< scrub ทุกแถวด้วยชื่อปัจจุบันเสมอ
+        const name = (nextName ?? this.getCategoryName(index) ?? '').toString();
+        this.scrubRowsForDetached(index, name);
+      }
+      cb.meta = null;
     }
 
-    // resetไฮไลท์รายการ
     this.activeUnmappedIndex[index] = 0;
   }
 
@@ -1093,7 +1156,7 @@ export class ReasonDetailsComponent {
     const value = (ctrl?.value || '').toString().trim();
 
     if (!value) {
-      this.clearSelectedForIndex(index);
+      this.clearSelectedForIndex(index, value);
       this.closeUnmappedDropdown();
       return;
     }
@@ -1105,10 +1168,11 @@ export class ReasonDetailsComponent {
     if (match) {
       this.selectUnmappedCategory(index, match);
     } else {
-      this.clearSelectedForIndex(index);
+      this.clearSelectedForIndex(index, value);
     }
 
     this.closeUnmappedDropdown();
+    this.ensureLinkState(index);
   }
 
   /** เลือก option ตั้งแต่ mousedown และกัน blur */
@@ -1167,14 +1231,6 @@ export class ReasonDetailsComponent {
 
       if (match) {
         this.selectedUnmapped[i] = match;
-        // อัปเดต meta ให้ครบ (กันเคส meta เดิมเป็น null)
-        cb.meta = {
-          categoryId: match.categoryId,
-          categoryName: match.categoryName,
-          categoryType: match.categoryType,
-          isActive: match.isActive,
-          isUnMatch: false,
-        };
       }
     });
   }
@@ -1228,6 +1284,247 @@ export class ReasonDetailsComponent {
     });
   }
 
+  private scrubRowsForDetached(index: number, nextName: string) {
+    const cb = this.categoryBlocks[index];
+    if (!cb) return;
+    cb.rows = (cb.rows || []).map(r => ({
+      reasonId: undefined,
+      categoryId: null, // <<< ต้องเป็น null
+      categoryName: nextName,
+      reasonText: (r.reasonText || '').toString(),
+      isActive: true, // <<< true เสมอสำหรับแถว detached
+      isDeleted: true, // <<< true เสมอสำหรับแถว detached
+      createdAt: null,
+    }));
+  }
+
+  private namesEqual(a: string, b: string): boolean {
+    return (a || '').trim().toLowerCase() === (b || '').trim().toLowerCase();
+  }
+
+  private ensureLinkState(index: number) {
+    const cb = this.categoryBlocks[index];
+    if (!cb || !cb.isNew) return;
+
+    const currentName = (this.getCategoryName(index) || '').trim();
+    const selected = this.selectedUnmapped[index];
+
+    // กรณีมี meta (เคย linked) แต่ชื่อ "ไม่ตรง" กับ option → DETACH
+    if (cb.meta && (!selected || !this.namesEqual(currentName, selected.categoryName))) {
+      // DETACH
+      cb.meta = null;                 // ปลดลิงก์
+      this.scrubRowsForDetached(index, currentName);
+      this.formDetails.markAsDirty();
+      this.updateSaveState();
+      return;
+    }
+
+    // กรณีไม่มี meta (unlinked/detached) แต่ตอนนี้ "ตรง" option → LINK + hydrate
+    if (!cb.meta && selected && this.namesEqual(currentName, selected.categoryName)) {
+      cb.meta = {
+        categoryId: selected.categoryId,
+        categoryName: selected.categoryName,
+        categoryType: selected.categoryType,
+        isActive: selected.isActive,
+        isUnMatch: false,
+      };
+      // hydrate (re-fetch เสมอเพื่อกัน stale)
+      this.fetchAndFillReasonsFor(index, selected.categoryId, selected.categoryName);
+      this.formDetails.markAsDirty();
+      this.updateSaveState();
+    }
+  }
+
+  private buildChangeSummary(): Array<{
+    section: string;
+    items: Array<{
+      id?: string | number | null;
+      label: string;
+      field: string;
+      from: any;
+      to: any;
+    }>;
+  }> {
+    const before = this.initialPayloadForDiff?.reasons ?? [];
+    const after  = this.buildReasonsPayload();
+
+    const norm = (s: string) => (s || '').trim().toLowerCase();
+    const catKey = (b: any) => {
+      const id = b?.categoryId ?? 0;
+      return id && id > 0 ? `id:${id}` : `name:${norm(b?.categoryName || b?.categoryType || '')}`;
+    };
+
+    const mapByKey = (arr: any[]) => {
+      const m = new Map<string, any>();
+      for (const b of arr) m.set(catKey(b), b);
+      return m;
+    };
+
+    const B = mapByKey(before);
+    const A = mapByKey(after);
+
+    const groups: Array<{ section: string; items: any[] }> = [];
+
+    // ===== Categories =====
+    const catItems: any[] = [];
+
+    // Created categories
+    for (const [k, a] of A.entries()) {
+      if (a?.isUnMatch) continue;
+      if (!B.has(k)) {
+        const name = a.categoryName || a.categoryType || '(new)';
+        catItems.push({
+          entity: 'Category',
+          id: a.categoryId ?? null,
+          label: name,
+          field: 'CREATE',
+          from: '-',
+          to: name,
+        });
+      }
+    }
+
+    // Unmatched categories
+    for (const a of after) {
+      if (a?.isUnMatch) {
+        const name = a.categoryName || a.categoryType || '(category)';
+        catItems.push({
+          entity: 'Category',
+          id: a.categoryId ?? null,
+          label: name,
+          field: 'Unmatch',
+          from: 'Matched',
+          to: 'Unmatched',
+        });
+      }
+    }
+
+    // Status toggle
+    for (const [k, a] of A.entries()) {
+      if (a?.isUnMatch) continue;
+      const b = B.get(k);
+      if (!b) continue;
+      if (!!a.isActive !== !!b.isActive) {
+        const name = a.categoryName || a.categoryType || '(category)';
+        catItems.push({
+          entity: 'Category',
+          id: a.categoryId ?? null,
+          label: name,
+          field: 'activeStatus',
+          from: !!b.isActive,
+          to: !!a.isActive,
+        });
+      }
+    }
+
+    // Rename
+    for (const [k, a] of A.entries()) {
+      if (a?.isUnMatch) continue;
+      const b = B.get(k);
+      if (!b) continue;
+      const nameB = (b.categoryName || b.categoryType || '').toString().trim();
+      const nameA = (a.categoryName || a.categoryType || '').toString().trim();
+      if (nameB && nameA && nameB !== nameA) {
+        catItems.push({
+          entity: 'CategoryName',
+          id: a.categoryId ?? null,
+          label: nameA,
+          field: 'categoryName',
+          from: nameB,
+          to: nameA,
+        });
+      }
+    }
+
+    if (catItems.length) groups.push({ section: 'Categories', items: catItems });
+
+    // ===== Reasons =====
+    const reasonItems: any[] = [];
+
+    const categoryKeys = new Set<string>([...A.keys(), ...B.keys()]);
+    for (const k of categoryKeys) {
+      const a = A.get(k);
+      if (!a || a.isUnMatch) continue; // ข้าม category ที่ถูก unmatched หรือไม่มีใน after
+      const b = B.get(k);
+
+      const nameA = a.categoryName || a.categoryType || '(category)';
+      const byIdB = new Map<number, any>();
+      const byIdA = new Map<number, any>();
+      for (const r of (b?.rejectionReasons ?? [])) if (r?.reasonId) byIdB.set(r.reasonId, r);
+      for (const r of (a?.rejectionReasons ?? [])) if (r?.reasonId) byIdA.set(r.reasonId, r);
+
+      // 1) Edits (จับด้วย reasonId ที่ซ้อนกัน)
+      const editedIds = new Set<number>();
+      for (const [rid, rA] of byIdA.entries()) {
+        const rB = byIdB.get(rid);
+        if (!rB) continue;
+        const tB = (rB.reasonText || '').trim();
+        const tA = (rA.reasonText || '').trim();
+        if (tB !== tA) {
+          editedIds.add(rid);
+          reasonItems.push({
+            entity: 'Detail',
+            id: rA.reasonId ?? null,
+            label: nameA,
+            field: 'Edit Reason',
+            from: tB,
+            to: tA,
+          });
+        }
+      }
+
+      // 2) New (ไม่มี reasonId หรือมี reasonId แต่ไม่อยู่ใน before) — และไม่ใช่ edited
+      for (const rA of (a?.rejectionReasons ?? [])) {
+        const rid = rA?.reasonId;
+        const isEdited = typeof rid === 'number' && editedIds.has(rid);
+        const isNew =
+          rid == null // แถวใหม่ที่ยังไม่ถูกออก id
+          || (typeof rid === 'number' && !byIdB.has(rid)); // มี id แต่ไม่เคยอยู่ใน before
+
+        if (!isEdited && isNew) {
+          reasonItems.push({
+            entity: 'Detail',
+            id: rA?.reasonId ?? null,
+            label: nameA,
+            field: 'New Reason',
+            from: '-',
+            to: (rA?.reasonText || '').trim(),
+          });
+        }
+      }
+
+      // 3) Delete (อยู่ใน before แต่ไม่อยู่ใน after) — และไม่ใช่ edited
+      for (const rB of (b?.rejectionReasons ?? [])) {
+        const rid = rB?.reasonId;
+        if (typeof rid !== 'number') continue;       // baseline ส่วนใหญ่มี id
+        if (editedIds.has(rid)) continue;            // ตัดกรณีแก้ไขออก
+        if (!byIdA.has(rid)) {
+          reasonItems.push({
+            entity: 'Detail',
+            id: rB?.reasonId ?? null,
+            label: nameA,
+            field: 'Delete Reason',
+            from: (rB?.reasonText || '').trim(),
+            to: '-',
+          });
+        }
+      }
+    }
+
+    if (reasonItems.length) groups.push({ section: 'Reasons', items: reasonItems });
+
+    return groups;
+  }
+
+  private getBaselineReasonText(reasonId?: number | null): string | null {
+    if (!reasonId || !this.initialPayloadForDiff?.reasons) return null;
+    for (const b of this.initialPayloadForDiff.reasons) {
+      for (const r of (b.rejectionReasons || [])) {
+        if (r?.reasonId === reasonId) return (r.reasonText || '').trim();
+      }
+    }
+    return null;
+  }
 
   ngOnDestroy(): void {
     this.destroy$.next();

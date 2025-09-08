@@ -23,14 +23,24 @@ export class ConfirmChangesDialogComponent {
   prettyField(field: string): string {
     switch (field) {
       case 'CREATE': return 'Create';
+      case 'Unmatch': return 'Unmatch';
+      case 'activeStatus': return 'Status';
+      case 'categoryName':
+      case 'CategoryName': return 'Category Name';
+
+      // ===== ป้ายเหตุผลแบบใหม่ =====
+      case 'New Reason': return 'New Reason';
+      case 'Edit Reason': return 'Edit Reason';
+      case 'Delete Reason': return 'Delete Reason';
+
+      // (ของเดิมที่ใช้ในหน้าก่อน ๆ — คงไว้เพื่อ backward compatibility)
       case 'NEW': return 'New Row';
+      case 'DELETE': return 'Delete Row';
+      case 'reasonText': return 'Reason';
       case '__index': return 'Order';
       case 'questionTH': return 'Question (TH)';
       case 'questionEN': return 'Question (EN)';
-      case 'activeStatus': return 'Status';
       case 'scoringMethod': return 'Scoring Method';
-      case 'CategoryName':
-      case 'categoryName': return 'Category Name';
       default: return field;
     }
   }
