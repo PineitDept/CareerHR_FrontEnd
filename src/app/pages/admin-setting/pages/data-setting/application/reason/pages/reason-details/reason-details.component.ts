@@ -11,6 +11,7 @@ import utc from 'dayjs/plugin/utc';
 import { NotificationService } from '../../../../../../../../shared/services/notification/notification.service';
 import { ConnectedPosition } from '@angular/cdk/overlay';
 import { ConfirmChangesDialogComponent } from '../../../../../../../../shared/components/dialogs/confirm-changes-dialog/confirm-changes-dialog.component';
+import { ApiCategory, ApiReason, ApiRequestBody } from '../../../../../../../../interfaces/admin-setting/reason.interface';
 dayjs.extend(utc);
 
 type CategoryKey = string;
@@ -117,6 +118,8 @@ export class ReasonDetailsComponent {
 
   private initialPayloadForDiff: { processName: string; reasons: any[] } | null = null;
 
+  isSaving = false;
+
   constructor(
     private route: ActivatedRoute,
     private reasonService: ReasonService,
@@ -138,7 +141,7 @@ export class ReasonDetailsComponent {
       .pipe(takeUntil(this.destroy$))
       .subscribe(params => {
         this.processName = (params['processName'] || '').split('-').join(' ');
-        this.processId = params['processId'] || 0;
+        this.processId = Number(params['processId'] || 0);
 
         this.formDetails.patchValue({ processName: this.processName });
         this.fetchRecruitmentStagesWithReasons();
@@ -268,24 +271,43 @@ export class ReasonDetailsComponent {
       document.querySelector('.cdk-overlay-container')?.classList.remove('dimmed-overlay');
       if (!ok) return;
 
-      const payload = this.getFormPayload();
-      console.log('SAVE payload:', payload);
+      // สร้าง payload สำหรับ API (คัดทิ้ง category ที่ไม่เปลี่ยน)
+      const payloadForApi = this.buildApiRequest();
 
-      // TODO: call API ที่แท้จริง
-      // this.reasonService.saveReasons(this.processId, payload).subscribe(...)
+      // กันกดซ้ำ
+      if (this.isSaving) return;
+      this.isSaving = true;
+      this.setSaveEnabled(false);
 
-      // รีเฟรช baseline และสถานะฟอร์ม
-      this.initialSnapshot = this.computeSnapshot();
-      this.initialPayloadForDiff = payload;
-      this.formDetails.markAsPristine();
-      this.removeDraft();
-      this.updateSaveState();
-      this.notify.success('Saved successfully.');
+      this.reasonService.updateReasonsOfRecruitmentStage(payloadForApi)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            // รีเฟรช baseline ให้ตรงกับสิ่งที่เพิ่งเซฟ
+            this.initialSnapshot = this.computeSnapshot();
+            this.initialPayloadForDiff = this.getFormPayload();
+            this.formDetails.markAsPristine();
+            this.removeDraft();
+            this.updateSaveState();
+
+            this.notify.success('Saved successfully.');
+            // ถ้าต้องการรีเฟรชข้อมูลจากเซิร์ฟเวอร์ (กันสเตต stale) ให้เรียกซ้ำ:
+            this.fetchRecruitmentStagesWithReasons();
+          },
+          error: (err) => {
+            const msg = (err?.error?.message || err?.message || 'Save failed. Please try again.') as string;
+            this.notify.error(msg);
+            this.setSaveEnabled(true); // เปิดปุ่มให้ลองใหม่
+          }
+        }).add(() => {
+          this.isSaving = false;
+        });
     });
   }
 
   // ================= โหลดข้อมูล =================
   fetchRecruitmentStagesWithReasons() {
+    console.log('fetchRecruitmentStagesWithReasons');
     this.reasonService.getRecruitmentStagesWithReasons(this.processId).subscribe({
       next: (response) => {
         // 1) สร้าง blocks จาก server
@@ -1524,6 +1546,136 @@ export class ReasonDetailsComponent {
       }
     }
     return null;
+  }
+
+  private catKeyForDiff(b: any): string {
+    const id = b?.categoryId ?? 0;
+    const name = (b?.categoryName || b?.categoryType || '').toString().trim().toLowerCase();
+    return id && id > 0 ? `id:${id}` : `name:${name}`;
+  }
+
+  private toReasonMapById(list: any[]): Map<number, any> {
+    const m = new Map<number, any>();
+    for (const r of (list || [])) {
+      if (typeof r?.reasonId === 'number') m.set(r.reasonId, r);
+    }
+    return m;
+  }
+
+  private buildApiRequest(): ApiRequestBody {
+    const before = this.initialPayloadForDiff?.reasons ?? [];
+    const after  = this.buildReasonsPayload();
+
+    const B = new Map<string, any>();
+    for (const b of before) B.set(this.catKeyForDiff(b), b);
+
+    const A = new Map<string, any>();
+    for (const a of after)  A.set(this.catKeyForDiff(a), a);
+
+    const categories: ApiCategory[] = [];
+
+    for (const [k, a] of A.entries()) {
+      const b = B.get(k); // baseline (undefined = หมวดใหม่)
+
+      const categoryId   = (a?.categoryId ?? null) as number | null;
+      const categoryName = (a?.categoryName || a?.categoryType || '').toString();
+      const categoryType = (a?.categoryType || categoryName || '').toString();
+      const isActive     = !!a?.isActive;
+      const isUnmatch    = !!a?.isUnMatch;
+
+      // ===== สร้าง reasons "diff เท่านั้น" =====
+      const reasons: ApiReason[] = [];
+      const byIdB = this.toReasonMapById(b?.rejectionReasons || []);
+      const byIdA = this.toReasonMapById(a?.rejectionReasons || []);
+
+      // Edit
+      for (const [rid, rA] of byIdA.entries()) {
+        const rB = byIdB.get(rid);
+        if (!rB) continue;
+        const oldText = (rB.reasonText || '').trim();
+        const newText = (rA.reasonText || '').trim();
+        if (oldText !== newText) {
+          reasons.push({
+            reasonId: rid,
+            reasonText: newText,
+            isActive: !!rA.isActive,
+            isDelete: false,
+          });
+        }
+      }
+
+      // New
+      for (const rA of (a?.rejectionReasons || [])) {
+        const rid = rA?.reasonId;
+        const isNew = rid == null || !byIdB.has(rid);
+        if (isNew) {
+          const text = (rA?.reasonText || '').toString().trim();
+          if (text) {
+            reasons.push({
+              reasonId: null,
+              reasonText: text,
+              isActive: true,
+              isDelete: false,
+            });
+          }
+        }
+      }
+
+      // Delete
+      const idsInA = new Set<number>([...byIdA.keys()]);
+      for (const [rid, rB] of byIdB.entries()) {
+        if (!idsInA.has(rid)) {
+          reasons.push({
+            reasonId: rid,
+            reasonText: (rB?.reasonText || '').toString().trim(),
+            isActive: !!rB?.isActive,
+            isDelete: true,
+          });
+        }
+      }
+
+      // หมวดใหม่ → ถ้า reasons ยังว่าง ให้ส่งทุกเหตุผลเป็น new
+      if (!b && !isUnmatch && reasons.length === 0) {
+        for (const r of (a?.rejectionReasons || [])) {
+          const text = (r?.reasonText || '').toString().trim();
+          if (text) {
+            reasons.push({
+              reasonId: null,
+              reasonText: text,
+              isActive: true,
+              isDelete: false,
+            });
+          }
+        }
+      }
+
+      // ===== จุดสำคัญ: กรอง category ที่ไม่เปลี่ยนแปลง =====
+      const noCategoryChange =
+        !!b &&                 // มี baseline อยู่แล้ว (ไม่ใช่หมวดใหม่)
+        !isUnmatch &&          // ไม่ได้กด unmatch
+        (!!b.isActive === isActive) &&  // active ไม่เปลี่ยน
+        reasons.length === 0;  // ไม่มี diff ของ reasons
+
+      if (noCategoryChange) {
+        // ⛔ ข้าม ไม่ push ลง payload
+        continue;
+      }
+
+      // มีการเปลี่ยนแปลง → ใส่ใน payload
+      categories.push({
+        categoryId,
+        categoryName,
+        categoryType,
+        isActive,
+        isUnmatch,
+        reasons,
+      });
+    }
+
+    return {
+      stageId: this.processId, // ตอนนี้เป็น number แล้ว
+      categories,
+    };
   }
 
   ngOnDestroy(): void {

@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { ApiService } from '../../../shared/services/api/api.service';
 import { Observable } from 'rxjs';
+import { ApiRequestBody } from '../../../interfaces/admin-setting/reason.interface';
 
 @Injectable({
   providedIn: 'root'
@@ -25,7 +26,7 @@ export class ReasonService {
     });
   }
 
-  updateReasonsOfRecruitmentStage(body: any): Observable<any> {
+  updateReasonsOfRecruitmentStage(body: ApiRequestBody): Observable<any> {
     return this.apiService.post<any>(`RecruitmentReasons/bulk-update`, body, {
       withAuth: true,
       loading: true
