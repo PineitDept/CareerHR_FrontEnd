@@ -19,7 +19,14 @@ export class ApplicationQuestionService {
   }
 
   getCategoryTypesInfoQuestionDetails(categoryType: string): Observable<any> {
-    return this.apiService.get<any>(`InfoQuestion/TypeCategories/${categoryType}`, {
+    return this.apiService.get<any>(`InfoQuestion/TypeCategories/${categoryType}/Questions`, {
+      withAuth: true,
+      loading: true
+    });
+  }
+
+  getRevisionCategoryTypesInfoQuestionDetails(categoryId: number, revisionId: number): Observable<any> {
+    return this.apiService.get<any>(`InfoQuestion/history/questions/category/${categoryId}/revisionId/${revisionId}`, {
       withAuth: true,
       loading: true
     });

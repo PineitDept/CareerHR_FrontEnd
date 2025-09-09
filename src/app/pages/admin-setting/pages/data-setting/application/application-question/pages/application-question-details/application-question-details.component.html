@@ -129,6 +129,7 @@
         <label class="tw-text-lg tw-font-bold">Category Details</label>
 
         <div class="tw-flex tw-items-center tw-gap-2">
+          <!-- แสดงปุ่ม Edit เฉพาะหมวดล่าสุด -->
           <button
             type="button"
             (click)="onEditDetailsClicked()"
@@ -136,11 +137,12 @@
             tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
               tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-orange focus-visible:ring-orange"
             aria-label="Edit Details"
-            *ngIf="!isAddMode && !isEditDetails"
+            *ngIf="canEditSelectedCategory && !isAddMode && !isEditDetails"
           >
             <app-icon [name]="'pencil'" [size]="18" extraClass="tw-text-white"></app-icon>
             <span class="tw-font-semibold">Edit</span>
           </button>
+
           <button
             type="button"
             (click)="onSaveDetailsClicked()"
@@ -171,6 +173,7 @@
       <div class="tw-flex tw-items-center tw-justify-between tw-mb-4">
         <div></div>
 
+        <!-- แสดงปุ่ม Add Question เฉพาะหมวดล่าสุด -->
         <button
           type="button"
           (click)="onAddQuestionClicked()"
@@ -180,11 +183,15 @@
           [ngClass]="{
             'tw-pointer-events-none tw-opacity-50': !isEditDetails && !isAddMode
           }"
-          aria-label="Add Question">
+          aria-label="Add Question"
+          *ngIf="canEditSelectedCategory"
+        >
           <app-icon [name]="'plus'" [size]="18" extraClass="tw-text-white"></app-icon>
           <span class="tw-font-semibold">Add Question</span>
         </button>
       </div>
+
+      <!-- ตารางรายละเอียด -->
       <div class="tw--mx-6 tw-rounded-b-xl tw-max-h-[calc(100vh-330px)] tw-overflow-y-auto">
         <app-tables
           #categoryDetailsTable
@@ -214,6 +221,16 @@
           (editClicked)="onInlineEditSave($event)"
         ></app-tables>
       </div>
+
+      <!-- Revision History footer -->
+      <app-revision-history-footer
+        [label]="'Reason Detail Revision History'"
+        [revisionOptions]="revisionOptions"
+        [currentRevision]="currentRevision"
+        (revisionChange)="onRevisionChange($event)">
+      </app-revision-history-footer>
+      <!-- /Revision History footer -->
+
     </div>
   </div>
 </form>
