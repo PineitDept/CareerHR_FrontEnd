@@ -42,21 +42,21 @@ interface DetailsSnapshot {
 }
 
 type QuestionPayload = {
-  id: number;
+  id: number | null;
   questionTH: string;
   questionEN: string;
   type: string;
   sort: number | 0;
-  scoringMethod: number | 0 | null;
+  scoringMethod: number | null;   // <- ไม่มีให้ส่ง null
   isActive: boolean;
   isDeleted: boolean;
 };
 
 type CategorySavePayload = {
-  categoryId: number;
+  categoryId: number | null;      // <- ใหม่ให้เป็น null
   categoryName: string;
   categoryType: string;
-  isCategoryActive: boolean;
+  isCategoryActive: boolean;      // <- ส่ง true เสมอ
   questions: QuestionPayload[];
 };
 
@@ -814,10 +814,11 @@ export class ApplicationQuestionDetailsComponent {
       const payloads: CategorySavePayload[] = [];
 
       dirtyIds.forEach((cid) => {
-        const current = this.buildSnapshotFromCache(cid)
-          || (String(this.formDetails.get('selectedCategoryId')?.value) === String(cid)
-                ? this.buildCurrentDetailsView()
-                : null);
+        const current =
+          this.buildSnapshotFromCache(cid) ||
+          (String(this.formDetails.get('selectedCategoryId')?.value) === String(cid)
+            ? this.buildCurrentDetailsView()
+            : null);
 
         const baseline = this.getBaselineFor(cid) || { name: '', items: [] };
 
@@ -826,9 +827,8 @@ export class ApplicationQuestionDetailsComponent {
         }
       });
 
-      const body: any = (payloads.length === 1) ? payloads[0] : { categories: payloads };
-
-      this.applicationQuestionService.saveApplicationQuestionDetails(body).subscribe({
+      // ส่งเป็น "อาเรย์" ตรงตามสเปคใหม่
+      this.applicationQuestionService.saveApplicationQuestionDetails(payloads).subscribe({
         next: () => {
           dirtyIds.forEach((cid) => {
             this.deleteCachedDetails(cid);
@@ -1566,15 +1566,22 @@ export class ApplicationQuestionDetailsComponent {
     current: DetailsSnapshot,
     baseline: DetailsSnapshot | null
   ): CategorySavePayload {
-    const categoryIdNum = this.isTempId(catId) ? 0 : this.toNumberOrZero(catId);
-    const isCategoryActive = this.getCategoryActiveFlag(catId);
+    // ใหม่ => null, เดิม => ตัวเลขเดิม
+    const categoryIdOut: number | null = this.isTempId(catId)
+      ? null
+      : (this.toNumberOrZero(catId) || null);
 
+    // ส่ง true ตามสเปคใหม่
+    const isCategoryActive = true;
+
+    // map baseline ด้วย id (ใช้ตรวจว่า changed)
     const baselineById = new Map<number, any>();
     (baseline?.items ?? []).forEach((b: any) => {
       const idNum = this.toNumberOrZero(b?.id);
       if (idNum > 0) baselineById.set(idNum, b);
     });
 
+    // ใช้ไว้ mark ลบ
     const baseMapForDelete = new Map<string, any>();
     (baseline?.items ?? []).forEach((d: any, idx: number) => {
       baseMapForDelete.set(this.detailKeyForCompare(d, idx), d);
@@ -1582,43 +1589,49 @@ export class ApplicationQuestionDetailsComponent {
 
     const questions: QuestionPayload[] = [];
 
+    // เพิ่ม/แก้ไข
     (current.items ?? []).forEach((d: any, idx: number) => {
-      const idNum = this.toNumberOrZero(d?.id);
       const curKey = this.detailKeyForCompare(d, idx);
-      const old = idNum > 0 ? baselineById.get(idNum) : null;
-
       if (baseMapForDelete.has(curKey)) baseMapForDelete.delete(curKey);
 
+      const old = this.toNumberOrZero(d?.id) > 0 ? baselineById.get(this.toNumberOrZero(d?.id)) : null;
       const changed = this.isDetailChanged(d, old);
       if (!changed) return;
 
+      const idOut = this.toNumberOrZero(d?.id) > 0 ? this.toNumberOrZero(d?.id) : null;
+      const scoringOut = this.normalizeScoringForPayload(d?.scoringMethod); // ไม่มีให้เป็น null
+
       questions.push({
-        id: idNum > 0 ? idNum : 0,
+        id: idOut,
         questionTH: (d?.questionTH ?? '').trim(),
         questionEN: (d?.questionEN ?? '').trim(),
         type: (d?.type ?? 'Answer'),
         sort: this.toNumberOrZero(d?.sort) || 0,
-        scoringMethod: this.toNumberOrZero(d?.scoringMethod),
+        scoringMethod: scoringOut,
         isActive: !!d?.activeStatus,
         isDeleted: false,
       });
     });
 
+    // ลบ
     Array.from(baseMapForDelete.values()).forEach((old: any) => {
+      const idOut = this.toNumberOrZero(old?.id) || null;
+      const scoringOut = this.normalizeScoringForPayload(old?.scoringMethod);
+
       questions.push({
-        id: this.toNumberOrZero(old?.id) || 0,
+        id: idOut,
         questionTH: (old?.questionTH ?? '').trim(),
         questionEN: (old?.questionEN ?? '').trim(),
         type: (old?.type ?? 'Answer'),
         sort: this.toNumberOrZero(old?.sort) || 0,
-        scoringMethod: this.toNumberOrZero(old?.scoringMethod),
+        scoringMethod: scoringOut,
         isActive: !!old?.activeStatus,
         isDeleted: true,
       });
     });
 
     return {
-      categoryId: categoryIdNum,
+      categoryId: categoryIdOut,
       categoryName: (current?.name ?? '').trim(),
       categoryType: this.categoryType || '',
       isCategoryActive,
@@ -1883,6 +1896,23 @@ export class ApplicationQuestionDetailsComponent {
         });
       }
     }
+  }
+
+  private hasScoringMethod(): boolean {
+    return this.isQuiz2 || this.isAboutMe;
+  }
+
+  private normalizeScoringForPayload(val: any): number | null {
+    if (!this.hasScoringMethod()) return null;
+    if (this.isQuiz2) {
+      const n = Number(val);
+      return n === 2 ? 2 : 1; // Normal=1, Reverse=2
+    }
+    if (this.isAboutMe) {
+      const n = Number(val);
+      return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
+    }
+    return null;
   }
 
   ngOnDestroy() {
