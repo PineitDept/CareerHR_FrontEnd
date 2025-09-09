@@ -194,7 +194,24 @@
 
                   <!-- Number Content -->
                   <span *ngSwitchCase="'number'">
-                    {{ getCellValue(row, column.field) | number: '1.0-2' }}
+                    <ng-container *ngIf="editRow && (editingRowId === (row._tempId ?? i+1)) && (column.editing ?? true) && column.field !== '__index'; else numberView">
+                      <input
+                        type="number"
+                        class="tw-border tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white"
+                        [ngClass]="fieldErrors ? 'tw-border-red-500' : 'tw-border-gray-300'"
+                        [(ngModel)]="editingBuffer[column.field]"
+                        [attr.min]="(column.field === 'sort' || column.field === 'scoringMethod') ? 1 : null"
+                        [attr.step]="(column.field === 'sort' || column.field === 'scoringMethod') ? 1 : null"
+                        [attr.inputmode]="(column.field === 'sort' || column.field === 'scoringMethod') ? 'numeric' : null"
+                        (keydown)="onInlineNumberKeydown(column.field, $event)"
+                        (input)="onInlineNumberInput(column.field, $event)"
+                        (blur)="onInlineNumberBlur(column.field, $event)"
+                        (click)="$event.stopPropagation()"
+                      />
+                    </ng-container>
+                    <ng-template #numberView>
+                      {{ getCellValue(row, column.field) }}
+                    </ng-template>
                   </span>
 
                   <!-- Select Dropdown -->

@@ -454,8 +454,17 @@ export class ApplicationQuestionDetailsComponent {
 
   private autoOpenLastSelectedIfAny() {
     const last = this.getLastSelected();
-    if (!last) return;
-    const row = this.categoryRows.find(r => String(r.categoryId) === String(last));
+
+    // พยายามเปิดตาม last selected ก่อน
+    let row = last
+      ? this.categoryRows.find(r => String(r.categoryId) === String(last))
+      : undefined;
+
+    // ถ้าไม่มี last selected หรือหาไม่เจอ ⇒ เปิด "แถวล่าสุด" (ตัวท้ายของตาราง)
+    if (!row && this.categoryRows.length) {
+      row = this.categoryRows[this.categoryRows.length - 1];
+    }
+
     if (row) this.onRowClicked(row, 'view');
   }
 
@@ -1274,16 +1283,21 @@ export class ApplicationQuestionDetailsComponent {
       items: ChangeItem[];
     };
 
-    const groups: ChangeGroup[] = [];
-    const detItems: ChangeItem[] = [];
-    const dirtyIds = this.readDirty();
+    const newCatGroups: ChangeGroup[] = [];
+    const editGroups: ChangeGroup[] = [];
     const includeScoring = this.isQuiz2 || this.isAboutMe;
 
-    if (dirtyIds.length === 1 && this.isNewCategoryId(dirtyIds[0])) {
-      const cid = dirtyIds[0];
+    const dirtyIds = this.readDirty();
+
+    for (const cid of dirtyIds) {
       const currentFromCache = this.buildSnapshotFromCache(cid);
-      if (currentFromCache) {
+      const baseline = this.getBaselineFor(cid) || { name: '', items: [] as any[] };
+      if (!currentFromCache) continue;
+
+      // -------- กลุ่ม "New Category" --------
+      if (this.isNewCategoryId(cid)) {
         const items: ChangeItem[] = [];
+
         items.push({
           entity: 'CategoryName',
           label: 'Category Name',
@@ -1323,15 +1337,12 @@ export class ApplicationQuestionDetailsComponent {
           });
         });
 
-        groups.push({ section: 'New Category', items });
-        return groups;
+        newCatGroups.push({ section: 'New Category', items });
+        continue;
       }
-    }
 
-    dirtyIds.forEach((cid) => {
-      const baseline = this.getBaselineFor(cid) || { name: '', items: [] as any[] };
-      const currentFromCache = this.buildSnapshotFromCache(cid);
-      if (!currentFromCache) return;
+      // -------- กลุ่ม "Category Details" (แก้ไขของเดิม) --------
+      const detItems: ChangeItem[] = [];
 
       if ((baseline.name ?? '').trim() !== currentFromCache.name) {
         detItems.push({
@@ -1410,7 +1421,7 @@ export class ApplicationQuestionDetailsComponent {
         if (includeScoring) {
           const pretty = this.isQuiz2 ? (Number(old?.scoringMethod) === 2 ? 'Reverse' : 'Normal')
                                       : (Number(old?.scoringMethod) || '-');
-        parts.push(`ScoringMethod: ${pretty}`);
+          parts.push(`ScoringMethod: ${pretty}`);
         }
 
         detItems.push({
@@ -1422,13 +1433,14 @@ export class ApplicationQuestionDetailsComponent {
           to: '(deleted)',
         });
       }
-    });
 
-    if (detItems.length) {
-      groups.push({ section: 'Category Details', items: detItems });
+      if (detItems.length) {
+        editGroups.push({ section: 'Category Details', items: detItems });
+      }
     }
 
-    return groups;
+    // เรียง "New Category" ก่อนเสมอ เพื่อความชัดเจน
+    return [...newCatGroups, ...editGroups];
   }
 
   onCategoryNameBlur() {

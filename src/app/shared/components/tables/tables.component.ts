@@ -866,6 +866,31 @@ export class TablesComponent
     this.cdr.detectChanges();
   }
 
+  onInlineNumberKeydown(field: string, e: KeyboardEvent) {
+    if (field !== 'sort' && field !== 'scoringMethod') return;
+    const blocked = ['e', 'E', '+', '-', '.'];
+    if (blocked.includes(e.key)) e.preventDefault();
+  }
+
+  onInlineNumberInput(field: string, e: Event) {
+    if (field !== 'sort' && field !== 'scoringMethod') return;
+    const el = e.target as HTMLInputElement;
+    const onlyDigits = el.value.replace(/[^\d]/g, '');
+    if (onlyDigits !== el.value) el.value = onlyDigits;
+    if (this.editingBuffer) {
+      this.editingBuffer[field] = onlyDigits === '' ? undefined : Number(onlyDigits);
+    }
+  }
+
+  onInlineNumberBlur(field: string, e: Event) {
+    if (field !== 'sort' && field !== 'scoringMethod') return;
+    const el = e.target as HTMLInputElement;
+    let n = Number(el.value || 0);
+    if (!Number.isFinite(n) || n < 1) n = 1;
+    el.value = String(n);
+    if (this.editingBuffer) this.editingBuffer[field] = n;
+  }
+
   // onInlineKeydown(e: KeyboardEvent, row: any) {
   //   if (e.key === 'Enter') { e.preventDefault(); this.saveInlineCreate(row); }
   //   if (e.key === 'Escape') { e.preventDefault(); this.cancelInlineCreate(row); }
