@@ -171,18 +171,17 @@
             <!-- ปุ่ม Unmatch -->
             <button
               type="button"
-              (mouseenter)="onUnmatchHover($event, true)"
-              (mouseleave)="onUnmatchHover($event, false)"
               (click)="onUnmatchClicked(i)"
-              class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
+              class="group tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
+                    tw-border tw-border-[#FF4D4F] tw-bg-white tw-text-[#FF4D4F]
+                    hover:tw-bg-[#FF4D4F] hover:tw-text-white
                     tw-shadow-[0_2px_6px_rgba(255,77,79,0.35)] focus:ring-dark-red focus-visible:ring-dark-red"
-              [style.background]="'#FF4D4F'"
               [disabled]="!isEditMode || !cat.meta?.isUnMatch || !cat.active"
               [ngClass]="{
                 'tw-pointer-events-none tw-opacity-50': !isEditMode || !cat.meta?.isUnMatch || !cat.active
               }"
             >
-              <app-icon [name]="'ban'" [size]="16" extraClass="tw-text-white"></app-icon>
+              <app-icon [name]="'ban'" [size]="16" extraClass="group-hover:tw-text-white"></app-icon>
               <span class="tw-font-semibold">Unmatch</span>
             </button>
 
@@ -191,15 +190,17 @@
               *ngIf="cat.isNew"
               type="button"
               (click)="onCancelNewCategory(i)"
-              class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
-                    bg-gray-dark-3 hover:bg-gray-dark-2 focus:ring-gray-dark-3 focus-visible:ring-gray-dark-3"
+              class="group tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
+                    tw-border tw-border-[#495057] tw-bg-white tw-text-[#495057]
+                    hover:tw-bg-[#495057] hover:tw-text-white tw-shadow-[0_2px_6px_rgba(73,80,87,0.35)]
+                    focus:ring-gray-dark-3 focus-visible:ring-gray-dark-3"
               [disabled]="!isEditMode"
               [ngClass]="{
                 'tw-pointer-events-none tw-opacity-50': !isEditMode
               }"
               aria-label="Cancel new category"
               title="Cancel this new category">
-              <app-icon [name]="'xmark'" [size]="16" extraClass="tw-text-white"></app-icon>
+              <app-icon [name]="'xmark'" [size]="16" extraClass="group-hover:tw-text-white"></app-icon>
               <span class="tw-font-semibold">Cancel</span>
             </button>
 

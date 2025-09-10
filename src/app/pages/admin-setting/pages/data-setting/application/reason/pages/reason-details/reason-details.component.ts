@@ -637,12 +637,6 @@ export class ReasonDetailsComponent {
     this.updateSaveState();
   }
 
-  onUnmatchHover(event: MouseEvent, enter: boolean) {
-    const el = event.currentTarget as HTMLElement | null;
-    if (!el) return; // กัน null
-    el.style.background = enter ? '#D9363E' : '#FF4D4F';
-  }
-
   onCancelNewCategory(index: number) {
     const cat = this.categoryBlocks[index];
     if (!cat || !cat.isNew) return;
