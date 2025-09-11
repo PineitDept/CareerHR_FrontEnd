@@ -43,15 +43,15 @@
 }
 
 ::ng-deep .fc .fc-daygrid-day-frame {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  height: 100%;
-  padding: 4px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    padding: 4px;
 }
 
 ::ng-deep .fc .fc-daygrid-day-events {
-  margin-top: auto !important;
+    margin-top: auto !important;
 }
 
 
@@ -79,13 +79,36 @@
     color: #00AA00;
 }
 
-::ng-deep .event-decline {
-    background: #70343536;
+::ng-deep .event-decline .fc-event-title {
+    text-decoration: line-through;
 }
 
-::ng-deep .event-decline .fc-event-title {
-    color: #9e4e4f;
-    // text-decoration: line-through;
+::ng-deep .strikethrough-dashed {
+    position: relative;
+}
+
+::ng-deep .strikethrough-dashed::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    border-bottom: 1px dashed black;
+    transform: translateY(-50%);
+    pointer-events: none;
+    margin: 0 4px;
+}
+
+::ng-deep .strikethrough-dashed.event-interview1::before {
+    border-color: #0085FF;
+}
+
+::ng-deep .strikethrough-dashed.event-interview2::before {
+    border-color: #FF9F2D;
+}
+
+::ng-deep .strikethrough-dashed.event-onboard::before {
+    border-color: #00AA00;
 }
 
 ::ng-deep .event-cancel {
@@ -123,7 +146,7 @@
 }
 
 ::ng-deep .fc-button-group .fc-button:hover,
-::ng-deep .fc .fc-button-primary:not(:disabled).fc-button-active, 
+::ng-deep .fc .fc-button-primary:not(:disabled).fc-button-active,
 ::ng-deep .fc .fc-button-primary:not(:disabled):active {
     background: #66070927;
     color: #333;

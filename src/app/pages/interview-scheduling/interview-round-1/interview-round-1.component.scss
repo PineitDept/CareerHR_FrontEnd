@@ -28,54 +28,80 @@
     height: unset;
 }
 
+.ribbon {
+    position: absolute;
+    top: 20px;
+    right: -55px;
+    transform: rotate(45deg);
+    background-color: #1e88e5;
+    color: white;
+    padding: 5px 60px;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
 .tag {
     font-size: 12px;
     padding: 4px 8px;
     border-radius: 8px;
     text-align: center;
-    margin-bottom: 20px;
+    margin-top: 24px;
     font-weight: 600;
 }
 
-.tag.tag-green {
-    color: #005500;
-    background: #AAFFAA;
+.tag-grade-a {
+    color: #00AA00;
+    border-color: #00AA00;
 }
 
-.tag.tag-green2 {
-    color: #555500;
-    background: #aaaa0088;
+.tag-grade-b {
+    color: #77CA24;
+    border-color: #77CA24;
 }
 
-.tag.tag-green3 {
-    color: #2a4106;
-    background: #e4ffb8;
+.tag-grade-c {
+    color: #D0D03E;
+    border-color: #D0D03E;
 }
 
-.tag.tag-green4 {
-    color: #554c00;
-    background: #fff2b9;
+.tag-grade-d {
+    color: #EE9241;
+    border-color: #EE9241;
 }
 
-.tag.tag-green5 {
-    color: #455500;
-    background: #efffaa;
+.tag-grade-f {
+    color: #C25D5E;
+    border-color: #C25D5E;
 }
 
-.tag.tag-gray {
-    color: #999999;
-    background: #dfdfdf;
+.tag-grade-default {
+    color: #ADB5BD;
+    border-color: #ADB5BD;
 }
 
-button:disabled {
-    opacity: 0.3;
-    pointer-events: none;
+.grade-tag {
+    display: block;
+    text-align: center;
+    border: 2px solid;
+    font-size: 14px;
+    border-radius: 25px;
+    font-weight: 600;
+    width: 24px;
+    height: 24px;
+    position: relative;
+    top: 4px;
+}
+
+button:disabled,
+.disabled-btn {
     color: #ffffff;
-    background: #232323;
+    background: #afafaf;
+    cursor: no-drop;
 }
 
 .grid-cols-auto {
-    grid-template-columns: auto auto auto auto;
+    grid-template-columns: 1fr 1fr 1fr;
 }
 
 .hide-scrollbar::-webkit-scrollbar {

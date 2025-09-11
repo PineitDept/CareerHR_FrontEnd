@@ -302,6 +302,17 @@ export class InterviewRound1Component {
   dataOptions = []
   appointments: any[] = [];
 
+  dataStatusCall = [
+    {label: 'Switched Off', value: 1},
+    {label: 'No Answer', value: 2},
+    {label: 'Call Rejected', value: 3},
+    {label: 'Line Busy', value: 4},
+    {label: 'Invalid Number', value: 5},
+    {label: 'Answered by Someone Else', value: 6},
+    {label: 'Call Back Requested', value: 7},
+    {label: 'Voicemail Reached', value: 8},
+  ]
+
   selectedPositions: { label: string, value: number }[] = [];
 
   slideConfig = {
@@ -383,30 +394,30 @@ export class InterviewRound1Component {
   getButtonClass(resultText: string): string {
     switch (resultText?.toLowerCase()) {
       case 'pending':
-        return 'tw-bg-[#FFAA00]';
+        return 'tw-bg-[rgba(255, 255, 85, 0.30)] tw-text-[#AAAA00]';
       case 'accept':
-        return 'tw-bg-[#0A0]';
+        return 'tw-bg-[#AAFFAA] tw-text-[#00AA00]';
       case 'decline':
-        return 'tw-bg-red-600';
+        return 'tw-bg-[#f56c6e4d] tw-text-[#9e4e4f]';
       default:
-        return 'tw-bg-gray-500';
+        return 'tw-bg-[#e9e9e9] tw-text-[#373737]';
     }
   }
 
   getTagClass(resultText: string): string {
     switch (resultText?.toLowerCase().trim()) {
       case 'a':
-        return 'tag-green';
+        return 'tag-grade-a';
       case 'b':
-        return 'tag-green2';
+        return 'tag-grade-b';
       case 'c':
-        return 'tag-green3';
+        return 'tag-grade-c';
       case 'd':
-        return 'tag-green4';
+        return 'tag-grade-d';
       case 'f':
-        return 'tag-green5';
+        return 'tag-grade-f';
       default:
-        return 'tag-gray';
+        return 'tag-grade-default';
     }
   }
 
@@ -498,7 +509,7 @@ export class InterviewRound1Component {
         type: 'single',
         label: 'Status',
         placeholder: 'Select Status',
-        options: this.dataOptions,
+        options: this.dataStatusCall,
       },
       {
         type: 'multi',
@@ -559,7 +570,6 @@ export class InterviewRound1Component {
       }
     });
   }
-
 
   loading = false;
   hasMoreData = true;

@@ -6,59 +6,71 @@
 
 <!-- (search)="onSearch($event)" (clearSearch)="onClearSearch()" -->
 
-<app-filter [filterDate]="true" [filterDateRange]="filterDateRange" (dateRangeSelected)="onDateRangeSelected($event)"></app-filter>
+<app-filter [filterDate]="true" [filterDateRange]="filterDateRange"
+    (dateRangeSelected)="onDateRangeSelected($event)"></app-filter>
 
-<app-tab-menus [tabs]="tabMenus" (tabChanged)="onTabChange($event)" 
-  [activeTab]="activeTab"></app-tab-menus>
+<app-tab-menus [tabs]="tabMenus" (tabChanged)="onTabChange($event)" [activeTab]="activeTab"></app-tab-menus>
 
-<div class="tw-p-6 tw-flex tw-flex-col tw-gap-6 tw-overflow-y-auto tw-h-[calc(100vh-370px)]" (scroll)="onScroll($event)">
+<div class="tw-p-6 tw-flex tw-flex-col tw-gap-8 tw-overflow-y-auto tw-h-[calc(100vh-370px)]"
+    (scroll)="onScroll($event)">
 
     <div *ngFor="let item of appointments; let i = index" class="tw-relative group">
 
-        <!-- ปุ่มเลื่อนซ้าย -->
-        <button *ngIf="canGoPrev[i]" (click)="onPrevClick(i)" [disabled]="!canGoPrev[i]" class="nav-arrow left-arrow">
+        <!-- <button *ngIf="canGoPrev[i]" (click)="onPrevClick(i)" [disabled]="!canGoPrev[i]" class="nav-arrow left-arrow">
             <app-icon [name]="'chevron-left'" [size]="32" class="tw-text-white"></app-icon>
         </button>
 
-        <!-- ปุ่มเลื่อนขวา -->
         <button *ngIf="canGoNext[i]" (click)="onNextClick(i)" [disabled]="!canGoNext[i]" class="nav-arrow right-arrow">
             <app-icon [name]="'chevron-left'" [size]="32" class="tw-text-white tw-transform tw-rotate-180"></app-icon>
-        </button>
+        </button> -->
 
-        <ngx-slick-carousel #slickCarousel class="tw-grid grid-cols-auto tw-gap-8" [config]="slideConfig"
-            (init)="onCarouselInit($event, i)" (afterChange)="onSlideChanged($event, i)">
-            <div ngxSlickItem
-                class="tw-border-1 tw-flex tw-rounded-lg tw-items-center !tw-bg-[#F8F9FA] box-shadow flex-box tw-mr-4 h-unset tw-overflow-hidden">
-                <div class="tw-min-w-[50%] tw-h-full tw-w-full">
+        <!-- <ngx-slick-carousel #slickCarousel class="tw-grid grid-cols-auto tw-gap-8" [config]="slideConfig" (init)="onCarouselInit($event, i)" (afterChange)="onSlideChanged($event, i)"> -->
+        <div class="tw-grid grid-cols-auto tw-gap-8">
+            <div
+                class="tw-border-1 tw-flex tw-rounded-lg tw-items-center !tw-bg-[#F8F9FA] box-shadow flex-box h-unset tw-overflow-hidden">
+                <div class="tw-min-w-[45%] tw-h-full tw-w-full">
                     <img class="tw-object-cover tw-h-full tw-w-full" src="assets/image/user-mock.jpg" alt="Applicant">
                 </div>
-                <div class="tw-min-w-[50%] tw-p-5">
-                    <p class="tag" [ngClass]="getTagClass(item.profile.candidateGrade)">Applicant Grade {{
-                        item.profile.candidateGrade }}</p>
-                    <p class="tw-font-semibold">{{ item.profile.fullName }}</p>
-                    <p class="tw-text-[10px] tw-mb-2">{{ item.profile.userId }}</p>
-                    <p class="tw-text-[12px]">{{ item.profile.university }}</p>
+                <div
+                    class="tw-min-w-[55%] tw-p-5 tw-relative tw-h-full tw-flex tw-flex-col tw-items-center tw-justify-center">
+                    <!-- <span class="ribbon" [ngClass]="getTagClass(item.profile.candidateGrade)">Grade {{
+                        item.profile.candidateGrade ? item.profile.candidateGrade : 'N/A' }}</span> -->
+                    <div class="tw-w-full">
+                        <div class="tw-flex tw-items-start tw-gap-2">
+                            <p class="grade-tag" [ngClass]="[getTagClass(item.profile.candidateGrade), !item.profile.candidateGrade ? '!tw-w-[40px]' : '']">
+                                {{ item.profile.candidateGrade ? item.profile.candidateGrade : 'N/A' }}
+                            </p>
+                            <div>
+                                <p class="tw-font-semibold">{{ item.profile.fullName }}</p>
+                                <p class="tw-text-[10px] tw-mb-2">{{ item.profile.userId }}</p>
+                            </div>
+                        </div>
+                        <p class="tw-text-[12px]">{{ item.profile.university }}</p>
 
-                    <div class="tw-mt-2">
-                        <p class="tw-text-[12px] tw-flex tw-justify-between">
-                            <span>GPA</span><span>{{ item.profile.gpa }}</span>
-                        </p>
-                        <p class="tw-text-[12px] tw-flex tw-justify-between">
-                            <span>Experience</span>
-                            <span *ngIf="item.profile.experienceYear !== 0 || item.profile.experienceMonths !== 0"><span
-                                    *ngIf="item.profile.experienceYear">{{ item.profile.experienceYear }} y</span> <span
-                                    *ngIf="item.profile.experienceMonths"> {{ item.profile.experienceMonths }}
-                                    m</span></span>
-                            <span
-                                *ngIf="item.profile.experienceYear === 0 && item.profile.experienceMonths === 0">-</span>
-                        </p>
-                        <p class="tw-text-[12px] tw-flex tw-justify-between">
-                            <span>Phone</span><span>{{ item.profile.phoneNumber }}</span>
-                        </p>
+                        <div class="tw-mt-2">
+                            <p class="tw-text-[12px] tw-flex tw-justify-between">
+                                <span>GPA</span><span>{{ item.profile.gpa }}</span>
+                            </p>
+                            <p class="tw-text-[12px] tw-flex tw-justify-between">
+                                <span>Experience</span>
+                                <span
+                                    *ngIf="item.profile.experienceYear !== 0 || item.profile.experienceMonths !== 0"><span
+                                        *ngIf="item.profile.experienceYear">{{ item.profile.experienceYear }} y</span>
+                                    <span *ngIf="item.profile.experienceMonths"> {{ item.profile.experienceMonths }}
+                                        m</span></span>
+                                <span
+                                    *ngIf="item.profile.experienceYear === 0 && item.profile.experienceMonths === 0">-</span>
+                            </p>
+                            <p class="tw-text-[12px] tw-flex tw-justify-between">
+                                <span>Phone</span><span>{{ item.profile.phoneNumber }}</span>
+                            </p>
+                        </div>
+                        <p class="tag" [ngClass]="getButtonClass(item.result.interviewResultText)">
+                            {{item.result.interviewResultText}}</p>
                     </div>
                 </div>
             </div>
-            <div ngxSlickItem class="tw-border-1 tw-rounded-lg box-shadow tw-p-6 flex-box-col tw-mr-4 h-unset">
+            <div class="tw-border-1 tw-rounded-lg box-shadow tw-p-6 flex-box-col h-unset">
 
                 <div class="list-top">
                     <p class="tw-mb-3"><strong>Job Position Interviewed </strong><span class="text-red">*</span></p>
@@ -94,7 +106,7 @@
                 </button>
 
             </div>
-            <div ngxSlickItem class="tw-border-1 tw-rounded-lg box-shadow tw-p-6 flex-box-col tw-mr-4 h-unset">
+            <div class="tw-border-1 tw-rounded-lg box-shadow tw-p-6 flex-box-col h-unset">
 
                 <div class="tw-flex tw-flex-col tw-gap-6">
                     <div class="tw-grid tw-grid-cols-2 tw-gap-6">
@@ -127,18 +139,25 @@
                             <p class="tw-mb-3"><strong>Contact </strong><span class="text-red">*</span></p>
 
                             <div class="tw-flex tw-rounded-lg tw-overflow-hidden tw-w-full">
-                                <button type="button" (click)="onSendMail()" [disabled]="item.interview.isEmailSent"
-                                    class=" tw-min-h-[40px] tw-w-full tw-bg-[#0A0] hover:tw-bg-[#008500] tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5">
+                                <!-- ✅ SEND EMAIL BUTTON -->
+                                <button type="button" (click)="onSendMail()"
+                                    [disabled]="item.interview.lastCalledAt === null || item.interview.isEmailSent"
+                                    [ngClass]="[item.interview.isEmailSent ? 'tw-bg-[#0A0]' : item.interview.lastCalledAt !== null ? 'tw-bg-[#FFC107] hover:tw-bg-[#e0a800]' : 'tw-bg-[#afafaf] hover:tw-bg-[#858585]', 'tw-min-h-[40px]','tw-w-full','tw-text-white','tw-text-sm','tw-font-semibold','tw-px-3','tw-py-1.5']">
                                     <app-icon [name]="'mail'" [size]="18"
                                         extraClass="tw-text-white tw-relative tw-bottom-[1px] tw-mr-2"></app-icon>
                                     <span class="tw-font-semibold">Send</span>
                                 </button>
-                                <button type="button" (click)="onAddCallStatus()" [disabled]="item.interview.isCalled"
-                                    class=" tw-min-h-[40px] tw-bg-[#0A0] hover:tw-bg-[#008500] tw-px-3 tw-py-1.5 tw-border-l-[1px] tw-border-white">
+
+                                <!-- ✅ CALL BUTTON -->
+                                <button type="button" (click)="onAddCallStatus()"
+                                    [disabled]="item.interview.lastCalledAt !== null"
+                                    [ngClass]="[item.interview.lastCalledAt !== null? 'tw-bg-[#0A0]' : item.interview.missCalled !== null? 'tw-bg-[#FFC107] hover:tw-bg-[#e0a800]' : 'tw-bg-[#afafaf] hover:tw-bg-[#858585]', 'tw-min-h-[40px]','tw-px-3','tw-py-1.5','tw-border-l-[1px]','tw-border-white','tw-min-w-[30%]','tw-text-white']">
                                     <app-icon [name]="'phone'" [size]="18"
-                                        extraClass="tw-relative tw-bottom-[1px]"></app-icon>
+                                        extraClass="tw-relative tw-bottom-[1px] tw-text-white"></app-icon>
                                 </button>
                             </div>
+
+
 
                             <p class="tw-text-[10px] tw-mt-2" *ngIf="item.interview.missCalled">
                                 {{ item.interview.lastCalledAt | date:'dd/MM/yyyy hh:mm a' }} {{
@@ -149,15 +168,22 @@
                 </div>
 
                 <div class="tw-flex tw-justify-between">
+                    <div class="tw-flex tw-gap-2">
+                        <button type="button"
+                            class="tw-w-fit tw-rounded-lg tw-border-[#e5e5e5] tw-border hover:tw-bg-[#f5f5f5] tw-text-black tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5">
+                            <span class="tw-font-semibold">Rescheduled</span>
+                        </button>
+                        <app-cdk-dropdown *ngIf="" class="tw-block tw-w-fit" [options]="locationsList"
+                            placeholder="version"></app-cdk-dropdown>
+                    </div>
                     <button type="button"
                         class="tw-w-fit tw-rounded-lg tw-border-[#e5e5e5] tw-border hover:tw-bg-[#f5f5f5] tw-text-black tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5">
-                        <span class="tw-font-semibold">Rescheduled</span>
+                        <span class="tw-font-semibold">Interview Form </span>
                     </button>
-                    <app-cdk-dropdown *ngIf="" [options]="locationsList" placeholder="version"></app-cdk-dropdown>
                 </div>
 
             </div>
-            <div ngxSlickItem class="tw-border-1 tw-rounded-lg box-shadow tw-p-6 flex-box-col tw-mr-1 h-unset">
+            <!-- <div ngxSlickItem class="tw-border-1 tw-rounded-lg box-shadow tw-p-6 flex-box-col tw-mr-1 h-unset">
 
                 <div class="tw-flex tw-flex-col tw-gap-6">
                     <div class="tw-grid tw-grid-cols-2 tw-gap-6">
@@ -208,8 +234,8 @@
                     <span class="tw-font-semibold">Interview Form </span>
                 </button>
 
-            </div>
-        </ngx-slick-carousel>
+            </div> -->
+        </div>
     </div>
 
 </div>
