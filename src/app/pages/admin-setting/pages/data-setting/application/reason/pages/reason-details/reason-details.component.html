@@ -79,7 +79,7 @@
                   />
 
                   <!-- ปุ่ม toggle dropdown -->
-                  <button
+                  <!-- <button
                     type="button"
                     class="tw-inline-flex tw-items-center tw-justify-center tw-rounded-md tw-h-8 tw-w-8 tw-border tw-border-gray-300 hover:tw-border-gray-400"
                     [disabled]="!isEditMode"
@@ -88,11 +88,11 @@
                     <app-icon name="chevron-down" [size]="16"
                       [extraClass]="isUnmappedOpen(i) ? 'tw-rotate-180 tw-transition-transform' : 'tw-transition-transform'">
                     </app-icon>
-                  </button>
+                  </button> -->
                 </div>
 
                 <!-- Dropdown (CDK Overlay) -->
-                <ng-template
+                <!-- <ng-template
                   cdkConnectedOverlay
                   [cdkConnectedOverlayOrigin]="newCatOrigin"
                   [cdkConnectedOverlayOpen]="isUnmappedOpen(i)"
@@ -103,9 +103,9 @@
                   [cdkConnectedOverlayPanelClass]="'tw-z-[1000]'"
                   [cdkConnectedOverlayPositions]="overlayPositions">
                   <div class="tw-bg-white tw-shadow-xl tw-rounded-lg tw-max-h-[300px] tw-overflow-y-auto tw-min-w-[300px] tw-border tw-border-gray-200"
-                       [style.width.px]="overlayWidth[i] || 300">
+                       [style.width.px]="overlayWidth[i] || 300"> -->
                     <!-- สรุปจำนวน -->
-                    <div class="tw-text-xs tw-text-gray-500 tw-px-3 tw-pt-2">Unmapped categories ({{ filteredUnmapped[i]?.length ?? 0 }})</div>
+                    <!-- <div class="tw-text-xs tw-text-gray-500 tw-px-3 tw-pt-2">Unmapped categories ({{ filteredUnmapped[i]?.length ?? 0 }})</div>
                     <ul class="tw-py-1" role="listbox">
                       <li *ngIf="(filteredUnmapped[i]?.length || 0) === 0"
                           class="tw-px-4 tw-py-2 tw-text-sm tw-text-gray-500">No results</li>
@@ -127,7 +127,7 @@
                       </li>
                     </ul>
                   </div>
-                </ng-template>
+                </ng-template> -->
               </div>
 
               <!-- ปุ่มคอนเฟิร์มชื่อ -->
@@ -169,62 +169,76 @@
             </button>
 
             <!-- ปุ่ม Unmatch -->
-            <button
+            <!-- <button
               type="button"
-              (mouseenter)="onUnmatchHover($event, true)"
-              (mouseleave)="onUnmatchHover($event, false)"
               (click)="onUnmatchClicked(i)"
-              class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
+              class="group tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
+                    tw-border tw-border-[#FF4D4F] tw-bg-white tw-text-[#FF4D4F]
+                    hover:tw-bg-[#FF4D4F] hover:tw-text-white
                     tw-shadow-[0_2px_6px_rgba(255,77,79,0.35)] focus:ring-dark-red focus-visible:ring-dark-red"
-              [style.background]="'#FF4D4F'"
               [disabled]="!isEditMode || !cat.meta?.isUnMatch || !cat.active"
               [ngClass]="{
                 'tw-pointer-events-none tw-opacity-50': !isEditMode || !cat.meta?.isUnMatch || !cat.active
               }"
             >
-              <app-icon [name]="'ban'" [size]="16" extraClass="tw-text-white"></app-icon>
+              <app-icon [name]="'ban'" [size]="16" extraClass="group-hover:tw-text-white"></app-icon>
               <span class="tw-font-semibold">Unmatch</span>
-            </button>
+            </button> -->
 
             <!-- ปุ่ม Cancel — แสดงเฉพาะ New Category -->
             <button
               *ngIf="cat.isNew"
               type="button"
               (click)="onCancelNewCategory(i)"
-              class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
-                    bg-gray-dark-3 hover:bg-gray-dark-2 focus:ring-gray-dark-3 focus-visible:ring-gray-dark-3"
+              class="group tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
+                    tw-border tw-border-[#495057] tw-bg-white tw-text-[#495057]
+                    hover:tw-bg-[#495057] hover:tw-text-white tw-shadow-[0_2px_6px_rgba(73,80,87,0.35)]
+                    focus:ring-gray-dark-3 focus-visible:ring-gray-dark-3"
               [disabled]="!isEditMode"
               [ngClass]="{
                 'tw-pointer-events-none tw-opacity-50': !isEditMode
               }"
               aria-label="Cancel new category"
               title="Cancel this new category">
-              <app-icon [name]="'xmark'" [size]="16" extraClass="tw-text-white"></app-icon>
+              <app-icon [name]="'xmark'" [size]="16" extraClass="group-hover:tw-text-white"></app-icon>
               <span class="tw-font-semibold">Cancel</span>
             </button>
 
-            <!-- Toggle Active -->
-            <label class="tw-inline-flex tw-items-center tw-cursor-pointer"
-                  (click)="$event.stopPropagation()"
-                  [attr.title]="cat.active ? 'Active' : 'Inactive'">
-              <input
-                type="checkbox"
-                class="tw-sr-only tw-peer"
-                [checked]="cat.active"
-                [disabled]="!isEditMode"
-                (click)="onToggleChange($event, i)"
-                [attr.aria-checked]="cat.active"
-                role="switch" />
-              <div
-                class="tw-relative tw-w-11 tw-h-6 tw-rounded-full tw-bg-gray-200 tw-border-white
-                      after:tw-content-[''] after:tw-absolute after:tw-top-[2px] after:tw-start-[2px]
-                      after:tw-h-5 after:tw-w-5 after:tw-rounded-full after:tw-bg-white after:tw-transition-all
-                      peer-checked:tw-bg-[#00AA00] rtl:peer-checked:after:tw--translate-x-full peer-checked:after:tw-translate-x-full"
-                [ngClass]="{
-                  'peer-checked:tw-bg-[#00AA00]/40 tw-cursor-default': !isEditMode
-                }">
-              </div>
-            </label>
+            <!-- Toggle Active: กัน scroll ซ้อน -->
+            <div class="tw-relative tw-w-11 tw-h-6 tw-flex-none tw-isolate tw-contain-strict">
+              <label class="tw-absolute tw-inset-0 tw-inline-flex tw-items-center tw-justify-center tw-cursor-pointer"
+                    (click)="$event.stopPropagation()"
+                    [attr.title]="cat.active ? 'Active' : 'Inactive'">
+
+                <input
+                  type="checkbox"
+                  class="tw-sr-only tw-peer"
+                  [checked]="cat.active"
+                  [disabled]="!isEditMode"
+                  (click)="onToggleChange($event, i)"
+                  [attr.aria-checked]="cat.active"
+                  role="switch" />
+
+                <!-- track -->
+                <span
+                  class="tw-relative tw-block tw-w-11 tw-h-6 tw-rounded-full tw-bg-gray-200 tw-overflow-hidden tw-shadow-none
+                        peer-checked:tw-bg-[#00AA00]
+                        !tw-w-[44px] !tw-h-[24px]"
+                  [ngClass]="{
+                    'peer-checked:tw-bg-[#00AA00]/40 tw-cursor-default': !isEditMode
+                  }"
+                >
+                  <!-- thumb (ใช้ left แทน translate ป้องกัน subpixel overflow) -->
+                  <span
+                    class="tw-absolute tw-top-[2px] tw-left-[2px] tw-h-5 tw-w-5 tw-rounded-full tw-bg-white tw-transition-all tw-duration-150"
+                    [ngClass]="{
+                      'tw-left-[calc(100%-22px)]': cat.active
+                    }">
+                  </span>
+                </span>
+              </label>
+            </div>
+
           </div>
         </div>
 
