@@ -204,28 +204,37 @@
               <span class="tw-font-semibold">Cancel</span>
             </button>
 
-            <!-- Toggle Active -->
-            <label class="tw-inline-flex tw-items-center tw-cursor-pointer"
-                  (click)="$event.stopPropagation()"
-                  [attr.title]="cat.active ? 'Active' : 'Inactive'">
-              <input
-                type="checkbox"
-                class="tw-sr-only tw-peer"
-                [checked]="cat.active"
-                [disabled]="!isEditMode"
-                (click)="onToggleChange($event, i)"
-                [attr.aria-checked]="cat.active"
-                role="switch" />
-              <div
-                class="tw-relative tw-w-11 tw-h-6 tw-rounded-full tw-bg-gray-200 tw-border-white
-                      after:tw-content-[''] after:tw-absolute after:tw-top-[2px] after:tw-start-[2px]
-                      after:tw-h-5 after:tw-w-5 after:tw-rounded-full after:tw-bg-white after:tw-transition-all
-                      peer-checked:tw-bg-[#00AA00] rtl:peer-checked:after:tw--translate-x-full peer-checked:after:tw-translate-x-full"
-                [ngClass]="{
-                  'peer-checked:tw-bg-[#00AA00]/40 tw-cursor-default': !isEditMode
-                }">
-              </div>
-            </label>
+            <!-- Toggle Active: กัน scroll ซ้อน -->
+            <div class="tw-relative tw-w-11 tw-h-6 tw-flex-none tw-isolate tw-contain-strict">
+              <label class="tw-absolute tw-inset-0 tw-inline-flex tw-items-center tw-justify-center tw-cursor-pointer"
+                    (click)="$event.stopPropagation()"
+                    [attr.title]="cat.active ? 'Active' : 'Inactive'">
+
+                <input
+                  type="checkbox"
+                  class="tw-sr-only tw-peer"
+                  [checked]="cat.active"
+                  [disabled]="!isEditMode"
+                  (click)="onToggleChange($event, i)"
+                  [attr.aria-checked]="cat.active"
+                  role="switch" />
+
+                <!-- track -->
+                <span
+                  class="tw-relative tw-block tw-w-11 tw-h-6 tw-rounded-full tw-bg-gray-200 tw-overflow-hidden tw-shadow-none
+                        peer-checked:tw-bg-[#00AA00]
+                        !tw-w-[44px] !tw-h-[24px]">
+                  <!-- thumb (ใช้ left แทน translate ป้องกัน subpixel overflow) -->
+                  <span
+                    class="tw-absolute tw-top-[2px] tw-left-[2px] tw-h-5 tw-w-5 tw-rounded-full tw-bg-white tw-transition-all tw-duration-150"
+                    [ngClass]="{
+                      'tw-left-[calc(100%-22px)]': cat.active
+                    }">
+                  </span>
+                </span>
+              </label>
+            </div>
+
           </div>
         </div>
 
