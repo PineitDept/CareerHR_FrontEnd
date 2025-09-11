@@ -223,7 +223,11 @@
                 <span
                   class="tw-relative tw-block tw-w-11 tw-h-6 tw-rounded-full tw-bg-gray-200 tw-overflow-hidden tw-shadow-none
                         peer-checked:tw-bg-[#00AA00]
-                        !tw-w-[44px] !tw-h-[24px]">
+                        !tw-w-[44px] !tw-h-[24px]"
+                  [ngClass]="{
+                    'peer-checked:tw-bg-[#00AA00]/40 tw-cursor-default': !isEditMode
+                  }"
+                >
                   <!-- thumb (ใช้ left แทน translate ป้องกัน subpixel overflow) -->
                   <span
                     class="tw-absolute tw-top-[2px] tw-left-[2px] tw-h-5 tw-w-5 tw-rounded-full tw-bg-white tw-transition-all tw-duration-150"
