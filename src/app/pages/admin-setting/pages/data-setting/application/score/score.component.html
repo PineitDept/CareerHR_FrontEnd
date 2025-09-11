@@ -1,1 +1,19 @@
-<p>score works!</p>
+<div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
+  <app-header-content
+    [headerName]="'Score'"
+    [headerType]="''"
+  ></app-header-content>
+</div>
+<app-loading></app-loading>
+
+<div class="tw-h-[calc(100vh-300px)] tw-overflow-y-auto tw-mt-6" #scrollArea>
+  <app-tables
+    [columns]="scoreTypeColumns"
+    [rows]="scoreTypeRows"
+    [showCheckbox]="false"
+    [enableRowClick]="false"
+    (viewRowClicked)="onViewRowClicked($event)"
+    [hasOverflowY]="hasOverflowY"
+    [isToggleAlert]="true"
+  ></app-tables>
+</div>
