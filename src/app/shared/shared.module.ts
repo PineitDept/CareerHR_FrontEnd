@@ -35,6 +35,7 @@ import { CdkDropdownComponent } from './components/cdk-dropdown/cdk-dropdown.com
 import { BackToTopComponent } from './components/back-to-top/back-to-top.component';
 import { FullCalendarModule } from '@fullcalendar/angular';
 import { CalendarComponent } from './components/calendar/calendar.component';
+import { RevisionHistoryFooterComponent } from './components/revision-history-footer/revision-history-footer.component';
 
 @NgModule({
   declarations: [
@@ -58,6 +59,7 @@ import { CalendarComponent } from './components/calendar/calendar.component';
     CdkDropdownComponent,
     BackToTopComponent,
     CalendarComponent,
+    RevisionHistoryFooterComponent,
   ],
   imports: [
     CommonModule,
@@ -96,7 +98,8 @@ import { CalendarComponent } from './components/calendar/calendar.component';
     BackToTopComponent,
     // PurchaseOrderDetailsFormComponent
     CalendarComponent,
-    FullCalendarModule
+    FullCalendarModule,
+    RevisionHistoryFooterComponent,
   ]
 })
 export class SharedModule { }

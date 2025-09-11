@@ -1,0 +1,93 @@
+<div class="tw-flex tw-items-center tw-justify-between tw-px-2 tw-py-4 tw-border-t tw-border-gray-200">
+  <!-- Left -->
+  <div class="tw-text-sm tw-font-semibold tw-text-gray-700">{{ label }}</div>
+
+  <!-- Middle: Revision select -->
+  <div class="tw-flex tw-items-center tw-gap-2">
+    <label class="tw-text-sm tw-text-gray-600">Revision</label>
+
+    <div class="tw-relative" cdkOverlayOrigin #revOrigin="cdkOverlayOrigin">
+      <button
+        #revBtn
+        type="button"
+        (click)="toggleRevOverlay()"
+        (keydown.arrowDown)="moveActiveRev(+1)"
+        (keydown.arrowUp)="moveActiveRev(-1)"
+        (keydown.enter)="confirmActiveRev()"
+        class="tw-flex tw-items-center tw-justify-between tw-gap-2
+               tw-min-w-[80px] tw-bg-white tw-border tw-border-gray-300
+               tw-rounded-lg tw-px-3 tw-py-1.5 tw-text-sm tw-text-[#495057]"
+        [attr.aria-expanded]="isRevOpen ? 'true' : 'false'">
+        {{ currentRevision || (revisionOptions[revisionOptions.length-1] || 'Select revision') }}
+        <app-icon name="chevron-down" [size]="14"
+          [extraClass]="isRevOpen ? 'tw-rotate-180 tw-transition-transform' : 'tw-transition-transform'"></app-icon>
+      </button>
+    </div>
+
+    <ng-template
+      cdkConnectedOverlay
+      [cdkConnectedOverlayOrigin]="revOrigin"
+      [cdkConnectedOverlayOpen]="isRevOpen"
+      [cdkConnectedOverlayHasBackdrop]="true"
+      [cdkConnectedOverlayBackdropClass]="'overlay-clear-backdrop'"
+      (backdropClick)="closeRevOverlay()"
+      (detach)="closeRevOverlay()"
+      [cdkConnectedOverlayPanelClass]="'tw-z-[1000]'"
+      [cdkConnectedOverlayPositions]="overlayPositions">
+      <div
+        class="tw-bg-white tw-shadow-xl tw-rounded-lg tw-max-h-[260px] tw-overflow-y-auto tw-border tw-border-gray-200"
+        [style.width.px]="revOverlayWidth || 160">
+        <ul class="tw-py-1" role="listbox">
+          <li
+            *ngFor="let rev of revisionOptions; let i = index"
+            (mousedown)="onSelectRevisionMouseDown(rev, $event)"
+            class="tw-px-4 tw-py-2 tw-text-sm tw-cursor-pointer tw-transition-colors tw-duration-150 hover:tw-bg-gray-100"
+            [class.tw-bg-[#E6F4FF]]="i === activeRevIndex"
+            role="option"
+            [attr.aria-selected]="i === activeRevIndex">
+            {{ rev }}
+          </li>
+        </ul>
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- Right: Pagination -->
+  <nav class="tw-flex tw-items-center tw-gap-1" aria-label="Revision pages">
+    <button
+      type="button"
+      class="tw-min-w-[34px] tw-h-8 tw-rounded-md tw-border tw-border-gray-300 tw-text-sm tw-px-2 hover:tw-bg-gray-50 disabled:tw-opacity-50"
+      [disabled]="historyPage <= 1"
+      (click)="onClickPage(historyPage - 1)"
+      aria-label="Previous page">
+      <app-icon [name]="'chevron-left'" [size]="18" extraClass="tw-text-gray-700"></app-icon>
+    </button>
+
+    <ng-container *ngFor="let p of historyPageList">
+      <button
+        *ngIf="p !== '…'; else dotsTpl"
+        type="button"
+        class="tw-min-w-[34px] tw-h-8 tw-rounded-md tw-border tw-text-sm tw-px-2 hover:tw-bg-gray-50"
+        [ngClass]="{
+          'tw-bg-gray-900 tw-text-white tw-border-gray-900 hover:tw-bg-gray-900': p === historyPage
+        }"
+        (click)="onClickPage(p)"
+        [attr.aria-current]="p === historyPage ? 'page' : null">
+        {{ p }}
+      </button>
+    </ng-container>
+
+    <ng-template #dotsTpl>
+      <span class="tw-min-w-[34px] tw-h-8 tw-flex tw-items-center tw-justify-center tw-text-sm">…</span>
+    </ng-template>
+
+    <button
+      type="button"
+      class="tw-min-w-[34px] tw-h-8 tw-rounded-md tw-border tw-border-gray-300 tw-text-sm tw-px-2 hover:tw-bg-gray-50 disabled:tw-opacity-50"
+      [disabled]="historyPage >= historyTotalPages"
+      (click)="onClickPage(historyPage + 1)"
+      aria-label="Next page">
+      <app-icon [name]="'chevron-left'" [size]="18" extraClass="tw-transform tw-rotate-180 tw-text-gray-700"></app-icon>
+    </button>
+  </nav>
+</div>
