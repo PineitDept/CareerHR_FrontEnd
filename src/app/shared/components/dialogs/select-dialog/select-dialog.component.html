@@ -12,16 +12,18 @@
 
                     <!-- Single Select Dropdown -->
                     <app-cdk-dropdown *ngSwitchCase="'single'" [label]="config.label" [options]="config.options"
-                        [placeholder]="config.placeholder">
+                        [placeholder]="config.placeholder"
+                        (valueChange)="onSingleSelectChange($event, config.label, config.options)">
                     </app-cdk-dropdown>
 
                     <!-- Multi Select Dropdown -->
                     <app-multi-select-dropdown *ngSwitchCase="'multi'" [label]="config.label" [options]="config.options"
-                        (selectionChange)="onSelectionChange($event)">
+                        (selectionChange)="onMultiSelectChange($event, config.label)">
                     </app-multi-select-dropdown>
 
                 </div>
             </ng-container>
+
         </mat-dialog-content>
     </form>
 

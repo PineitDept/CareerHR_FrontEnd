@@ -36,6 +36,7 @@ import { FullCalendarModule } from '@fullcalendar/angular';
 import { CalendarComponent } from './components/calendar/calendar.component';
 import { SlickCarouselModule } from 'ngx-slick-carousel';
 import { SelectDialogComponent } from './components/dialogs/select-dialog/select-dialog.component';
+import { MailDialogComponent } from './components/dialogs/mail-dialog/mail-dialog.component';
 
 @NgModule({
   declarations: [
@@ -59,6 +60,7 @@ import { SelectDialogComponent } from './components/dialogs/select-dialog/select
     CdkDropdownComponent,
     CalendarComponent,
     SelectDialogComponent,
+    MailDialogComponent,
   ],
   imports: [
     CommonModule,

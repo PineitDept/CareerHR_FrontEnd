@@ -4,7 +4,7 @@ import { FormBuilder, FormGroup } from '@angular/forms';
 import { AlertDialogData } from '../../../interfaces/dialog/dialog.interface';
 
 export interface SelectOption {
-  value: string;
+  value: string | number;
   label: string;
 }
 
@@ -17,6 +17,8 @@ export class SelectDialogComponent {
   form: FormGroup;
   titleHeader: string | undefined;
   selectedValues: string[] = [];
+  singleSelectedValue: SelectOption | null = null;
+  selectionMap: Record<string, any> = {};
 
   @Input() dataOption: any[] | undefined;
   @Output() dataResult: any[] | undefined;
@@ -35,8 +37,6 @@ export class SelectDialogComponent {
 
     this.titleHeader = data.title
 
-    this.dataOption = data.options
-
     this.dropdownConfigs = data.dropdownConfigs
   }
 
@@ -45,11 +45,19 @@ export class SelectDialogComponent {
   }
 
   onConfirm(): void {
-    const selectedValues = this.dataResult?.map(item => item.value);
-    this.dialogRef.close(selectedValues);
+    this.dialogRef.close(this.selectionMap);
   }
 
   onSelectionChange(selectedOptions: SelectOption[]) {
     this.dataResult = selectedOptions
+  }
+
+  onSingleSelectChange(selectedValue: string | number, label: string, options: SelectOption[]) {
+    const matched = options.find(o => o.value === selectedValue);
+    this.selectionMap[label] = matched ?? { value: selectedValue, label: '' };
+  }
+
+  onMultiSelectChange(selectedValues: SelectOption[], label: string) {
+    this.selectionMap[label] = selectedValues;
   }
 }

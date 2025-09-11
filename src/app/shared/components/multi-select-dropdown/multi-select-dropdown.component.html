@@ -10,7 +10,7 @@
     class="tw-flex tw-justify-between tw-items-center tw-py-2 tw-px-4 tw-relative tw-min-h-[42px] tw-w-full tw-border tw-border-gray-300 tw-rounded-lg tw-bg-white tw-focus-within:tw-ring-2 tw-focus-within:tw-ring-[#D97706] tw-focus-within:tw-border-[#D97706] tw-transition-all tw-duration-200"
     [class.tw-ring-2]="isOpen" [class.tw-ring-[#D97706]]="isOpen" [class.tw-border-[#D97706]]="isOpen">
     <!-- Selected Tags and Search Input -->
-    <div class="tw-flex tw-flex-wrap tw-items-center tw-gap-1">
+    <div class="tw-flex tw-flex-wrap tw-items-center tw-gap-1" style="width: inherit;">
 
       <!-- Selected Option Tags -->
       <div *ngFor="let option of selectedOptions; trackBy: trackByValue"

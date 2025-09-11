@@ -111,6 +111,7 @@ export class MultiSelectDropdownComponent implements ControlValueAccessor {
     if (!this.isSelected(option)) {
       this.selectedOptions = [...this.selectedOptions, option];
       this.emitChange();
+      this.updateDropdownPosition();
     }
   }
 
@@ -119,6 +120,19 @@ export class MultiSelectDropdownComponent implements ControlValueAccessor {
       selected => selected.value !== option.value
     );
     this.emitChange();
+    this.updateDropdownPosition();
+  }
+
+  updateDropdownPosition(): void {
+    const triggerEl = this.triggerElRef?.nativeElement;
+    if (triggerEl) {
+      const rect = triggerEl.getBoundingClientRect();
+      this.dropdownStyles = {
+        top: `${rect.bottom + 8}px`,
+        left: `${rect.left}px`,
+        width: `${rect.width}px`,
+      };
+    }
   }
 
   isSelected(option: SelectOption): boolean {

@@ -1,0 +1,106 @@
+<div class="tw-text-black">
+    <div class="tw-text-lg tw-font-semibold tw-px-6 tw-pt-4 tw-pb-3">
+        {{titleHeader}}
+    </div>
+
+    <div class="tw-border-t tw-border-[#E3E3E3]"></div>
+
+    <form [formGroup]="emailForm">
+        <mat-dialog-content>
+
+
+            <div class="tw-flex tw-gap-4">
+                <button class="tw-text-white tw-font-medium tw-py-1.5 tw-px-6 tw-rounded-xl tw-mb-6"
+                    [disabled]="emailForm.invalid" (click)="onConfirm()"
+                    [ngClass]="emailForm.invalid ? 'tw-bg-gray-400 tw-cursor-not-allowed' : (data.confirm ? 'tw-bg-[#00AA55] hover:tw-bg-[#02934a]' : 'tw-bg-[#930000] hover:tw-bg-[#7a0000]')">
+                    <app-icon [name]="'location-arrow-right'" [size]="24"
+                        [extraClass]="'tw-rotate-45 tw-mb-1'"></app-icon>
+                    {{ data.confirm ? 'Send' : 'OK' }}
+                </button>
+                <div class="tw-w-full">
+                    <mat-form-field appearance="fill"
+                        class="tw-w-full tw-border tw-border-[#E3E3E3] tw-rounded-lg tw-mb-4">
+                        <mat-label>From</mat-label>
+                        <input matInput formControlName="from" placeholder="Enter your email" />
+                        <!-- <mat-error *ngIf="emailForm.get('from')?.hasError('required')">
+                            Required
+                        </mat-error>
+                        <mat-error *ngIf="emailForm.get('from')?.hasError('email')">
+                            Invalid email format
+                        </mat-error> -->
+                    </mat-form-field>
+
+                    <mat-form-field appearance="fill"
+                        class="tw-w-full tw-border tw-border-[#E3E3E3] tw-rounded-lg tw-mb-6">
+                        <mat-label>To</mat-label>
+                        <input matInput formControlName="to" placeholder="Enter recipient email" />
+                        <!-- <mat-error *ngIf="emailForm.get('to')?.hasError('required')">
+                            Required
+                        </mat-error>
+                        <mat-error *ngIf="emailForm.get('to')?.hasError('email')">
+                            Invalid email format
+                        </mat-error> -->
+                    </mat-form-field>
+                </div>
+            </div>
+
+            <hr class="tw-border-t tw-border-[#E3E3E3] tw-mb-6">
+
+            <mat-form-field appearance="fill" class="tw-w-full tw-border tw-border-[#E3E3E3] tw-rounded-lg tw-mb-4">
+                <mat-label>Subject</mat-label>
+                <input matInput formControlName="subject" placeholder="Enter subject" />
+            </mat-form-field>
+
+            <mat-form-field appearance="fill" class="tw-w-full tw-border tw-border-[#E3E3E3] tw-rounded-lg">
+                <mat-label>Message</mat-label>
+                <textarea matInput formControlName="message" rows="6" placeholder="Write your message"
+                    class="tw-py-4"></textarea>
+            </mat-form-field>
+
+
+            <div class="attach-file">
+                <p class="tw-mt-4 tw-text-black"><strong>Attach File</strong></p>
+
+                <div class="tw-mt-2 tw-flex tw-gap-2 tw-flex-wrap tw-items-center">
+                    <ng-container *ngFor="let file of selectedFiles; let i = index">
+                        <div
+                            class="tw-text-[#333] tw-h-[36px] tw-flex tw-items-center tw-gap-2 tw-text-sm tw-border tw-border-[#E3E3E3] tw-font-bold tw-p-2 tw-w-fit tw-rounded-lg">
+                            <button type="button" class="tw-text-red-600 hover:tw-underline" (click)="removeFile(i)">
+                                <app-icon [name]="'xmark'" [size]="16" [extraClass]="'tw-text-gray-700'"></app-icon>
+                            </button>
+                            {{ file.name }}
+                        </div>
+                    </ng-container>
+
+                    <label
+                        class="tw-inline-flex tw-items-center tw-cursor-pointer tw-text-sm tw-font-medium tw-text-gray-700 tw-gap-2">
+                        <input type="file" (change)="onFilesSelected($event, fileInput)" multiple hidden #fileInput />
+                        <button type="button"
+                            class="tw-bg-[#00AAFF] hover:tw-bg-[#0886c5] tw-text-white tw-px-4 tw-py-1.5 tw-rounded-lg tw-h-[36px]"
+                            (click)="fileInput.click()">
+                            <app-icon name="plus" [size]="16" extraClass="tw-text-white tw-mr-1"></app-icon>
+                            Add
+                        </button>
+                    </label>
+                </div>
+
+            </div>
+
+
+        </mat-dialog-content>
+    </form>
+
+    <div class="tw-border-t tw-border-gray-300"></div>
+
+    <div class="tw-text-right tw-px-6 tw-pt-3 tw-pb-3">
+        <button *ngIf="data.confirm"
+            class="tw-bg-gray-200 hover:tw-bg-gray-300 tw-text-black tw-font-medium tw-py-1.5 tw-px-5 tw-rounded"
+            (click)="onCancel()">
+            Cancel
+        </button>
+        <!-- <button class="tw-text-white tw-font-medium tw-py-1.5 tw-px-6 tw-rounded" (click)="onConfirm()"
+            [ngClass]="data.confirm ? 'tw-bg-[#00AA55] hover:tw-bg-[#02934a]' : 'tw-bg-[#930000] hover:tw-bg-[#7a0000]'">
+            {{ data.confirm ? 'Send' : 'OK' }}
+        </button> -->
+    </div>
+</div>

@@ -22,13 +22,14 @@ type Opt = string | { label: string; value: any };
   }],
 })
 export class CdkDropdownComponent implements ControlValueAccessor {
+  @Input() value: any;  
   @Input() options: Opt[] = [];
   @Input() placeholder = 'Select';
   @Input() panelMaxHeight = 240;
   @Input() label: string = '';
   @Input() require: boolean = false;
 
-  value: any = null;
+  // value: any = null;
   disabledSelected = false;
 
   @Output() valueChange = new EventEmitter<any>();
@@ -100,7 +101,7 @@ export class CdkDropdownComponent implements ControlValueAccessor {
   // -------------------------------------
 
   get items() {
-    return this.options.map(o => typeof o === 'string' ? { label: o, value: o } : o);
+    return (this.options ?? []).map(o => typeof o === 'string' ? { label: o, value: o } : o);
   }
 
   get display(): string {
