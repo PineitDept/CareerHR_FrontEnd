@@ -5,7 +5,6 @@ type CaptchaData = {
   title?: string;
   message?: string;
   length?: number;       // ความยาวโค้ด (ค่าเริ่มต้น 6)
-  caseSensitive?: boolean; // แยกตัวพิมพ์เล็ก/ใหญ่ไหม (ค่าเริ่มต้น false)
 };
 
 @Component({
@@ -18,14 +17,13 @@ export class CaptchaDialogComponent {
   imgSrc = '';
   input = '';
   length = 6;
-  caseSensitive = false;
+  private readonly caseSensitive = true;
 
   constructor(
     private ref: MatDialogRef<CaptchaDialogComponent, boolean>,
     @Inject(MAT_DIALOG_DATA) public data: CaptchaData
   ) {
     this.length = data?.length ?? 6;
-    this.caseSensitive = !!data?.caseSensitive;
     this.regenerate();
   }
 
@@ -36,8 +34,7 @@ export class CaptchaDialogComponent {
   }
 
   get matched(): boolean {
-    if (this.caseSensitive) return this.input === this.code;
-    return (this.input || '').toUpperCase() === this.code.toUpperCase();
+    return this.input === this.code;
   }
 
   cancel()  { this.ref.close(false); }

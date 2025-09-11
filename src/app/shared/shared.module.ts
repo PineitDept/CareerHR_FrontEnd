@@ -32,11 +32,13 @@ import { ConfirmChangesDialogComponent } from './components/dialogs/confirm-chan
 import { DualListboxComponent } from './components/dual-listbox/dual-listbox.component';
 import { QualityDialogComponent } from './components/dialogs/quality-dialog/quality-dialog.component';
 import { CdkDropdownComponent } from './components/cdk-dropdown/cdk-dropdown.component';
+import { BackToTopComponent } from './components/back-to-top/back-to-top.component';
 import { FullCalendarModule } from '@fullcalendar/angular';
 import { CalendarComponent } from './components/calendar/calendar.component';
 import { SlickCarouselModule } from 'ngx-slick-carousel';
 import { SelectDialogComponent } from './components/dialogs/select-dialog/select-dialog.component';
 import { MailDialogComponent } from './components/dialogs/mail-dialog/mail-dialog.component';
+import { RevisionHistoryFooterComponent } from './components/revision-history-footer/revision-history-footer.component';
 
 @NgModule({
   declarations: [
@@ -58,9 +60,11 @@ import { MailDialogComponent } from './components/dialogs/mail-dialog/mail-dialo
     DualListboxComponent,
     QualityDialogComponent,
     CdkDropdownComponent,
+    BackToTopComponent,
     CalendarComponent,
     SelectDialogComponent,
     MailDialogComponent,
+    RevisionHistoryFooterComponent,
   ],
   imports: [
     CommonModule,
@@ -97,10 +101,12 @@ import { MailDialogComponent } from './components/dialogs/mail-dialog/mail-dialo
     DualListboxComponent,
     OverlayModule,
     CdkDropdownComponent,
+    BackToTopComponent,
     // PurchaseOrderDetailsFormComponent
     CalendarComponent,
     FullCalendarModule,
-    SlickCarouselModule
+    SlickCarouselModule,
+    RevisionHistoryFooterComponent,
   ]
 })
 export class SharedModule { }

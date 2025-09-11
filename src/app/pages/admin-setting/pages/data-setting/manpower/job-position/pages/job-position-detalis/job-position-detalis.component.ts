@@ -808,7 +808,6 @@ export class JobPositionDetalisComponent {
         title: 'Delete',
         message: 'Are you sure you want to delete this item?',
         length: 6,
-        caseSensitive: false
       }
     });
 

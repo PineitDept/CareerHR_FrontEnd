@@ -79,9 +79,10 @@ export class TablesComponent
   @Input() allowViewWhenDisabled: boolean = false;
   @Input() requiredFooterFields: string[] = [];
   @Input() draggableRows: boolean = false;
-  @Input() isConfirmDialogToggleRequired: boolean = false;
-  @Input() isConfirmDialogSaveRequired: boolean = false;
+  @Input() isConfirmDialogToggleRequired: boolean = true;
+  @Input() isConfirmDialogSaveRequired: boolean = true;
   @Input() tableFixed: boolean = true;
+  @Input() isReasonSave: boolean = false;
 
   @Output() selectionChanged = new EventEmitter<any[]>();
   @Output() rowClicked = new EventEmitter<any>();
@@ -535,7 +536,7 @@ export class TablesComponent
 
     checkbox.checked = !targetStatus;
 
-    if (!row._isNew && !this.isToggleAlert && !this.isConfirmDialogToggleRequired) {
+    if (!row._isNew && !this.isToggleAlert && this.isConfirmDialogToggleRequired) {
       Promise.resolve().then(() => {
         const container = document.querySelector('.cdk-overlay-container');
         container?.classList.add('dimmed-overlay');
@@ -628,7 +629,7 @@ export class TablesComponent
   onClickSave(event: Event, row: any): void {
     event.stopPropagation();
 
-    if (!this.isConfirmDialogSaveRequired) {
+    if (this.isConfirmDialogSaveRequired) {
       Promise.resolve().then(() => {
         const container = document.querySelector('.cdk-overlay-container');
         container?.classList.add('dimmed-overlay');
@@ -641,7 +642,7 @@ export class TablesComponent
         disableClose: true,
         data: {
           title: 'Confirmation',
-          message: 'Are you sure you want to change the status of this item?',
+          message: 'Are you sure you want to save this data?',
           confirm: true
         }
       });
@@ -721,12 +722,23 @@ export class TablesComponent
       return; // ไม่ emit ออกไป
     }
 
-    const payload = { ...row };
-    if (!this.isZeroOneStatus) {
-      payload.status = payload.activeStatus ? 1 : 2;
+    let payload: any;
+
+    if (this.isReasonSave) {
+      const reason = (row?.reasonText ?? '').trim();
+      payload = {
+        reasonText: reason,
+        isActive: true,
+      };
     } else {
-      payload.status = payload.activeStatus ? 1 : 0;
+      payload = { ...row };
+      if (!this.isZeroOneStatus) {
+        payload.status = payload.activeStatus ? 1 : 2;
+      } else {
+        payload.status = payload.activeStatus ? 1 : 0;
+      }
     }
+
     delete payload._tempId;
     delete payload._isNew;
     this.createInlineSave.emit(payload);
@@ -852,6 +864,31 @@ export class TablesComponent
     });
 
     this.cdr.detectChanges();
+  }
+
+  onInlineNumberKeydown(field: string, e: KeyboardEvent) {
+    if (field !== 'sort' && field !== 'scoringMethod') return;
+    const blocked = ['e', 'E', '+', '-', '.'];
+    if (blocked.includes(e.key)) e.preventDefault();
+  }
+
+  onInlineNumberInput(field: string, e: Event) {
+    if (field !== 'sort' && field !== 'scoringMethod') return;
+    const el = e.target as HTMLInputElement;
+    const onlyDigits = el.value.replace(/[^\d]/g, '');
+    if (onlyDigits !== el.value) el.value = onlyDigits;
+    if (this.editingBuffer) {
+      this.editingBuffer[field] = onlyDigits === '' ? undefined : Number(onlyDigits);
+    }
+  }
+
+  onInlineNumberBlur(field: string, e: Event) {
+    if (field !== 'sort' && field !== 'scoringMethod') return;
+    const el = e.target as HTMLInputElement;
+    let n = Number(el.value || 0);
+    if (!Number.isFinite(n) || n < 1) n = 1;
+    el.value = String(n);
+    if (this.editingBuffer) this.editingBuffer[field] = n;
   }
 
   // onInlineKeydown(e: KeyboardEvent, row: any) {
