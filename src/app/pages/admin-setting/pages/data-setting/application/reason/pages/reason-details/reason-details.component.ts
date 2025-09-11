@@ -350,7 +350,7 @@ export class ReasonDetailsComponent {
           this.categoriesForm.push(this.createCategoryFormGroup(display, /*isNew*/ false));
         });
 
-        this.loadUnmappedReasonCategories();
+        // this.loadUnmappedReasonCategories();
 
         // 2) สร้าง snapshot ฝั่ง server
         this.initialSnapshot = this.computeSnapshot();
@@ -635,12 +635,6 @@ export class ReasonDetailsComponent {
     // mark dirty + อัปเดตปุ่ม Save + เขียน draft
     this.formDetails.markAsDirty();
     this.updateSaveState();
-  }
-
-  onUnmatchHover(event: MouseEvent, enter: boolean) {
-    const el = event.currentTarget as HTMLElement | null;
-    if (!el) return; // กัน null
-    el.style.background = enter ? '#D9363E' : '#FF4D4F';
   }
 
   onCancelNewCategory(index: number) {
