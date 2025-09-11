@@ -350,7 +350,7 @@ export class ReasonDetailsComponent {
           this.categoriesForm.push(this.createCategoryFormGroup(display, /*isNew*/ false));
         });
 
-        this.loadUnmappedReasonCategories();
+        // this.loadUnmappedReasonCategories();
 
         // 2) สร้าง snapshot ฝั่ง server
         this.initialSnapshot = this.computeSnapshot();
