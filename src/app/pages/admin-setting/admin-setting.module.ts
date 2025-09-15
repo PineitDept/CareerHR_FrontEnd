@@ -33,6 +33,8 @@ import { InterviewerTeamsDetailsComponent } from './pages/data-setting/interview
 import { OverlayModule } from '@angular/cdk/overlay';
 import { PortalModule } from '@angular/cdk/portal';
 import { ScrollingModule } from '@angular/cdk/scrolling';
+import { ScoreComponent } from './pages/data-setting/application/score/score.component';
+import { ScoreDetailsComponent } from './pages/data-setting/application/score/pages/score-details/score-details.component';
 
 @NgModule({
   declarations: [
@@ -60,7 +62,9 @@ import { ScrollingModule } from '@angular/cdk/scrolling';
     JobPositionDetalisComponent,
     InterviewerListComponent,
     InterviewerTeamsComponent,
-    InterviewerTeamsDetailsComponent
+    InterviewerTeamsDetailsComponent,
+    ScoreComponent,
+    ScoreDetailsComponent
   ],
   imports: [
     CommonModule,
