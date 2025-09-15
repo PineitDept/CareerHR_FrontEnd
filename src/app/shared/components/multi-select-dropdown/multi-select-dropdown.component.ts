@@ -17,6 +17,8 @@ export class MultiSelectDropdownComponent implements ControlValueAccessor {
   @Input() label?: string;
   @Input() required: boolean = false;
   @Input() disabled: boolean = false;
+  @Input() defaultSelected: string[] = [];
+  @Input() isHistory: boolean = false;
 
   @Output() selectionChange = new EventEmitter<SelectOption[]>();
 
@@ -32,6 +34,14 @@ export class MultiSelectDropdownComponent implements ControlValueAccessor {
   private onTouched = () => { };
 
   constructor(private elementRef: ElementRef) { }
+
+  ngOnChanges(): void {
+    if (this.defaultSelected?.length && this.options?.length) {
+      this.selectedOptions = this.options.filter(option =>
+        this.defaultSelected.includes(option.value)
+      );
+    }
+  }
 
   // ControlValueAccessor implementation
   writeValue(value: string[] | null): void {

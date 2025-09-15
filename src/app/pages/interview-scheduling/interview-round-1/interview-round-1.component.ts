@@ -1,18 +1,11 @@
-import { ChangeDetectorRef, Component, computed, ElementRef, EventEmitter, HostListener, Output, QueryList, signal, ViewChild, ViewChildren } from '@angular/core';
-import { defaultColumns, defaultFilterButtons } from '../../../constants/admin-setting/interviewer.constants';
+import { ChangeDetectorRef, Component, computed, QueryList, signal, ViewChildren } from '@angular/core';
 import { InterviewerService } from '../../../services/admin-setting/interviewer/interviewer.service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DateRange, SearchForm } from '../../../interfaces/interview-scheduling/interview.interface';
-import { FilterConfig, GroupedCheckboxOption } from '../../../shared/components/filter-check-box/filter-check-box.component';
-import { CalendarOptions } from '@fullcalendar/core/index.js';
-import { defaultColumnsPolicy } from '../../../constants/admin-setting/email-template.constants';
 import { ICandidateFilterRequest, TabMenu } from '../../../interfaces/Application/application.interface';
-import { DropdownOption } from '../../../shared/components/cdk-dropdown/cdk-dropdown.component';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
-import { AlertDialogComponent } from '../../../shared/components/dialogs/alert-dialog/alert-dialog.component';
-import { forkJoin } from 'rxjs';
-import { SelectDialogComponent } from '../../../shared/components/dialogs/select-dialog/select-dialog.component';
+import { SelectDialogComponent, SelectOption } from '../../../shared/components/dialogs/select-dialog/select-dialog.component';
 import { GeneralBenefitsService } from '../../../services/admin-setting/general-benefits/general-benefits.service';
 import { IApiResponse, IBenefitsFilterRequest, IUniversityWithPositionsDto } from '../../../interfaces/admin-setting/general-benefits.interface';
 import { JobPositionService } from '../../../services/admin-setting/job-position/job-position.service';
@@ -54,14 +47,15 @@ export class InterviewRound1Component {
   );
 
   activeTab = computed(() => this.filterRequest().statusGroup || '');
+  filterButtons: { label: string; key: string; color: string; outlineBtn?: boolean }[] = [];
 
   createInitialTabs(): TabMenu[] {
     return [
       { key: 'total', label: 'All Status', count: 0 },
       { key: 'pending', label: 'Pending', count: 0 },
       // { key: 'scheduled', label: 'Scheduled', count: 0 },
-      { key: 'no-show', label: 'No-Show', count: 0 },
-      { key: 'accept', label: 'Accept', count: 0 },
+      { key: 'in-process', label: 'In Process', count: 0 },
+      { key: 'schedule', label: 'Schedule', count: 0 },
       { key: 'decline', label: 'Decline', count: 0 },
     ];
   }
@@ -79,13 +73,24 @@ export class InterviewRound1Component {
   ) { }
 
   ngOnInit() {
+    const savedSearch = sessionStorage.getItem('interviewSearchForm');
+    if (savedSearch) {
+      this.searchForm = JSON.parse(savedSearch);
+      this.currentFilterParams = {
+        ...this.currentFilterParams,
+        search: this.searchForm.searchValue,
+        page: 1,
+      };
+    }
+
     this.fetchLocationDetails();
     this.fetchJobPosition();
     this.fetchTeamID();
     this.fetchInterviewer();
 
-    // this.fetchAppointments();
+    this.filterButtons = [{ label: 'History', key: 'history', color: 'transparent', outlineBtn: true }];
   }
+
 
   fetchLocationDetails() {
     this.benefitsService.setBenefitType('location');
@@ -165,16 +170,12 @@ export class InterviewRound1Component {
   fetchAppointments() {
     this.loading = true;
 
-    this.currentFilterParams
-
-    // console.log(this.yearData, '=>this.yearData')
-    // console.log(this.monthData, '=>this.monthData')
-
     const updatedParams = {
-      ... this.currentFilterParams,
+      ...this.currentFilterParams,
       month: this.monthData === 12 ? undefined : this.monthData,
       year: this.yearData,
-      page: 1
+      page: this.currentFilterParams.page ?? 1,
+      search: this.currentFilterParams.search,
     };
 
     this.appointmentsService.getAppointments<any>(updatedParams).subscribe({
@@ -197,7 +198,35 @@ export class InterviewRound1Component {
   }
 
 
+  onSearch() {
+    sessionStorage.setItem('interviewSearchForm', JSON.stringify(this.searchForm));
 
+    this.currentFilterParams = {
+      ...this.currentFilterParams,
+      search: this.searchForm.searchValue,
+      page: 1,
+    };
+
+    this.appointments = [];
+    this.hasMoreData = true;
+
+    this.fetchAppointments();
+  }
+
+  onClearSearch() {
+    this.searchForm = { searchBy: '', searchValue: '' };
+    sessionStorage.removeItem('interviewSearchForm');
+
+    this.currentFilterParams = {
+      page: 1,
+      pageSize: 5,
+    };
+
+    this.appointments = [];
+    this.hasMoreData = true;
+
+    this.fetchAppointments();
+  }
 
   updateTabCounts(appointments: any[]) {
     // const counts: { [key: string]: number } = {
@@ -303,17 +332,30 @@ export class InterviewRound1Component {
   appointments: any[] = [];
 
   dataStatusCall = [
-    {label: 'Switched Off', value: 1},
-    {label: 'No Answer', value: 2},
-    {label: 'Call Rejected', value: 3},
-    {label: 'Line Busy', value: 4},
-    {label: 'Invalid Number', value: 5},
-    {label: 'Answered by Someone Else', value: 6},
-    {label: 'Call Back Requested', value: 7},
-    {label: 'Voicemail Reached', value: 8},
+    { label: 'Switched Off', value: 1 },
+    { label: 'No Answer', value: 2 },
+    { label: 'Call Rejected', value: 3 },
+    { label: 'Line Busy', value: 4 },
+    { label: 'Invalid Number', value: 5 },
+    { label: 'Answered by Someone Else', value: 6 },
+    { label: 'Call Back Requested', value: 7 },
+    { label: 'Voicemail Reached', value: 8 },
   ]
 
+  historyData = [
+    { date: "2025/09/18", time: "10:00am", status: "โทรติดแต่ไม่รับสาย", value: 1 },
+    { date: "2025/09/17", time: "10:00am", status: "โทรไม่ติด / ปิดเครื่อง", value: 2 },
+    { date: "2025/09/16", time: "10:00am", status: "Voicemail", value: 3 },
+  ];
+
   selectedPositions: { label: string, value: number }[] = [];
+
+  jobPositions: {
+    jobId: number,
+    jobName: string,
+    isActive: boolean,
+    isOffered: boolean
+  }[] = [];
 
   slideConfig = {
     slidesToShow: 4,
@@ -425,17 +467,33 @@ export class InterviewRound1Component {
     this.appointments.forEach(item => item.isAddingPosition = false);
     this.appointments[index].isAddingPosition = true;
 
+    const item = this.appointments[index];
+    const filteredJobPositionList = this.jobpositionList.filter((jp: { label: string; }) =>
+      !item.jobPosition.jobList.some((job: { jobName: string; }) =>
+        jp.label.trim().toLowerCase() === job.jobName.trim().toLowerCase()
+      )
+    );
+
+    const historyOptions: SelectOption[] = this.historyData.map(item => ({
+      value: item.value,
+      label: `${item.date} ${item.time} ${item.status}`,
+    }));
+
+    const defaultSelected = historyOptions.slice(-2).map(opt => opt.value);
+
     this.dropdownConfigs = [
       {
         type: 'single',
         label: 'Position',
         placeholder: 'Select Position',
-        options: this.jobpositionList,
+        options: filteredJobPositionList,
       },
       {
         type: 'multi',
         label: 'History',
-        options: this.dataOptions,
+        options: historyOptions,
+        isHistory: true,
+        defaultSelected: defaultSelected
       }
     ];
 
@@ -458,10 +516,38 @@ export class InterviewRound1Component {
         const exists = item.selectedPositions.some((pos: any) => pos.value === result.Position.value);
         if (!exists && item.selectedPositions.length < 2) {
           item.selectedPositions.push(result.Position);
+
+          const newJob = {
+            jobId: result.Position.value,
+            jobName: result.Position.label,
+            isActive: true,
+            isOffered: true
+          };
+          item.jobPosition.jobList.push(newJob);
+          item.jobPosition.totalJobs = item.jobPosition.jobList.length
+
+          console.log(this.appointments, '=>this.appointments')
+
         }
       }
     });
   }
+
+  onRemoveJobByValue(jobToRemove: any, item: any) {
+    item.jobPosition.jobList = item.jobPosition.jobList.filter(
+      (job: any) => job.jobId !== jobToRemove.jobId
+    );
+
+    item.selectedPositions = item.selectedPositions.filter(
+      (pos: any) => pos.value !== jobToRemove.jobId
+    );
+
+    item.jobPosition.totalJobs = item.jobPosition.jobList.length;
+
+    console.log(this.appointments, '=>this.appointments')
+  }
+
+
 
   onAddTermClick() {
     this.dropdownConfigs = [

@@ -38,6 +38,8 @@ export class SelectDialogComponent {
     this.titleHeader = data.title
 
     this.dropdownConfigs = data.dropdownConfigs
+
+    console.log(this.dropdownConfigs)
   }
 
   onCancel(): void {

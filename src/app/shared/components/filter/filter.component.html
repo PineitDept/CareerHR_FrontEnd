@@ -103,7 +103,8 @@
     <ng-container *ngFor="let btn of actionButtons">
       <button
         [ngStyle]="{ 'background-color': btn.color || '#0A84FF' }"
-        class="tw-text-white tw-rounded-lg tw-px-4 tw-py-2 tw-text-base disabled:tw-opacity-50 disabled:tw-cursor-not-allowed tw-min-w-[120px]"
+        [ngClass]="btn.outlineBtn ? '!tw-bg-transparent tw-border tw-border-black tw-text-black tw-font-bold hover:!tw-bg-black hover:tw-text-white' : 'tw-text-white'"
+        class="tw-rounded-lg tw-px-4 tw-py-2 tw-text-base disabled:tw-opacity-50 disabled:tw-cursor-not-allowed tw-min-w-[120px]"
         (click)="onActionButtonClick(btn.key)"
         [disabled]="disabledKeys.includes(btn.key) || ((btn.key === 'submit' || btn.key === 'register') && (!(selectedRows.length)))"
       >

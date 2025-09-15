@@ -1,13 +1,13 @@
 <div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
-    <app-header-content [headerName]="'Appointment Interview 1'" [headerType]="'search'"
-        [searchByOptions]="searchByOptions" [searchForm]="searchForm"></app-header-content>
+    <app-header-content [headerName]="'Appointment Interview 1'" [headerType]="'search'" (search)="onSearch()"
+        (clearSearch)="onClearSearch()" [searchByOptions]="searchByOptions"
+        [searchForm]="searchForm"></app-header-content>
 </div>
 <app-loading></app-loading>
 
-<!-- (search)="onSearch($event)" (clearSearch)="onClearSearch()" -->
-
 <app-filter [filterDate]="true" [filterDateRange]="filterDateRange"
-    (dateRangeSelected)="onDateRangeSelected($event)"></app-filter>
+    (dateRangeSelected)="onDateRangeSelected($event)" 
+  [actionButtons]="filterButtons"></app-filter>
 
 <app-tab-menus [tabs]="tabMenus" (tabChanged)="onTabChange($event)" [activeTab]="activeTab"></app-tab-menus>
 
@@ -37,7 +37,8 @@
                         item.profile.candidateGrade ? item.profile.candidateGrade : 'N/A' }}</span> -->
                     <div class="tw-w-full">
                         <div class="tw-flex tw-items-start tw-gap-2">
-                            <p class="grade-tag" [ngClass]="[getTagClass(item.profile.candidateGrade), !item.profile.candidateGrade ? '!tw-w-[40px]' : '']">
+                            <p class="grade-tag"
+                                [ngClass]="[getTagClass(item.profile.candidateGrade), !item.profile.candidateGrade ? '!tw-w-[40px]' : '']">
                                 {{ item.profile.candidateGrade ? item.profile.candidateGrade : 'N/A' }}
                             </p>
                             <div>
@@ -79,17 +80,19 @@
                             <input type="checkbox" class="tw-accent-black/25 tw-relative tw-top-[7px]"
                                 [checked]="job.isActive" />
                             <span class="tw-ml-2">{{ job.jobName }}</span>
+                            <button *ngIf="job.isOffered" class="tw-ml-3 tw-text-gray-500"
+                                (click)="onRemoveJobByValue(job, item)">x</button>
                         </label>
                         <!-- <div *ngFor="let pos of selectedPositions; let i = index" class="tw-flex tw-items-center">
                             <input type="checkbox" [id]="'pos-' + i" [value]="pos.value" class="tw-accent-black/25 tw-relative tw-top-[1px]" checked />
                             <label [for]="'pos-' + i" class="tw-ml-2">{{ pos.label }}</label>
                         </div> -->
-                        <div *ngFor="let pos of item.selectedPositions; let posIndex = index"
+                        <!-- <div *ngFor="let pos of item.selectedPositions; let posIndex = index"
                             class="tw-flex tw-items-center">
                             <input type="checkbox" [id]="'pos-' + i + '-' + posIndex" [value]="pos.value"
                                 class="tw-accent-black/25 tw-relative tw-top-[1px]" checked />
                             <label [for]="'pos-' + i + '-' + posIndex" class="tw-ml-2">{{ pos.label }}</label>
-                        </div>
+                        </div> -->
                     </div>
                 </div>
 
@@ -176,8 +179,8 @@
                         <app-cdk-dropdown *ngIf="" class="tw-block tw-w-fit" [options]="locationsList"
                             placeholder="version"></app-cdk-dropdown>
                     </div>
-                    <button type="button"
-                        class="tw-w-fit tw-rounded-lg tw-border-[#e5e5e5] tw-border hover:tw-bg-[#f5f5f5] tw-text-black tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5">
+                    <button type="button" *ngIf="!item.interview.isEmailSent"
+                        class="tw-w-fit tw-rounded-lg tw-bg-[#00AAFF] hover:tw-bg-[#028cd1] tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5">
                         <span class="tw-font-semibold">Interview Form </span>
                     </button>
                 </div>

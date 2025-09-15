@@ -18,7 +18,7 @@ import dayjs from 'dayjs';
 })
 export class FilterComponent {
 
-  @Input() actionButtons: { label: string; key: string; color?: string }[] = [];
+  @Input() actionButtons: { label: string; key: string; color?: string; outlineBtn?: boolean }[] = [];
   @Input() disabledKeys: string[] = [];
   @Input() selectedRows: any[] = [];
   @Input() filterDynamicButton: boolean = false;
