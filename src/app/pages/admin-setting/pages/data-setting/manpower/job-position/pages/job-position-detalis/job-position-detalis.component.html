@@ -1,3 +1,6 @@
+<!-- sentinel สำหรับ back-to-top -->
+<div id="page-top-sentinel" class="tw-h-px tw-w-px tw-opacity-0" aria-hidden="true"></div>
+
 <div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
     <app-header-content [headerName]="'Job Position Details'" [headerType]="''"></app-header-content>
 </div>
@@ -346,3 +349,11 @@
 
     </div>
 </form>
+
+<!-- Floating Back-to-Top -->
+<app-back-to-top
+  [sentinelSelector]="'#page-top-sentinel'"
+  [buttonClass]="'tw-fixed tw-bottom-6 tw-right-6 tw-rounded-full tw-h-14 tw-w-14 tw-flex tw-items-center tw-justify-center tw-shadow-xl bg-red-blood hover:bg-maroon-1 tw-text-white tw-z-[60]'"
+  [iconName]="'arrow-upward'"
+  [iconSize]="26">
+</app-back-to-top>
