@@ -4,6 +4,7 @@ import { InterviewSchedulingComponent } from './interview-scheduling.component';
 import { AppointmentCalendarComponent } from './appointment-calendar/appointment-calendar.component';
 import { InterviewRound1Component } from './interview-round-1/interview-round-1.component';
 import { InterviewRound2Component } from './interview-round-2/interview-round-2.component';
+import { InterviewRound1HistoryComponent } from './interview-round-1/pages/interview-round-1-history/interview-round-1-history.component';
 
 const routes: Routes = [
   {
@@ -21,7 +22,11 @@ const routes: Routes = [
       {
         path: 'interview-round-2',
         component: InterviewRound2Component,
-      }
+      },
+      {
+        path: 'interview-round-1/history',
+        component: InterviewRound1HistoryComponent
+      },
     ]
   }
 ];

@@ -1,14 +1,12 @@
 <div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
-    <app-header-content [headerName]="'Appointment Interview 1'" [headerType]="'search'" (search)="onSearch()"
+    <app-header-content [headerName]="'History Appointment Interview 1'" [headerType]="'search'" (search)="onSearch()"
         (clearSearch)="onClearSearch()" [searchByOptions]="searchByOptions"
         [searchForm]="searchForm"></app-header-content>
 </div>
 <app-loading></app-loading>
 
-<app-filter [filterDate]="true" [filterDateRange]="filterDateRange"
-    (dateRangeSelected)="onDateRangeSelected($event)" 
-  [actionButtons]="filterButtons" 
-  (buttonClicked)="onFilterButtonClick($event)"></app-filter>
+<app-filter [filterDate]="true" [filterDateRange]="filterDateRange" (dateRangeSelected)="onDateRangeSelected($event)"
+    [actionButtons]="filterButtons" (buttonClicked)="onFilterButtonClick($event)"></app-filter>
 
 <app-tab-menus [tabs]="tabMenus" (tabChanged)="onTabChange($event)" [activeTab]="activeTab"></app-tab-menus>
 
@@ -17,15 +15,6 @@
 
     <div *ngFor="let item of appointments; let i = index" class="tw-relative group">
 
-        <!-- <button *ngIf="canGoPrev[i]" (click)="onPrevClick(i)" [disabled]="!canGoPrev[i]" class="nav-arrow left-arrow">
-            <app-icon [name]="'chevron-left'" [size]="32" class="tw-text-white"></app-icon>
-        </button>
-
-        <button *ngIf="canGoNext[i]" (click)="onNextClick(i)" [disabled]="!canGoNext[i]" class="nav-arrow right-arrow">
-            <app-icon [name]="'chevron-left'" [size]="32" class="tw-text-white tw-transform tw-rotate-180"></app-icon>
-        </button> -->
-
-        <!-- <ngx-slick-carousel #slickCarousel class="tw-grid grid-cols-auto tw-gap-8" [config]="slideConfig" (init)="onCarouselInit($event, i)" (afterChange)="onSlideChanged($event, i)"> -->
         <div class="tw-grid grid-cols-auto tw-gap-8">
             <div
                 class="tw-border-1 tw-flex tw-rounded-lg tw-items-center !tw-bg-[#F8F9FA] box-shadow flex-box h-unset tw-overflow-hidden">
@@ -34,8 +23,6 @@
                 </div>
                 <div
                     class="tw-min-w-[55%] tw-p-5 tw-relative tw-h-full tw-flex tw-flex-col tw-items-center tw-justify-center">
-                    <!-- <span class="ribbon" [ngClass]="getTagClass(item.profile.candidateGrade)">Grade {{
-                        item.profile.candidateGrade ? item.profile.candidateGrade : 'N/A' }}</span> -->
                     <div class="tw-w-full">
                         <div class="tw-flex tw-items-start tw-gap-2">
                             <p class="grade-tag"
@@ -76,38 +63,25 @@
 
                 <div class="list-top">
                     <p class="tw-mb-3"><strong>Job Position Interviewed </strong><span class="text-red">*</span></p>
-                    <div class="tw-flex tw-flex-col tw-w-full tw-gap-4 !tw-mt-0">
-                        <label *ngFor="let job of item.jobPosition.jobList" class="tw-flex tw-items-start">
-                            <input type="checkbox" class="tw-accent-black/25 tw-relative tw-top-[7px]"
-                                [checked]="job.isActive" />
-                            <span class="tw-ml-2">{{ job.jobName }}</span>
-                            <button *ngIf="job.isOffered" class="tw-ml-3 tw-text-gray-500"
-                                (click)="onRemoveJobByValue(job, item)">x</button>
-                        </label>
-                        <!-- <div *ngFor="let pos of selectedPositions; let i = index" class="tw-flex tw-items-center">
-                            <input type="checkbox" [id]="'pos-' + i" [value]="pos.value" class="tw-accent-black/25 tw-relative tw-top-[1px]" checked />
-                            <label [for]="'pos-' + i" class="tw-ml-2">{{ pos.label }}</label>
-                        </div> -->
-                        <!-- <div *ngFor="let pos of item.selectedPositions; let posIndex = index"
-                            class="tw-flex tw-items-center">
-                            <input type="checkbox" [id]="'pos-' + i + '-' + posIndex" [value]="pos.value"
-                                class="tw-accent-black/25 tw-relative tw-top-[1px]" checked />
-                            <label [for]="'pos-' + i + '-' + posIndex" class="tw-ml-2">{{ pos.label }}</label>
-                        </div> -->
+                    <div *ngFor="let job of item.jobPosition.jobList">
+                        <div class="tw-flex tw-flex-col tw-w-full tw-gap-4 !tw-mt-0 tw-pointer-events-none">
+                            <label *ngIf="job.isActive" class="tw-flex tw-items-start">
+                                <input type="checkbox" class="tw-accent-black/25 tw-relative tw-top-[7px]"
+                                    [checked]="job.isActive" />
+                                <span class="tw-ml-2">{{ job.jobName }}</span>
+                                <!-- <button *ngIf="job.isOffered" class="tw-ml-3 tw-text-gray-500"
+                                    (click)="onRemoveJobByValue(job, item)">x</button> -->
+                            </label>
+                        </div>
                     </div>
                 </div>
 
-                <!-- <button type="button" *ngIf="item.jobPosition.canAdd" (click)="onAddPoscitionClick(i)"
-                    class="tw-w-fit tw-rounded-lg tw-border-[#e5e5e5] tw-border hover:tw-bg-[#f5f5f5] tw-text-black tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5">
-                    <span class="tw-font-semibold">Add Position</span>
-                </button> -->
-
-                <button type="button"
+                <!-- <button type="button"
                     *ngIf="item.jobPosition.canAdd && (!item.selectedPositions || item.selectedPositions.length < 2)"
                     (click)="onAddPoscitionClick(i)"
                     class="tw-w-fit tw-rounded-lg tw-border-[#e5e5e5] tw-border hover:tw-bg-[#f5f5f5] tw-text-black tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5">
                     <span class="tw-font-semibold">Add Position</span>
-                </button>
+                </button> -->
 
             </div>
             <div class="tw-border-1 tw-rounded-lg box-shadow tw-p-6 flex-box-col h-unset">
@@ -117,13 +91,13 @@
                         <div class="tw-flex-1">
                             <p class="tw-mb-3"><strong>Interview Date</strong></p>
                             <input
-                                class="tw-w-full tw-block tw-bg-gray-light-4 tw-border tw-border-[#d1d5db] tw-rounded-[8px] tw-p-2 tw-text-sm tw-outline-none tw-gap-2 placeholder:tw-text-[#ADB5BD]"
+                                class="ac-disabled tw-w-full tw-block tw-bg-gray-light-4 tw-border tw-border-[#d1d5db] tw-rounded-[8px] tw-p-2 tw-text-sm tw-outline-none tw-gap-2 placeholder:tw-text-[#ADB5BD]"
                                 type="date" [value]="item.interview.date | date:'yyyy-MM-dd'">
                         </div>
                         <div class="tw-flex-1">
                             <p class="tw-mb-3"><strong>Interview Location </strong><span class="text-red">*</span></p>
                             <app-cdk-dropdown [options]="locationsList" placeholder="Location"
-                                [value]="item.interview.locationId"></app-cdk-dropdown>
+                                [value]="item.interview.locationId" [disabledSelected]="true"></app-cdk-dropdown>
                         </div>
                     </div>
 
@@ -131,19 +105,18 @@
                         <div class="tw-flex-1">
                             <p class="tw-mb-3"><strong>Interviewers Team </strong><span class="text-red">*</span></p>
                             <button type="button" (click)="onAddTermClick()"
-                                class="tw-w-full tw-flex tw-justify-between tw-h-10 tw-items-center tw-rounded-lg tw-border-[#e5e5e5] tw-border hover:tw-bg-[#f5f5f5] tw-text-black tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5">
+                                class="ac-disabled tw-w-full tw-flex tw-justify-between tw-h-10 tw-items-center tw-rounded-lg tw-border-[#e5e5e5] tw-border hover:tw-bg-[#f5f5f5] tw-text-black tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5">
                                 <span class="tw-font-normal">
                                     {{ getTeamNameById(item.interview.teamId) || 'Team' }}
                                 </span>
                                 <app-icon [name]="'sliders-horizontal-square'" [size]="18"
-                                    extraClass="tw-relative tw-bottom-[1px]"></app-icon>
+                                    extraClass="tw-relative tw-bottom-[1px] tw-text-black"></app-icon>
                             </button>
                         </div>
                         <div class="tw-flex-1">
                             <p class="tw-mb-3"><strong>Contact </strong><span class="text-red">*</span></p>
 
                             <div class="tw-flex tw-rounded-lg tw-overflow-hidden tw-w-full">
-                                <!-- ✅ SEND EMAIL BUTTON -->
                                 <button type="button" (click)="onSendMail()"
                                     [disabled]="item.interview.lastCalledAt === null || item.interview.isEmailSent"
                                     [ngClass]="[item.interview.isEmailSent ? 'tw-bg-[#0A0]' : item.interview.lastCalledAt !== null ? 'tw-bg-[#FFC107] hover:tw-bg-[#e0a800]' : 'tw-bg-[#afafaf] hover:tw-bg-[#858585]', 'tw-min-h-[40px]','tw-w-full','tw-text-white','tw-text-sm','tw-font-semibold','tw-px-3','tw-py-1.5']">
@@ -152,7 +125,6 @@
                                     <span class="tw-font-semibold">Send</span>
                                 </button>
 
-                                <!-- ✅ CALL BUTTON -->
                                 <button type="button" (click)="onAddCallStatus()"
                                     [disabled]="item.interview.lastCalledAt !== null"
                                     [ngClass]="[item.interview.lastCalledAt !== null? 'tw-bg-[#0A0]' : item.interview.missCalled !== null? 'tw-bg-[#FFC107] hover:tw-bg-[#e0a800]' : 'tw-bg-[#afafaf] hover:tw-bg-[#858585]', 'tw-min-h-[40px]','tw-px-3','tw-py-1.5','tw-border-l-[1px]','tw-border-white','tw-min-w-[30%]','tw-text-white']">
@@ -173,10 +145,10 @@
 
                 <div class="tw-flex tw-justify-between">
                     <div class="tw-flex tw-gap-2">
-                        <button type="button"
+                        <!-- <button type="button"
                             class="tw-w-fit tw-rounded-lg tw-border-[#e5e5e5] tw-border hover:tw-bg-[#f5f5f5] tw-text-black tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5">
                             <span class="tw-font-semibold">Rescheduled</span>
-                        </button>
+                        </button> -->
                         <app-cdk-dropdown *ngIf="" class="tw-block tw-w-fit" [options]="locationsList"
                             placeholder="version"></app-cdk-dropdown>
                     </div>
@@ -187,58 +159,6 @@
                 </div>
 
             </div>
-            <!-- <div ngxSlickItem class="tw-border-1 tw-rounded-lg box-shadow tw-p-6 flex-box-col tw-mr-1 h-unset">
-
-                <div class="tw-flex tw-flex-col tw-gap-6">
-                    <div class="tw-grid tw-grid-cols-2 tw-gap-6">
-                        <div class="tw-flex-1">
-                            <p class="tw-mb-3"><strong>Start Interview </strong><span class="text-red">*</span></p>
-                            <input
-                                class="tw-w-full tw-block tw-bg-gray-light-4 tw-border tw-border-[#d1d5db] tw-rounded-[8px] tw-p-2 tw-text-sm tw-outline-none tw-gap-2 placeholder:tw-text-[#ADB5BD]"
-                                type="datetime-local" [value]="item.result.startInterview | date:'yyyy-MM-ddTHH:mm'">
-                        </div>
-                        <div class="tw-flex-1">
-                            <p class="tw-mb-3"><strong>Finish Interview </strong><span class="text-red">*</span></p>
-                            <input
-                                class="tw-w-full tw-block tw-bg-gray-light-4 tw-border tw-border-[#d1d5db] tw-rounded-[8px] tw-p-2 tw-text-sm tw-outline-none tw-gap-2 placeholder:tw-text-[#ADB5BD]"
-                                type="datetime-local" [value]="item.result.finishInterview | date:'yyyy-MM-ddTHH:mm'">
-                        </div>
-                    </div>
-
-                    <div class="tw-grid tw-grid-cols-2 tw-gap-6">
-                        <div class="tw-flex-1">
-                            <p class="tw-mb-3"><strong>Interviewers Result </strong></p>
-
-                            <div class="tw-flex tw-rounded-lg tw-overflow-hidden tw-w-full">
-                                <button type="button" [ngClass]="getButtonClass(item.result.interviewResultText)" class="tw-pointer-events-none tw-min-h-[40px] tw-w-full tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5">
-                                    <app-icon [name]="'file-pencil'" [size]="18" extraClass="tw-text-white tw-relative tw-bottom-[1px] tw-mr-2"></app-icon>
-                                    <span class="tw-font-semibold">{{item.result.interviewResultText}}</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="tw-flex-1" *ngIf="item.result.isEmailDeclineSent">
-                            <p class="tw-mb-3"><strong>Contact </strong><span class="text-red">*</span></p>
-
-                            <div class="tw-flex tw-rounded-lg tw-overflow-hidden tw-w-full">
-                                <button type="button" (click)="onSendMail()"
-                                    class="tw-min-h-[40px] tw-w-full tw-bg-[#0A0] hover:tw-bg-[#008500] tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5">
-                                    <app-icon [name]="'mail'" [size]="18"
-                                        extraClass="tw-text-white tw-relative tw-bottom-[1px] tw-mr-2"></app-icon>
-                                    <span class="tw-font-semibold">Send</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-
-                <button type="button"
-                    class="tw-w-fit tw-rounded-lg tw-border-[#e5e5e5] tw-border hover:tw-bg-[#f5f5f5] tw-text-black tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5">
-                    <span class="tw-font-semibold">Interview Form </span>
-                </button>
-
-            </div> -->
         </div>
     </div>
 

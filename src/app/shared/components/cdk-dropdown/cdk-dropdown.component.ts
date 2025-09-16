@@ -30,7 +30,7 @@ export class CdkDropdownComponent implements ControlValueAccessor {
   @Input() require: boolean = false;
 
   // value: any = null;
-  disabledSelected = false;
+  @Input() disabledSelected = false;
 
   @Output() valueChange = new EventEmitter<any>();
 

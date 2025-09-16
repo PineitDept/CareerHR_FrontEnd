@@ -1,17 +1,21 @@
 import { ChangeDetectorRef, Component, computed, QueryList, signal, ViewChildren } from '@angular/core';
-import { InterviewerService } from '../../../services/admin-setting/interviewer/interviewer.service';
 import { ActivatedRoute, Router } from '@angular/router';
-import { DateRange, SearchForm } from '../../../interfaces/interview-scheduling/interview.interface';
-import { ICandidateFilterRequest, TabMenu } from '../../../interfaces/Application/application.interface';
 import { FormBuilder, FormGroup } from '@angular/forms';
+
 import { MatDialog } from '@angular/material/dialog';
-import { SelectDialogComponent, SelectOption } from '../../../shared/components/dialogs/select-dialog/select-dialog.component';
-import { GeneralBenefitsService } from '../../../services/admin-setting/general-benefits/general-benefits.service';
-import { IApiResponse, IBenefitsFilterRequest, IUniversityWithPositionsDto } from '../../../interfaces/admin-setting/general-benefits.interface';
-import { JobPositionService } from '../../../services/admin-setting/job-position/job-position.service';
 import { SlickCarouselComponent } from 'ngx-slick-carousel';
-import { MailDialogComponent } from '../../../shared/components/dialogs/mail-dialog/mail-dialog.component';
-import { AppointmentsService } from '../../../services/interview-scheduling/appointment-interview/appointments.service';
+
+import { AppointmentsService } from '../../../../../services/interview-scheduling/appointment-interview/appointments.service';
+import { GeneralBenefitsService } from '../../../../../services/admin-setting/general-benefits/general-benefits.service';
+import { InterviewerService } from '../../../../../services/admin-setting/interviewer/interviewer.service';
+import { JobPositionService } from '../../../../../services/admin-setting/job-position/job-position.service';
+
+import { DateRange, SearchForm } from '../../../../../interfaces/interview-scheduling/interview.interface';
+import { ICandidateFilterRequest, TabMenu } from '../../../../../interfaces/Application/application.interface';
+import { IApiResponse, IBenefitsFilterRequest, IUniversityWithPositionsDto } from '../../../../../interfaces/admin-setting/general-benefits.interface';
+
+import { MailDialogComponent } from '../../../../../shared/components/dialogs/mail-dialog/mail-dialog.component';
+import { SelectDialogComponent, SelectOption } from '../../../../../shared/components/dialogs/select-dialog/select-dialog.component';
 
 const SEARCH_OPTIONS: string[] = [
   'Applicant ID',
@@ -19,20 +23,19 @@ const SEARCH_OPTIONS: string[] = [
 ] as const;
 
 @Component({
-  selector: 'app-interview-round-1',
-  templateUrl: './interview-round-1.component.html',
-  styleUrl: './interview-round-1.component.scss'
+  selector: 'app-interview-round-1-history',
+  templateUrl: './interview-round-1-history.component.html',
+  styleUrl: './interview-round-1-history.component.scss'
 })
-
-export class InterviewRound1Component {
+export class InterviewRound1HistoryComponent {
 
   createInitialTabs(): TabMenu[] {
     return [
       { key: 'total', label: 'All Status', count: 0 },
-      { key: 'pending', label: 'Pending', count: 0 },
-      // { key: 'scheduled', label: 'Scheduled', count: 0 },
-      { key: 'in-process', label: 'In Process', count: 0 },
-      { key: 'schedule', label: 'Schedule', count: 0 }
+      { key: 'no-show', label: 'Candidate No-Show', count: 0 },
+      { key: 'accept', label: 'Accepted Interviews', count: 0 },
+      { key: 'decline-interview', label: 'Declined Interviews', count: 0 },
+      { key: 'decline-candidate', label: 'Declined Candidates', count: 0 },
     ];
   }
 
@@ -167,7 +170,7 @@ export class InterviewRound1Component {
     this.fetchTeamID();
     this.fetchInterviewer();
 
-    this.filterButtons = [{ label: 'History', key: 'history', color: 'transparent', outlineBtn: true }];
+    this.filterButtons = [{ label: 'Back to Appointment Interview 1', key: 'back', color: 'transparent', outlineBtn: true }];
   }
 
   // ---------- Data fetching ----------
@@ -479,8 +482,8 @@ export class InterviewRound1Component {
       {
         type: 'multi',
         label: 'Interviewers',
-        isHistory: false,
         options: this.interviewerList,
+        isHistory: false,
       }
     ];
 
@@ -709,8 +712,8 @@ export class InterviewRound1Component {
 
   onFilterButtonClick(key: string) {
     switch (key) {
-      case 'history':
-        this.router.navigate(['/interview-scheduling/interview-round-1/history']);
+      case 'back':
+        this.router.navigate(['/interview-scheduling/interview-round-1']);
         break;
     }
   }

@@ -7,12 +7,14 @@ import { AppointmentCalendarComponent } from './appointment-calendar/appointment
 import { InterviewRound1Component } from './interview-round-1/interview-round-1.component';
 import { InterviewRound2Component } from './interview-round-2/interview-round-2.component';
 import { A11yModule } from "@angular/cdk/a11y";
+import { InterviewRound1HistoryComponent } from './interview-round-1/pages/interview-round-1-history/interview-round-1-history.component';
 
 @NgModule({
   declarations: [
     AppointmentCalendarComponent,
     InterviewRound1Component,
     InterviewRound2Component,
+    InterviewRound1HistoryComponent,
   ],
   imports: [
     CommonModule,

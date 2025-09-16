@@ -17,7 +17,7 @@
                     </app-cdk-dropdown>
 
                     <!-- Multi Select Dropdown -->
-                    <app-multi-select-dropdown *ngSwitchCase="'multi'" [label]="config.label" [options]="config.options" [defaultSelected]="config.defaultSelected" [isHistory]="true"
+                    <app-multi-select-dropdown *ngSwitchCase="'multi'" [label]="config.label" [options]="config.options" [defaultSelected]="config.defaultSelected" [isHistory]="config.isHistory"
                         (selectionChange)="onMultiSelectChange($event, config.label)">
                     </app-multi-select-dropdown>
 

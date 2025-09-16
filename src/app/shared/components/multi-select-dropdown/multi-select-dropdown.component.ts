@@ -41,6 +41,8 @@ export class MultiSelectDropdownComponent implements ControlValueAccessor {
         this.defaultSelected.includes(option.value)
       );
     }
+
+    console.log(this.isHistory, '=>this.isHistory')
   }
 
   // ControlValueAccessor implementation
