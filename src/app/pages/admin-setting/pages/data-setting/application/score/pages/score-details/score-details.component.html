@@ -75,6 +75,7 @@
           (editClicked)="onInlineEditSave($event)"
           [isDisabledForm]="!isEditMode"
           (toggleChange)="onToggleChangeDetails($event)"
+          [lockedPrefixConfig]="conditionLockedCfg"
         ></app-tables>
       </div>
 

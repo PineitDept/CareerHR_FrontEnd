@@ -62,6 +62,11 @@ export class ScoreDetailsComponent {
 
   private destroy$ = new Subject<void>();
 
+  private readonly CONDITION_PREFIX_MAP: Record<number, string> = {
+    8: 'Score EQ > ',
+    9: 'Score Ethics > ',
+  };
+
   constructor(
     private route: ActivatedRoute,
     private scoreService: ScoreService,
@@ -76,6 +81,12 @@ export class ScoreDetailsComponent {
   /** แสดงปุ่ม Add Condition เฉพาะเมื่อ scoreType เป็น 8 หรือ 9 */
   get canShowAddButton(): boolean {
     return this.scoreType === 8 || this.scoreType === 9;
+  }
+
+  // ใช้กับ <app-tables> เพื่อให้ render prefix lock
+  get conditionLockedCfg() {
+    const prefix = this.CONDITION_PREFIX_MAP[this.scoreType];
+    return prefix ? { field: 'conditionDetail', prefix } : null;
   }
 
   ngOnInit() {
@@ -254,14 +265,31 @@ export class ScoreDetailsComponent {
   onInlineSave(payload: any) {
     if (!this.isEditMode) { this.isAddingRow = false; return; }
 
+    // กันซ้ำและ validate เฉพาะ scoreType 8
+    if (this.scoreType === 8) {
+      const num = this.extractConditionNumber(String(payload?.conditionDetail ?? ''));
+      if (num == null) {
+        this.fieldErrors = true;
+        this.notify.warn('กรุณากรอกตัวเลขหลัง "Score EQ > "');
+        return;
+      }
+      const dupIdx = this.findDuplicateIndexByNumber(num);
+      if (dupIdx !== -1) {
+        this.fieldErrors = true;
+        this.duplicateRowIndex = dupIdx;
+        this.notify.error(`ค่าเงื่อนไขซ้ำกับแถวที่ ${dupIdx + 1}`);
+        return;
+      }
+    }
+
     const normalized: ScoreItem = {
       id: null,
       condition: String(payload?.condition ?? ''),
       conditionDetail: String(payload?.conditionDetail ?? '').trim(),
       score: Number(payload?.score ?? 0) || 0,
       activeStatus: !!(payload?.activeStatus ?? (payload?.status === 1)),
-      isDelete: true,     // แถวใหม่ให้ลบได้ (ปรับ rule ได้)
-      isDisable: true,    // true = อนุญาต toggle (ตั้ง default ให้แก้ได้)
+      isDelete: true,
+      isDisable: true,
     };
 
     this.scoreSettingsFA.push(this.buildFG(normalized), { emitEvent: false });
@@ -275,6 +303,27 @@ export class ScoreDetailsComponent {
 
     const idx = this.findIndexByRow(updatedRow);
     if (idx < 0) return;
+
+    // ✅ กันซ้ำและ validate เฉพาะ scoreType 8
+    if (this.scoreType === 8) {
+      const num = this.extractConditionNumber(String(updatedRow?.conditionDetail ?? ''));
+      if (num == null) {
+        this.fieldErrors = true;
+        this.notify.warn('กรุณากรอกตัวเลขหลัง "Score EQ > "');
+        // ยกเลิกการแก้ไข: รีเฟรชตารางกลับค่าเดิมจาก FormArray
+        this.rebuildRowsFromForm();
+        return;
+      }
+      const dupIdx = this.findDuplicateIndexByNumber(num, idx);
+      if (dupIdx !== -1) {
+        this.fieldErrors = true;
+        this.duplicateRowIndex = dupIdx;
+        this.notify.error(`ค่าเงื่อนไขซ้ำกับแถวที่ ${dupIdx + 1}`);
+        // ยกเลิกการแก้ไข: รีเฟรชตารางกลับค่าเดิมจาก FormArray
+        this.rebuildRowsFromForm();
+        return;
+      }
+    }
 
     const patch: Partial<ScoreItem> = {
       condition: String(updatedRow?.condition ?? ''),
@@ -429,6 +478,28 @@ export class ScoreDetailsComponent {
         isDeleted: false,
       }))
     };
+  }
+
+  // ดึงเลขทศนิยมไม่ติดลบจาก conditionDetail (รองรับกรณีมี prefix)
+  private extractConditionNumber(text: string): number | null {
+    if (typeof text !== 'string') return null;
+    let s = text.trim();
+    const prefix = this.CONDITION_PREFIX_MAP[this.scoreType] ?? '';
+    if (prefix && s.startsWith(prefix)) s = s.slice(prefix.length).trim();
+    if (s === '') return null;
+    const n = Number(s);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  }
+
+  // หา index ของแถวที่มีค่าซ้ำ (ข้าม index ที่กำลังแก้)
+  private findDuplicateIndexByNumber(n: number, skipIndex?: number): number {
+    const arr = (this.scoreSettingsFA.getRawValue() as ScoreItem[]) || [];
+    for (let i = 0; i < arr.length; i++) {
+      if (skipIndex != null && i === skipIndex) continue;
+      const m = this.extractConditionNumber(arr[i]?.conditionDetail ?? '');
+      if (m != null && m === n) return i;
+    }
+    return -1;
   }
 
   // ======= Cleanup =======

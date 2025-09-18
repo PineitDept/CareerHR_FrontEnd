@@ -83,6 +83,7 @@ export class TablesComponent
   @Input() isConfirmDialogSaveRequired: boolean = true;
   @Input() tableFixed: boolean = true;
   @Input() isReasonSave: boolean = false;
+  @Input() lockedPrefixConfig: { field: string; prefix: string } | null = null;
 
   @Output() selectionChanged = new EventEmitter<any[]>();
   @Output() rowClicked = new EventEmitter<any>();
@@ -136,6 +137,8 @@ export class TablesComponent
     { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 4 },
     { originX: 'start', originY: 'top',    overlayX: 'start', overlayY: 'bottom', offsetY: -4 },
   ];
+
+  private readonly MAX_SCORE = 1;
 
   constructor(
     private cdr: ChangeDetectorRef,
@@ -797,6 +800,19 @@ export class TablesComponent
     const err: Record<string, boolean> = {};
     for (const f of this.requiredFooterFields || []) {
       const v = this.footerRow?.[f];
+
+      if (this.hasLockedPrefix(f)) {
+        const suffix = this.extractLockedSuffix(String(v ?? ''));
+        if (suffix === '') err[f] = true;
+        continue;
+      }
+
+      if (f === 'score') {
+        const n = Number(v);
+        if (!Number.isFinite(n) || n < 0 || n > this.MAX_SCORE) err[f] = true;
+        continue;
+      }
+
       if (f === 'sort' || f === 'scoringMethod') {
         const n = Number(v);
         if (!Number.isFinite(n) || n < 1) err[f] = true;
@@ -817,7 +833,13 @@ export class TablesComponent
       const el = e.target as HTMLInputElement;
       const sanitized = this.sanitizeDecimalNonNegative(el.value);
       if (sanitized !== el.value) el.value = sanitized;
-      this.footerRow[field] = sanitized === '' ? undefined : Number(sanitized);
+
+      let n = sanitized === '' ? undefined : Number(sanitized);
+      if (n !== undefined) {
+        if (n < 0) { n = 0; el.value = '0'; }
+        if (n > this.MAX_SCORE) { n = this.MAX_SCORE; el.value = String(this.MAX_SCORE); }
+      }
+      this.footerRow[field] = n;
     }
     if (this.isRequired(field)) this.validateFooterField(field);
     this.cdr.detectChanges();
@@ -839,7 +861,9 @@ export class TablesComponent
     } else if (field === 'score') {
       const el = e.target as HTMLInputElement;
       let n = Number(el.value);
-      if (!Number.isFinite(n) || n < 0) n = 0;
+      if (!Number.isFinite(n)) n = 0;
+      if (n < 0) n = 0;
+      if (n > this.MAX_SCORE) n = this.MAX_SCORE;
       el.value = String(n);
       this.footerRow[field] = n;
     }
@@ -856,7 +880,13 @@ export class TablesComponent
     const next = { ...this.footerErrors };
     delete next[field];
 
-    if (field === 'sort' || field === 'scoringMethod') {
+    if (this.hasLockedPrefix(field)) {
+      const suffix = this.extractLockedSuffix(String(v ?? ''));
+      if (suffix === '') next[field] = true;
+    } else if (field === 'score') {
+      const n = Number(v);
+      if (!Number.isFinite(n) || n < 0 || n > this.MAX_SCORE) next[field] = true;
+    } else if (field === 'sort' || field === 'scoringMethod') {
       const n = Number(v);
       if (!Number.isFinite(n) || n < 1) next[field] = true;
     } else {
@@ -909,9 +939,13 @@ export class TablesComponent
       const el = e.target as HTMLInputElement;
       const sanitized = this.sanitizeDecimalNonNegative(el.value);
       if (sanitized !== el.value) el.value = sanitized;
-      if (this.editingBuffer) {
-        this.editingBuffer[field] = sanitized === '' ? undefined : Number(sanitized);
+
+      let n = sanitized === '' ? undefined : Number(sanitized);
+      if (n !== undefined) {
+        if (n < 0) n = 0;
+        if (n > this.MAX_SCORE) { n = this.MAX_SCORE; el.value = String(this.MAX_SCORE); }
       }
+      if (this.editingBuffer) this.editingBuffer[field] = n;
     }
   }
 
@@ -925,7 +959,9 @@ export class TablesComponent
     } else if (field === 'score') {
       const el = e.target as HTMLInputElement;
       let n = Number(el.value);
-      if (!Number.isFinite(n) || n < 0) n = 0;
+      if (!Number.isFinite(n)) n = 0;
+      if (n < 0) n = 0;
+      if (n > this.MAX_SCORE) n = this.MAX_SCORE;
       el.value = String(n);
       if (this.editingBuffer) this.editingBuffer[field] = n;
     }
@@ -952,5 +988,32 @@ export class TablesComponent
     const parts = s.split('.');
     if (parts.length > 2) s = parts[0] + '.' + parts.slice(1).join('');
     return s;
+  }
+
+  private hasLockedPrefix(field: string): boolean {
+    return !!this.lockedPrefixConfig && this.lockedPrefixConfig.field === field;
+  }
+
+  extractLockedSuffix(value: string): string {
+    const prefix = this.lockedPrefixConfig?.prefix ?? '';
+    if (typeof value !== 'string') return '';
+    const s = value.startsWith(prefix) ? value.slice(prefix.length) : value;
+    return s.trim();
+  }
+
+  onLockedPrefixEditingInput(field: string, e: Event) {
+    const el = e.target as HTMLInputElement;
+    const sanitized = this.sanitizeDecimalNonNegative(el.value);
+    if (sanitized !== el.value) el.value = sanitized;
+    const prefix = this.lockedPrefixConfig?.prefix ?? '';
+    if (this.editingBuffer) this.editingBuffer[field] = prefix + sanitized;
+  }
+
+  onLockedPrefixFooterInput(field: string, e: Event) {
+    const el = e.target as HTMLInputElement;
+    const sanitized = this.sanitizeDecimalNonNegative(el.value);
+    if (sanitized !== el.value) el.value = sanitized;
+    const prefix = this.lockedPrefixConfig?.prefix ?? '';
+    this.footerRow[field] = prefix + sanitized;
   }
 }
