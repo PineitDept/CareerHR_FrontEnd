@@ -37,6 +37,7 @@
         <div></div>
 
         <button
+          *ngIf="canShowAddButton"
           type="button"
           (click)="onAddConditionClicked()"
           class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-azure hover:bg-azure-dark

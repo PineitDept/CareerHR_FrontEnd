@@ -73,6 +73,11 @@ export class ScoreDetailsComponent {
   // ======= Getters =======
   get scoreSettingsFA(): FormArray { return this.formDetails.get('scoreSettings') as FormArray; }
 
+  /** แสดงปุ่ม Add Condition เฉพาะเมื่อ scoreType เป็น 8 หรือ 9 */
+  get canShowAddButton(): boolean {
+    return this.scoreType === 8 || this.scoreType === 9;
+  }
+
   ngOnInit() {
     this.initializeForm();
     this.ensureFilterButtons();
@@ -241,7 +246,7 @@ export class ScoreDetailsComponent {
 
   // ======= Inline row create/edit/delete =======
   onAddConditionClicked() {
-    if (!this.isEditMode) return;
+    if (!this.isEditMode || !this.canShowAddButton) return;
     this.isAddingRow = true;
     this.scoreDetailsTable.startInlineCreate({ activeStatus: true }, 'bottom');
   }

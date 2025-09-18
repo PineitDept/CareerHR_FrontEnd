@@ -811,17 +811,38 @@ export class TablesComponent
   }
 
   onFooterInput(field: string, e: Event) {
-    if (field === 'sort') this.onNumberTyping(e, 'sort');
+    if (field === 'sort' || field === 'scoringMethod') {
+      this.onNumberTyping(e, field);
+    } else if (field === 'score') {
+      const el = e.target as HTMLInputElement;
+      const sanitized = this.sanitizeDecimalNonNegative(el.value);
+      if (sanitized !== el.value) el.value = sanitized;
+      this.footerRow[field] = sanitized === '' ? undefined : Number(sanitized);
+    }
     if (this.isRequired(field)) this.validateFooterField(field);
     this.cdr.detectChanges();
   }
 
   onFooterKeydown(field: string, e: KeyboardEvent) {
-    if (field === 'sort') this.onNumberKeydown(e, 'sort');
+    if (field === 'sort' || field === 'scoringMethod') {
+      const blocked = ['e', 'E', '+', '-', '.'];
+      if (blocked.includes(e.key)) e.preventDefault();
+    } else if (field === 'score') {
+      const blocked = ['e', 'E', '+', '-']; // อนุญาต '.'
+      if (blocked.includes(e.key)) e.preventDefault();
+    }
   }
 
   onFooterBlur(field: string, e: Event) {
-    if (field === 'sort') this.onNumberBlur(e, 'sort');
+    if (field === 'sort' || field === 'scoringMethod') {
+      this.onNumberBlur(e, field);
+    } else if (field === 'score') {
+      const el = e.target as HTMLInputElement;
+      let n = Number(el.value);
+      if (!Number.isFinite(n) || n < 0) n = 0;
+      el.value = String(n);
+      this.footerRow[field] = n;
+    }
     if (this.isRequired(field)) this.validateFooterField(field);
     this.cdr.detectChanges();
   }
@@ -867,28 +888,47 @@ export class TablesComponent
   }
 
   onInlineNumberKeydown(field: string, e: KeyboardEvent) {
-    if (field !== 'sort' && field !== 'scoringMethod') return;
-    const blocked = ['e', 'E', '+', '-', '.'];
-    if (blocked.includes(e.key)) e.preventDefault();
+    if (field === 'sort' || field === 'scoringMethod') {
+      const blocked = ['e', 'E', '+', '-', '.'];
+      if (blocked.includes(e.key)) e.preventDefault();
+    } else if (field === 'score') {
+      const blocked = ['e', 'E', '+', '-']; // อนุญาต '.'
+      if (blocked.includes(e.key)) e.preventDefault();
+    }
   }
 
   onInlineNumberInput(field: string, e: Event) {
-    if (field !== 'sort' && field !== 'scoringMethod') return;
-    const el = e.target as HTMLInputElement;
-    const onlyDigits = el.value.replace(/[^\d]/g, '');
-    if (onlyDigits !== el.value) el.value = onlyDigits;
-    if (this.editingBuffer) {
-      this.editingBuffer[field] = onlyDigits === '' ? undefined : Number(onlyDigits);
+    if (field === 'sort' || field === 'scoringMethod') {
+      const el = e.target as HTMLInputElement;
+      const onlyDigits = el.value.replace(/[^\d]/g, '');
+      if (onlyDigits !== el.value) el.value = onlyDigits;
+      if (this.editingBuffer) {
+        this.editingBuffer[field] = onlyDigits === '' ? undefined : Number(onlyDigits);
+      }
+    } else if (field === 'score') {
+      const el = e.target as HTMLInputElement;
+      const sanitized = this.sanitizeDecimalNonNegative(el.value);
+      if (sanitized !== el.value) el.value = sanitized;
+      if (this.editingBuffer) {
+        this.editingBuffer[field] = sanitized === '' ? undefined : Number(sanitized);
+      }
     }
   }
 
   onInlineNumberBlur(field: string, e: Event) {
-    if (field !== 'sort' && field !== 'scoringMethod') return;
-    const el = e.target as HTMLInputElement;
-    let n = Number(el.value || 0);
-    if (!Number.isFinite(n) || n < 1) n = 1;
-    el.value = String(n);
-    if (this.editingBuffer) this.editingBuffer[field] = n;
+    if (field === 'sort' || field === 'scoringMethod') {
+      const el = e.target as HTMLInputElement;
+      let n = Number(el.value || 0);
+      if (!Number.isFinite(n) || n < 1) n = 1;
+      el.value = String(n);
+      if (this.editingBuffer) this.editingBuffer[field] = n;
+    } else if (field === 'score') {
+      const el = e.target as HTMLInputElement;
+      let n = Number(el.value);
+      if (!Number.isFinite(n) || n < 0) n = 0;
+      el.value = String(n);
+      if (this.editingBuffer) this.editingBuffer[field] = n;
+    }
   }
 
   // onInlineKeydown(e: KeyboardEvent, row: any) {
@@ -905,4 +945,12 @@ export class TablesComponent
     return Array.isArray(column?.textlinkActions) ? column.textlinkActions! : [];
   }
 
+  private sanitizeDecimalNonNegative(value: string): string {
+    // เอาเฉพาะตัวเลขและจุดทศนิยม
+    let s = value.replace(/[^0-9.]/g, '');
+    // ให้มีจุดได้แค่ 1 จุด
+    const parts = s.split('.');
+    if (parts.length > 2) s = parts[0] + '.' + parts.slice(1).join('');
+    return s;
+  }
 }
