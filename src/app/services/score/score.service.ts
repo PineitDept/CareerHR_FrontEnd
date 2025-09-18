@@ -17,4 +17,25 @@ export class ScoreService {
       loading: true
     });
   }
+
+  getScoreSettingDetailsByType(scoreType: number): Observable<any> {
+    return this.apiService.get<any>(`ScoreSetting/by-type/${scoreType}`, {
+      withAuth: true,
+      loading: true
+    });
+  }
+
+  getRevisionScoreSettingDetailsByType(scoreType: number, divisionId: number): Observable<any> {
+    return this.apiService.get<any>(`ScoreSetting/by-type/${scoreType}/division/${divisionId}`, {
+      withAuth: true,
+      loading: true
+    });
+  }
+
+  // saveScoreSettingDetails(body: any): Observable<any> {
+  //   return this.apiService.post<any>('ScoreSetting/forms', body, {
+  //     withAuth: true,
+  //     loading: true
+  //   });
+  // }
 }

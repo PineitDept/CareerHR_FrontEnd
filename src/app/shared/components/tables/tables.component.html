@@ -288,76 +288,55 @@
                   </div>
 
                   <!-- text link Content -->
-                  <div *ngSwitchCase="'textlink'" class="tw-flex tw-justify-center tw-gap-4"
-                    (click)="$event.stopPropagation()"
-                  >
-                    <a *ngIf="column.textlinkActions?.includes('view')" href="javascript:void(0)"
+                  <div *ngSwitchCase="'textlink'" class="tw-flex tw-justify-center tw-gap-4" (click)="$event.stopPropagation()">
+                    <a *ngIf="getRowTextlinkActions(column, row).includes('view')" href="javascript:void(0)"
                       class="tw-text-[#5500FF] hover:tw-text-[#5f31bb] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
                       (click)="onClickView($event, row)">
-                      <app-icon name="eye" [size]="20"></app-icon> <span>View</span>
+                      <app-icon name="eye" [size]="20"></app-icon>
+                      <span>View</span>
                     </a>
 
-                    <a *ngIf="column.textlinkActions?.includes('edit-topopup')" href="javascript:void(0)"
+                    <a *ngIf="getRowTextlinkActions(column, row).includes('edit-topopup')" href="javascript:void(0)"
                       class="tw-text-[#D97706] hover:tw-text-[#a7671e] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
-                      [class.tw-pointer-events-none]="isDisabledForm"
-                      [class.tw-opacity-50]="isDisabledForm"
+                      [class.tw-pointer-events-none]="isDisabledForm" [class.tw-opacity-50]="isDisabledForm"
                       (click)="onClickEditDialog($event, row)">
-                      <app-icon name="pen-to-square" [size]="20"></app-icon> <span>Edit</span>
+                      <app-icon name="pen-to-square" [size]="20"></app-icon>
+                      <span>Edit</span>
                     </a>
 
-                    <!-- <a *ngIf="column.textlinkActions?.includes('edit-card')" href="javascript:void(0)"
+                    <a *ngIf="getRowTextlinkActions(column, row).includes('edit-inrow') && editingRowId !== i+1 && !row._isNew"
                       class="tw-text-[#D97706] hover:tw-text-[#a7671e] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
-                      [class.tw-pointer-events-none]="isDisabledForm"
-                      [class.tw-opacity-50]="isDisabledForm"
-                      (click)="onClickEditCard($event, row)">
-                      <app-icon name="pen-to-square" [size]="20"></app-icon> <span>Edit</span>
-                    </a> -->
-
-                    <a *ngIf="column.textlinkActions?.includes('edit-inrow') && editingRowId !== i+1 && !row._isNew"
-                      class="tw-text-[#D97706] hover:tw-text-[#a7671e] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
-                      [class.tw-pointer-events-none]="isDisabledForm"
-                      [class.tw-opacity-50]="isDisabledForm"
+                      [class.tw-pointer-events-none]="isDisabledForm" [class.tw-opacity-50]="isDisabledForm"
                       (click)="onClickEdit($event, row, i+1)">
-                      <app-icon name="pen-to-square" [size]="20"></app-icon> <span>Edit</span>
+                      <app-icon name="pen-to-square" [size]="20"></app-icon>
+                      <span>Edit</span>
                     </a>
 
-                    <!-- <ng-container *ngIf="row._isNew; else normalActions">
+                    <ng-container *ngIf="editingRowId === i+1 && editRow">
                       <a href="javascript:void(0)"
-                        class="tw-text-[#00AA00] hover:tw-text-[#148014] tw-flex tw-items-center tw-gap-1 tw-font-semibold"
-                        (click)="saveInlineCreate(row); $event.stopPropagation()">
-                        <app-icon name="file-plus-circle" [size]="20"></app-icon> <span>Save</span>
+                        class="tw-text-[#00AA00] hover:tw-text-[#148014] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
+                        (click)="onClickSave($event, row)">
+                        <app-icon name="file-plus-circle" [size]="20"></app-icon>
+                        <span>Save</span>
                       </a>
                       <a href="javascript:void(0)"
-                        class="tw-text-[#6C757D] hover:tw-text-[#404447] tw-flex tw-items-center tw-gap-1 tw-font-semibold"
-                        (click)="cancelInlineCreate(row); $event.stopPropagation()">
-                        <app-icon name="xmark" [size]="20"></app-icon> <span>Cancel</span>
+                        class="tw-text-[#6C757D] hover:tw-text-[#404447] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
+                        (click)="onClickCancel($event, row)">
+                        <app-icon name="xmark" [size]="20"></app-icon>
+                        <span>Cancel</span>
                       </a>
-                    </ng-container> -->
+                    </ng-container>
 
-                    <!-- <ng-template #normalActions> -->
-                      <ng-container *ngIf="editingRowId === i+1 && editRow">
-                        <a href="javascript:void(0)"
-                          class="tw-text-[#00AA00] hover:tw-text-[#148014] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
-                          (click)="onClickSave($event, row)">
-                          <app-icon name="file-plus-circle" [size]="20"></app-icon> <span>Save</span>
-                        </a>
-
-                        <a href="javascript:void(0)"
-                          class="tw-text-[#6C757D] hover:tw-text-[#404447] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
-                          (click)="onClickCancel($event, row)">
-                          <app-icon name="xmark" [size]="20"></app-icon> <span>Cancel</span>
-                        </a>
-                      </ng-container>
-                    <!-- </ng-template> -->
-
-                    <a *ngIf="column.textlinkActions?.includes('delete') && editingRowId !== i+1 && !row._isNew" href="javascript:void(0)"
+                    <a *ngIf="getRowTextlinkActions(column, row).includes('delete') && editingRowId !== i+1 && !row._isNew"
+                      href="javascript:void(0)"
                       class="tw-text-[#F00] hover:tw-text-[#AA0000] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
-                      [class.tw-pointer-events-none]="isDisabledForm"
-                      [class.tw-opacity-50]="isDisabledForm"
+                      [class.tw-pointer-events-none]="isDisabledForm" [class.tw-opacity-50]="isDisabledForm"
                       (click)="onClickDelete($event, row)">
-                      <app-icon name="trash" [size]="20"></app-icon> <span>Delete</span>
+                      <app-icon name="trash" [size]="20"></app-icon>
+                      <span>Delete</span>
                     </a>
                   </div>
+
 
                 </ng-container>
               </div>

@@ -895,4 +895,14 @@ export class TablesComponent
   //   if (e.key === 'Enter') { e.preventDefault(); this.saveInlineCreate(row); }
   //   if (e.key === 'Escape') { e.preventDefault(); this.cancelInlineCreate(row); }
   // }
+
+  getRowTextlinkActions(column: Column, row: any): string[] {
+    // ใช้ row override เฉพาะเมื่อคอลัมน์เปิดใช้ opt-in
+    if (column?.useRowTextlinkActions) {
+      const rowActs = Array.isArray(row?.textlinkActions) ? row.textlinkActions : [];
+      if (rowActs.length) return rowActs;
+    }
+    return Array.isArray(column?.textlinkActions) ? column.textlinkActions! : [];
+  }
+
 }
