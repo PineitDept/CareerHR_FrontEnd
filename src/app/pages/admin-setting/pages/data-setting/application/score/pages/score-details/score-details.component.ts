@@ -9,6 +9,7 @@ import { NotificationService } from '../../../../../../../../shared/services/not
 import { CaptchaDialogComponent } from '../../../../../../../../shared/components/dialogs/captcha-dialog/captcha-dialog.component';
 import { Subject, takeUntil } from 'rxjs';
 import { UniversityPickerDialogComponent } from '../../../../../../../../shared/components/dialogs/university-picker-dialog/university-picker-dialog.component';
+import { PendingDraftsAware } from '../../../../../../../../guards/pending-draft.guard';
 
 type ScoreItem = {
   id: number | null;
@@ -27,7 +28,7 @@ type ScoreItem = {
   templateUrl: './score-details.component.html',
   styleUrl: './score-details.component.scss'
 })
-export class ScoreDetailsComponent {
+export class ScoreDetailsComponent implements PendingDraftsAware {
   @ViewChild('scoreDetailsTable') scoreDetailsTable!: TablesComponent;
 
   filterButtons: { label: string; key: string; color: string }[] = [];
@@ -80,6 +81,14 @@ export class ScoreDetailsComponent {
     { key: 5, label: 'Candidate Grade F to Pass' },
   ];
 
+  // === Baseline/Draft helpers ===
+  private _baselineSnapshot = '';  // JSON ของสถานะล่าสุดไว้เทียบ hasFormChanged()
+
+  private _draftKey(): string {
+    // แยกตาม scoreType เพื่อไม่ชนกันระหว่างหน้า/ประเภท
+    return `scoreDetailsDraft:type:${this.scoreType}`;
+  }
+
   constructor(
     private route: ActivatedRoute,
     private scoreService: ScoreService,
@@ -115,6 +124,38 @@ export class ScoreDetailsComponent {
         this.setupColumnsByType();
 
         this.formDetails.patchValue({ scoreName: this.scoreName }, { emitEvent: false });
+
+        try {
+          const raw = sessionStorage.getItem(this._draftKey());
+          if (raw) {
+            const draft = JSON.parse(raw);
+            if (draft?.items && Array.isArray(draft.items)) {
+              this.clearFormArrayQuietly(this.scoreSettingsFA);
+              draft.items.forEach((r: any) => {
+                const it: ScoreItem = {
+                  id: r.id ?? null,
+                  tempId: null,
+                  condition: String(r.condition ?? ''),
+                  conditionDetail: String(r.conditionDetail ?? '').trim(),
+                  score: Number(r.score ?? 0) || 0,
+                  activeStatus: !!r.isActive,
+                  isDelete: !!r.isDelete,
+                  isDisable: !!r.isDisable,
+                };
+                this.scoreSettingsFA.push(this.buildFG(it), { emitEvent: false });
+              });
+              this.rebuildRowsFromForm();
+              this.isEditMode = true;
+              this.isViewingRevision = false;
+              this.ensureFilterButtons();
+
+              // baseline กำหนดเป็นสถานะที่โหลดจาก draft
+              this._baselineSnapshot = JSON.stringify(this.scoreSettingsFA.getRawValue());
+              return; // ไม่ต้อง fetch API ถ้าจะให้ใช้ draft ต่อเลย
+            }
+          }
+        } catch {}
+
         this.fetchScoreSettingDetailsByType();
       });
   }
@@ -365,6 +406,7 @@ export class ScoreDetailsComponent {
         this.isViewingRevision = false;
         this.isEditMode = false;
         this.ensureFilterButtons();
+        this._baselineSnapshot = JSON.stringify(this.scoreSettingsFA.getRawValue());
       },
       error: (error) => {
         console.error('Error fetching score details by type:', error);
@@ -938,6 +980,7 @@ export class ScoreDetailsComponent {
         items.forEach(it => this.scoreSettingsFA.push(this.buildFG(it), { emitEvent: false }));
         this.rebuildRowsFromForm();
         this.currentRevision = revisionId;
+        this._baselineSnapshot = JSON.stringify(this.scoreSettingsFA.getRawValue());
       },
       error: (err) => {
         const msg = err?.error?.message || err?.message || 'Cannot load this revision.';
@@ -952,7 +995,14 @@ export class ScoreDetailsComponent {
     return this.isEditMode;
   }
 
-  private touchChanged() { this.setSaveEnabled(true); }
+  private touchChanged() {
+    this.setSaveEnabled(true);
+    // Auto-save draft ต่อ scoreType ลง sessionStorage
+    try {
+      const draft = this.buildSavePayload(); // payload พร้อมใช้
+      sessionStorage.setItem(this._draftKey(), JSON.stringify(draft));
+    } catch {}
+  }
 
   private buildSavePayload() {
     const rows = this.scoreSettingsFA.getRawValue() as ScoreItem[];
@@ -1143,6 +1193,28 @@ export class ScoreDetailsComponent {
     // รีบิลด์แถวในตารางและเปิดปุ่ม Save
     this.rebuildRowsFromForm();
     this.touchChanged();
+  }
+
+  // == PendingDraftsAware ==
+  public hasFormChanged(): boolean {
+    if (!this.scoreSettingsFA) return false;
+    try {
+      const current = JSON.stringify(this.scoreSettingsFA.getRawValue());
+      return current !== this._baselineSnapshot;
+    } catch { return false; }
+  }
+
+  public hasPendingDrafts(): boolean {
+    let hasStorage = false;
+    try { hasStorage = !!sessionStorage.getItem(this._draftKey()); } catch {}
+    return this.hasFormChanged() || hasStorage;
+  }
+
+  public clearDraftsForCurrentType(): void {
+    try { sessionStorage.removeItem(this._draftKey()); } catch {}
+    if (this.scoreSettingsFA) {
+      this._baselineSnapshot = JSON.stringify(this.scoreSettingsFA.getRawValue());
+    }
   }
 
   // ======= Cleanup =======
