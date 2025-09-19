@@ -5,17 +5,15 @@
 </div>
 <app-loading></app-loading>
 
-<app-filter [filterDate]="true" [filterDateRange]="filterDateRange"
-    (dateRangeSelected)="onDateRangeSelected($event)" 
-  [actionButtons]="filterButtons" 
-  (buttonClicked)="onFilterButtonClick($event)"></app-filter>
+<app-filter [filterDate]="true" [filterDateRange]="filterDateRange" (dateRangeSelected)="onDateRangeSelected($event)"
+    [actionButtons]="filterButtons" (buttonClicked)="onFilterButtonClick($event)"></app-filter>
 
 <app-tab-menus [tabs]="tabMenus" (tabChanged)="onTabChange($event)" [activeTab]="activeTab"></app-tab-menus>
 
-<div class="tw-p-6 tw-flex tw-flex-col tw-gap-8 tw-overflow-y-auto tw-h-[calc(100vh-370px)]"
+<div #scrollContainer class="tw-p-6 tw-flex tw-flex-col tw-gap-8 tw-overflow-y-auto tw-h-[calc(100vh-370px)]"
     (scroll)="onScroll($event)">
 
-    <div *ngFor="let item of appointments; let i = index" class="tw-relative group">
+    <div [id]="'appointment-' + item.profile.appointmentId" *ngFor="let item of appointments; let i = index" class="tw-relative group">
 
         <!-- <button *ngIf="canGoPrev[i]" (click)="onPrevClick(i)" [disabled]="!canGoPrev[i]" class="nav-arrow left-arrow">
             <app-icon [name]="'chevron-left'" [size]="32" class="tw-text-white"></app-icon>
@@ -30,7 +28,7 @@
             <div
                 class="tw-border-1 tw-flex tw-rounded-lg tw-items-center !tw-bg-[#F8F9FA] box-shadow flex-box h-unset tw-overflow-hidden">
                 <div class="tw-min-w-[45%] tw-h-full tw-w-full">
-                    <img class="tw-object-cover tw-h-full tw-w-full" src="assets/image/user-mock.jpg" alt="Applicant">
+                    <img class="tw-object-cover tw-h-full tw-w-full" src="{{item.profile.pathImage}}" onerror="this.onerror=null; this.src='assets/image/user-mock.jpg';" alt="Applicant">
                 </div>
                 <div
                     class="tw-min-w-[55%] tw-p-5 tw-relative tw-h-full tw-flex tw-flex-col tw-items-center tw-justify-center">
@@ -77,13 +75,25 @@
                 <div class="list-top">
                     <p class="tw-mb-3"><strong>Job Position Interviewed </strong><span class="text-red">*</span></p>
                     <div class="tw-flex tw-flex-col tw-w-full tw-gap-4 !tw-mt-0">
-                        <label *ngFor="let job of item.jobPosition.jobList" class="tw-flex tw-items-start">
-                            <input type="checkbox" class="tw-accent-black/25 tw-relative tw-top-[7px]"
-                                [checked]="job.isActive" />
-                            <span class="tw-ml-2">{{ job.jobName }}</span>
-                            <button *ngIf="job.isOffered" class="tw-ml-3 tw-text-gray-500"
-                                (click)="onRemoveJobByValue(job, item)">x</button>
-                        </label>
+                        <ng-container *ngFor="let job of item.jobPosition.jobList">
+                            <label *ngIf="!job.isOffered" class="tw-flex tw-items-start" (click)="onRemoveJobApplicant(job, item)">
+                                <input type="checkbox" class="tw-accent-black/25 tw-relative tw-top-[7px]"
+                                    [checked]="job.isActive" (click)="$event.stopPropagation()" />
+                                <span class="tw-ml-2">{{ job.jobName }}</span>
+                            </label>
+                            <label *ngIf="job.isOffered" class="tw-flex tw-items-start hover:tw-text-red-600 hover:tw-cursor-pointer"
+                                (click)="onRemoveJobByValue(job, item)">
+                                <!-- <input type="checkbox" class="tw-accent-black/25 tw-relative tw-top-[7px]"
+                                    [checked]="job.isActive" (click)="$event.stopPropagation()" /> -->
+                                <app-icon [name]="'check-circle'" [size]="18"
+                                    extraClass="tw-relative tw-top-[3px]"></app-icon>
+                                <span class="tw-ml-2">{{ job.jobName }}</span>
+                                <!-- <button *ngIf="job.isOffered" class="tw-ml-3 tw-text-gray-500"
+                                    (click)="onRemoveJobByValue(job, item)">x</button> -->
+                            </label>
+                        </ng-container>
+
+
                         <!-- <div *ngFor="let pos of selectedPositions; let i = index" class="tw-flex tw-items-center">
                             <input type="checkbox" [id]="'pos-' + i" [value]="pos.value" class="tw-accent-black/25 tw-relative tw-top-[1px]" checked />
                             <label [for]="'pos-' + i" class="tw-ml-2">{{ pos.label }}</label>
@@ -142,23 +152,47 @@
                         <div class="tw-flex-1">
                             <p class="tw-mb-3"><strong>Contact </strong><span class="text-red">*</span></p>
 
-                            <div class="tw-flex tw-rounded-lg tw-overflow-hidden tw-w-full">
+                            <div class="tw-flex tw-rounded-lg tw-w-full">
                                 <!-- ✅ SEND EMAIL BUTTON -->
-                                <button type="button" (click)="onSendMail()"
+                                <!-- <button type="button" (click)="onSendMail()" class="tw-rounded-tl-lg tw-rounded-bl-lg tw-min-h-[40px] tw-w-full tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5"
                                     [disabled]="item.interview.lastCalledAt === null || item.interview.isEmailSent"
-                                    [ngClass]="[item.interview.isEmailSent ? 'tw-bg-[#0A0]' : item.interview.lastCalledAt !== null ? 'tw-bg-[#FFC107] hover:tw-bg-[#e0a800]' : 'tw-bg-[#afafaf] hover:tw-bg-[#858585]', 'tw-min-h-[40px]','tw-w-full','tw-text-white','tw-text-sm','tw-font-semibold','tw-px-3','tw-py-1.5']">
+                                    [ngClass]="[item.interview.isEmailSent ? 'tw-bg-[#0A0]' : item.interview.lastCalledAt !== null ? 'tw-bg-[#FFC107] hover:tw-bg-[#e0a800]' : 'tw-bg-[#afafaf] hover:tw-bg-[#858585]']">
+                                    <app-icon [name]="'mail'" [size]="18"
+                                        extraClass="tw-text-white tw-relative tw-bottom-[1px] tw-mr-2"></app-icon>
+                                    <span class="tw-font-semibold">Send</span>
+                                </button> -->
+                                <button type="button" (click)="onSendMail(item)" class="tw-rounded-tl-lg tw-rounded-bl-lg tw-min-h-[40px] tw-w-full tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5"
+                                    [disabled]="item.interview.lastCalledAt === null || item.interview.isEmailSent"
+                                    [ngClass]="[
+                                        item.interview.isEmailSent ? 'tw-bg-[#0A0] hover:tw-bg-[#038d03]' : 'tw-bg-[#afafaf] hover:tw-bg-[#858585]',
+                                        item.interview.isCalled !== 'complete' ? 'tw-cursor-no-drop hover:tw-bg-[#afafaf]' : '',
+                                    ]">
                                     <app-icon [name]="'mail'" [size]="18"
                                         extraClass="tw-text-white tw-relative tw-bottom-[1px] tw-mr-2"></app-icon>
                                     <span class="tw-font-semibold">Send</span>
                                 </button>
 
                                 <!-- ✅ CALL BUTTON -->
-                                <button type="button" (click)="onAddCallStatus()"
-                                    [disabled]="item.interview.lastCalledAt !== null"
-                                    [ngClass]="[item.interview.lastCalledAt !== null? 'tw-bg-[#0A0]' : item.interview.missCalled !== null? 'tw-bg-[#FFC107] hover:tw-bg-[#e0a800]' : 'tw-bg-[#afafaf] hover:tw-bg-[#858585]', 'tw-min-h-[40px]','tw-px-3','tw-py-1.5','tw-border-l-[1px]','tw-border-white','tw-min-w-[30%]','tw-text-white']">
-                                    <app-icon [name]="'phone'" [size]="18"
-                                        extraClass="tw-relative tw-bottom-[1px] tw-text-white"></app-icon>
-                                </button>
+                                <div class="tw-relative tw-min-w-[30%] tw-text-white">
+                                    <!-- <button type="button" (click)="onAddCallStatus()"
+                                        class="tw-rounded-tr-lg tw-rounded-br-lg tw-min-h-[40px] tw-px-3 tw-py-1.5 tw-border-l-[1px] tw-border-white tw-w-full"
+                                        [disabled]="!item.interview.isCalled"
+                                        [ngClass]="[item.interview.lastCalledAt !== null? 'tw-bg-[#0A0]' : item.interview.missCalled !== null? 'tw-bg-[#FFC107] hover:tw-bg-[#e0a800]' : 'tw-bg-[#afafaf] hover:tw-bg-[#858585]']">
+                                        <app-icon [name]="'phone'" [size]="18"
+                                            extraClass="tw-relative tw-bottom-[1px] tw-text-white"></app-icon>
+                                    </button> -->
+                                    <button type="button" (click)="onAddCallStatus(item)"
+                                        class="tw-rounded-tr-lg tw-rounded-br-lg tw-min-h-[40px] tw-px-3 tw-py-1.5 tw-border-l-[1px] tw-border-white tw-w-full"
+                                        [ngClass]="[
+                                            item.interview.isCalled === 'complete' ? 'tw-bg-[#0A0] hover:tw-bg-[#038d03] tw-pointer-events-none' : '',
+                                            item.interview.isCalled === 'inprocess' ? 'tw-bg-[#FFC107] hover:tw-bg-[#e0a800]' : '',
+                                            item.interview.isCalled === 'pending' ? 'tw-bg-[#afafaf] hover:tw-bg-[#858585]' : ''
+                                        ]">
+                                        <app-icon [name]="'phone'" [size]="18"
+                                            extraClass="tw-relative tw-bottom-[1px] tw-text-white"></app-icon>
+                                    </button>
+                                    <span (click)="onShowCallStatus(item)" *ngIf="item.interview.missCallCount" class="tw-cursor-pointer tw-absolute tw-top-[-8px] tw-right-[-12px] tw-z-10 tw-p-1 tw-w-[24px] tw-h-[24px] tw-text-[12px] tw-font-bold tw-rounded-[100%] tw-bg-[#00aaff] tw-text-white tw-flex tw-justify-center tw-items-center">{{item.interview.missCallCount}}</span>
+                                </div>
                             </div>
 
 
@@ -173,14 +207,13 @@
 
                 <div class="tw-flex tw-justify-between">
                     <div class="tw-flex tw-gap-2">
-                        <button type="button"
+                        <button type="button" *ngIf="item.interview.isCalled === 'complete'"
                             class="tw-w-fit tw-rounded-lg tw-border-[#e5e5e5] tw-border hover:tw-bg-[#f5f5f5] tw-text-black tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5">
                             <span class="tw-font-semibold">Rescheduled</span>
                         </button>
-                        <app-cdk-dropdown *ngIf="" class="tw-block tw-w-fit" [options]="locationsList"
-                            placeholder="version"></app-cdk-dropdown>
+                        <!-- <app-cdk-dropdown *ngIf="" class="tw-block tw-w-fit" [options]="locationsList" placeholder="version"></app-cdk-dropdown> -->
                     </div>
-                    <button type="button" *ngIf="!item.interview.isEmailSent"
+                    <button type="button" *ngIf="item.interview.isEmailSent"
                         class="tw-w-fit tw-rounded-lg tw-bg-[#00AAFF] hover:tw-bg-[#028cd1] tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5">
                         <span class="tw-font-semibold">Interview Form </span>
                     </button>

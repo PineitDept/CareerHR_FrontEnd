@@ -7,23 +7,82 @@
 
     <form [formGroup]="form">
         <mat-dialog-content>
+            <!-- <div class="tw-mb-4 tw-grid tw-grid-cols-2">
+                <label class="tw-inline-flex tw-items-center tw-cursor-pointer" (click)="$event.stopPropagation()">
+                    <input type="checkbox" class="tw-sr-only tw-peer" [checked]="callAnswered"
+                        (change)="toggleCheck('answered', $event)">
+                    <div
+                        class="tw-relative tw-w-11 tw-h-6 peer-checked:tw-bg-[#00AA00] tw-bg-gray-200 tw-rounded-full tw-peer peer-checked:after:tw-translate-x-full rtl:peer-checked:after:tw--translate-x-full tw-border-white after:tw-content-[''] after:tw-absolute after:tw-top-[2px] after:tw-start-[2px] after:tw-bg-white after:tw-rounded-full after:tw-h-5 after:tw-w-5 after:tw-transition-all">
+                    </div>
+                    <span class="tw-ml-3 tw-text-black">Call answered</span>
+                </label>
+
+                <label class="tw-inline-flex tw-items-center tw-cursor-pointer" (click)="$event.stopPropagation()">
+                    <input type="checkbox" class="tw-sr-only tw-peer" [checked]="callMissed"
+                        (change)="toggleCheck('missed', $event)">
+                    <div
+                        class="tw-relative tw-w-11 tw-h-6 peer-checked:tw-bg-[#00AA00] tw-bg-gray-200 tw-rounded-full tw-peer peer-checked:after:tw-translate-x-full rtl:peer-checked:after:tw--translate-x-full tw-border-white after:tw-content-[''] after:tw-absolute after:tw-top-[2px] after:tw-start-[2px] after:tw-bg-white after:tw-rounded-full after:tw-h-5 after:tw-w-5 after:tw-transition-all">
+                    </div>
+                    <span class="tw-ml-3 tw-text-black">Call missed</span>
+                </label>
+            </div> -->
+
             <ng-container *ngFor="let config of dropdownConfigs">
                 <div class="tw-mb-4" [ngSwitch]="config.type">
+                    
+                    <div *ngSwitchCase="'toggle'">
+                        <p *ngIf="config.label" class="tw-text-sm tw-font-bold tw-mb-2 text-black">{{ config.label }}</p>
 
+                        <div class="tw-grid tw-grid-cols-2">
+                            <label class="tw-inline-flex tw-items-center tw-cursor-pointer" (click)="$event.stopPropagation()">
+                                <input type="checkbox" class="tw-sr-only tw-peer" [checked]="!callMissed"
+                                    (change)="toggleCheck('answered', $event)">
+                                <div
+                                    class="tw-relative tw-w-11 tw-h-6 peer-checked:tw-bg-[#00AA00] tw-bg-gray-200 tw-rounded-full tw-peer peer-checked:after:tw-translate-x-full rtl:peer-checked:after:tw--translate-x-full tw-border-white after:tw-content-[''] after:tw-absolute after:tw-top-[2px] after:tw-start-[2px] after:tw-bg-white after:tw-rounded-full after:tw-h-5 after:tw-w-5 after:tw-transition-all">
+                                </div>
+                                <span class="tw-ml-3 tw-text-black">Call answered</span>
+                            </label>
+
+                            <label class="tw-inline-flex tw-items-center tw-cursor-pointer" (click)="$event.stopPropagation()">
+                                <input type="checkbox" class="tw-sr-only tw-peer" [checked]="callMissed"
+                                    (change)="toggleCheck('missed', $event)">
+                                <div
+                                    class="tw-relative tw-w-11 tw-h-6 peer-checked:tw-bg-[#00AA00] tw-bg-gray-200 tw-rounded-full tw-peer peer-checked:after:tw-translate-x-full rtl:peer-checked:after:tw--translate-x-full tw-border-white after:tw-content-[''] after:tw-absolute after:tw-top-[2px] after:tw-start-[2px] after:tw-bg-white after:tw-rounded-full after:tw-h-5 after:tw-w-5 after:tw-transition-all">
+                                </div>
+                                <span class="tw-ml-3 tw-text-black">Call missed</span>
+                            </label>
+                        </div>
+                    </div>
+                    
                     <!-- Single Select Dropdown -->
-                    <app-cdk-dropdown *ngSwitchCase="'single'" [label]="config.label" [options]="config.options"
-                        [placeholder]="config.placeholder"
-                        (valueChange)="onSingleSelectChange($event, config.label, config.options)">
+                    <app-cdk-dropdown *ngSwitchCase="'single'" [label]="config.label" [options]="config.options" 
+                        (valueChange)="onSingleSelectChange($event, config.label, config.options)" >
                     </app-cdk-dropdown>
 
                     <!-- Multi Select Dropdown -->
-                    <app-multi-select-dropdown *ngSwitchCase="'multi'" [label]="config.label" [options]="config.options" [defaultSelected]="config.defaultSelected" [isHistory]="config.isHistory"
-                        (selectionChange)="onMultiSelectChange($event, config.label)">
-                    </app-multi-select-dropdown>
+                    <div *ngIf="config.isHistory ? lenOptions > 0 : true">
+                        <app-multi-select-dropdown *ngSwitchCase="'multi'" [label]="config.label" [options]="config.options" 
+                            [placeholder]="config.placeholder ? config.placeholder : 'Select options'"
+                            [defaultSelected]="config.defaultSelected" [isHistory]="config.isHistory"
+                            (selectionChange)="onMultiSelectChange($event, config.label)">
+                        </app-multi-select-dropdown>
+                    </div>
 
                 </div>
             </ng-container>
-
+            
+            <div *ngIf="callMissed && statusValue !== 5 && missCallCount >= 2">
+                <p class="tw-text-sm tw-font-bold tw-mb-2 text-black tw-mt-6">Set as No Show</p>
+                <label class="tw-inline-flex tw-items-center tw-cursor-pointer" (click)="$event.stopPropagation()">
+                    <input type="checkbox" class="tw-sr-only tw-peer" [checked]="isNoShow" (change)="toggleCheckNoshow($event)">
+                    <div class="tw-relative tw-w-11 tw-h-6 peer-checked:tw-bg-[#930000] tw-bg-gray-200 tw-rounded-full tw-peer peer-checked:after:tw-translate-x-full rtl:peer-checked:after:tw--translate-x-full tw-border-white after:tw-content-[''] after:tw-absolute after:tw-top-[2px] after:tw-start-[2px] after:tw-bg-white after:tw-rounded-full after:tw-h-5 after:tw-w-5 after:tw-transition-all">
+                    </div>
+                    <span class="tw-ml-3 tw-text-black">No Show</span>
+                </label>
+            </div>
+            
+            <p *ngIf="!callMissed && statusValue === 53" class="text-red tw-text-sm tw-text-center tw-mt-6 !tw-mb-1 tw-rounded-lg tw-p-2 tw-bg-[#ff000014]">ผู้สมัครแจ้งปฏิเสธการสัมภาษณ์ ระบบจึงย้ายสถานะไปที่ History</p>
+            
         </mat-dialog-content>
     </form>
 

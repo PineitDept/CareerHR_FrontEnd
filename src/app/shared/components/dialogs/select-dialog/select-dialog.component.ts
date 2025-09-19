@@ -19,6 +19,11 @@ export class SelectDialogComponent {
   selectedValues: string[] = [];
   singleSelectedValue: SelectOption | null = null;
   selectionMap: Record<string, any> = {};
+  callMissed = false;
+  statusValue: string | number | undefined;
+  missCallCount = 0;
+  lenOptions = 0;
+  isNoShow: boolean = false;
 
   @Input() dataOption: any[] | undefined;
   @Output() dataResult: any[] | undefined;
@@ -34,12 +39,29 @@ export class SelectDialogComponent {
       position: [null],
       history: [[]]
     });
-
     this.titleHeader = data.title
-
     this.dropdownConfigs = data.dropdownConfigs
 
-    console.log(this.dropdownConfigs)
+    this.dropdownConfigs?.forEach(config => {
+      if (config.dynamicByToggle) {
+        if (!this.callMissed) {
+          config.options = config.optionsSecond
+        } else {
+          config.options = config.optionsFirst
+        }
+      }
+
+      if (config.missCallCount) {
+        this.missCallCount = config.missCallCount;
+      }
+
+      if (config.label === 'History') {
+        this.lenOptions = config.options.length
+      }
+    });
+
+    // this.missCallCount = data.dropdownConfigs?.find(c => c.missCallCount !== undefined)?.missCallCount || 0;
+
   }
 
   onCancel(): void {
@@ -47,19 +69,54 @@ export class SelectDialogComponent {
   }
 
   onConfirm(): void {
-    this.dialogRef.close(this.selectionMap);
+    this.dialogRef.close({
+      selectionMap: this.selectionMap,
+      isNoShow: this.isNoShow
+    });
   }
+
 
   onSelectionChange(selectedOptions: SelectOption[]) {
     this.dataResult = selectedOptions
+
+    console.log(this.dataResult, '=>dataResult')
   }
 
   onSingleSelectChange(selectedValue: string | number, label: string, options: SelectOption[]) {
     const matched = options.find(o => o.value === selectedValue);
     this.selectionMap[label] = matched ?? { value: selectedValue, label: '' };
+
+    this.statusValue = selectedValue;
   }
 
   onMultiSelectChange(selectedValues: SelectOption[], label: string) {
     this.selectionMap[label] = selectedValues;
+  }
+
+  toggleCheck(type: 'answered' | 'missed', event: Event) {
+    event.stopPropagation();
+    const input = event.target as HTMLInputElement;
+
+    this.callMissed = type === 'missed' ? input.checked : !input.checked;
+
+    this.dropdownConfigs?.forEach(config => {
+      if (config.dynamicByToggle) {
+        if (!this.callMissed) {
+          config.options = config.optionsSecond
+        } else {
+          config.options = config.optionsFirst
+        }
+      }
+    });
+  }
+
+  toggleCheckNoshow(event: Event) {
+    event.stopPropagation();
+    const input = event.target as HTMLInputElement;
+    if (this.callMissed) {
+      this.isNoShow = input.checked;
+    } else {
+      this.isNoShow = !input.checked;
+    }
   }
 }

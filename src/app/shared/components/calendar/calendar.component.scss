@@ -99,6 +99,10 @@
     margin: 0 4px;
 }
 
+::ng-deep .fc-listMonth-view .strikethrough-dashed::before {
+    display: none;
+}
+
 ::ng-deep .strikethrough-dashed.event-interview1::before {
     border-color: #0085FF;
 }

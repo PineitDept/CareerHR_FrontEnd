@@ -89,31 +89,31 @@ export class CalendarComponent implements AfterViewInit {
     const teamPart = event.teamName ? `(${event.teamName}) ` : '';
     let title = `${teamPart}${event.time} ${event.userName}`;
 
-    // if (event.status === "Did't interview (PINE)" || event.status === "Did't interview (Candidate)") {
+    // if (event.status === "No Show") {
     //   return { type: 'strikethrough-dashed', title };
     // }
 
     switch (Number(event.interview)) {
       case 1:
-        if (event.status === "Did't interview (PINE)" || event.status === "Did't interview (Candidate)") {
+        if (event.status === "No Show") {
           return { type: 'event-interview1 strikethrough-dashed', title };
-        } else if (event.status === 'Decline') {
+        } else if (event.status.includes('Decline')) {
           return { type: 'event-interview1 event-decline', title };
         } else {
           return { type: 'event-interview1', title };
         }
       case 2:
-        if (event.status === "Did't interview (PINE)" || event.status === "Did't interview (Candidate)") {
+        if (event.status === "No Show") {
           return { type: 'event-interview2 strikethrough-dashed', title };
-        } else if (event.status === 'Decline') {
+        } else if (event.status.includes('Decline')) {
           return { type: 'event-interview2 event-decline', title };
         } else {
           return { type: 'event-interview2', title };
         }
       case 3:
-        if (event.status === "Did't interview (PINE)" || event.status === "Did't interview (Candidate)") {
+        if (event.status === "No Show") {
           return { type: 'event-onboard strikethrough-dashed', title: event.userName };
-        } else if (event.status === 'Decline') {
+        } else if (event.status.includes('Decline')) {
           return { type: 'event-onboard event-decline', title: event.userName };
         } else {
           return { type: 'event-onboard', title: event.userName };

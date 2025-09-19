@@ -8,6 +8,7 @@ export interface AlertDialogData {
   options?: any[];
   dropdownConfigs?: any[];
   quality?: number;
+  missCallCount?: number;
 }
 
 export interface FormDialogData {

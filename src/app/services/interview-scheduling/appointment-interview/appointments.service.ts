@@ -18,9 +18,28 @@ export interface IAppointmentFilterRequest {
   providedIn: 'root',
 })
 export class AppointmentsService {
-  private base = 'Appointments';
+  private baseAPI = 'Appointments';
+  private base = '';
+  private baseCandidate = 'Candidates'
+  
+  
+  setAppointmentsType(type?: number) {
+    switch (type) {
+      case 1:
+        this.base = 'Appointments/appointments/1';
+        break;
+      case 2:
+        this.base = 'Appointments/appointments/2';
+        break;
+      case 3:
+        this.base = 'Appointments/appointments/3';
+        break;
+      default:
+        this.base = 'Appointments/appointments';
+    }
+  }
 
-  constructor(private api: ApiService) {}
+  constructor(private api: ApiService) { }
 
   private clean(obj: Record<string, any>) {
     const out: Record<string, any> = {};
@@ -50,4 +69,61 @@ export class AppointmentsService {
       loading: true,
     });
   }
+
+  getAppointmentsHistory<T>(params: IAppointmentFilterRequest): Observable<T> {
+    const query = this.clean({
+      Search: params.search,
+      PositionId: params.positionId,
+      Month: params.month,
+      Year: params.year,
+      InterviewDate: params.interviewDate,
+      InterviewResult: params.InterviewResult,
+      SortFields: params.sortFields,
+      page: params.page ?? 1,
+      pageSize: params.pageSize ?? 10,
+    });
+
+    return this.api.get<T>(`${this.base}/history`, {
+      params: query,
+      withAuth: true,
+      loading: true,
+    });
+  }
+
+  updateCandidateStatus(
+    id: number,
+    body: { isPassed: boolean; positionId: number; applyRound: number }
+  ): Observable<any> {
+    return this.api.patch<any>(`${this.baseCandidate}/${id}/status`, body, {
+      withAuth: true,
+      loading: false
+    });
+  }
+
+  getStatus<T>(params: IAppointmentFilterRequest): Observable<T> {
+    const query = this.clean({
+      Search: params.search,
+      PositionId: params.positionId,
+      Month: params.month,
+      Year: params.year,
+      InterviewDate: params.interviewDate,
+      InterviewResult: params.InterviewResult,
+      SortFields: params.sortFields,
+      page: params.page ?? 1,
+      pageSize: params.pageSize ?? 10,
+    });
+
+    return this.api.get<T>(`${this.baseAPI}/misscall-reasons`, {
+      params: query,
+      withAuth: true,
+      loading: true,
+    });
+  }
+
+  appointmentMisscall(body: { appointmentId: string; missCallId: number; isNoShow: boolean }): Observable<any> {
+    return this.api.post<any>(`${this.baseAPI}/appointment-misscall`, body, {
+      withAuth: true,
+      loading: false,
+    });
+}
 }

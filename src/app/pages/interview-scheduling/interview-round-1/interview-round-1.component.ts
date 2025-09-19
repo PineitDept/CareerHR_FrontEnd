@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, computed, QueryList, signal, ViewChildren } from '@angular/core';
+import { ChangeDetectorRef, Component, computed, ElementRef, QueryList, signal, ViewChild, ViewChildren } from '@angular/core';
 import { InterviewerService } from '../../../services/admin-setting/interviewer/interviewer.service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DateRange, SearchForm } from '../../../interfaces/interview-scheduling/interview.interface';
@@ -12,6 +12,8 @@ import { JobPositionService } from '../../../services/admin-setting/job-position
 import { SlickCarouselComponent } from 'ngx-slick-carousel';
 import { MailDialogComponent } from '../../../shared/components/dialogs/mail-dialog/mail-dialog.component';
 import { AppointmentsService } from '../../../services/interview-scheduling/appointment-interview/appointments.service';
+import { AlertDialogComponent } from '../../../shared/components/dialogs/alert-dialog/alert-dialog.component';
+import { catchError, finalize, forkJoin, Observable, of, tap } from 'rxjs';
 
 const SEARCH_OPTIONS: string[] = [
   'Applicant ID',
@@ -30,9 +32,8 @@ export class InterviewRound1Component {
     return [
       { key: 'total', label: 'All Status', count: 0 },
       { key: 'pending', label: 'Pending', count: 0 },
-      // { key: 'scheduled', label: 'Scheduled', count: 0 },
       { key: 'in-process', label: 'In Process', count: 0 },
-      { key: 'schedule', label: 'Schedule', count: 0 }
+      { key: 'scheduled', label: 'Scheduled', count: 0 }
     ];
   }
 
@@ -87,16 +88,9 @@ export class InterviewRound1Component {
   dataOptions: any[] = [];
 
   // ---------- Demo/static option data ----------
-  dataStatusCall = [
-    { label: 'Switched Off', value: 1 },
-    { label: 'No Answer', value: 2 },
-    { label: 'Call Rejected', value: 3 },
-    { label: 'Line Busy', value: 4 },
-    { label: 'Invalid Number', value: 5 },
-    { label: 'Answered by Someone Else', value: 6 },
-    { label: 'Call Back Requested', value: 7 },
-    { label: 'Voicemail Reached', value: 8 },
-  ];
+  dataStatusCall: any[] = [];
+  dataStatusCallFirst: any[] = [];
+  dataStatusCallSecond: any[] = [];
 
   historyData = [
     { date: '2025/09/18', time: '10:00am', status: 'โทรติดแต่ไม่รับสาย', value: 1 },
@@ -136,6 +130,7 @@ export class InterviewRound1Component {
   };
 
   @ViewChildren('slickCarousel') carousels!: QueryList<SlickCarouselComponent>;
+  @ViewChild('scrollContainer') scrollContainer!: ElementRef;
 
   // ---------- Constructor ----------
   constructor(
@@ -152,6 +147,8 @@ export class InterviewRound1Component {
 
   // ---------- Lifecycle ----------
   ngOnInit() {
+    this.appointmentsService.setAppointmentsType(1);
+
     const savedSearch = sessionStorage.getItem('interviewSearchForm');
     if (savedSearch) {
       this.searchForm = JSON.parse(savedSearch);
@@ -166,6 +163,7 @@ export class InterviewRound1Component {
     this.fetchJobPosition();
     this.fetchTeamID();
     this.fetchInterviewer();
+    this.fetchStatusCall();
 
     this.filterButtons = [{ label: 'History', key: 'history', color: 'transparent', outlineBtn: true }];
   }
@@ -246,31 +244,101 @@ export class InterviewRound1Component {
     });
   }
 
-  fetchAppointments() {
+  currentPage = 1;
+
+  loadInitialAppointments(updateTabCounts = false) {
+    this.appointments = [];
+    this.currentFilterParams.page = 1;
+    this.fetchAppointments(updateTabCounts);
+  }
+
+  fetchAppointments(updateTabCounts = false, autoSubscribe = true): Observable<any> {
+    if (!this.hasMoreData) return of(null);
+
     this.loading = true;
 
     const updatedParams = {
       ...this.currentFilterParams,
       month: this.monthData === 12 ? undefined : this.monthData,
-      year: this.yearData,
       page: this.currentFilterParams.page ?? 1,
       search: this.currentFilterParams.search,
     };
 
-    this.appointmentsService.getAppointments<any>(updatedParams).subscribe({
-      next: (res) => {
+    const obs$ = this.appointmentsService.getAppointments<any>(updatedParams).pipe(
+      tap((res) => {
         const newItems = res.items || [];
         this.appointments = [...this.appointments, ...newItems];
 
         if (newItems.length < Number(this.currentFilterParams.pageSize)) {
           this.hasMoreData = false;
+        } else {
+          this.currentFilterParams.page = (this.currentFilterParams.page ?? 1);
         }
 
+        if (updateTabCounts && res.groupCounts) {
+          this.updateTabCountsFromGroup(res.groupCounts);
+        }
+      }),
+      catchError((err) => {
+        console.error('Error fetching appointments:', err);
+        return of(null); // fallback ให้ forkJoin ไปต่อได้
+      }),
+      finalize(() => {
         this.loading = false;
+      })
+    );
+
+    if (autoSubscribe) {
+      obs$.subscribe();
+    }
+
+    return obs$;
+  }
+
+
+  getHistoryDataForUser(userId: number) {
+    const historyData: { date: string; time: string; status: any; value: any; }[] = [];
+
+    const userAppointment = this.appointments.find(item => item.profile?.userId === userId);
+    if (!userAppointment) return historyData;
+
+    const missCalls = userAppointment.interview?.missCallHistory || [];
+    missCalls.forEach((call: { missCallAt: string | number | Date; missCallReason: any; missCallId: any; }) => {
+      historyData.push({
+        date: call.missCallAt ? new Date(call.missCallAt).toISOString().split('T')[0].replace(/-/g, '/') : '',
+        time: call.missCallAt ? new Date(call.missCallAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '',
+        status: call.missCallReason || '',
+        value: call.missCallId || 0
+      });
+    });
+
+    return historyData;
+  }
+
+  fetchStatusCall() {
+
+    const updatedParams = {
+      ...this.currentFilterParams,
+      month: this.monthData === 12 ? undefined : this.monthData,
+      // year: this.yearData,
+      page: this.currentFilterParams.page ?? 1,
+      search: this.currentFilterParams.search,
+    };
+
+    this.appointmentsService.getStatus<any>(updatedParams).subscribe({
+      next: (res) => {
+        const allMapped = res.map((item: { reasonMissCall: any; missCallId: number }) => ({
+          label: item.reasonMissCall,
+          value: item.missCallId
+        }));
+
+        this.dataStatusCallFirst = allMapped.filter((item: { value: number; }) => item.value >= 0 && item.value <= 49);
+        this.dataStatusCallSecond = allMapped.filter((item: { value: number; }) => item.value >= 50 && item.value <= 99);
+
+        this.dataStatusCall = [...this.dataStatusCallFirst, ...this.dataStatusCallSecond];
       },
       error: (err) => {
         console.error('Error fetching appointments:', err);
-        this.loading = false;
       }
     });
   }
@@ -288,7 +356,7 @@ export class InterviewRound1Component {
     this.appointments = [];
     this.hasMoreData = true;
 
-    this.fetchAppointments();
+    this.loadInitialAppointments(true);
   }
 
   onClearSearch() {
@@ -303,7 +371,7 @@ export class InterviewRound1Component {
     this.appointments = [];
     this.hasMoreData = true;
 
-    this.fetchAppointments();
+    this.loadInitialAppointments(true);
   }
 
   onTabChange(tabKey: string): void {
@@ -311,7 +379,6 @@ export class InterviewRound1Component {
     this.currentFilterParams.page = 1;
     this.hasMoreData = true;
 
-    console.log(this.currentFilterParams, '=>.this.currentFilterParams tabbb');
     const updatedParams = {
       ...this.currentFilterParams,
       InterviewResult: tabKey === 'total' ? undefined : tabKey,
@@ -322,7 +389,7 @@ export class InterviewRound1Component {
     this.currentFilterParams = updatedParams;
 
     this.appointments = [];
-    this.fetchAppointments();
+    this.loadInitialAppointments(false);
   }
 
   // ---------- Date range ----------
@@ -335,54 +402,50 @@ export class InterviewRound1Component {
     this.monthData = start.getMonth() + 1;
 
     this.appointments = [];
-    this.fetchAppointments();
+    this.loadInitialAppointments(true);
 
-    this.updateTabCounts(this.appointments);
+    // this.updateTabCounts(this.appointments);
   }
 
   // ---------- Tab counts (preserve comments) ----------
   updateTabCounts(appointments: any[]) {
-    // const counts: { [key: string]: number } = {
-    //   total: appointments.length,
-    //   pending: appointments.filter(a => a.result.interviewResultText.toLowerCase() === 'pending').length,
-    //   scheduled: appointments.filter(a => a.result.interviewResultText.toLowerCase() === 'scheduled').length,
-    //   'no-show': appointments.filter(a => a.result.interviewResultText.toLowerCase() === 'no-show').length,
-    //   accept: appointments.filter(a => a.result.interviewResultText.toLowerCase() === 'accept').length,
-    //   decline: appointments.filter(a => a.result.interviewResultText.toLowerCase() === 'decline').length,
-    // };
+    const counts: { [key: string]: number } = {
+      total: appointments.length,
+      pending: appointments.filter(a => a.result.interviewResult === 'pending').length,
+      scheduled: appointments.filter(a => a.result.interviewResult === 'scheduled').length,
+      'in-process': appointments.filter(a => a.result.interviewResult === 'in-process').length
+    };
 
-    // const newTabs = this.tabMenus().map(tab => ({
-    //   ...tab,
-    //   count: counts[tab.key] ?? 0
-    // }));
+    const newTabs = this.tabMenus().map(tab => ({
+      ...tab,
+      count: counts[tab.key] ?? 0
+    }));
 
-    // this.tabMenus.set(newTabs);
+    this.tabMenus.set(newTabs);
   }
 
-  // updateTabCounts(groupCounts: { [key: string]: number }) {
-  //   const newTabs = this.tabMenus().map(tab => {
-  //     let count = 0;
+  updateTabCountsFromGroup(groupCounts: { [key: string]: number }) {
+    const newTabs = this.tabMenus().map(tab => {
+      let count = 0;
 
-  //     if (tab.key === 'total') {
-  //       count = groupCounts['All Status'] ?? 0;
-  //     } else {
-  //       const key = tab.key
-  //         .split('-')
-  //         .map(s => s.charAt(0).toUpperCase() + s.slice(1))
-  //         .join('-');
+      if (tab.key === 'total') {
+        count = groupCounts['All Status'] ?? 0;
+      } else {
+        const labelMatch = tab.label.toLowerCase().trim();
+        const matchingKey = Object.keys(groupCounts).find(
+          key => key.toLowerCase().trim() === labelMatch
+        );
 
-  //       count = groupCounts[key] ?? 0;
-  //     }
+        if (matchingKey) {
+          count = groupCounts[matchingKey];
+        }
+      }
 
-  //     return { ...tab, count };
-  //   });
+      return { ...tab, count };
+    });
 
-  //   this.tabMenus.set(newTabs);
-  // }
-
-  // loadAppointments() {
-  //   this.updateTabCounts(this.appointments);
-  // }
+    this.tabMenus.set(newTabs);
+  }
 
   // ---------- Dialog handlers ----------
   onAddPoscitionClick(index: number) {
@@ -396,12 +459,18 @@ export class InterviewRound1Component {
       )
     );
 
-    const historyOptions: SelectOption[] = this.historyData.map(item => ({
-      value: item.value,
+    this.historyData = [
+      { date: '2025/09/18', time: '10:00am', status: 'โทรติดแต่ไม่รับสาย', value: 1 },
+      { date: '2025/09/17', time: '10:00am', status: 'โทรไม่ติด / ปิดเครื่อง', value: 2 },
+      { date: '2025/09/16', time: '10:00am', status: 'Voicemail', value: 3 },
+    ];
+
+    const historyOptions: SelectOption[] = this.historyData.map((item, index) => ({
+      value: index,
       label: `${item.date} ${item.time} ${item.status}`,
     }));
 
-    const defaultSelected = historyOptions.slice(-2).map(opt => opt.value);
+    const defaultSelected = historyOptions.slice(0, 2).map(opt => opt.value);
 
     this.dropdownConfigs = [
       {
@@ -430,6 +499,9 @@ export class InterviewRound1Component {
     });
 
     dialogRef.afterClosed().subscribe((result: any) => {
+
+      result = result.selectionMap
+
       if (result?.Position) {
         const item = this.appointments[index];
         if (!item.selectedPositions) {
@@ -455,17 +527,59 @@ export class InterviewRound1Component {
   }
 
   onRemoveJobByValue(jobToRemove: any, item: any) {
-    item.jobPosition.jobList = item.jobPosition.jobList.filter(
-      (job: any) => job.jobId !== jobToRemove.jobId
-    );
 
-    item.selectedPositions = item.selectedPositions.filter(
-      (pos: any) => pos.value !== jobToRemove.jobId
-    );
+    Promise.resolve().then(() => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.add('dimmed-overlay');
+    });
 
-    item.jobPosition.totalJobs = item.jobPosition.jobList.length;
+    const dialogRef = this.dialog.open(AlertDialogComponent, {
+      width: '496px',
+      panelClass: 'custom-dialog-container',
+      autoFocus: false,
+      disableClose: true,
+      data: {
+        title: 'Confirmation',
+        message: 'Are you sure you want to delete this job position?',
+        confirm: true
+      }
+    });
 
-    console.log(this.appointments, '=>this.appointments');
+    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.remove('dimmed-overlay');
+
+      if (confirmed) {
+
+        item.jobPosition.jobList = item.jobPosition.jobList.filter(
+          (job: any) => job.jobId !== jobToRemove.jobId
+        );
+
+        item.selectedPositions = item.selectedPositions.filter(
+          (pos: any) => pos.value !== jobToRemove.jobId
+        );
+
+        item.jobPosition.totalJobs = item.jobPosition.jobList.length;
+      }
+    })
+
+  }
+
+  onRemoveJobApplicant(jobToRemove: any, item: any) {
+    const candidateId = item.profile.userId;
+    const positionId = jobToRemove.jobId;
+    const applyRound = item.interview.round || 1;
+    const isPassed = !jobToRemove.isActive;
+
+    this.appointmentsService.updateCandidateStatus(candidateId, {
+      isPassed,
+      positionId,
+      applyRound
+    }).subscribe({
+      error: (err) => {
+        console.error('เกิดข้อผิดพลาดขณะอัปเดตสถานะผู้สมัคร', err);
+      }
+    });
   }
 
   onAddTermClick() {
@@ -509,28 +623,39 @@ export class InterviewRound1Component {
     });
   }
 
-  onAddCallStatus() {
+  onAddCallStatus(item: any) {
+    const currentUserId = item.profile.userId;
+    const currentAppointmentId = item.profile.appointmentId;
+    const missCallCount = item.interview.missCallCount;
+    this.historyData = this.getHistoryDataForUser(currentUserId);
 
-    const historyOptions: SelectOption[] = this.historyData.map(item => ({
-      value: item.value,
+    const historyOptions: SelectOption[] = this.historyData.map((item, index) => ({
+      value: index,
       label: `${item.date} ${item.time} ${item.status}`,
     }));
 
-    const defaultSelected = historyOptions.slice(-2).map(opt => opt.value);
+    const defaultSelected = historyOptions.slice(0, 2).map(opt => opt.value);
 
     this.dropdownConfigs = [
+      {
+        type: 'toggle',
+        missCallCount: missCallCount
+      },
       {
         type: 'single',
         label: 'Status',
         placeholder: 'Select Status',
-        options: this.dataStatusCall,
+        optionsFirst: this.dataStatusCallFirst,
+        optionsSecond: this.dataStatusCallSecond,
+        dynamicByToggle: true
       },
       {
         type: 'multi',
         label: 'History',
         options: historyOptions,
         isHistory: true,
-        defaultSelected: defaultSelected
+        defaultSelected: defaultSelected,
+        placeholder: 'No History',
       }
     ];
 
@@ -550,6 +675,94 @@ export class InterviewRound1Component {
       }
     });
 
+    dialogRef.afterClosed().subscribe((result: any) => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.remove('dimmed-overlay');
+
+      if (result) {
+        console.log('Selected values from dialog:', result);
+
+        const appointmentId = currentAppointmentId;
+        const missCallId = result.selectionMap.Status?.value || 0;
+        const isNoShow = result.isNoShow;
+
+        console.log({ appointmentId, missCallId, isNoShow })
+
+        this.appointmentsService.appointmentMisscall({
+          appointmentId,
+          missCallId,
+          isNoShow
+        }).subscribe({
+          next: () => {
+            const previousPage = this.currentFilterParams.page;
+            const focusedAppointmentId = appointmentId;
+
+            this.appointments = [];
+            this.currentFilterParams.page = 1;
+            this.hasMoreData = true;
+
+            const fetchCalls: Observable<any>[] = [this.fetchAppointments(false, false)];
+
+            for (let page = 2; page <= previousPage; page++) {
+              this.currentFilterParams.page = page;
+              fetchCalls.push(this.fetchAppointments(false, false));
+            }
+
+            forkJoin(fetchCalls).subscribe(() => {
+              setTimeout(() => {
+                const el = document.getElementById(`appointment-${focusedAppointmentId}`);
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }, 0);
+            });
+          },
+          error: (err) => {
+            console.error('API call error:', err);
+          }
+        });
+
+      }
+    });
+  }
+
+  onShowCallStatus(item: any) {
+    const currentUserId = item.profile.userId;
+    this.historyData = this.getHistoryDataForUser(currentUserId);
+
+    const historyOptions: SelectOption[] = this.historyData.map((item, index) => ({
+      value: index,
+      label: `${item.date} ${item.time} ${item.status}`,
+    }));
+
+    const defaultSelected = historyOptions.slice(0, 2).map(opt => opt.value);
+
+    this.dropdownConfigs = [
+      {
+        type: 'multi',
+        label: 'History',
+        options: historyOptions,
+        isHistory: true,
+        defaultSelected: defaultSelected
+      }
+    ];
+
+    Promise.resolve().then(() => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.add('dimmed-overlay');
+    });
+
+    const dialogRef = this.dialog.open(SelectDialogComponent, {
+      width: '480px',
+      data: {
+        title: 'Call Status History',
+        quality: 0,
+        confirm: true,
+        options: this.dataOptions,
+        dropdownConfigs: this.dropdownConfigs
+      }
+    });
+
     dialogRef.afterClosed().subscribe((result: boolean) => {
       const container = document.querySelector('.cdk-overlay-container');
       container?.classList.remove('dimmed-overlay');
@@ -560,7 +773,10 @@ export class InterviewRound1Component {
     });
   }
 
-  onSendMail() {
+  onSendMail(item: any) {
+    const statusCall = item.interview.isCalled;
+    if (statusCall !== 'complete') return
+
     Promise.resolve().then(() => {
       const container = document.querySelector('.cdk-overlay-container');
       container?.classList.add('dimmed-overlay');
@@ -637,11 +853,11 @@ export class InterviewRound1Component {
   getButtonClass(resultText: string): string {
     switch (resultText?.toLowerCase()) {
       case 'pending':
-        return 'tw-bg-[rgba(255, 255, 85, 0.30)] tw-text-[#AAAA00]';
-      case 'accept':
-        return 'tw-bg-[#AAFFAA] tw-text-[#00AA00]';
-      case 'decline':
-        return 'tw-bg-[#f56c6e4d] tw-text-[#9e4e4f]';
+        return 'tw-bg-[#FAFBC8] tw-text-[#AAAA00]';
+      case 'in process':
+        return 'tw-bg-[#F9E9C8] tw-text-[#AA5500]';
+      case 'scheduled':
+        return 'tw-bg-[#E0EEFA] tw-text-[#0085FF]';
       default:
         return 'tw-bg-[#e9e9e9] tw-text-[#373737]';
     }
@@ -685,7 +901,7 @@ export class InterviewRound1Component {
       pageSize: this.currentFilterParams.pageSize,
       InterviewResult: this.selectedTab === 'total' ? undefined : this.selectedTab,
       month: this.monthData === 12 ? undefined : this.monthData,
-      year: this.yearData,
+      // year: this.yearData,
     };
 
     this.appointmentsService.getAppointments<any>(params).subscribe({
