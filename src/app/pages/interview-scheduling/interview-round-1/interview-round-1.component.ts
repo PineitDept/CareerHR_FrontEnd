@@ -13,7 +13,7 @@ import { SlickCarouselComponent } from 'ngx-slick-carousel';
 import { MailDialogComponent } from '../../../shared/components/dialogs/mail-dialog/mail-dialog.component';
 import { AppointmentsService } from '../../../services/interview-scheduling/appointment-interview/appointments.service';
 import { AlertDialogComponent } from '../../../shared/components/dialogs/alert-dialog/alert-dialog.component';
-import { catchError, finalize, forkJoin, Observable, of, tap } from 'rxjs';
+import { catchError, finalize, forkJoin, map, Observable, of, tap } from 'rxjs';
 
 const SEARCH_OPTIONS: string[] = [
   'Applicant ID',
@@ -69,12 +69,14 @@ export class InterviewRound1Component {
   jobpositionList: any;
   teamList: any;
   interviewerList: any;
+  revisionList: any;
 
   // ---------- Appointments / UI state ----------
   appointments: any[] = [];
   isDeclined = false;
   loading = false;
   hasMoreData = true;
+  canAddPos = true
 
   // ---------- Carousel controls ----------
   currentSlide: number[] = [];
@@ -278,6 +280,29 @@ export class InterviewRound1Component {
         if (updateTabCounts && res.groupCounts) {
           this.updateTabCountsFromGroup(res.groupCounts);
         }
+
+        this.appointments = this.appointments.map((item: any) => {
+          const revision = Number(item.interview?.revision || 1);
+
+          const revisionList = Array.from({ length: revision }, (_, i) => ({
+            label: i + 1,
+            value: i + 1
+          })).reverse();
+
+          return {
+            ...item,
+            revisionList
+          };
+        });
+
+        this.appointments = this.appointments.map(appointment => {
+          const offeredCount = appointment.jobPosition.jobList.filter((job: any) => job.isOffered === true).length;
+          return {
+            ...appointment,
+            isHidden: offeredCount >= 2
+          };
+        });
+
       }),
       catchError((err) => {
         console.error('Error fetching appointments:', err);
@@ -342,6 +367,23 @@ export class InterviewRound1Component {
       }
     });
   }
+
+  fetchPositionLogFor(appointment: any) {
+    // this.appointmentsService.getPositionLogs(
+    //   appointment.profile.userId,
+    //   appointment.interview.round
+    // ).subscribe({
+    //   next: (res) => {
+    //     appointment.positionLogs = res;
+    //     console.log(`Fetched position log for ${appointment.profile.userId}`, res);
+    //   },
+    //   error: (err) => {
+    //     console.error('Error fetching position log for appointment:', err);
+    //   }
+    // });
+  }
+
+
 
   // ---------- Search / filter actions ----------
   onSearch() {
@@ -465,6 +507,13 @@ export class InterviewRound1Component {
       { date: '2025/09/16', time: '10:00am', status: 'Voicemail', value: 3 },
     ];
 
+    this.appointments.forEach((appointment) => {
+      if (!appointment.positionLogs) {
+        this.fetchPositionLogFor(appointment);
+      }
+    });
+
+
     const historyOptions: SelectOption[] = this.historyData.map((item, index) => ({
       value: index,
       label: `${item.date} ${item.time} ${item.status}`,
@@ -509,18 +558,33 @@ export class InterviewRound1Component {
         }
         const exists = item.selectedPositions.some((pos: any) => pos.value === result.Position.value);
         if (!exists && item.selectedPositions.length < 2) {
-          item.selectedPositions.push(result.Position);
 
-          const newJob = {
-            jobId: result.Position.value,
-            jobName: result.Position.label,
-            isActive: true,
-            isOffered: true
-          };
-          item.jobPosition.jobList.push(newJob);
-          item.jobPosition.totalJobs = item.jobPosition.jobList.length;
+          const payload = {
+            userId: item.profile.userId,
+            idjobPst: result.Position.value,
+            round: item.interview.round
+          }
 
-          console.log(this.appointments, '=>this.appointments');
+          this.appointmentsService.addPositionJob(payload).subscribe({
+            next: (res) => {
+              item.selectedPositions.push(result.Position);
+              const newJob = {
+                jobId: result.Position.value,
+                jobName: result.Position.label,
+                isActive: true,
+                isOffered: true
+              };
+              item.jobPosition.jobList.push(newJob);
+              item.jobPosition.totalJobs = item.jobPosition.jobList.length;
+        
+              const offeredCount = item.jobPosition.jobList.filter((job: any) => job.isOffered === true).length;
+              item.isHidden = offeredCount >= 2;
+            },
+            error: (err) => {
+              console.error('Add Job Log Error:', err);
+            }
+          });
+
         }
       }
     });
@@ -551,15 +615,25 @@ export class InterviewRound1Component {
 
       if (confirmed) {
 
-        item.jobPosition.jobList = item.jobPosition.jobList.filter(
-          (job: any) => job.jobId !== jobToRemove.jobId
-        );
+        this.appointmentsService.deletePositionJob(item.profile.userId, item.interview.round, jobToRemove.jobId).subscribe({
+          next: (res) => {
+            item.jobPosition.jobList = item.jobPosition.jobList.filter(
+              (job: any) => job.jobId !== jobToRemove.jobId
+            );
 
-        item.selectedPositions = item.selectedPositions.filter(
-          (pos: any) => pos.value !== jobToRemove.jobId
-        );
+            // item.selectedPositions = item.selectedPositions.filter(
+            //   (pos: any) => pos.value !== jobToRemove.jobId
+            // );
 
-        item.jobPosition.totalJobs = item.jobPosition.jobList.length;
+            item.jobPosition.totalJobs = item.jobPosition.jobList.length;
+            
+            const offeredCount = item.jobPosition.jobList.filter((job: any) => job.isOffered === true).length;
+            item.isHidden = offeredCount >= 2;
+          },
+          error: (err) => {
+            console.error('Delete Job Log Error:', err);
+          }
+        });
       }
     })
 
@@ -582,7 +656,7 @@ export class InterviewRound1Component {
     });
   }
 
-  onAddTermClick() {
+  onAddTeamClick() {
     this.dropdownConfigs = [
       {
         type: 'single',
@@ -915,6 +989,28 @@ export class InterviewRound1Component {
         }
 
         this.loading = false;
+
+        this.appointments = this.appointments.map((item: any) => {
+          const revision = Number(item.interview?.revision || 1);
+
+          const revisionList = Array.from({ length: revision }, (_, i) => ({
+            label: i + 1,
+            value: i + 1
+          })).reverse();
+
+          return {
+            ...item,
+            revisionList
+          };
+        });
+
+        this.appointments = this.appointments.map(appointment => {
+          const offeredCount = appointment.jobPosition.jobList.filter((job: any) => job.isOffered === true).length;
+          return {
+            ...appointment,
+            isHidden: offeredCount >= 2
+          };
+        });
       },
       error: (err) => {
         console.error('Load more failed:', err);

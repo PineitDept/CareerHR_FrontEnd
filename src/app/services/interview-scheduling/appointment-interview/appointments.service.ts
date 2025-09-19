@@ -21,8 +21,8 @@ export class AppointmentsService {
   private baseAPI = 'Appointments';
   private base = '';
   private baseCandidate = 'Candidates'
-  
-  
+
+
   setAppointmentsType(type?: number) {
     switch (type) {
       case 1:
@@ -125,5 +125,28 @@ export class AppointmentsService {
       withAuth: true,
       loading: false,
     });
-}
+  }
+
+  getPositionLogs(id: number, round: number): Observable<any> {
+    return this.api.get<any>(`PositionLogs/${id}/${round}`, {
+      withAuth: true,
+      loading: false,
+    });
+  }
+
+  addPositionJob(body: { userId: number; idjobPst: number; round: number }): Observable<any> {
+    return this.api.post<any>(`PositionLogs/add-job-log`, body, {
+      withAuth: true,
+      loading: false,
+    });
+  }
+
+  deletePositionJob(userId: number, round: number, idjobPst: number): Observable<any> {
+    return this.api.delete<any>(`PositionLogs/delete/?userId=${userId}&round=${round}&positionid=${idjobPst}`, {
+      withAuth: true,
+      loading: false,
+    });
+  }
+
+
 }

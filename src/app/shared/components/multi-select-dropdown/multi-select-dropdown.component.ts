@@ -37,7 +37,6 @@ export class MultiSelectDropdownComponent implements ControlValueAccessor {
 
   ngOnChanges(): void {
     if (this.defaultSelected?.length && this.options?.length) {
-      console.log(this.options)
       this.selectedOptions = this.options.filter(option =>
         this.defaultSelected.includes(option.value)
       );

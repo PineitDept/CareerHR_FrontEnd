@@ -113,7 +113,7 @@
                 </button> -->
 
                 <button type="button"
-                    *ngIf="item.jobPosition.canAdd && (!item.selectedPositions || item.selectedPositions.length < 2)"
+                    *ngIf="!item.isHidden"
                     (click)="onAddPoscitionClick(i)"
                     class="tw-w-fit tw-rounded-lg tw-border-[#e5e5e5] tw-border hover:tw-bg-[#f5f5f5] tw-text-black tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5">
                     <span class="tw-font-semibold">Add Position</span>
@@ -140,7 +140,7 @@
                     <div class="tw-grid tw-grid-cols-2 tw-gap-6">
                         <div class="tw-flex-1">
                             <p class="tw-mb-3"><strong>Interviewers Team </strong><span class="text-red">*</span></p>
-                            <button type="button" (click)="onAddTermClick()"
+                            <button type="button" (click)="onAddTeamClick()"
                                 class="tw-w-full tw-flex tw-justify-between tw-h-10 tw-items-center tw-rounded-lg tw-border-[#e5e5e5] tw-border hover:tw-bg-[#f5f5f5] tw-text-black tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5">
                                 <span class="tw-font-normal">
                                     {{ getTeamNameById(item.interview.teamId) || 'Team' }}
@@ -205,15 +205,15 @@
                     </div>
                 </div>
 
-                <div class="tw-flex tw-justify-between">
-                    <div class="tw-flex tw-gap-2">
-                        <button type="button" *ngIf="item.interview.isCalled === 'complete'"
+                <div class="tw-grid tw-grid-cols-2 tw-gap-6">
+                    <div class="tw-flex tw-gap-2" *ngIf="item.interview.isCalled === 'complete'">
+                        <button type="button"
                             class="tw-w-fit tw-rounded-lg tw-border-[#e5e5e5] tw-border hover:tw-bg-[#f5f5f5] tw-text-black tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5">
                             <span class="tw-font-semibold">Rescheduled</span>
                         </button>
-                        <!-- <app-cdk-dropdown *ngIf="" class="tw-block tw-w-fit" [options]="locationsList" placeholder="version"></app-cdk-dropdown> -->
+                        <app-cdk-dropdown class="tw-block tw-w-fit" [options]="item.revisionList" [value]="item.revisionList[0].value"></app-cdk-dropdown>
                     </div>
-                    <button type="button" *ngIf="item.interview.isEmailSent"
+                    <button type="button" *ngIf="item.interview.isEmailSent" 
                         class="tw-w-fit tw-rounded-lg tw-bg-[#00AAFF] hover:tw-bg-[#028cd1] tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5">
                         <span class="tw-font-semibold">Interview Form </span>
                     </button>
