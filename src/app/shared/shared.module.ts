@@ -36,6 +36,7 @@ import { BackToTopComponent } from './components/back-to-top/back-to-top.compone
 import { FullCalendarModule } from '@fullcalendar/angular';
 import { CalendarComponent } from './components/calendar/calendar.component';
 import { RevisionHistoryFooterComponent } from './components/revision-history-footer/revision-history-footer.component';
+import { UniversityPickerDialogComponent } from './components/dialogs/university-picker-dialog/university-picker-dialog.component';
 
 @NgModule({
   declarations: [
@@ -60,6 +61,7 @@ import { RevisionHistoryFooterComponent } from './components/revision-history-fo
     BackToTopComponent,
     CalendarComponent,
     RevisionHistoryFooterComponent,
+    UniversityPickerDialogComponent,
   ],
   imports: [
     CommonModule,
@@ -100,6 +102,7 @@ import { RevisionHistoryFooterComponent } from './components/revision-history-fo
     CalendarComponent,
     FullCalendarModule,
     RevisionHistoryFooterComponent,
+    UniversityPickerDialogComponent,
   ]
 })
 export class SharedModule { }

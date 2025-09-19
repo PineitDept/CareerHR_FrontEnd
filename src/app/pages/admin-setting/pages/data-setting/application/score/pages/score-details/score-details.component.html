@@ -76,6 +76,11 @@
           [isDisabledForm]="!isEditMode"
           (toggleChange)="onToggleChangeDetails($event)"
           [lockedPrefixConfig]="conditionLockedCfg"
+          [inlineFieldErrors]="inlineFieldErrors"
+          [mergeByFields]="scoreType === 3 ? ['universityName'] : []"
+          [useExternalInlineSaveFlow]="scoreType === 3"
+          (inlineSaveAttempt)="onInlineSaveAttempt($event)"
+          (inlineCancel)="onInlineCancelRow($event)"
         ></app-tables>
       </div>
 

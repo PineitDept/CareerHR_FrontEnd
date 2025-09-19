@@ -8,9 +8,11 @@ import { MatDialog } from '@angular/material/dialog';
 import { NotificationService } from '../../../../../../../../shared/services/notification/notification.service';
 import { CaptchaDialogComponent } from '../../../../../../../../shared/components/dialogs/captcha-dialog/captcha-dialog.component';
 import { Subject, takeUntil } from 'rxjs';
+import { UniversityPickerDialogComponent } from '../../../../../../../../shared/components/dialogs/university-picker-dialog/university-picker-dialog.component';
 
 type ScoreItem = {
   id: number | null;
+  tempId?: string | null;     // ใช้ระบุตัวตนชั่วคราวตอน id=null
   condition: string;        // server: condition (string number)
   conditionDetail: string;  // server: conditionDetail -> ใช้แสดงในคอลัมน์ "Condition"
   score: number;            // server: score
@@ -63,9 +65,12 @@ export class ScoreDetailsComponent {
   private destroy$ = new Subject<void>();
 
   private readonly CONDITION_PREFIX_MAP: Record<number, string> = {
+    3: '≥ ',
     8: 'Score EQ > ',
     9: 'Score Ethics > ',
   };
+
+  inlineFieldErrors: Record<string, boolean> = {};
 
   constructor(
     private route: ActivatedRoute,
@@ -78,9 +83,9 @@ export class ScoreDetailsComponent {
   // ======= Getters =======
   get scoreSettingsFA(): FormArray { return this.formDetails.get('scoreSettings') as FormArray; }
 
-  /** แสดงปุ่ม Add Condition เฉพาะเมื่อ scoreType เป็น 8 หรือ 9 */
+  /** แสดงปุ่ม Add Condition เฉพาะเมื่อ scoreType เป็น 3, 8 หรือ 9 */
   get canShowAddButton(): boolean {
-    return this.scoreType === 8 || this.scoreType === 9;
+    return  this.scoreType === 3 || this.scoreType === 8 || this.scoreType === 9;
   }
 
   // ใช้กับ <app-tables> เพื่อให้ render prefix lock
@@ -99,6 +104,8 @@ export class ScoreDetailsComponent {
         this.scoreName = (params['scoreName'] || '').split('-').join(' ');
         this.scoreType = Number(params['scoreType'] || 0);
 
+        this.setupColumnsByType();
+
         this.formDetails.patchValue({ scoreName: this.scoreName }, { emitEvent: false });
         this.fetchScoreSettingDetailsByType();
       });
@@ -110,6 +117,27 @@ export class ScoreDetailsComponent {
       // ใช้ชื่อ array เป็น scoreSettings ตามที่กำหนด
       scoreSettings: this.fb.array([]),
     });
+  }
+
+  private setupColumnsByType() {
+    if (this.scoreType === 3) {
+      this.scoreDetailsColumns = [
+        { header: 'University', field: 'universityName', type: 'text', width: '25%', wrapText: true, editing: false, align: 'center' }, // merge
+        { header: 'GPA Condition', field: 'conditionDetail', type: 'text', width: '30%', wrapText: true, editing: true, align: 'center' },
+        { header: 'Score', field: 'score', type: 'number', align: 'center', width: '12%' },
+        { header: 'Status', field: 'activeStatus', type: 'toggle', align: 'center', width: '7%' },
+        { header: 'Action', field: 'textlink', type: 'textlink', align: 'center', width: '18%', textlinkActions: ['edit-inrow'], useRowTextlinkActions: true },
+      ];
+    } else {
+      // เดิม (type อื่น)
+      this.scoreDetailsColumns = [
+        { header: 'No.', field: '__index', type: 'number', align: 'center', width: '7%' },
+        { header: 'Condition', field: 'conditionDetail', type: 'text', width: '56%', wrapText: true },
+        { header: 'Score', field: 'score', type: 'number', align: 'center', width: '12%' },
+        { header: 'Status', field: 'activeStatus', type: 'toggle', align: 'center', width: '7%' },
+        { header: 'Action', field: 'textlink', type: 'textlink', align: 'center', width: '18%', textlinkActions: ['edit-inrow'], useRowTextlinkActions: true }
+      ];
+    }
   }
 
   private ensureFilterButtons() {
@@ -137,6 +165,7 @@ export class ScoreDetailsComponent {
   private buildFG(item: ScoreItem): FormGroup {
     return this.fb.group({
       id: [item.id],
+      tempId: [item.tempId ?? null],
       condition: [item.condition],
       conditionDetail: [item.conditionDetail],
       score: [item.score],
@@ -149,43 +178,82 @@ export class ScoreDetailsComponent {
   private rebuildRowsFromForm() {
     const arr = this.scoreSettingsFA.getRawValue() as ScoreItem[];
 
+    if (this.scoreType === 3) {
+      const prefix = this.CONDITION_PREFIX_MAP[3] || '≥ ';
+      const isZero = (v: any) => {
+        // รองรับ '0', '0.0', 0, '0.00 ' ฯลฯ แต่ไม่ถือ '' / null เป็นศูนย์
+        if (v === '' || v === null || v === undefined) return false;
+        const n = Number(String(v).trim());
+        return Number.isFinite(n) && n === 0;
+      };
+
+      this.scoreDetailsRows = arr.map((it) => {
+        const actions = new Set<string>(['edit-inrow']);
+        if (it.isDelete) actions.add('delete');
+
+        // ซ่อน Edit เฉพาะแถว GPA=0 และ Score=0
+        const hideEdit = isZero(it.condition) && isZero(it.score);
+        if (hideEdit) actions.delete('edit-inrow');
+
+        return {
+          id: it.id,
+          tempId: it.tempId ?? null,
+          universityName: it.conditionDetail,
+          condition: it.condition,
+          conditionDetail: `${prefix}${it.condition}`,
+          score: it.score,
+          activeStatus: !!it.activeStatus,
+          isDelete: !!it.isDelete,
+          isDisable: !!it.isDisable,
+          // 👇 จุดชี้ขาด: ให้ตารางอ่าน action จากแถวนี้จริง ๆ
+          textlinkActions: Array.from(actions),
+        };
+      });
+      return;
+    }
+
+    // ---------- ของเดิมสำหรับ type อื่น ----------
     this.scoreDetailsRows = arr.map((it) => {
-      // default ต้องมี edit เสมอ
       const actions = new Set<string>(['edit-inrow']);
-
-      // แสดง delete เฉพาะเมื่อ isDelete = true
       if (it.isDelete) actions.add('delete');
-
       return {
         id: it.id,
+        tempId: it.tempId ?? null,
         condition: it.condition,
         conditionDetail: it.conditionDetail,
         score: it.score,
         activeStatus: !!it.activeStatus,
         isDelete: !!it.isDelete,
         isDisable: !!it.isDisable,
-        textlinkActions: Array.from(actions), // ใช้ action จากแถว
+        textlinkActions: Array.from(actions),
       };
     });
   }
 
   private mapServerToItems(resp: any): ScoreItem[] {
     const list = Array.isArray(resp?.scoreSettings) ? resp.scoreSettings : [];
-    const items: ScoreItem[] = list.map((s: any) => ({
-      id: Number.isFinite(Number(s?.id)) ? Number(s.id) : null,
-      condition: String(s?.condition ?? ''),
-      conditionDetail: String(s?.conditionDetail ?? '').trim(),
-      score: Number(s?.score ?? 0) || 0,
-      activeStatus: !!s?.isActive,     // isActive เป็น boolean อยู่แล้ว
-      isDelete: !!s?.isDelete,         // ควบคุมปุ่ม Delete
-      isDisable: !!s?.isDisable,       // true = อนุญาต toggle, false = ไม่อนุญาต
-    }));
 
-    // เรียงตาม condition (numeric) -> id
-    items.sort((a, b) =>
-      (Number(a.condition) || 0) - (Number(b.condition) || 0) ||
-      (Number(a.id) || 0) - (Number(b.id) || 0)
-    );
+    const items: ScoreItem[] = list.map((s: any) => {
+      const base: ScoreItem = {
+        id: Number.isFinite(Number(s?.id)) ? Number(s.id) : null,
+        tempId: null,
+        condition: String(s?.condition ?? ''),        // ค่าตัวเลขจริง (string)
+        conditionDetail: String(s?.conditionDetail ?? '').trim(), // เดิม = label
+        score: Number(s?.score ?? 0) || 0,
+        activeStatus: !!s?.isActive,
+        isDelete: !!s?.isDelete,
+        isDisable: !!s?.isDisable,
+      };
+      return base;
+    });
+
+    // ✅ type 3: preserve order ตาม API
+    if (this.scoreType !== 3) {
+      items.sort((a, b) =>
+        (Number(a.condition) || 0) - (Number(b.condition) || 0) ||
+        (Number(a.id) || 0) - (Number(b.id) || 0)
+      );
+    }
 
     return items;
   }
@@ -258,6 +326,74 @@ export class ScoreDetailsComponent {
   // ======= Inline row create/edit/delete =======
   onAddConditionClicked() {
     if (!this.isEditMode || !this.canShowAddButton) return;
+
+    if (this.scoreType === 3) {
+      const items = this.scoreSettingsFA.getRawValue() as ScoreItem[];
+      const universities = Array.from(
+        new Set(items.map(it => String(it.conditionDetail || '').trim()).filter(Boolean))
+      ).sort((a, b) => a.localeCompare(b));
+
+      const dialogRef = this.dialog.open(UniversityPickerDialogComponent, {
+        width: '520px',
+        panelClass: 'custom-dialog-container',
+        disableClose: true,
+        data: { universities },
+      });
+
+      dialogRef.afterClosed().subscribe((selected: string | null) => {
+        if (!selected) return;
+
+        const newItem: ScoreItem = {
+          id: null,
+          tempId: `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          condition: '',
+          conditionDetail: selected,
+          score: 0,
+          activeStatus: true,
+          isDelete: true,
+          isDisable: true,
+        };
+
+        const items = this.scoreSettingsFA.getRawValue() as ScoreItem[];
+
+        // หา index ที่จะแทรก
+        const lastIdxOfUni = (() => {
+          let idx = -1;
+          for (let i = 0; i < items.length; i++) {
+            if ((items[i]?.conditionDetail || '').trim() === selected.trim()) {
+              idx = i;
+            }
+          }
+          return idx;
+        })();
+
+        let insertAt: number;
+        if (lastIdxOfUni === -1) {
+          insertAt = items.length;
+          for (let i = 0; i < items.length; i++) {
+            const name = String(items[i].conditionDetail || '');
+            if (selected.localeCompare(name) < 0) { insertAt = i; break; }
+          }
+          this.scoreSettingsFA.insert(insertAt, this.buildFG(newItem), { emitEvent: false });
+        } else {
+          insertAt = lastIdxOfUni + 1;
+          this.scoreSettingsFA.insert(insertAt, this.buildFG(newItem), { emitEvent: false });
+        }
+
+        // rebuild แล้วเปิด inline-edit ที่ตำแหน่งแทรกทันที
+        this.rebuildRowsFromForm();
+        this.touchChanged();
+
+        // ให้แน่ใจว่า view อัปเดตแล้วค่อยสั่งเปิด edit
+        setTimeout(() => {
+          this.scoreDetailsTable?.openInlineEditAt(insertAt);
+        });
+      });
+
+      return;
+    }
+
+    // type อื่น ๆ (เดิม)
     this.isAddingRow = true;
     this.scoreDetailsTable.startInlineCreate({ activeStatus: true }, 'bottom');
   }
@@ -265,7 +401,61 @@ export class ScoreDetailsComponent {
   onInlineSave(payload: any) {
     if (!this.isEditMode) { this.isAddingRow = false; return; }
 
-    // กันซ้ำและ validate เฉพาะ scoreType 8
+    // === NEW: รองรับ type=3 ให้เช็คเหมือน onInlineEditSave / onInlineSaveAttempt ===
+    if (this.scoreType === 3) {
+      // payload.conditionDetail จะเป็น "≥ x.xx" (จาก input-affix)
+      const num = this.extractConditionNumber(String(payload?.conditionDetail ?? ''), /*forcePrefix*/ true);
+      const valid = num !== null && num >= 0 && num <= 4;
+
+      if (!valid) {
+        this.fieldErrors = true;
+        this.inlineFieldErrors = { conditionDetail: true };
+        this.notify.error('GPA ต้องอยู่ระหว่าง 0.00 – 4.00');
+        return;
+      }
+
+      // หา index ของ "แถวใหม่" ล่าสุด เพื่อระบุ university (จากฟอร์ม)
+      // ปกติกรณี type=3 เราเพิ่มแถวใน FormArray ไปก่อนแล้ว (ตอนเลือกมหาลัย) แล้วค่อยเปิดแก้ไข
+      // ตรงนี้ therefore ให้ map จาก rows -> index ปัจจุบันที่กำลัง save โดยจับ tempId หากมี
+      const uniName = String(payload?.universityName ?? '').trim();
+      const skipIdx = (() => {
+        const idx = this.findIndexByRow(payload);
+        return idx >= 0 ? idx : undefined;
+      })();
+
+      const dupIdx = this.findDuplicateGpaIndexWithinUniversity(uniName, num!, skipIdx);
+      if (dupIdx !== -1) {
+        this.fieldErrors = true;
+        this.inlineFieldErrors = { conditionDetail: true };
+        this.duplicateRowIndex = dupIdx;
+        this.notify.error(`GPA ซ้ำกับแถวที่ ${dupIdx + 1} ของ "${uniName}"`);
+        return;
+      }
+
+      // ผ่าน: อัปเดตค่าในฟอร์ม (condition = ตัวเลขจริง, เก็บ label มหาลัยเดิมใน conditionDetail)
+      const idx = this.findIndexByRow(payload);
+      if (idx >= 0) {
+        const curr = this.scoreSettingsFA.at(idx).getRawValue() as ScoreItem;
+        this.scoreSettingsFA.at(idx).patchValue({
+          condition: String(num),
+          score: Number(payload?.score ?? curr.score) || 0,
+          activeStatus: !!(payload?.activeStatus ?? curr.activeStatus),
+        }, { emitEvent: false });
+
+        this.rebuildRowsFromForm();
+        this.touchChanged();
+      }
+
+      // ปิดโหมด add + ให้ตารางรีเซ็ตเป็นปุ่ม Edit/Delete
+      this.isAddingRow = false;
+      // ตารางของคุณจะปิดอินไลน์ในฝั่ง self เมื่อ parent เปลี่ยน rows; ถ้าจำเป็น เรียก:
+      this.scoreDetailsTable?.commitInlineSave?.();
+
+      return;
+    }
+    // === END NEW (type=3) ===
+
+    // ====== เดิม (type อื่น) ======
     if (this.scoreType === 8) {
       const num = this.extractConditionNumber(String(payload?.conditionDetail ?? ''));
       if (num == null) {
@@ -284,6 +474,7 @@ export class ScoreDetailsComponent {
 
     const normalized: ScoreItem = {
       id: null,
+      tempId: `tmp-${Date.now()}-${Math.random().toString(36).slice(2,8)}`, // <— NEW: ให้แถวใหม่ type อื่นมี tempId ด้วย
       condition: String(payload?.condition ?? ''),
       conditionDetail: String(payload?.conditionDetail ?? '').trim(),
       score: Number(payload?.score ?? 0) || 0,
@@ -304,13 +495,42 @@ export class ScoreDetailsComponent {
     const idx = this.findIndexByRow(updatedRow);
     if (idx < 0) return;
 
-    // ✅ กันซ้ำและ validate เฉพาะ scoreType 8
+    // ----- วาลิเดชันเฉพาะ type=3 : GPA 0.00-4.00 -----
+    if (this.scoreType === 3) {
+      // ดึงเลขจาก conditionDetail ที่มี prefix "≥ "
+      const num = this.extractConditionNumber(String(updatedRow?.conditionDetail ?? ''), /*forcePrefix*/ true);
+      // เฉพาะช่วง 0..4
+      const valid = num !== null && num >= 0 && num <= 4;
+      if (!valid) {
+        this.inlineFieldErrors = { conditionDetail: true };
+        this.notify.error('GPA ต้องอยู่ระหว่าง 0.00 – 4.00');
+        // revert กลับค่าเดิมจากฟอร์ม
+        this.rebuildRowsFromForm();
+        return;
+      }
+      this.inlineFieldErrors = {};
+
+      // ปรับค่าในฟอร์ม: condition = ตัวเลขจริง, conditionDetail = label มหาลัยเดิม
+      const curr = this.scoreSettingsFA.at(idx).getRawValue() as ScoreItem;
+      const patch: Partial<ScoreItem> = {
+        condition: String(num),
+        // conditionDetail ของ type=3 คือ university label เดิม -> ไม่แตะ
+        score: Number(updatedRow?.score ?? curr.score) || 0,
+        activeStatus: !!(updatedRow?.activeStatus ?? curr.activeStatus),
+      };
+      this.scoreSettingsFA.at(idx).patchValue(patch, { emitEvent: false });
+      this.rebuildRowsFromForm();
+      this.touchChanged();
+      return;
+    }
+    // -----------------------------------------------------
+
+    // ====== ของเดิมสำหรับ type อื่น ======
     if (this.scoreType === 8) {
       const num = this.extractConditionNumber(String(updatedRow?.conditionDetail ?? ''));
       if (num == null) {
         this.fieldErrors = true;
         this.notify.warn('กรุณากรอกตัวเลขหลัง "Score EQ > "');
-        // ยกเลิกการแก้ไข: รีเฟรชตารางกลับค่าเดิมจาก FormArray
         this.rebuildRowsFromForm();
         return;
       }
@@ -319,7 +539,6 @@ export class ScoreDetailsComponent {
         this.fieldErrors = true;
         this.duplicateRowIndex = dupIdx;
         this.notify.error(`ค่าเงื่อนไขซ้ำกับแถวที่ ${dupIdx + 1}`);
-        // ยกเลิกการแก้ไข: รีเฟรชตารางกลับค่าเดิมจาก FormArray
         this.rebuildRowsFromForm();
         return;
       }
@@ -375,13 +594,46 @@ export class ScoreDetailsComponent {
     });
   }
 
+  onInlineCancelRow(row: any) {
+    // เคลียร์สถานะ error/ไฮไลต์ทุกครั้งที่กด Cancel
+    this.fieldErrors = false;
+    this.inlineFieldErrors = {};       // ล้าง error รายฟิลด์ (เช่น conditionDetail)
+    this.duplicateRowIndex = null;     // ยกเลิกแถวที่ถูกไฮไลต์
+
+    if (this.scoreType !== 3) return;
+
+    const idx = this.findIndexByRow(row);
+    if (idx < 0) return;
+
+    const item = this.scoreSettingsFA.at(idx).getRawValue() as ScoreItem;
+    const isNewUnsaved =
+      item.id == null &&
+      !!item.tempId &&
+      (item.condition == null || String(item.condition).trim() === '');
+
+    if (isNewUnsaved) {
+      this.scoreSettingsFA.removeAt(idx);   // ลบทิ้งทั้งแถว เพราะยังไม่เคย Save inline
+      this.rebuildRowsFromForm();
+      this.touchChanged();
+    }
+  }
+
   private findIndexByRow(row: any): number {
     const arr = this.scoreSettingsFA.getRawValue() as ScoreItem[];
-    // map โดยใช้ id ก่อน ถ้าไม่มีค่อย fallback ด้วย condition + conditionDetail + score
+
+    // 1) tempId ก่อน (แถวใหม่ยังไม่มี id)
+    if (row?.tempId) {
+      const byTmp = arr.findIndex((it) => it.tempId === row.tempId);
+      if (byTmp > -1) return byTmp;
+    }
+
+    // 2) จากนั้นค่อยลอง id
     if (row?.id != null) {
       const byId = arr.findIndex((it) => it.id === row.id);
       if (byId > -1) return byId;
     }
+
+    // 3) สุดท้าย fallback แบบเดิม
     const cond = String(row?.condition ?? '');
     const label = String(row?.conditionDetail ?? '').trim();
     const sc = Number(row?.score ?? 0) || 0;
@@ -480,12 +732,22 @@ export class ScoreDetailsComponent {
     };
   }
 
-  // ดึงเลขทศนิยมไม่ติดลบจาก conditionDetail (รองรับกรณีมี prefix)
-  private extractConditionNumber(text: string): number | null {
+  // ดึงตัวเลขทศนิยมไม่ติดลบจาก conditionDetail
+  private extractConditionNumber(text: string, forcePrefix = false): number | null {
     if (typeof text !== 'string') return null;
     let s = text.trim();
     const prefix = this.CONDITION_PREFIX_MAP[this.scoreType] ?? '';
-    if (prefix && s.startsWith(prefix)) s = s.slice(prefix.length).trim();
+
+    // ถ้าบังคับมี prefix (เช่น type 3) ให้ตัด prefix เท่านั้น
+    if (prefix) {
+      if (forcePrefix) {
+        if (!s.startsWith(prefix)) return null;
+        s = s.slice(prefix.length).trim();
+      } else if (s.startsWith(prefix)) {
+        s = s.slice(prefix.length).trim();
+      }
+    }
+
     if (s === '') return null;
     const n = Number(s);
     return Number.isFinite(n) && n >= 0 ? n : null;
@@ -498,6 +760,65 @@ export class ScoreDetailsComponent {
       if (skipIndex != null && i === skipIndex) continue;
       const m = this.extractConditionNumber(arr[i]?.conditionDetail ?? '');
       if (m != null && m === n) return i;
+    }
+    return -1;
+  }
+
+  onInlineSaveAttempt(e: { draft: any; original: any }) {
+    if (this.scoreType !== 3) {
+      this.scoreDetailsTable.commitInlineSave();
+      return;
+    }
+
+    // 1) แยกเลขจาก "≥ x.xx"
+    const num = this.extractConditionNumber(String(e?.draft?.conditionDetail ?? ''), /*forcePrefix*/ true);
+    const valid = num !== null && num >= 0 && num <= 4;
+
+    if (!valid) {
+      this.inlineFieldErrors = { conditionDetail: true };
+      this.notify.error('GPA ต้องอยู่ระหว่าง 0.00 – 4.00');
+      return;
+    }
+
+    // 2) กันซ้ำภายในมหาวิทยาลัยเดียวกัน
+    const uniName = String(e?.original?.universityName ?? '').trim();
+    const idx = this.findIndexByRow(e.original);
+    const dupIdx = this.findDuplicateGpaIndexWithinUniversity(uniName, num!, idx);
+
+    if (dupIdx !== -1) {
+      this.inlineFieldErrors = { conditionDetail: true };
+      this.duplicateRowIndex = dupIdx;
+      this.notify.error(`GPA ซ้ำกับแถวที่ ${dupIdx + 1} ของ "${uniName}"`);
+      return;
+    }
+
+    // 3) ผ่าน: เขียนกลับฟอร์ม แล้ว commit
+    this.inlineFieldErrors = {};
+    if (idx >= 0) {
+      const curr = this.scoreSettingsFA.at(idx).getRawValue() as ScoreItem;
+      this.scoreSettingsFA.at(idx).patchValue({
+        condition: String(num),
+        score: Number(e.draft?.score ?? curr.score) || 0,
+        activeStatus: !!(e.draft?.activeStatus ?? curr.activeStatus),
+      }, { emitEvent: false });
+    }
+
+    this.rebuildRowsFromForm();
+    this.touchChanged();
+    this.scoreDetailsTable.commitInlineSave(); // ปิด edit-inrow -> แสดง Edit/Delete
+  }
+
+  private findDuplicateGpaIndexWithinUniversity(
+    universityName: string,
+    gpa: number,
+    skipIndex?: number
+  ): number {
+    const arr = (this.scoreSettingsFA.getRawValue() as ScoreItem[]) || [];
+    for (let i = 0; i < arr.length; i++) {
+      if (skipIndex != null && i === skipIndex) continue;
+      const sameUni = String(arr[i]?.conditionDetail || '').trim() === String(universityName || '').trim();
+      const g = Number(arr[i]?.condition);
+      if (sameUni && Number.isFinite(g) && g === gpa) return i;
     }
     return -1;
   }

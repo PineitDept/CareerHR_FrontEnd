@@ -84,6 +84,9 @@ export class TablesComponent
   @Input() tableFixed: boolean = true;
   @Input() isReasonSave: boolean = false;
   @Input() lockedPrefixConfig: { field: string; prefix: string } | null = null;
+  @Input() mergeByFields: string[] = [];
+  @Input() inlineFieldErrors: Record<string, boolean> = {};
+  @Input() useExternalInlineSaveFlow: boolean = false;
 
   @Output() selectionChanged = new EventEmitter<any[]>();
   @Output() rowClicked = new EventEmitter<any>();
@@ -99,6 +102,8 @@ export class TablesComponent
   @Output() deleteRowClicked = new EventEmitter<any>();
   @Output() selectChanged = new EventEmitter<{ rowIndex: number; field: string; value: string }>();
   @Output() rowsReordered = new EventEmitter<{ previousIndex: number; currentIndex: number }>();
+  @Output() inlineSaveAttempt = new EventEmitter<{ draft: any; original: any }>();
+  @Output() inlineCancel = new EventEmitter<any>();
 
   sortedColumns: string[] = [];
   clickedRows: Set<string> = new Set();
@@ -632,6 +637,18 @@ export class TablesComponent
   onClickSave(event: Event, row: any): void {
     event.stopPropagation();
 
+    const doEmitAttempt = () => {
+      // รวมร่าง draft = row ปัจจุบัน + editingBuffer (ค่าที่ผู้ใช้แก้)
+      const draft = this.editingBuffer ? { ...row, ...this.editingBuffer } : { ...row };
+      this.inlineSaveAttempt.emit({ draft, original: row });
+      // ❗ ไม่ปิดโหมดแก้ไข ปล่อยให้ parent ตัดสินใจ
+    };
+
+    if (this.useExternalInlineSaveFlow) {
+      doEmitAttempt();
+      return;
+    }
+
     if (this.isConfirmDialogSaveRequired) {
       Promise.resolve().then(() => {
         const container = document.querySelector('.cdk-overlay-container');
@@ -684,6 +701,7 @@ export class TablesComponent
     // this.editedValue = '';
     this.editRow = false;
     this.editingBuffer = null;
+    this.inlineCancel.emit(row);
     console.log('Cancelled edit');
   }
 
@@ -973,11 +991,11 @@ export class TablesComponent
   // }
 
   getRowTextlinkActions(column: Column, row: any): string[] {
-    // ใช้ row override เฉพาะเมื่อคอลัมน์เปิดใช้ opt-in
+    // เคารพ row override เสมอ แม้จะเป็น []
     if (column?.useRowTextlinkActions) {
-      const rowActs = Array.isArray(row?.textlinkActions) ? row.textlinkActions : [];
-      if (rowActs.length) return rowActs;
+      return Array.isArray(row?.textlinkActions) ? row.textlinkActions : [];
     }
+    // ถ้าไม่ได้ใช้ row override ค่อย fallback ไปที่คอลัมน์
     return Array.isArray(column?.textlinkActions) ? column.textlinkActions! : [];
   }
 
@@ -1015,5 +1033,70 @@ export class TablesComponent
     if (sanitized !== el.value) el.value = sanitized;
     const prefix = this.lockedPrefixConfig?.prefix ?? '';
     this.footerRow[field] = prefix + sanitized;
+  }
+
+  // ---------- Helpers: merge row ----------
+  isMergeField(field: string): boolean {
+    return Array.isArray(this.mergeByFields) && this.mergeByFields.includes(field);
+  }
+
+  /** เรนเดอร์เซลล์เฉพาะ "หัวกลุ่ม" (แถวแรกของค่าซ้ำ) */
+  shouldRenderMergedCell(rowIndex: number, field: string): boolean {
+    if (!this.isMergeField(field)) return true;
+    if (rowIndex === 0) return true;
+    const curr = this.getCellValue(this.rowsValue[rowIndex], field);
+    const prev = this.getCellValue(this.rowsValue[rowIndex - 1], field);
+    return curr !== prev;
+  }
+
+  /** คำนวณ rowspan ของหัวกลุ่ม */
+  getRowspan(rowIndex: number, field: string): number {
+    if (!this.isMergeField(field)) return 1;
+    const rows = this.rowsValue;
+    if (rowIndex >= rows.length) return 1;
+    const val = this.getCellValue(rows[rowIndex], field);
+    let span = 1;
+    for (let i = rowIndex + 1; i < rows.length; i++) {
+      if (this.getCellValue(rows[i], field) === val) span++;
+      else break;
+    }
+    return span;
+  }
+
+  public commitInlineSave() {
+    // เอา buffer -> ผสานเข้า row แล้วปิดโหมดแก้ไข เหมือนเดิม
+    if (this.editingBuffer && this.editingRowId != null) {
+      const index = typeof this.editingRowId === 'number'
+        ? this.editingRowId - 1
+        : this.rowsValue.findIndex(r => r._tempId === this.editingRowId);
+
+      const row = index >= 0 ? this.rowsValue[index] : null;
+      if (row) Object.assign(row, this.editingBuffer);
+    }
+    this.editingRowId = null;
+    this.editRow = false;
+    const committed = this.editingBuffer;
+    this.editingBuffer = null;
+    this.cdr.detectChanges();
+
+    // คงปล่อยอีเวนต์เดิมไว้เพื่อความเข้ากันได้
+    if (committed) this.editClicked.emit(committed);
+  }
+
+  public openInlineEditAt(rowIndex: number): void {
+    if (rowIndex == null || rowIndex < 0 || rowIndex >= this.rowsValue.length) return;
+
+    const row = this.rowsValue[rowIndex];
+
+    // สำหรับแถวปกติ component ใช้ index+1 เป็น editingRowId
+    this.editingRowId = (row?._tempId ?? (rowIndex + 1));
+    this.editRow = true;
+
+    // clone ค่าปัจจุบันเข้าบัฟเฟอร์แก้ไข
+    this.editingBuffer = typeof structuredClone === 'function'
+      ? structuredClone(row)
+      : JSON.parse(JSON.stringify(row));
+
+    this.cdr.detectChanges();
   }
 }
