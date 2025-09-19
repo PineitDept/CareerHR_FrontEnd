@@ -1099,4 +1099,10 @@ export class TablesComponent
 
     this.cdr.detectChanges();
   }
+
+  /** true เมื่อเซลล์ merge (เริ่มที่ rowIndex) ครอบคลุมจนถึงแถวสุดท้ายของตาราง */
+  isEndOfMergedGroup(rowIndex: number, field: string): boolean {
+    const span = this.getRowspan(rowIndex, field);
+    return rowIndex + span >= this.rowsValue.length;
+  }
 }

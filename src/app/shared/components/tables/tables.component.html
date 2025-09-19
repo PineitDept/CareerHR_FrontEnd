@@ -134,7 +134,7 @@
             <!-- ถ้าเป็นฟิลด์ที่ต้อง merge ให้แสดงแค่หัวกลุ่ม + ใส่ rowspan -->
             <ng-container *ngIf="isMergeField(column.field); else normalCell">
               <td *ngIf="shouldRenderMergedCell(i, column.field)"
-                  class="table-cell tw-px-2 tw-py-2 tw-align-middle"
+                  class="table-cell tw-px-2 tw-py-2 tw-align-middle tw-border-r tw-border-gray-200"
                   [attr.rowspan]="getRowspan(i, column.field)"
                   [class.wrap-text]="column.wrapText"
                   [style.width]="getColumnWidth(column)"
@@ -142,9 +142,9 @@
                   [style.max-width]="getColumnMaxWidth(column)"
                   [style.text-align]="column.align || 'left'"
                   [ngClass]="[
-                    withinCard && i === rowsValue.length - 1 && !showCheckbox && firstCol ? 'tw-rounded-bl-xl' : '',
-                    withinCard && i === rowsValue.length - 1 && lastCol ? 'tw-rounded-br-xl' : '',
-                    (withinCard && i < rowsValue.length - 1) ? 'tw-border-b tw-border-gray-200' : '',
+                    (withinCard && isEndOfMergedGroup(i, column.field) && !showCheckbox && firstCol) ? 'tw-rounded-bl-xl' : '',
+                    (withinCard && isEndOfMergedGroup(i, column.field) && lastCol) ? 'tw-rounded-br-xl' : '',
+                    (withinCard && !isEndOfMergedGroup(i, column.field)) ? 'tw-border-b tw-border-gray-200' : '',
                     isDisabledForm ? 'tw-bg-[#fafafa]': '',
                     (isDisabledForm && !(column.type === 'textlink' && allowViewWhenDisabled)) ? 'tw-pointer-events-none' : ''
                   ]">
