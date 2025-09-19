@@ -93,12 +93,7 @@ export class InterviewRound1Component {
   dataStatusCall: any[] = [];
   dataStatusCallFirst: any[] = [];
   dataStatusCallSecond: any[] = [];
-
-  historyData = [
-    { date: '2025/09/18', time: '10:00am', status: 'โทรติดแต่ไม่รับสาย', value: 1 },
-    { date: '2025/09/17', time: '10:00am', status: 'โทรไม่ติด / ปิดเครื่อง', value: 2 },
-    { date: '2025/09/16', time: '10:00am', status: 'Voicemail', value: 3 },
-  ];
+  historyData: any[] = [];
 
   selectedPositions: { label: string; value: number }[] = [];
 
@@ -368,20 +363,14 @@ export class InterviewRound1Component {
     });
   }
 
-  fetchPositionLogFor(appointment: any) {
-    // this.appointmentsService.getPositionLogs(
-    //   appointment.profile.userId,
-    //   appointment.interview.round
-    // ).subscribe({
-    //   next: (res) => {
-    //     appointment.positionLogs = res;
-    //     console.log(`Fetched position log for ${appointment.profile.userId}`, res);
-    //   },
-    //   error: (err) => {
-    //     console.error('Error fetching position log for appointment:', err);
-    //   }
-    // });
+  fetchPositionLogFor(appointment: any): Observable<any> {
+    return this.appointmentsService.getPositionLogs(appointment.profile.userId, appointment.interview.round).pipe(
+      tap(res => {
+        appointment.positionLogs = res.data;
+      })
+    );
   }
+
 
 
 
@@ -501,92 +490,88 @@ export class InterviewRound1Component {
       )
     );
 
-    this.historyData = [
-      { date: '2025/09/18', time: '10:00am', status: 'โทรติดแต่ไม่รับสาย', value: 1 },
-      { date: '2025/09/17', time: '10:00am', status: 'โทรไม่ติด / ปิดเครื่อง', value: 2 },
-      { date: '2025/09/16', time: '10:00am', status: 'Voicemail', value: 3 },
-    ];
+    this.historyData = [];
 
-    this.appointments.forEach((appointment) => {
-      if (!appointment.positionLogs) {
-        this.fetchPositionLogFor(appointment);
-      }
-    });
+    this.fetchPositionLogFor(this.appointments[index]).subscribe(() => {
+      const dataPosLogs = this.appointments[index].positionLogs;
 
+      const historyOptions: SelectOption[] = dataPosLogs.map((item: { createDate: string; namePosition: any; }, index: any) => {
+        const { formattedDate, formattedTime } = this.formatCreateDateTimeDMY(item.createDate);
+        return {
+          value: index,
+          label: `${formattedDate} ${formattedTime} ${item.namePosition}`
+        };
+      });
 
-    const historyOptions: SelectOption[] = this.historyData.map((item, index) => ({
-      value: index,
-      label: `${item.date} ${item.time} ${item.status}`,
-    }));
+      const defaultSelected = historyOptions.slice(0, 2).map(opt => opt.value);
 
-    const defaultSelected = historyOptions.slice(0, 2).map(opt => opt.value);
-
-    this.dropdownConfigs = [
-      {
-        type: 'single',
-        label: 'Position',
-        placeholder: 'Select Position',
-        options: filteredJobPositionList,
-      },
-      {
-        type: 'multi',
-        label: 'History',
-        options: historyOptions,
-        isHistory: true,
-        defaultSelected: defaultSelected
-      }
-    ];
-
-    const dialogRef = this.dialog.open(SelectDialogComponent, {
-      width: '480px',
-      data: {
-        title: 'Job Position',
-        quality: 0,
-        confirm: true,
-        dropdownConfigs: this.dropdownConfigs
-      }
-    });
-
-    dialogRef.afterClosed().subscribe((result: any) => {
-
-      result = result.selectionMap
-
-      if (result?.Position) {
-        const item = this.appointments[index];
-        if (!item.selectedPositions) {
-          item.selectedPositions = [];
+      this.dropdownConfigs = [
+        {
+          type: 'single',
+          label: 'Position',
+          placeholder: 'Select Position',
+          options: filteredJobPositionList,
+        },
+        {
+          type: 'multi',
+          label: 'History',
+          options: historyOptions,
+          isHistory: true,
+          defaultSelected: defaultSelected
         }
-        const exists = item.selectedPositions.some((pos: any) => pos.value === result.Position.value);
-        if (!exists && item.selectedPositions.length < 2) {
+      ];
 
-          const payload = {
-            userId: item.profile.userId,
-            idjobPst: result.Position.value,
-            round: item.interview.round
+      const dialogRef = this.dialog.open(SelectDialogComponent, {
+        width: '480px',
+        data: {
+          title: 'Job Position',
+          quality: 0,
+          confirm: true,
+          dropdownConfigs: this.dropdownConfigs
+        }
+      });
+
+      dialogRef.afterClosed().subscribe((result: any) => {
+
+        result = result.selectionMap
+
+        if (result?.Position) {
+          const item = this.appointments[index];
+          if (!item.selectedPositions) {
+            item.selectedPositions = [];
           }
+          const exists = item.selectedPositions.some((pos: any) => pos.value === result.Position.value);
+          if (!exists && item.selectedPositions.length < 2) {
 
-          this.appointmentsService.addPositionJob(payload).subscribe({
-            next: (res) => {
-              item.selectedPositions.push(result.Position);
-              const newJob = {
-                jobId: result.Position.value,
-                jobName: result.Position.label,
-                isActive: true,
-                isOffered: true
-              };
-              item.jobPosition.jobList.push(newJob);
-              item.jobPosition.totalJobs = item.jobPosition.jobList.length;
-        
-              const offeredCount = item.jobPosition.jobList.filter((job: any) => job.isOffered === true).length;
-              item.isHidden = offeredCount >= 2;
-            },
-            error: (err) => {
-              console.error('Add Job Log Error:', err);
+            const payload = {
+              userId: item.profile.userId,
+              idjobPst: result.Position.value,
+              round: item.interview.round
             }
-          });
 
+            this.appointmentsService.addPositionJob(payload).subscribe({
+              next: (res) => {
+                item.selectedPositions.push(result.Position);
+                const newJob = {
+                  jobId: result.Position.value,
+                  jobName: result.Position.label,
+                  isActive: true,
+                  isOffered: true
+                };
+                item.jobPosition.jobList.push(newJob);
+                item.jobPosition.totalJobs = item.jobPosition.jobList.length;
+
+                const offeredCount = item.jobPosition.jobList.filter((job: any) => job.isOffered === true).length;
+                item.isHidden = offeredCount >= 2;
+              },
+              error: (err) => {
+                console.error('Add Job Log Error:', err);
+              }
+            });
+
+          }
         }
-      }
+      });
     });
   }
 
@@ -626,7 +611,7 @@ export class InterviewRound1Component {
             // );
 
             item.jobPosition.totalJobs = item.jobPosition.jobList.length;
-            
+
             const offeredCount = item.jobPosition.jobList.filter((job: any) => job.isOffered === true).length;
             item.isHidden = offeredCount >= 2;
           },
@@ -849,30 +834,34 @@ export class InterviewRound1Component {
 
   onSendMail(item: any) {
     const statusCall = item.interview.isCalled;
-    if (statusCall !== 'complete') return
+    if (statusCall !== 'complete') return;
 
-    Promise.resolve().then(() => {
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.add('dimmed-overlay');
-    });
+    this.appointmentsService.getEmailTemplate(item.profile.appointmentId, 1).subscribe({
+      next: (res) => {
+        const container = document.querySelector('.cdk-overlay-container');
+        container?.classList.add('dimmed-overlay');
 
-    const dialogRef = this.dialog.open(MailDialogComponent, {
-      width: '1140px',
-      data: {
-        title: 'Send Mail',
-        quality: 0,
-        confirm: true,
-        options: this.dataOptions,
-        dropdownConfigs: this.dropdownConfigs
-      }
-    });
+        const dialogRef = this.dialog.open(MailDialogComponent, {
+          width: '1140px',
+          data: {
+            title: 'Send Mail',
+            quality: 0,
+            confirm: true,
+            options: this.dataOptions,
+            dropdownConfigs: this.dropdownConfigs,
+            dataMail: res 
+          }
+        });
 
-    dialogRef.afterClosed().subscribe((result: boolean) => {
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.remove('dimmed-overlay');
-
-      if (result) {
-        console.log('Selected values from dialog:', result);
+        dialogRef.afterClosed().subscribe((result: boolean) => {
+          container?.classList.remove('dimmed-overlay');
+          if (result) {
+            console.log('Selected values from dialog:', result);
+          }
+        });
+      },
+      error: (err) => {
+        console.error('Get Email Template Error:', err);
       }
     });
   }
@@ -952,6 +941,24 @@ export class InterviewRound1Component {
       default:
         return 'tag-grade-default';
     }
+  }
+
+  formatCreateDateTimeDMY(dateString: string) {
+    const date = new Date(dateString);
+
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // เดือนเริ่มที่ 0
+    const year = String(date.getFullYear()).slice(-2); // 2 หลักสุดท้ายของปี
+
+    const formattedDate = `${day}/${month}/${year}`;
+
+    const formattedTime = date.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      hour12: true 
+    });
+
+    return { formattedDate, formattedTime };
   }
 
   // ---------- Infinite scroll ----------

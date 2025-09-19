@@ -142,7 +142,14 @@ export class AppointmentsService {
   }
 
   deletePositionJob(userId: number, round: number, idjobPst: number): Observable<any> {
-    return this.api.delete<any>(`PositionLogs/delete/?userId=${userId}&round=${round}&positionid=${idjobPst}`, {
+    return this.api.delete<any>(`PositionLogs/delete?userId=${userId}&round=${round}&positionid=${idjobPst}`, {
+      withAuth: true,
+      loading: false,
+    });
+  }
+
+  getEmailTemplate(appointmentId: number, mailId: number): Observable<any> {
+    return this.api.get<any>(`Email/template/${appointmentId}/${mailId}`, {
       withAuth: true,
       loading: false,
     });
