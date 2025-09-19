@@ -152,6 +152,14 @@ export class ScoreDetailsComponent {
         { header: 'Status', field: 'activeStatus', type: 'toggle', align: 'center', width: '8%' },
         { header: 'Action', field: 'textlink', type: 'textlink', align: 'center', width: '18%', textlinkActions: ['edit-inrow'], useRowTextlinkActions: true },
       ];
+    } else if ([4,5,6,7].includes(this.scoreType)) {
+      this.scoreDetailsColumns = [
+        { header: 'No.', field: '__index', type: 'number', align: 'center', width: '7%', editing: false },
+        { header: 'Condition', field: 'conditionDetail', type: 'text', width: '56%', wrapText: true, editing: false },
+        { header: 'Score', field: 'score', type: 'number', align: 'center', width: '12%', editing: true },
+        { header: 'Status', field: 'activeStatus', type: 'toggle', align: 'center', width: '7%', /* toggle คุมที่ parent อยู่แล้ว */ },
+        { header: 'Action', field: 'textlink', type: 'textlink', align: 'center', width: '18%', textlinkActions: ['edit-inrow'], useRowTextlinkActions: true },
+      ];
     } else {
       // เดิม (type อื่น)
       this.scoreDetailsColumns = [
@@ -253,6 +261,36 @@ export class ScoreDetailsComponent {
           condition: it.condition,             // ไม่ได้ใช้ใน type 10 แต่คงไว้
           conditionDetail: label,              // แสดง label
           score: s,                            // 1..5
+          activeStatus: !!it.activeStatus,
+          isDelete: !!it.isDelete,
+          isDisable: !!it.isDisable,
+          textlinkActions: Array.from(actions),
+        };
+      });
+      return;
+    }
+
+    if (this.scoreType === 8 || this.scoreType === 9) {
+      this.scoreDetailsRows = arr.map((it) => {
+        const actions = new Set<string>(['edit-inrow']);
+        if (it.isDelete) actions.add('delete');
+
+        // อ่านค่าตัวเลขจาก conditionDetail ที่มี prefix ("Score EQ > " หรือ "Score Ethics > ")
+        const condNum = this.extractConditionNumber(String(it.conditionDetail ?? ''), /*forcePrefix*/ false);
+        const isZeroCond = condNum !== null && condNum === 0;
+        const isZeroScore = (Number(it.score) || 0) === 0;
+
+        // ถ้าเงื่อนไข=0 และ score=0 -> ซ่อน Edit
+        if (isZeroCond && isZeroScore) {
+          actions.delete('edit-inrow');
+        }
+
+        return {
+          id: it.id,
+          tempId: it.tempId ?? null,
+          condition: it.condition,                 // เก็บไว้ตามเดิม
+          conditionDetail: it.conditionDetail,     // แสดง label เดิม (มี prefix)
+          score: Number(it.score) || 0,
           activeStatus: !!it.activeStatus,
           isDelete: !!it.isDelete,
           isDisable: !!it.isDisable,
@@ -580,6 +618,25 @@ export class ScoreDetailsComponent {
 
     const idx = this.findIndexByRow(updatedRow);
     if (idx < 0) return;
+
+    // ---- แก้ได้เฉพาะ score สำหรับ type 4/5/6/7 ----
+    if ([4,5,6,7].includes(this.scoreType)) {
+      let s = Number(updatedRow?.score);
+      if (!Number.isFinite(s)) s = 0;
+      if (s < 0) s = 0;
+      if (s > (this.scoreType === 10 ? 5 : 1)) {
+        s = this.scoreType === 10 ? 5 : 1;
+      }
+
+      this.scoreSettingsFA.at(idx).patchValue(
+        { score: s },
+        { emitEvent: false }
+      );
+
+      this.rebuildRowsFromForm();
+      this.touchChanged();
+      return;
+    }
 
     // ----- Validation เฉพาะ type=3 : GPA 0.00-4.00 -----
     if (this.scoreType === 3) {
