@@ -72,6 +72,14 @@ export class ScoreDetailsComponent {
 
   inlineFieldErrors: Record<string, boolean> = {};
 
+  private readonly GRADE_OPTIONS = [
+    { key: 1, label: 'Candidate Grade A to Pass' },
+    { key: 2, label: 'Candidate Grade B to Pass' },
+    { key: 3, label: 'Candidate Grade C to Pass' },
+    { key: 4, label: 'Candidate Grade D to Pass' },
+    { key: 5, label: 'Candidate Grade F to Pass' },
+  ];
+
   constructor(
     private route: ActivatedRoute,
     private scoreService: ScoreService,
@@ -126,6 +134,22 @@ export class ScoreDetailsComponent {
         { header: 'GPA Condition', field: 'conditionDetail', type: 'text', width: '30%', wrapText: true, editing: true, align: 'center' },
         { header: 'Score', field: 'score', type: 'number', align: 'center', width: '12%' },
         { header: 'Status', field: 'activeStatus', type: 'toggle', align: 'center', width: '7%' },
+        { header: 'Action', field: 'textlink', type: 'textlink', align: 'center', width: '18%', textlinkActions: ['edit-inrow'], useRowTextlinkActions: true },
+      ];
+    } else if (this.scoreType === 10) {
+      this.scoreDetailsColumns = [
+        { header: 'No.', field: '__index', type: 'number', align: 'center', width: '8%' },
+        // Condition เป็น select (ใช้ dropdown overlay ของ TablesComponent)
+        {
+          header: 'Condition',
+          field: 'conditionDetail',
+          type: 'select',
+          width: '54%',
+          align: 'left',
+          options: this.GRADE_OPTIONS.map(o => o.label), // แสดง label
+        },
+        { header: 'Score', field: 'score', type: 'number', align: 'center', width: '12%' },
+        { header: 'Status', field: 'activeStatus', type: 'toggle', align: 'center', width: '8%' },
         { header: 'Action', field: 'textlink', type: 'textlink', align: 'center', width: '18%', textlinkActions: ['edit-inrow'], useRowTextlinkActions: true },
       ];
     } else {
@@ -206,6 +230,32 @@ export class ScoreDetailsComponent {
           isDelete: !!it.isDelete,
           isDisable: !!it.isDisable,
           // 👇 จุดชี้ขาด: ให้ตารางอ่าน action จากแถวนี้จริง ๆ
+          textlinkActions: Array.from(actions),
+        };
+      });
+      return;
+    }
+
+    if (this.scoreType === 10) {
+      this.scoreDetailsRows = arr.map((it) => {
+        const actions = new Set<string>(['edit-inrow']);
+        if (it.isDelete) actions.add('delete');
+
+        // แสดง label ตาม score (1-5) หาก conditionDetail ว่าง
+        const s = Number(it.score) || 0;
+        const label = it.conditionDetail?.trim()
+          ? it.conditionDetail.trim()
+          : (s >= 1 && s <= 5 ? this.gradeLabelByKey(s) : '');
+
+        return {
+          id: it.id,
+          tempId: it.tempId ?? null,
+          condition: it.condition,             // ไม่ได้ใช้ใน type 10 แต่คงไว้
+          conditionDetail: label,              // แสดง label
+          score: s,                            // 1..5
+          activeStatus: !!it.activeStatus,
+          isDelete: !!it.isDelete,
+          isDisable: !!it.isDisable,
           textlinkActions: Array.from(actions),
         };
       });
@@ -401,7 +451,7 @@ export class ScoreDetailsComponent {
   onInlineSave(payload: any) {
     if (!this.isEditMode) { this.isAddingRow = false; return; }
 
-    // === NEW: รองรับ type=3 ให้เช็คเหมือน onInlineEditSave / onInlineSaveAttempt ===
+    // === รองรับ type=3 ให้เช็คเหมือน onInlineEditSave / onInlineSaveAttempt ===
     if (this.scoreType === 3) {
       // payload.conditionDetail จะเป็น "≥ x.xx" (จาก input-affix)
       const num = this.extractConditionNumber(String(payload?.conditionDetail ?? ''), /*forcePrefix*/ true);
@@ -453,7 +503,7 @@ export class ScoreDetailsComponent {
 
       return;
     }
-    // === END NEW (type=3) ===
+    // === END (type=3) ===
 
     // ====== เดิม (type อื่น) ======
     if (this.scoreType === 8) {
@@ -470,6 +520,42 @@ export class ScoreDetailsComponent {
         this.notify.error(`ค่าเงื่อนไขซ้ำกับแถวที่ ${dupIdx + 1}`);
         return;
       }
+    }
+
+    if (this.scoreType === 10) {
+      // รับจาก footerRow (ถ้าเปิด isAddMode) หรือจาก inline create
+      const label = String(payload?.conditionDetail ?? '').trim();
+      const key = this.gradeKeyByLabel(label);
+      let s = Number(payload?.score);
+      s = Number.isFinite(s) ? Math.trunc(s) : (key ?? 0);
+
+      // อนุญาตให้เลือกผ่าน dropdown (label) หรือกรอก score (1..5) แล้ว map อีกฝั่งให้ตรง
+      if (key == null && (s < 1 || s > 5)) {
+        this.fieldErrors = true;
+        this.inlineFieldErrors = { conditionDetail: !label, score: true };
+        this.notify.error('กรุณาเลือก Condition (dropdown) หรือกรอก Score เป็นจำนวนเต็ม 1–5');
+        return;
+      }
+
+      const finalScore = key ?? s;
+      const finalLabel = key != null ? label : this.gradeLabelByKey(finalScore);
+
+      const normalized: ScoreItem = {
+        id: null,
+        tempId: `tmp-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
+        condition: '',                    // not used for type 10
+        conditionDetail: finalLabel,      // แสดง label
+        score: finalScore,                // 1..5
+        activeStatus: !!payload?.activeStatus,
+        isDelete: true,
+        isDisable: true,
+      };
+
+      this.scoreSettingsFA.push(this.buildFG(normalized), { emitEvent: false });
+      this.rebuildRowsFromForm();
+      this.isAddingRow = false;
+      this.touchChanged();
+      return;
     }
 
     const normalized: ScoreItem = {
@@ -495,7 +581,7 @@ export class ScoreDetailsComponent {
     const idx = this.findIndexByRow(updatedRow);
     if (idx < 0) return;
 
-    // ----- วาลิเดชันเฉพาะ type=3 : GPA 0.00-4.00 -----
+    // ----- Validation เฉพาะ type=3 : GPA 0.00-4.00 -----
     if (this.scoreType === 3) {
       // ดึงเลขจาก conditionDetail ที่มี prefix "≥ "
       const num = this.extractConditionNumber(String(updatedRow?.conditionDetail ?? ''), /*forcePrefix*/ true);
@@ -524,6 +610,42 @@ export class ScoreDetailsComponent {
       return;
     }
     // -----------------------------------------------------
+
+    // ----- กรณีพิเศษ type 10 -----
+    if (this.scoreType === 10) {
+      // ตรวจ score เป็นจำนวนเต็มบวก 1..5
+      let s = Number(updatedRow?.score);
+      if (!Number.isFinite(s)) s = 0;
+      s = Math.trunc(s);
+      if (s < 1 || s > 5) {
+        this.inlineFieldErrors = { score: true };
+        this.notify.error('Score ต้องเป็นจำนวนเต็มตั้งแต่ 1–5');
+        this.rebuildRowsFromForm();
+        return;
+      }
+
+      // map score -> label
+      const label = this.gradeLabelByKey(s);
+      if (!label) {
+        this.inlineFieldErrors = { score: true };
+        this.notify.error('ไม่พบตัวเลือกของ Score นี้');
+        this.rebuildRowsFromForm();
+        return;
+      }
+
+      // ปรับค่าในฟอร์ม (conditionDetail = label, score = key)
+      const curr = this.scoreSettingsFA.at(idx).getRawValue() as ScoreItem;
+      this.scoreSettingsFA.at(idx).patchValue({
+        conditionDetail: label,
+        score: s,
+        activeStatus: !!(updatedRow?.activeStatus ?? curr.activeStatus),
+      }, { emitEvent: false });
+
+      this.inlineFieldErrors = {};
+      this.rebuildRowsFromForm();
+      this.touchChanged();
+      return;
+    }
 
     // ====== ของเดิมสำหรับ type อื่น ======
     if (this.scoreType === 8) {
@@ -564,6 +686,29 @@ export class ScoreDetailsComponent {
   onDeleteRowClicked(row: any) {
     if (!this.isEditMode) return;
 
+    // NEW: pre-check min-one rules for type 8/9
+    if (this.isTypeWithMinOneRules()) {
+      const total = this.getTotalRows();
+      if (total <= 1) {
+        this.notify.warn('ต้องเหลือข้อมูลอย่างน้อย 1 แถว ไม่สามารถลบแถวสุดท้ายได้');
+        return;
+      }
+
+      const idx = this.findIndexByRow(row);
+      if (idx < 0) return;
+
+      const items = this.scoreSettingsFA.getRawValue() as ScoreItem[];
+      const activeCount = items.filter(it => it.activeStatus).length;
+      const rowIsActive = !!items[idx]?.activeStatus;
+
+      // ถ้าจะลบแถวที่ active อยู่ และตอนนี้มี active เหลือแค่ 1 -> ห้ามลบ
+      if (rowIsActive && activeCount <= 1) {
+        this.notify.warn('ต้องมีอย่างน้อย 1 แถวที่ Active อยู่ ไม่สามารถลบแถวที่ Active แถวสุดท้ายได้');
+        return;
+      }
+    }
+
+    // ดำเนินการเปิดยืนยัน (ตามเดิม)
     Promise.resolve().then(() => {
       const container = document.querySelector('.cdk-overlay-container');
       container?.classList.add('dimmed-overlay');
@@ -588,6 +733,25 @@ export class ScoreDetailsComponent {
       const idx = this.findIndexByRow(row);
       if (idx < 0) return;
 
+      // ป้องกัน race: ตรวจอีกครั้งหลังยืนยัน (เผื่อมี toggle/l ลบแถวอื่นระหว่าง dialog)
+      if (this.isTypeWithMinOneRules()) {
+        const total = this.getTotalRows();
+        if (total <= 1) {
+          this.notify.warn('ต้องเหลือข้อมูลอย่างน้อย 1 แถว ไม่สามารถลบแถวสุดท้ายได้');
+          return;
+        }
+
+        const items = this.scoreSettingsFA.getRawValue() as ScoreItem[];
+        const activeCount = items.filter(it => it.activeStatus).length;
+        const rowIsActive = !!items[idx]?.activeStatus;
+
+        if (rowIsActive && activeCount <= 1) {
+          this.notify.warn('ต้องมีอย่างน้อย 1 แถวที่ Active อยู่ ไม่สามารถลบแถวที่ Active แถวสุดท้ายได้');
+          return;
+        }
+      }
+
+      // ลบได้
       this.scoreSettingsFA.removeAt(idx);
       this.rebuildRowsFromForm();
       this.touchChanged();
@@ -658,6 +822,28 @@ export class ScoreDetailsComponent {
       e.checkbox.checked = !!e.row.activeStatus; // revert กลับ
       this.notify.warn('เงื่อนไขนี้ไม่สามารถแก้ไข Active/Inactive ได้');
       return;
+    }
+
+    // NEW: min-one rules for type 8/9
+    if (this.isTypeWithMinOneRules()) {
+      const total = this.getTotalRows();
+      const activeCount = this.getActiveCount();
+      const isCurrentlyActive = !!e.row.activeStatus;
+      const wantActive = !!e.checked;
+
+      // ห้ามปิด Active เมื่อเหลือแถวเดียว
+      if (total === 1 && isCurrentlyActive && !wantActive) {
+        e.checkbox.checked = true; // revert
+        this.notify.warn('เหลือข้อมูลเพียง 1 แถว จึงต้องเป็น Active เสมอ');
+        return;
+      }
+
+      // ห้ามปิด Active จนไม่เหลือแถว Active เลย
+      if (isCurrentlyActive && !wantActive && activeCount <= 1) {
+        e.checkbox.checked = true; // revert
+        this.notify.warn('ต้องมีอย่างน้อย 1 แถวที่ Active อยู่ ไม่สามารถปิด Active ทั้งหมดได้');
+        return;
+      }
     }
 
     // อนุญาต: อัปเดตค่าใน FormArray และ rows
@@ -821,6 +1007,85 @@ export class ScoreDetailsComponent {
       if (sameUni && Number.isFinite(g) && g === gpa) return i;
     }
     return -1;
+  }
+
+  // === helpers เฉพาะกฎ scoreType 8/9 ===
+  private isTypeWithMinOneRules(): boolean {
+    return this.scoreType === 8 || this.scoreType === 9;
+  }
+
+  private getTotalRows(): number {
+    return this.scoreSettingsFA?.length ?? 0;
+  }
+
+  private getActiveCount(): number {
+    const arr = (this.scoreSettingsFA.getRawValue() as ScoreItem[]) || [];
+    return arr.reduce((acc, it) => acc + (it.activeStatus ? 1 : 0), 0);
+  }
+
+  private gradeLabelByKey(k: number): string {
+    return this.GRADE_OPTIONS.find(o => o.key === k)?.label ?? '';
+  }
+  private gradeKeyByLabel(label: string): number | null {
+    const f = this.GRADE_OPTIONS.find(o => o.label === label?.trim());
+    return f ? f.key : null;
+  }
+
+  // map เมื่อเลือกค่าใน dropdown (TablesComponent -> selectChanged)
+  onSelectChanged(e: { rowIndex: number; field: string; value: string }) {
+    if (this.scoreType !== 10) return;
+    if (e.field !== 'conditionDetail') return;
+
+    const idx = e.rowIndex;
+    const items = this.scoreSettingsFA.getRawValue() as ScoreItem[];
+    if (idx < 0 || idx >= items.length) return;
+
+    // แปลง label -> key (1..5) แล้ว map ไปที่ score
+    const key = this.gradeKeyByLabel(e.value);
+    if (key == null) return;
+
+    this.scoreSettingsFA.at(idx).patchValue({
+      conditionDetail: e.value,
+      score: key,
+    }, { emitEvent: false });
+
+    this.rebuildRowsFromForm();
+    this.touchChanged();
+  }
+
+  onInlineFieldCommit(e: { rowIndex: number; field: string; value: any }) {
+    // ใช้เฉพาะกรณี type 10 + commit ของ field 'score'
+    if (this.scoreType !== 10) return;
+    if (!e || e.rowIndex == null || e.rowIndex < 0) return;
+    if (e.field !== 'score') return;
+
+    // บังคับให้เป็นจำนวนเต็ม 1..5
+    let s = Number(e.value);
+    if (!Number.isFinite(s)) s = 0;
+    s = Math.trunc(s);
+    if (s < 1) s = 1;
+    if (s > 5) s = 5;
+
+    // หา label ให้ตรงกับ score
+    const label = this.gradeLabelByKey(s);
+    if (!label) {
+      // ถ้าไม่เจอ label (ไม่น่าจะเกิด) — กันพลาด: ไม่อัปเดตอะไร แต่แจ้งเตือนเบา ๆ
+      this.notify.warn('ไม่พบตัวเลือกที่ตรงกับคะแนนที่กรอก');
+      return;
+    }
+
+    // อัปเดต FormArray แถวที่กำลังแก้ไขอยู่
+    const items = this.scoreSettingsFA.getRawValue() as ScoreItem[];
+    if (e.rowIndex >= items.length) return;
+
+    this.scoreSettingsFA.at(e.rowIndex).patchValue({
+      conditionDetail: label,
+      score: s,
+    }, { emitEvent: false });
+
+    // รีบิลด์แถวในตารางและเปิดปุ่ม Save
+    this.rebuildRowsFromForm();
+    this.touchChanged();
   }
 
   // ======= Cleanup =======

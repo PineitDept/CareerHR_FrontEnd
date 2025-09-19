@@ -81,6 +81,9 @@
           [useExternalInlineSaveFlow]="scoreType === 3"
           (inlineSaveAttempt)="onInlineSaveAttempt($event)"
           (inlineCancel)="onInlineCancelRow($event)"
+          [scoreMax]="scoreType === 10 ? 5 : 1"
+          (selectChanged)="onSelectChanged($event)"
+          (inlineFieldCommit)="onInlineFieldCommit($event)"
         ></app-tables>
       </div>
 

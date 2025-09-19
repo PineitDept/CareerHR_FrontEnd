@@ -87,6 +87,7 @@ export class TablesComponent
   @Input() mergeByFields: string[] = [];
   @Input() inlineFieldErrors: Record<string, boolean> = {};
   @Input() useExternalInlineSaveFlow: boolean = false;
+  @Input() scoreMax: number = 1;
 
   @Output() selectionChanged = new EventEmitter<any[]>();
   @Output() rowClicked = new EventEmitter<any>();
@@ -104,6 +105,7 @@ export class TablesComponent
   @Output() rowsReordered = new EventEmitter<{ previousIndex: number; currentIndex: number }>();
   @Output() inlineSaveAttempt = new EventEmitter<{ draft: any; original: any }>();
   @Output() inlineCancel = new EventEmitter<any>();
+  @Output() inlineFieldCommit = new EventEmitter<{ rowIndex: number; field: string; value: any }>();
 
   sortedColumns: string[] = [];
   clickedRows: Set<string> = new Set();
@@ -142,8 +144,6 @@ export class TablesComponent
     { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 4 },
     { originX: 'start', originY: 'top',    overlayX: 'start', overlayY: 'bottom', offsetY: -4 },
   ];
-
-  private readonly MAX_SCORE = 1;
 
   constructor(
     private cdr: ChangeDetectorRef,
@@ -827,7 +827,7 @@ export class TablesComponent
 
       if (f === 'score') {
         const n = Number(v);
-        if (!Number.isFinite(n) || n < 0 || n > this.MAX_SCORE) err[f] = true;
+        if (!Number.isFinite(n) || n < 0 || n > this.scoreMax) err[f] = true;
         continue;
       }
 
@@ -855,7 +855,7 @@ export class TablesComponent
       let n = sanitized === '' ? undefined : Number(sanitized);
       if (n !== undefined) {
         if (n < 0) { n = 0; el.value = '0'; }
-        if (n > this.MAX_SCORE) { n = this.MAX_SCORE; el.value = String(this.MAX_SCORE); }
+        if (n > this.scoreMax) { n = this.scoreMax; el.value = String(this.scoreMax); }
       }
       this.footerRow[field] = n;
     }
@@ -881,7 +881,7 @@ export class TablesComponent
       let n = Number(el.value);
       if (!Number.isFinite(n)) n = 0;
       if (n < 0) n = 0;
-      if (n > this.MAX_SCORE) n = this.MAX_SCORE;
+      if (n > this.scoreMax) n = this.scoreMax;
       el.value = String(n);
       this.footerRow[field] = n;
     }
@@ -903,7 +903,7 @@ export class TablesComponent
       if (suffix === '') next[field] = true;
     } else if (field === 'score') {
       const n = Number(v);
-      if (!Number.isFinite(n) || n < 0 || n > this.MAX_SCORE) next[field] = true;
+      if (!Number.isFinite(n) || n < 0 || n > this.scoreMax) next[field] = true;
     } else if (field === 'sort' || field === 'scoringMethod') {
       const n = Number(v);
       if (!Number.isFinite(n) || n < 1) next[field] = true;
@@ -942,6 +942,20 @@ export class TablesComponent
     } else if (field === 'score') {
       const blocked = ['e', 'E', '+', '-']; // อนุญาต '.'
       if (blocked.includes(e.key)) e.preventDefault();
+
+      if (e.key === 'Enter') {
+        // อ่านค่าปัจจุบันจาก input แล้ว emit commit
+        const el = e.target as HTMLInputElement;
+        const sanitized = this.sanitizeDecimalNonNegative(el.value);
+        const n = sanitized === '' ? undefined : Number(sanitized);
+        const rowIndex = this.getEditingRowIndex();
+        if (rowIndex >= 0) {
+          this.inlineFieldCommit.emit({ rowIndex, field, value: n });
+        }
+        // กัน Enter ไป trigger อื่น
+        e.preventDefault();
+        e.stopPropagation();
+      }
     }
   }
 
@@ -961,7 +975,7 @@ export class TablesComponent
       let n = sanitized === '' ? undefined : Number(sanitized);
       if (n !== undefined) {
         if (n < 0) n = 0;
-        if (n > this.MAX_SCORE) { n = this.MAX_SCORE; el.value = String(this.MAX_SCORE); }
+        if (n > this.scoreMax) { n = this.scoreMax; el.value = String(this.scoreMax); }
       }
       if (this.editingBuffer) this.editingBuffer[field] = n;
     }
@@ -979,9 +993,15 @@ export class TablesComponent
       let n = Number(el.value);
       if (!Number.isFinite(n)) n = 0;
       if (n < 0) n = 0;
-      if (n > this.MAX_SCORE) n = this.MAX_SCORE;
+      if (n > this.scoreMax) n = this.scoreMax;
       el.value = String(n);
       if (this.editingBuffer) this.editingBuffer[field] = n;
+
+      // แจ้ง parent ว่ามีการ commit ค่านี้แล้ว (ให้ parent ไปแมพ dropdown ต่อ)
+      const rowIndex = this.getEditingRowIndex();
+      if (rowIndex >= 0) {
+        this.inlineFieldCommit.emit({ rowIndex, field, value: n });
+      }
     }
   }
 
@@ -1104,5 +1124,14 @@ export class TablesComponent
   isEndOfMergedGroup(rowIndex: number, field: string): boolean {
     const span = this.getRowspan(rowIndex, field);
     return rowIndex + span >= this.rowsValue.length;
+  }
+
+  // --- helper หาตำแหน่งแถวที่กำลังแก้ไขอยู่ ---
+  private getEditingRowIndex(): number {
+    // ถ้า editingRowId เป็นหมายเลข index จะเป็นลำดับแถว (เริ่ม 1) -> ต้องลบ 1
+    if (typeof this.editingRowId === 'number') return this.editingRowId - 1;
+    // ถ้าเป็น tempId: หา index จาก _tempId
+    const idx = this.rowsValue.findIndex(r => r._tempId === this.editingRowId);
+    return idx >= 0 ? idx : -1;
   }
 }
