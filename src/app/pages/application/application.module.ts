@@ -6,11 +6,13 @@ import { ScreeningComponent } from './screening/screening.component';
 import { ApplicationRoutingModule } from './application-routing.module';
 import { AllApplicationComponent } from './all-application/all-application.component';
 import { TrackingComponent } from './tracking/tracking.component';
+import { ApplicationFormComponent } from './application-form/application-form.component';
 @NgModule({
   declarations: [
     ScreeningComponent,
     AllApplicationComponent,
-    TrackingComponent
+    TrackingComponent,
+    ApplicationFormComponent
   ],
   imports: [
     CommonModule,

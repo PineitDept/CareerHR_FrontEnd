@@ -11,6 +11,7 @@ import {
 import { BaseApplicationComponent } from '../../../shared/base/base-application.component';
 import {
   ApiResponse,
+  ApplicationRow,
   ICandidateFilterRequest,
   ICandidateWithPositionsDto,
   IPositionDto,
@@ -250,6 +251,17 @@ export class ScreeningComponent extends BaseApplicationComponent {
       employeeAction: summary.employeeAction?.split(' ')[0] || '',
       screening: createStatusBadge(summary.screening),
     };
+  }
+
+  override onRowClick(row: ApplicationRow): void {
+    const id = (row as any)?.id;
+    if (!id) return;
+
+    const queryParams = {
+      id: id,
+    }
+
+    this.router.navigate(['/applications/screening/application-form'], { queryParams });
   }
 
   override ngOnDestroy(): void {
