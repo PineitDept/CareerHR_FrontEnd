@@ -14,6 +14,7 @@ import { MailDialogComponent } from '../../../shared/components/dialogs/mail-dia
 import { AppointmentsService } from '../../../services/interview-scheduling/appointment-interview/appointments.service';
 import { AlertDialogComponent } from '../../../shared/components/dialogs/alert-dialog/alert-dialog.component';
 import { catchError, finalize, forkJoin, map, Observable, of, tap } from 'rxjs';
+import { NotificationService } from '../../../shared/services/notification/notification.service';
 
 const SEARCH_OPTIONS: string[] = [
   'Applicant ID',
@@ -70,6 +71,8 @@ export class InterviewRound1Component {
   teamList: any;
   interviewerList: any;
   revisionList: any;
+  teamName = "Team"
+  teamUser = 0
 
   // ---------- Appointments / UI state ----------
   appointments: any[] = [];
@@ -133,13 +136,12 @@ export class InterviewRound1Component {
   constructor(
     private interviewerService: InterviewerService,
     private router: Router,
-    private route: ActivatedRoute,
-    private fb: FormBuilder,
     private dialog: MatDialog,
     private cdr: ChangeDetectorRef,
     private benefitsService: GeneralBenefitsService,
     private jobPositionService: JobPositionService,
     private appointmentsService: AppointmentsService,
+    private notificationService: NotificationService,
   ) { }
 
   // ---------- Lifecycle ----------
@@ -256,7 +258,8 @@ export class InterviewRound1Component {
 
     const updatedParams = {
       ...this.currentFilterParams,
-      month: this.monthData === 12 ? undefined : this.monthData,
+      // month: this.monthData === 12 ? undefined : this.monthData,
+      // year: this.yearData,
       page: this.currentFilterParams.page ?? 1,
       search: this.currentFilterParams.search,
     };
@@ -339,7 +342,7 @@ export class InterviewRound1Component {
 
     const updatedParams = {
       ...this.currentFilterParams,
-      month: this.monthData === 12 ? undefined : this.monthData,
+      // month: this.monthData === 12 ? undefined : this.monthData,
       // year: this.yearData,
       page: this.currentFilterParams.page ?? 1,
       search: this.currentFilterParams.search,
@@ -435,7 +438,10 @@ export class InterviewRound1Component {
     this.appointments = [];
     this.loadInitialAppointments(true);
 
-    // this.updateTabCounts(this.appointments);
+    console.log(this.yearData, '=>this.yearData')
+    console.log(this.monthData, '=>this.monthData')
+
+    this.updateTabCounts(this.appointments);
   }
 
   // ---------- Tab counts (preserve comments) ----------
@@ -641,7 +647,7 @@ export class InterviewRound1Component {
     });
   }
 
-  onAddTeamClick() {
+  onAddTeamClick(item: any) {
     this.dropdownConfigs = [
       {
         type: 'single',
@@ -672,14 +678,33 @@ export class InterviewRound1Component {
       }
     });
 
-    dialogRef.afterClosed().subscribe((result: boolean) => {
+    dialogRef.afterClosed().subscribe((result: any) => {
       const container = document.querySelector('.cdk-overlay-container');
       container?.classList.remove('dimmed-overlay');
 
       if (result) {
-        console.log('Selected values from dialog:', result);
+        const selectionMap = result.selectionMap;
+
+        item.teamName = this.getTeamNameById(selectionMap.Team?.value)
+
+        if (selectionMap.Interviewers === undefined) {
+          item.teamUser = 0
+        } else {
+          item.teamUser = selectionMap.Interviewers.length
+        }
+
+        const valuesOnly = selectionMap.Interviewers.map((item: { value: any; }) => item.value);
+
+        const payload = {
+          appointmentsId: item.profile.appointmentId,
+          teamInterviewId: selectionMap.Team?.value,
+          employeeIds: valuesOnly
+        }
+        
+        console.log(payload)
       }
     });
+
   }
 
   onAddCallStatus(item: any) {
@@ -739,8 +764,6 @@ export class InterviewRound1Component {
       container?.classList.remove('dimmed-overlay');
 
       if (result) {
-        console.log('Selected values from dialog:', result);
-
         const appointmentId = currentAppointmentId;
         const missCallId = result.selectionMap.Status?.value || 0;
         const isNoShow = result.isNoShow;
@@ -816,7 +839,7 @@ export class InterviewRound1Component {
       data: {
         title: 'Call Status History',
         quality: 0,
-        confirm: true,
+        confirm: false,
         options: this.dataOptions,
         dropdownConfigs: this.dropdownConfigs
       }
@@ -825,10 +848,6 @@ export class InterviewRound1Component {
     dialogRef.afterClosed().subscribe((result: boolean) => {
       const container = document.querySelector('.cdk-overlay-container');
       container?.classList.remove('dimmed-overlay');
-
-      if (result) {
-        console.log('Selected values from dialog:', result);
-      }
     });
   }
 
@@ -849,16 +868,54 @@ export class InterviewRound1Component {
             confirm: true,
             options: this.dataOptions,
             dropdownConfigs: this.dropdownConfigs,
-            dataMail: res 
+            dataMail: res
           }
         });
 
-        dialogRef.afterClosed().subscribe((result: boolean) => {
+        dialogRef.afterClosed().subscribe(async (result: any) => {
           container?.classList.remove('dimmed-overlay');
           if (result) {
-            console.log('Selected values from dialog:', result);
+            const formData = result.formData as FormData;
+            const from = formData.get('from') as string;
+            const to = formData.get('to') as string;
+            const subject = formData.get('subject') as string;
+            const message = formData.get('message') as string;
+            const attachments = formData.getAll('attachments') as File[];
+
+            const emailAttachments = [];
+
+            for (const file of attachments) {
+              const base64Content = await this.fileToBase64(file);
+              emailAttachments.push({
+                fileName: file.name,
+                content: base64Content,
+                contentType: file.type
+              });
+            }
+
+            const payload = {
+              fromEmail: from,
+              fromName: res.formName,
+              to: to,
+              cc: [],
+              bcc: [],
+              subject: subject,
+              body: message,
+              isHtml: true,
+              attachments: emailAttachments,
+              priority: 0
+            };
+
+            this.appointmentsService.sendEmail(payload).subscribe({
+              error: (err) => {
+                console.error('Error Sent Mail:', err);
+
+                this.notificationService.error('Error Sent Mail');
+              }
+            });
           }
         });
+
       },
       error: (err) => {
         console.error('Get Email Template Error:', err);
@@ -952,13 +1009,25 @@ export class InterviewRound1Component {
 
     const formattedDate = `${day}/${month}/${year}`;
 
-    const formattedTime = date.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit', 
-      hour12: true 
+    const formattedTime = date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
     });
 
     return { formattedDate, formattedTime };
+  }
+
+  fileToBase64(file: File): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64String = (reader.result as string).split(',')[1]; // ตัดเอาเฉพาะ base64 หลัง comma
+        resolve(base64String);
+      };
+      reader.onerror = error => reject(error);
+      reader.readAsDataURL(file);
+    });
   }
 
   // ---------- Infinite scroll ----------
@@ -981,7 +1050,7 @@ export class InterviewRound1Component {
       page: this.currentFilterParams.page,
       pageSize: this.currentFilterParams.pageSize,
       InterviewResult: this.selectedTab === 'total' ? undefined : this.selectedTab,
-      month: this.monthData === 12 ? undefined : this.monthData,
+      // month: this.monthData === 12 ? undefined : this.monthData,
       // year: this.yearData,
     };
 

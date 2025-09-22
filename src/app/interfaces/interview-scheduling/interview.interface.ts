@@ -18,3 +18,34 @@ export interface AppointmentEvent {
   userName: string;
   status: string;
 }
+
+export interface IAppointmentFilterRequest {
+  search?: string;
+  positionId?: number;
+  month?: number;
+  year?: number;
+  interviewDate?: string;
+  InterviewResult?: string;
+  sortFields?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface EmailAttachment {
+  fileName: string;
+  content: string;
+  contentType: string;
+}
+
+export interface SendEmailRequest {
+  fromEmail: string;
+  fromName: string;
+  to: string;
+  cc?: string[];
+  bcc?: string[];
+  subject: string;
+  body: string;
+  isHtml: boolean;
+  attachments?: EmailAttachment[];
+  priority?: number;
+}

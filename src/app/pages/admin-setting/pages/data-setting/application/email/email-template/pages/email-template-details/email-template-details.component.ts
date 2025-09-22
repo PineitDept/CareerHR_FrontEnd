@@ -250,10 +250,10 @@ export class EmailTemplateDetailsComponent {
         this.clearDraftsForCurrentType();
 
         // ยิงอัปเดตจริง
-        // this.putEmailIDsDetails({
-        //   subject: value.subject,
-        //   message: this.getInlineStyledHtml()
-        // });
+        this.putEmailIDsDetails({
+          subject: value.subject,
+          message: this.getInlineStyledHtml()
+        });
       }
     });
   }

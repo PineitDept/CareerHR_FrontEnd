@@ -12,10 +12,43 @@
 }
 
 ::ng-deep .mat-mdc-form-field:not(.mat-form-field-no-animations) .mdc-text-field__input {
-    min-height: 40px !important;
+    min-height: 40px;
     padding: 8px 0 8px 0;
+}
+
+.mat-mdc-form-field:not(.mat-form-field-no-animations) textarea.mdc-text-field__input {
+    min-height: 32dvh !important;
 }
 
 ::ng-deep .mdc-floating-label--required::after {
     color: rgba(255, 0, 0, 0.575);
+}
+
+::ng-deep .ql-editor {
+    font-family: "Sarabun", sans-serif;
+    font-size: 14px;
+    min-height: 250px;
+    overflow-y: auto;
+    resize: vertical;
+}
+
+quill-editor {
+    width: 100%;
+    display: block;
+    border-radius: 8px;
+    // overflow: hidden;
+}
+
+::ng-deep .ql-toolbar.ql-snow {
+    border-radius: 8px 8px 0 0;
+    border-color: #e5e7eb;
+}
+
+::ng-deep .ql-container.ql-snow {
+    border-radius: 0 0 8px 8px;
+    border-color: #e5e7eb;
+}
+
+::ng-deep .ql-container.ql-snow img[src="https://www.pinepacific.com/img/logo.png"] {
+    width: 300px;
 }

@@ -1,4 +1,4 @@
-import { NgModule } from '@angular/core';
+import { APP_INITIALIZER, NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
 
@@ -39,6 +39,8 @@ import { SlickCarouselModule } from 'ngx-slick-carousel';
 import { SelectDialogComponent } from './components/dialogs/select-dialog/select-dialog.component';
 import { MailDialogComponent } from './components/dialogs/mail-dialog/mail-dialog.component';
 import { RevisionHistoryFooterComponent } from './components/revision-history-footer/revision-history-footer.component';
+import { QuillModule } from 'ngx-quill';
+import { quillInitFactory } from '../app.module';
 
 @NgModule({
   declarations: [
@@ -80,7 +82,8 @@ import { RevisionHistoryFooterComponent } from './components/revision-history-fo
     PortalModule,
     ScrollingModule,
     FullCalendarModule,
-    SlickCarouselModule
+    SlickCarouselModule,
+    QuillModule.forRoot(),
 ],
   exports: [
     HeaderContentComponent,
@@ -107,6 +110,9 @@ import { RevisionHistoryFooterComponent } from './components/revision-history-fo
     FullCalendarModule,
     SlickCarouselModule,
     RevisionHistoryFooterComponent,
-  ]
+  ],
+  providers: [
+    { provide: APP_INITIALIZER, useFactory: quillInitFactory, multi: true },
+  ],
 })
 export class SharedModule { }

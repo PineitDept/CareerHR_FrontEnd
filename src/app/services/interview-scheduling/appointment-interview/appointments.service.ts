@@ -1,18 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from '../../../shared/services/api/api.service';
-
-export interface IAppointmentFilterRequest {
-  search?: string;
-  positionId?: number;
-  month?: number;
-  year?: number;
-  interviewDate?: string;
-  InterviewResult?: string;
-  sortFields?: string;
-  page?: number;
-  pageSize?: number;
-}
+import { IAppointmentFilterRequest, SendEmailRequest } from '../../../interfaces/interview-scheduling/interview.interface';
 
 @Injectable({
   providedIn: 'root',
@@ -155,5 +144,10 @@ export class AppointmentsService {
     });
   }
 
-
+  sendEmail(body: SendEmailRequest): Observable<any> {
+    return this.api.post<any>('Email/send', body, {
+      withAuth: true,
+      loading: false,
+    });
+  }
 }

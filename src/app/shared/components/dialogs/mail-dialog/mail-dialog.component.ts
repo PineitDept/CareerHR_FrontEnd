@@ -20,6 +20,25 @@ export class MailDialogComponent {
   selectionMap: Record<string, any> = {};
   selectedFiles: File[] = [];
 
+  modules = {
+    toolbar: [
+      [{ header: [1, 2, 3, false] }],
+      ['bold', 'italic', 'underline'],
+      [{ color: [] }, { background: [] }],
+      [{ align: [] }],
+      ['link'],
+      [{ list: 'ordered' }, { list: 'bullet' }],
+      ['image']
+    ],
+    imageResize: {}
+  };
+
+  formats = [
+    'header', 'bold', 'italic', 'underline',
+    'align', 'list', 'link', 'image',
+    'color', 'background', 'font', 'size'
+  ];
+
   @Input() dataOption: any[] | undefined;
   @Output() dataResult: any[] | undefined;
 
@@ -31,10 +50,10 @@ export class MailDialogComponent {
     @Inject(MAT_DIALOG_DATA) public data: AlertDialogData
   ) {
     this.emailForm = this.fb.group({
-      from: ['', [Validators.required, Validators.email]],
-      to: ['', [Validators.required, Validators.email]],
-      subject: ['', Validators.required],
-      message: ['', Validators.required],
+      from: [data.dataMail.formMail, [Validators.required, Validators.email]],
+      to: [data.dataMail.to, [Validators.required, Validators.email]],
+      subject: [data.dataMail.subject, Validators.required],
+      message: [data.dataMail.body, Validators.required],
     });
 
     this.titleHeader = data.title
@@ -52,19 +71,18 @@ export class MailDialogComponent {
       return;
     }
 
+    const EmailMessage = this.emailForm.value.message;
     const formData = new FormData();
+
     formData.append('from', this.emailForm.value.from);
     formData.append('to', this.emailForm.value.to);
     formData.append('subject', this.emailForm.value.subject);
-    formData.append('message', this.emailForm.value.message);
+    formData.append('message', EmailMessage);
 
     this.selectedFiles.forEach((file) => {
-      formData.append('attachments', file); 
+      formData.append('attachments', file);
     });
 
-    console.log(this.selectedFiles);
-
-    // ✅ ส่งค่ากลับ
     this.dialogRef.close({
       selectionMap: this.selectionMap,
       formData: formData

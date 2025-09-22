@@ -51,11 +51,14 @@
                 <input matInput formControlName="subject" placeholder="Enter subject" />
             </mat-form-field>
 
-            <mat-form-field appearance="fill" class="tw-w-full tw-border tw-border-[#E3E3E3] tw-rounded-lg">
+            <!-- <mat-form-field appearance="fill" class="tw-w-full tw-border tw-border-[#E3E3E3] tw-rounded-lg">
                 <mat-label>Message</mat-label>
                 <textarea matInput formControlName="message" rows="6" placeholder="Write your message"
-                    class="tw-py-4"></textarea>
-            </mat-form-field>
+                    class="tw-py-4 !tw-min-h-[1000px]"></textarea>
+            </mat-form-field> -->
+            <div class="tw-w-full">
+                <quill-editor #editor formControlName="message" [modules]="modules" [formats]="formats" theme="snow" [placeholder]="'Write your message'"></quill-editor>
+            </div>
 
 
             <div class="attach-file">

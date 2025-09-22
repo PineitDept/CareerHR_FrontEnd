@@ -28,6 +28,8 @@ export class FilterComponent {
   @Input() disabledFilterDateRange: boolean = false;
   @Input() GradeSelect: boolean = false;
   @Input() DateCalendar: boolean = false;
+  @Input() showAllYearOption: boolean = false;
+  @Input() defaultYearAll: boolean = false;
 
   @Output() buttonClicked = new EventEmitter<string>();
   @Output() dateRangeSelected = new EventEmitter<{ startDate: string; endDate: string }>();
@@ -66,6 +68,9 @@ export class FilterComponent {
   ) { }
 
   ngOnInit() {
+    this.years = this.getYearsWithOptionalAll();
+    this.selectedYear = this.defaultYearAll ? 'All' : String(this.currentYear);
+
     if (!this.DateCalendar) {
       this.emitDateRange();
     }
@@ -83,6 +88,11 @@ export class FilterComponent {
       this.formattedToday = formatDate(today, 'yyyy-MM-dd', 'en-US');
       this.dateRangeSelected.emit({ startDate: this.formattedToday, endDate: this.formattedToday });
     }
+  }
+
+  getYearsWithOptionalAll(): string[] {
+    const baseYears = Array.from({ length: 6 }, (_, i) => String(this.currentYear - i));
+    return this.showAllYearOption ? ['All', ...baseYears] : baseYears;
   }
 
   onBackClick() {
@@ -182,6 +192,13 @@ export class FilterComponent {
     const year = Number(this.selectedYear);
     let startDate: string;
     let endDate: string;
+
+    // if (this.selectedYear === 'All') {
+    //   startDate = `${year}-01-01`;
+    //   endDate = `${year}-12-31`;
+    //   this.dateRangeSelected.emit({ startDate, endDate });
+    // }
+
 
     if (this.selectedMonth === 'All') {
       startDate = `${year}-01-01`;
