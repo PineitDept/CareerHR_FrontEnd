@@ -89,6 +89,10 @@ export class ScoreDetailsComponent implements PendingDraftsAware {
     return `scoreDetailsDraft:type:${this.scoreType}`;
   }
 
+  private _baselineKey(): string {
+    return `scoreDetailsBaseline:type:${this.scoreType}`;
+  }
+
   constructor(
     private route: ActivatedRoute,
     private scoreService: ScoreService,
@@ -129,12 +133,14 @@ export class ScoreDetailsComponent implements PendingDraftsAware {
           const raw = sessionStorage.getItem(this._draftKey());
           if (raw) {
             const draft = JSON.parse(raw);
-            if (draft?.items && Array.isArray(draft.items)) {
+            if (Array.isArray(draft?.items)) {
+              // 1) โหลด draft เข้า FormArray (ข้ามแถวไม่สมบูรณ์ของ type 3)
               this.clearFormArrayQuietly(this.scoreSettingsFA);
+
               draft.items.forEach((r: any) => {
                 const it: ScoreItem = {
                   id: r.id ?? null,
-                  tempId: null,
+                  tempId: r.tempId ?? null,
                   condition: String(r.condition ?? ''),
                   conditionDetail: String(r.conditionDetail ?? '').trim(),
                   score: Number(r.score ?? 0) || 0,
@@ -142,17 +148,44 @@ export class ScoreDetailsComponent implements PendingDraftsAware {
                   isDelete: !!r.isDelete,
                   isDisable: !!r.isDisable,
                 };
+
+                // กันแถวใหม่ที่ยังไม่ได้กรอก GPA (condition ว่าง) ออกจากฟอร์ม (เฉพาะ type 3)
                 if (this.scoreType === 3 && this.isIncompleteNewRowType3(it)) return;
+
                 this.scoreSettingsFA.push(this.buildFG(it), { emitEvent: false });
               });
+
+              // 2) สร้าง rows
               this.rebuildRowsFromForm();
+
+              // 3) เข้าสู่โหมดแก้ไข
               this.isEditMode = true;
               this.isViewingRevision = false;
-              this.ensureFilterButtons();
 
-              // baseline กำหนดเป็นสถานะที่โหลดจาก draft
-              this._baselineSnapshot = JSON.stringify(this.scoreSettingsFA.getRawValue());
-              return; // ไม่ต้อง fetch API ถ้าจะให้ใช้ draft ต่อเลย
+              // 4) baseline ต้องมาจาก "server snapshot" เสมอ (ไม่ใช่ draft)
+              const cachedBaseline = sessionStorage.getItem(this._baselineKey());
+              if (cachedBaseline) {
+                this._baselineSnapshot = cachedBaseline;
+                // คำนวณปุ่มด้วย baseline ที่ถูกต้อง
+                this.ensureFilterButtons();
+              } else {
+                // ไม่มี cache: ดึง server snapshot แบบเงียบ ๆ แล้วตั้ง baseline
+                this.scoreService.getScoreSettingDetailsByType(this.scoreType).subscribe({
+                  next: (resp) => {
+                    const items = this.mapServerToItems(resp);
+                    const fa = this.fb.array(items.map(it => this.buildFG(it)));
+                    const serverSnapshot = JSON.stringify(fa.getRawValue());
+                    this._baselineSnapshot = serverSnapshot;
+                    try { sessionStorage.setItem(this._baselineKey(), serverSnapshot); } catch {}
+                    // หลังได้ baseline จริง อัปเดตสถานะปุ่มอีกครั้ง
+                    this.setSaveEnabled(this.hasFormChanged());
+                  }
+                });
+                // ระหว่างรอ async baseline ให้โชว์ปุ่มตามสถานะปัจจุบันก่อน
+                this.ensureFilterButtons();
+              }
+
+              return; // ใช้ draft ต่อ ไม่ต้อง fetch API หลัก
             }
           }
         } catch {}
@@ -217,7 +250,7 @@ export class ScoreDetailsComponent implements PendingDraftsAware {
   private ensureFilterButtons() {
     if (this.isEditMode) {
       this.filterButtons = [{ label: 'Save', key: 'save', color: '#000055' }];
-      this.setSaveEnabled(this.hasChanges());
+      this.setSaveEnabled(this.hasFormChanged());
     } else {
       this.filterButtons = [{ label: 'Edit', key: 'edit', color: '#000000' }];
       this.disabledKeys = [];
@@ -408,6 +441,7 @@ export class ScoreDetailsComponent implements PendingDraftsAware {
         this.isEditMode = false;
         this.ensureFilterButtons();
         this._baselineSnapshot = JSON.stringify(this.scoreSettingsFA.getRawValue());
+        try { sessionStorage.setItem(this._baselineKey(), this._baselineSnapshot); } catch {}
       },
       error: (error) => {
         console.error('Error fetching score details by type:', error);
@@ -897,7 +931,20 @@ export class ScoreDetailsComponent implements PendingDraftsAware {
       if (byId > -1) return byId;
     }
 
-    // 3) สุดท้าย fallback แบบเดิม
+    // 2.5) พิเศษสำหรับ scoreType 3:
+    if (this.scoreType === 3) {
+      const uni = String(row?.universityName ?? '').trim();
+      // row.conditionDetail ที่ตารางแสดงเป็น "≥ x.xx" → ดึงเลขจริง
+      const gpa = this.extractConditionNumber(String(row?.conditionDetail ?? ''), /*forcePrefix*/ true);
+      if (uni && gpa != null) {
+        const byUniGpa = arr.findIndex(it =>
+          String(it.conditionDetail ?? '').trim() === uni && Number(it.condition) === gpa
+        );
+        if (byUniGpa > -1) return byUniGpa;
+      }
+    }
+
+    // 3) สุดท้าย fallback แบบเดิม (ใช้ไม่ได้ใน type 3 เพราะ field ไม่ตรง แต่เผื่อ type อื่น)
     const cond = String(row?.condition ?? '');
     const label = String(row?.conditionDetail ?? '').trim();
     const sc = Number(row?.score ?? 0) || 0;
@@ -992,16 +1039,20 @@ export class ScoreDetailsComponent implements PendingDraftsAware {
 
   // ======= Save helpers =======
   private hasChanges(): boolean {
-    // เวอร์ชันเบา: ถือว่ามีการเปลี่ยนเมื่อเข้าระยะ Edit (ถ้าต้องการ exact diff ค่อยเพิ่ม baseline)
-    return this.isEditMode;
+    return this.hasFormChanged(); // เทียบค่ากับ _baselineSnapshot
   }
 
   private touchChanged() {
-    this.setSaveEnabled(true);
-    // Auto-save draft (sessionStorage) — ตัด incomplete row type=3 ทิ้งก่อนเสมอ
+    const changed = this.hasFormChanged();
+    this.setSaveEnabled(changed);
+
     try {
-      const draft = this.buildDraftPayload();
-      sessionStorage.setItem(this._draftKey(), JSON.stringify(draft));
+      if (changed) {
+        const draft = this.buildDraftPayload();
+        sessionStorage.setItem(this._draftKey(), JSON.stringify(draft));
+      } else {
+        sessionStorage.removeItem(this._draftKey());
+      }
     } catch {}
   }
 
@@ -1029,7 +1080,6 @@ export class ScoreDetailsComponent implements PendingDraftsAware {
   private buildDraftPayload() {
     const rows = (this.scoreSettingsFA.getRawValue() as ScoreItem[]) || [];
 
-    // กรองทิ้งเฉพาะ case type=3 ที่เป็น "แถวใหม่ + ยังไม่กรอกค่า GPA"
     const filtered = rows.filter(r => !this.isIncompleteNewRowType3(r));
 
     return {
@@ -1037,6 +1087,7 @@ export class ScoreDetailsComponent implements PendingDraftsAware {
       scoreName: this.scoreName,
       items: filtered.map((r, idx) => ({
         id: r.id,
+        tempId: r.tempId ?? null,
         condition: r.condition,
         conditionDetail: r.conditionDetail,
         score: Number(r.score) || 0,
