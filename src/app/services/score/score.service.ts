@@ -32,10 +32,10 @@ export class ScoreService {
     });
   }
 
-  // saveScoreSettingDetails(body: any): Observable<any> {
-  //   return this.apiService.post<any>('ScoreSetting/forms', body, {
-  //     withAuth: true,
-  //     loading: true
-  //   });
-  // }
+  saveScoreSettingDetails(body: any): Observable<any> {
+    return this.apiService.post<any>('ScoreSetting/forms', body, {
+      withAuth: true,
+      loading: true
+    });
+  }
 }

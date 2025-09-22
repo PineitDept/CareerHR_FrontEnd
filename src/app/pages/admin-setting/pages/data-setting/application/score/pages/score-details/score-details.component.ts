@@ -21,6 +21,7 @@ type ScoreItem = {
   isDelete: boolean;        // ควบคุมการแสดงปุ่ม Delete
   // เกณฑ์ที่ถูกต้อง: true = อนุญาต toggle, false = ไม่อนุญาต
   isDisable: boolean;
+  universityType?: number | null;
 };
 
 @Component({
@@ -93,6 +94,10 @@ export class ScoreDetailsComponent implements PendingDraftsAware {
     return `scoreDetailsBaseline:type:${this.scoreType}`;
   }
 
+  // ===== Server meta cache for save/diff =====
+  private _idToUniType = new Map<number, number | null>();
+  private _uniNameToUniType = new Map<string, number | null>();
+
   constructor(
     private route: ActivatedRoute,
     private scoreService: ScoreService,
@@ -147,6 +152,7 @@ export class ScoreDetailsComponent implements PendingDraftsAware {
                   activeStatus: !!r.isActive,
                   isDelete: !!r.isDelete,
                   isDisable: !!r.isDisable,
+                  universityType: r.universityType ?? null,
                 };
 
                 // กันแถวใหม่ที่ยังไม่ได้กรอก GPA (condition ว่าง) ออกจากฟอร์ม (เฉพาะ type 3)
@@ -279,6 +285,7 @@ export class ScoreDetailsComponent implements PendingDraftsAware {
       activeStatus: [item.activeStatus],
       isDelete: [item.isDelete],
       isDisable: [item.isDisable], // true = อนุญาต toggle
+      universityType: [item.universityType ?? null],
     });
   }
 
@@ -395,27 +402,39 @@ export class ScoreDetailsComponent implements PendingDraftsAware {
 
   private mapServerToItems(resp: any): ScoreItem[] {
     const list = Array.isArray(resp?.scoreSettings) ? resp.scoreSettings : [];
+    this.setServerMeta(list);
 
     const items: ScoreItem[] = list.map((s: any) => {
+      const idNum = Number(s?.id);
       const base: ScoreItem = {
-        id: Number.isFinite(Number(s?.id)) ? Number(s.id) : null,
+        id: Number.isFinite(idNum) && idNum > 0 ? idNum : null,
         tempId: null,
-        condition: String(s?.condition ?? ''),        // ค่าตัวเลขจริง (string)
-        conditionDetail: String(s?.conditionDetail ?? '').trim(), // เดิม = label
+        condition: String(s?.condition ?? ''),
+        conditionDetail: String(s?.conditionDetail ?? '').trim(),
         score: Number(s?.score ?? 0) || 0,
         activeStatus: !!s?.isActive,
         isDelete: !!s?.isDelete,
         isDisable: !!s?.isDisable,
+        universityType: (s?.universityType ?? null),
       };
       return base;
     });
 
-    // ✅ type 3: preserve order ตาม API
-    if (this.scoreType !== 3) {
-      items.sort((a, b) =>
-        (Number(a.condition) || 0) - (Number(b.condition) || 0) ||
-        (Number(a.id) || 0) - (Number(b.id) || 0)
-      );
+    if (this.scoreType === 3) {
+      items.sort((a, b) => {
+        const uniA = (a.conditionDetail || '').toLowerCase();
+        const uniB = (b.conditionDetail || '').toLowerCase();
+        if (uniA < uniB) return -1;
+        if (uniA > uniB) return 1;
+
+        // ถ้ามหาลัยเดียวกัน → เรียงตาม GPA (condition เป็น string number)
+        const condA = Number(a.condition) || 0;
+        const condB = Number(b.condition) || 0;
+        if (condA !== condB) return condA - condB;
+
+        // ถ้า GPA เท่ากัน → เรียงตาม id
+        return (a.id || 0) - (b.id || 0);
+      });
     }
 
     return items;
@@ -471,20 +490,46 @@ export class ScoreDetailsComponent implements PendingDraftsAware {
   }
 
   onSaveClicked() {
-    if (!this.hasChanges()) return;
+    if (!this.hasChanges()) {
+      this.notify.info('ไม่มีการเปลี่ยนแปลง');
+      return;
+    }
 
-    // TODO: เมื่อ backend พร้อมใช้งาน ให้เรียก service บันทึกจริง
+    // สร้าง payload ตามกติกา (รองรับ type 3/8/9 ที่เราปรับ logic ไว้แล้ว)
     const payload = this.buildSavePayload();
-    console.log('ScoreSetting SAVE payload =>', payload);
-    this.notify.success('บันทึกชั่วคราว (เดโม่): ส่ง payload ดูใน console');
 
-    // ตัวอย่าง:
-    // this.scoreService.saveScoreSettingDetails(payload).subscribe({
-    //   next: () => { this.notify.success('บันทึกสำเร็จ'); this.fetchScoreSettingDetailsByType(); },
-    //   error: (err) => this.notify.error(err?.error?.message || err?.message || 'บันทึกไม่สำเร็จ')
-    // });
+    // กัน user กดซ้ำระหว่างยิง API
+    this.disabledKeys = Array.from(new Set([...(this.disabledKeys || []), 'save']));
 
+    this.scoreService.saveScoreSettingDetails(payload).subscribe({
+      next: (resp) => this.handleSaveSuccess(resp),
+      error: (err) => this.handleSaveError(err),
+    });
+  }
+
+  private handleSaveSuccess(resp: any) {
+    this.notify.success('บันทึกสำเร็จ');
+
+    // เคลียร์ draft; baseline = ค่าหลังเซฟ (โหลดจาก server เพื่อความชัวร์)
+    try { sessionStorage.removeItem(this._draftKey()); } catch {}
+
+    // โหลด snapshot ล่าสุดกลับมาอีกรอบ (จะอัปเดต _latestRevision ด้วย)
+    this.fetchScoreSettingDetailsByType();
+
+    // ออกจากโหมดแก้ไขหลังโหลดใหม่เสร็จ (fetch จะเซ็ตสถานะให้อยู่แล้ว)
     this.isEditMode = false;
+
+    // เปิดปุ่มอีกครั้ง
+    this.disabledKeys = this.disabledKeys.filter(k => k !== 'save');
+    this.ensureFilterButtons();
+  }
+
+  private handleSaveError(err: any) {
+    const msg = err?.error?.message || err?.message || 'เกิดข้อผิดพลาดระหว่างบันทึก';
+    this.notify.error(msg);
+
+    // เปิดปุ่ม Save กลับมา
+    this.disabledKeys = this.disabledKeys.filter(k => k !== 'save');
     this.ensureFilterButtons();
   }
 
@@ -517,6 +562,7 @@ export class ScoreDetailsComponent implements PendingDraftsAware {
           activeStatus: true,
           isDelete: true,
           isDisable: true,
+          universityType: this.getUniversityTypeForName(selected) ?? null,
         };
 
         const items = this.scoreSettingsFA.getRawValue() as ScoreItem[];
@@ -620,12 +666,12 @@ export class ScoreDetailsComponent implements PendingDraftsAware {
     }
     // === END (type=3) ===
 
-    // ====== เดิม (type อื่น) ======
-    if (this.scoreType === 8) {
-      const num = this.extractConditionNumber(String(payload?.conditionDetail ?? ''));
+    // ====== กรณี type 8/9: ดึงเลขหลัง prefix แล้ว "เขียนกลับ" เข้า condition ======
+    if (this.scoreType === 8 || this.scoreType === 9) {
+      const num = this.extractConditionNumber(String(payload?.conditionDetail ?? ''), /*forcePrefix*/ false);
       if (num == null) {
         this.fieldErrors = true;
-        this.notify.warn('กรุณากรอกตัวเลขหลัง "Score EQ > "');
+        this.notify.warn(this.scoreType === 8 ? 'กรุณากรอกตัวเลขหลัง "Score EQ > "' : 'กรุณากรอกตัวเลขหลัง "Score Ethics > "');
         return;
       }
       const dupIdx = this.findDuplicateIndexByNumber(num);
@@ -635,6 +681,24 @@ export class ScoreDetailsComponent implements PendingDraftsAware {
         this.notify.error(`ค่าเงื่อนไขซ้ำกับแถวที่ ${dupIdx + 1}`);
         return;
       }
+
+      // สร้างแถวใหม่ โดย "condition" = เลขหลัง prefix (string)
+      const normalized: ScoreItem = {
+        id: null,
+        tempId: `tmp-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
+        condition: String(num),                              // <<<<<< เขียนเลขเข้า condition
+        conditionDetail: String(payload?.conditionDetail ?? '').trim(), // คง label ที่มี prefix ไว้
+        score: Number(payload?.score ?? 0) || 0,
+        activeStatus: !!(payload?.activeStatus ?? (payload?.status === 1)),
+        isDelete: true,
+        isDisable: true,
+      };
+
+      this.scoreSettingsFA.push(this.buildFG(normalized), { emitEvent: false });
+      this.rebuildRowsFromForm();
+      this.isAddingRow = false;
+      this.touchChanged();
+      return;
     }
 
     if (this.scoreType === 10) {
@@ -781,12 +845,12 @@ export class ScoreDetailsComponent implements PendingDraftsAware {
       return;
     }
 
-    // ====== ของเดิมสำหรับ type อื่น ======
-    if (this.scoreType === 8) {
-      const num = this.extractConditionNumber(String(updatedRow?.conditionDetail ?? ''));
+    // ----- กรณี type 8/9: อัปเดต condition จากเลขหลัง prefix -----
+    if (this.scoreType === 8 || this.scoreType === 9) {
+      const num = this.extractConditionNumber(String(updatedRow?.conditionDetail ?? ''), /*forcePrefix*/ false);
       if (num == null) {
         this.fieldErrors = true;
-        this.notify.warn('กรุณากรอกตัวเลขหลัง "Score EQ > "');
+        this.notify.warn(this.scoreType === 8 ? 'กรุณากรอกตัวเลขหลัง "Score EQ > "' : 'กรุณากรอกตัวเลขหลัง "Score Ethics > "');
         this.rebuildRowsFromForm();
         return;
       }
@@ -798,6 +862,19 @@ export class ScoreDetailsComponent implements PendingDraftsAware {
         this.rebuildRowsFromForm();
         return;
       }
+
+      // เขียนเลขเข้า condition (string) และเก็บ label เดิมใน conditionDetail
+      const patch89: Partial<ScoreItem> = {
+        condition: String(num),                                        // <<<<<< สำคัญ
+        conditionDetail: String(updatedRow?.conditionDetail ?? '').trim(),
+        score: Number(updatedRow?.score ?? 0) || 0,
+        activeStatus: !!(updatedRow?.activeStatus ?? (updatedRow?.status === 1)),
+      };
+
+      this.scoreSettingsFA.at(idx).patchValue(patch89, { emitEvent: false });
+      this.rebuildRowsFromForm();
+      this.touchChanged();
+      return;
     }
 
     const patch: Partial<ScoreItem> = {
@@ -1057,23 +1134,97 @@ export class ScoreDetailsComponent implements PendingDraftsAware {
   }
 
   private buildSavePayload() {
-    const rows = this.scoreSettingsFA.getRawValue() as ScoreItem[];
+    // 1) current & baseline
+    const current: ScoreItem[] = (this.scoreSettingsFA.getRawValue() as ScoreItem[]) || [];
+    let baseline: ScoreItem[] = [];
+    try { baseline = JSON.parse(this._baselineSnapshot) as ScoreItem[]; } catch {}
 
-    // ตัวอย่าง payload (ปรับตามสัญญา API จริงเมื่อเปิดใช้งาน save)
+    // 1.1 map baseline by id (เฉพาะ id > 0)
+    const baseById = new Map<number, ScoreItem>();
+    for (const b of baseline) {
+      const idNum = Number(b?.id);
+      if (Number.isFinite(idNum) && idNum > 0) baseById.set(idNum, b);
+    }
+
+    const isSameRow = (a: ScoreItem, b: ScoreItem) => {
+      if (!a || !b) return false;
+      return (
+        String(a.condition ?? '') === String(b.condition ?? '') &&
+        String(a.conditionDetail ?? '') === String(b.conditionDetail ?? '') &&
+        (Number(a.score) || 0) === (Number(b.score) || 0) &&
+        !!a.activeStatus === !!b.activeStatus
+      );
+    };
+
+    // 2) additions/updates
+    const settings: any[] = [];
+
+    for (const cur of current) {
+      const idNum = Number(cur?.id);
+      const hasId = Number.isFinite(idNum) && idNum > 0;
+
+      const uniTypeFromForm = cur.universityType ?? null;
+      const uniTypeFromCacheById = hasId ? (this._idToUniType.get(idNum) ?? null) : null;
+      const uniTypeFromName = this.getUniversityTypeForName(cur.conditionDetail);
+
+      const universityType =
+        uniTypeFromForm ?? uniTypeFromCacheById ?? uniTypeFromName ?? null;
+
+      if (!hasId) {
+        settings.push({
+          id: null,
+          universityType,                         // << ใช้ค่าที่คำนวณได้
+          condition: String(cur.condition ?? ''),
+          conditionDetail: String(cur.conditionDetail ?? ''),
+          score: Number(cur.score) || 0,
+          status: cur.activeStatus ? 1 : 0,
+          isDeleted: false,
+        });
+        continue;
+      }
+
+      const base = baseById.get(idNum);
+      if (!base || !isSameRow(cur, base)) {
+        settings.push({
+          id: idNum,
+          universityType,                         // << ใส่เสมอ
+          condition: String(cur.condition ?? ''),
+          conditionDetail: String(cur.conditionDetail ?? ''),
+          score: Number(cur.score) || 0,
+          status: cur.activeStatus ? 1 : 0,
+          isDeleted: false,
+        });
+      }
+    }
+
+    // 3) deletions = baseline rows whose id no longer present in current
+    const currentIds = new Set(
+      current
+        .map(r => Number(r?.id))
+        .filter(n => Number.isFinite(n) && n > 0) as number[] // <<<<<< เก็บเฉพาะ id > 0
+    );
+
+    for (const [idNum, base] of baseById.entries()) {
+      if (!currentIds.has(idNum)) {
+        const universityType =
+          this.scoreType === 3 ? (this._idToUniType.get(idNum) ?? this.getUniversityTypeForName(base.conditionDetail)) : null;
+
+        settings.push({
+          id: idNum,
+          universityType,
+          condition: String(base.condition ?? ''),
+          conditionDetail: String(base.conditionDetail ?? ''),
+          score: Number(base.score) || 0,
+          status: base.activeStatus ? 1 : 0,
+          isDeleted: true,
+        });
+      }
+    }
+
     return {
-      type: this.scoreType,
-      scoreName: this.scoreName,
-      items: rows.map((r, idx) => ({
-        id: r.id,
-        condition: r.condition,             // code เงื่อนไข (string/number)
-        conditionDetail: r.conditionDetail, // label สำหรับแสดง
-        score: Number(r.score) || 0,
-        isActive: !!r.activeStatus,
-        isDelete: !!r.isDelete,             // เผื่อ backend ต้องการรู้สิทธิ์
-        isDisable: !!r.isDisable,           // ส่งตาม semantics ที่ถูกต้อง
-        sort: idx + 1,
-        isDeleted: false,
-      }))
+      type: this.scoreType,  // number ใช้ค่าจาก scoreType
+      isActive: true,        // boolean เป็น true เสมอ
+      settings,              // ส่งเฉพาะ diff ของที่เปลี่ยนแปลง (add/update/delete)
     };
   }
 
@@ -1094,6 +1245,7 @@ export class ScoreDetailsComponent implements PendingDraftsAware {
         isActive: !!r.activeStatus,
         isDelete: !!r.isDelete,
         isDisable: !!r.isDisable,
+        universityType: r.universityType ?? null,
         sort: idx + 1,
         isDeleted: false,
       }))
@@ -1297,6 +1449,49 @@ export class ScoreDetailsComponent implements PendingDraftsAware {
     const isNew = it.id == null && !!it.tempId;
     const condEmpty = it.condition == null || String(it.condition).trim() === '';
     return isNew && condEmpty; // ยังไม่กรอก GPA เลขจริง (หลัง prefix)
+  }
+
+  private setServerMeta(list: any[]) {
+    this._idToUniType.clear();
+    this._uniNameToUniType.clear();
+
+    if (!Array.isArray(list)) return;
+
+    for (const s of list) {
+      const id = Number.isFinite(Number(s?.id)) ? Number(s.id) : null;
+      const uniType = (s?.universityType ?? null) as number | null;
+      const uniName = String(s?.conditionDetail ?? '').trim();
+
+      if (id != null) this._idToUniType.set(id, uniType);
+      // สำหรับ type=3 ใช้ conditionDetail (ชื่อมหาลัย) เป็นคีย์ของกรุ๊ป
+      if (uniName) {
+        // เก็บค่าแรกที่พบเป็น default ของกรุ๊ป
+        if (!this._uniNameToUniType.has(uniName)) {
+          this._uniNameToUniType.set(uniName, uniType);
+        }
+      }
+    }
+  }
+
+  private getUniversityTypeForName(universityNameRaw: string): number | null {
+    const name = String(universityNameRaw || '').trim();
+    if (!name) return null;
+
+    // จาก cache ชื่อ → type (ได้มาจาก setServerMeta ขณะโหลดจาก API)
+    const byName = this._uniNameToUniType.get(name);
+    if (byName != null) return byName;
+
+    // fallback: หาแถวปัจจุบันที่มีชื่อเดียวกันและมี id > 0 แล้วอิงจาก id → type
+    const current: ScoreItem[] = (this.scoreSettingsFA?.getRawValue() as ScoreItem[]) || [];
+    for (const r of current) {
+      const rid = Number(r?.id);
+      if (String(r?.conditionDetail ?? '').trim() === name && Number.isFinite(rid) && rid > 0) {
+        const t = this._idToUniType.get(rid);
+        if (t != null) return t;
+      }
+    }
+
+    return null;
   }
 
   // ======= Cleanup =======
