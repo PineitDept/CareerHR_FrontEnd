@@ -131,237 +131,261 @@
 
           <!-- Dynamic Data Cells -->
           <ng-container *ngFor="let column of columns; let firstCol = first; let lastCol = last; trackBy: trackByColumn">
-            <td class="table-cell tw-px-2 tw-py-2 tw-align-middle"
-              [class.main-column]="column.mainColumn" [class.sub-column]="column.subColumn"
-              [class.wrap-text]="column.wrapText" [class.expanded]="!column.subColumn || isSubColumnVisible(column)"
-              [class.collapsed]="column.subColumn && !isSubColumnVisible(column)" [style.width]="getColumnWidth(column)"
-              [style.min-width]="getColumnMinWidth(column)" [style.max-width]="getColumnMaxWidth(column)"
-              [style.text-align]="column.align || 'left'"
-              [ngClass]="[
-                column.type === 'icon' && !column.sortable ? getBackgroundClass(getCellValue(row, column.field)?.fill) : '',
-                withinCard && i === rowsValue.length - 1 && !showCheckbox && firstCol ? 'tw-rounded-bl-xl' : '',
-                withinCard && i === rowsValue.length - 1 && lastCol ? 'tw-rounded-br-xl' : '',
-                (withinCard && i < rowsValue.length - 1) ? 'tw-border-b tw-border-gray-200' : '',
-                isDisabledForm ? 'tw-bg-[#fafafa]': '',
-                (isDisabledForm && !(column.type === 'textlink' && allowViewWhenDisabled)) ? 'tw-pointer-events-none' : '',
-              ]"
-            >
-              <!-- Cell Content with Type Switching -->
-              <div class="cell-content tw-min-h-6"
-                [ngClass]="{
-                  'tw-text-gray-600': isDisabledForm,
-                  'tw-text-gray-800': !isDisabledForm
-                }"
+            <!-- ถ้าเป็นฟิลด์ที่ต้อง merge ให้แสดงแค่หัวกลุ่ม + ใส่ rowspan -->
+            <ng-container *ngIf="isMergeField(column.field); else normalCell">
+              <td *ngIf="shouldRenderMergedCell(i, column.field)"
+                  class="table-cell tw-px-2 tw-py-2 tw-align-middle tw-border-r tw-border-gray-200"
+                  [attr.rowspan]="getRowspan(i, column.field)"
+                  [class.wrap-text]="column.wrapText"
+                  [style.width]="getColumnWidth(column)"
+                  [style.min-width]="getColumnMinWidth(column)"
+                  [style.max-width]="getColumnMaxWidth(column)"
+                  [style.text-align]="column.align || 'left'"
+                  [ngClass]="[
+                    (withinCard && isEndOfMergedGroup(i, column.field) && !showCheckbox && firstCol) ? 'tw-rounded-bl-xl' : '',
+                    (withinCard && isEndOfMergedGroup(i, column.field) && lastCol) ? 'tw-rounded-br-xl' : '',
+                    (withinCard && !isEndOfMergedGroup(i, column.field)) ? 'tw-border-b tw-border-gray-200' : '',
+                    isDisabledForm ? 'tw-bg-[#fafafa]': '',
+                    (isDisabledForm && !(column.type === 'textlink' && allowViewWhenDisabled)) ? 'tw-pointer-events-none' : ''
+                  ]">
+                <div class="cell-content tw-min-h-6"
+                    [ngClass]="{ 'tw-text-gray-600': isDisabledForm, 'tw-text-gray-800': !isDisabledForm }">
+
+                  <!-- สำหรับ merge เราเรนเดอร์แบบ view-only เสมอ -->
+                  <span>{{ getCellValue(row, column.field) }}</span>
+
+                </div>
+              </td>
+            </ng-container>
+            <ng-template #normalCell>
+              <td class="table-cell tw-px-2 tw-py-2 tw-align-middle"
+                [class.main-column]="column.mainColumn" [class.sub-column]="column.subColumn"
+                [class.wrap-text]="column.wrapText" [class.expanded]="!column.subColumn || isSubColumnVisible(column)"
+                [class.collapsed]="column.subColumn && !isSubColumnVisible(column)" [style.width]="getColumnWidth(column)"
+                [style.min-width]="getColumnMinWidth(column)" [style.max-width]="getColumnMaxWidth(column)"
+                [style.text-align]="column.align || 'left'"
+                [ngClass]="[
+                  column.type === 'icon' && !column.sortable ? getBackgroundClass(getCellValue(row, column.field)?.fill) : '',
+                  withinCard && i === rowsValue.length - 1 && !showCheckbox && firstCol ? 'tw-rounded-bl-xl' : '',
+                  withinCard && i === rowsValue.length - 1 && lastCol ? 'tw-rounded-br-xl' : '',
+                  (withinCard && i < rowsValue.length - 1) ? 'tw-border-b tw-border-gray-200' : '',
+                  isDisabledForm ? 'tw-bg-[#fafafa]': '',
+                  (isDisabledForm && !(column.type === 'textlink' && allowViewWhenDisabled)) ? 'tw-pointer-events-none' : '',
+                ]"
               >
-                <ng-container [ngSwitch]="column.type || 'text'">
+                <!-- Cell Content with Type Switching -->
+                <div class="cell-content tw-min-h-6"
+                  [ngClass]="{
+                    'tw-text-gray-600': isDisabledForm,
+                    'tw-text-gray-800': !isDisabledForm
+                  }"
+                >
+                  <ng-container [ngSwitch]="column.type || 'text'">
 
-                  <!-- Text Content -->
-                  <span *ngSwitchCase="'text'">
-                    <!-- {{ getCellValue(row, column.field) }} -->
+                    <!-- Text Content -->
+                    <span *ngSwitchCase="'text'">
+                      <!-- {{ getCellValue(row, column.field) }} -->
 
-                    <!-- <ng-container *ngIf="editingRowId === i+1; else viewMode" >
-                      <input
-                        type="text"
-                        class="tw-border tw-border-gray-300 tw-rounded tw-px-2 tw-py-1 tw-w-full"
-                        [(ngModel)]="row[column.field]"
-                        (click)="$event.stopPropagation()" />
-                    </ng-container> -->
-                    <ng-container *ngIf="editRow && (editingRowId === (row._tempId ?? i+1)) && (column.editing ?? true); else viewMode">
-                      <input
-                        type="text"
-                        class="tw-border tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white"
-                        [ngClass]="fieldErrors ? 'tw-border-red-500' : 'tw-border-gray-300'"
-                        [(ngModel)]="editingBuffer[column.field]"
-                        (click)="$event.stopPropagation()"
-                      />
-                    </ng-container>
-                    <ng-template #viewMode>
-                      {{ getCellValue(row, column.field) }}
-                    </ng-template>
-                  </span>
+                      <!-- <ng-container *ngIf="editingRowId === i+1; else viewMode" >
+                        <input
+                          type="text"
+                          class="tw-border tw-border-gray-300 tw-rounded tw-px-2 tw-py-1 tw-w-full"
+                          [(ngModel)]="row[column.field]"
+                          (click)="$event.stopPropagation()" />
+                      </ng-container> -->
+                      <ng-container *ngIf="editRow && (editingRowId === (row._tempId ?? i+1)) && (column.editing ?? true); else viewMode">
+                        <ng-container *ngIf="lockedPrefixConfig && column.field === lockedPrefixConfig.field; else normalTextEdit">
+                          <div class="input-affix" [class.input-affix--error]="inlineFieldErrors[column.field] || fieldErrors">
+                            <span class="input-affix__prefix">{{ lockedPrefixConfig.prefix }}</span>
+                            <input
+                              type="text"
+                              class="input-affix__input"
+                              [value]="extractLockedSuffix(editingBuffer[column.field] || '')"
+                              (input)="onLockedPrefixEditingInput(column.field, $event)"
+                              (click)="$event.stopPropagation()"
+                            />
+                          </div>
+                        </ng-container>
 
-                  <!-- Expandable Content -->
-                  <div *ngSwitchCase="'expandable'">
-                    <span>{{ getCellValue(row, column.field) }}</span>
-                  </div>
+                        <ng-template #normalTextEdit>
+                          <input
+                            type="text"
+                            class="tw-border tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white"
+                            [ngClass]="(inlineFieldErrors[column.field] || fieldErrors) ? 'tw-border-red-500' : 'tw-border-gray-300'"
+                            [(ngModel)]="editingBuffer[column.field]"
+                            (click)="$event.stopPropagation()"
+                          />
+                        </ng-template>
+                      </ng-container>
+                      <ng-template #viewMode>
+                        {{ getCellValue(row, column.field) }}
+                      </ng-template>
+                    </span>
 
-                  <!-- Badge Content -->
-                  <span *ngSwitchCase="'badge'"
-                    class="tw-inline-flex tw-items-center tw-justify-center tw-rounded-lg tw-px-2.5 tw-py-1 tw-text-xs tw-font-medium tw-ring-1 tw-ring-inset tw-transition-all tw-duration-200 tw-max-w-full tw-whitespace-nowrap tw-overflow-hidden tw-text-ellipsis"
-                    [ngClass]="getCellValue(row, column.field)?.class || ['tw-bg-gray-100', 'tw-ring-gray-300']">
-                    {{ getCellValue(row, column.field)?.label || 'Badge' }}
-                  </span>
+                    <!-- Expandable Content -->
+                    <div *ngSwitchCase="'expandable'">
+                      <span>{{ getCellValue(row, column.field) }}</span>
+                    </div>
 
-                  <!-- Number Content -->
-                  <span *ngSwitchCase="'number'">
-                    <ng-container *ngIf="editRow && (editingRowId === (row._tempId ?? i+1)) && (column.editing ?? true) && column.field !== '__index'; else numberView">
-                      <input
-                        type="number"
-                        class="tw-border tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white"
-                        [ngClass]="fieldErrors ? 'tw-border-red-500' : 'tw-border-gray-300'"
-                        [(ngModel)]="editingBuffer[column.field]"
-                        [attr.min]="(column.field === 'sort' || column.field === 'scoringMethod') ? 1 : null"
-                        [attr.step]="(column.field === 'sort' || column.field === 'scoringMethod') ? 1 : null"
-                        [attr.inputmode]="(column.field === 'sort' || column.field === 'scoringMethod') ? 'numeric' : null"
-                        (keydown)="onInlineNumberKeydown(column.field, $event)"
-                        (input)="onInlineNumberInput(column.field, $event)"
-                        (blur)="onInlineNumberBlur(column.field, $event)"
-                        (click)="$event.stopPropagation()"
-                      />
-                    </ng-container>
-                    <ng-template #numberView>
-                      {{ getCellValue(row, column.field) }}
-                    </ng-template>
-                  </span>
+                    <!-- Badge Content -->
+                    <span *ngSwitchCase="'badge'"
+                      class="tw-inline-flex tw-items-center tw-justify-center tw-rounded-lg tw-px-2.5 tw-py-1 tw-text-xs tw-font-medium tw-ring-1 tw-ring-inset tw-transition-all tw-duration-200 tw-max-w-full tw-whitespace-nowrap tw-overflow-hidden tw-text-ellipsis"
+                      [ngClass]="getCellValue(row, column.field)?.class || ['tw-bg-gray-100', 'tw-ring-gray-300']">
+                      {{ getCellValue(row, column.field)?.label || 'Badge' }}
+                    </span>
 
-                  <!-- Select Dropdown -->
-                  <div *ngSwitchCase="'select'" class="tw-relative">
-                    <button
-                      type="button"
-                      cdkOverlayOrigin
-                      #origin="cdkOverlayOrigin"
-                      class="dropdown-button tw-border tw-border-gray-300 tw-rounded-md tw-px-3 tw-py-1 tw-w-full tw-text-sm tw-flex tw-items-center tw-justify-between tw-truncate tw-transition-all tw-duration-200 hover:tw-border-gray-400"
-                      [id]="'dropdown-button-' + i + '-' + column.field"
-                      (click)="toggleDropdown(i, column.field, origin, $event)"
-                      [attr.aria-expanded]="isDropdownOpen(i, column.field)"
-                      [ngClass]="[
-                        isDisabledForm ? 'tw-bg-gray-100' : 'tw-bg-white',
-                      ]">
-                      <span class="tw-text-left tw-w-full tw-truncate"
-                        [class.tw-text-gray-400]="!getCellValue(row, column.field)">
-                        {{ getCellValue(row, column.field) || 'Select' }}
-                      </span>
-                      <app-icon name="chevron-down" [size]="16" fill="currentColor"
-                        [extraClass]="'tw-ml-2 tw-flex-shrink-0 tw-transition-transform tw-duration-200 ' + (isDropdownOpen(i, column.field) ? 'tw-rotate-180' : '')">
-                      </app-icon>
+                    <!-- Number Content -->
+                    <span *ngSwitchCase="'number'">
+                      <ng-container *ngIf="editRow && (editingRowId === (row._tempId ?? i+1)) && (column.editing ?? true) && column.field !== '__index'; else numberView">
+                        <input
+                          type="number"
+                          class="tw-border tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white"
+                          [ngClass]="(inlineFieldErrors[column.field] || fieldErrors) ? 'tw-border-red-500' : 'tw-border-gray-300'"
+                          [(ngModel)]="editingBuffer[column.field]"
+                          [attr.min]="(column.field === 'sort' || column.field === 'scoringMethod') ? 1 : (column.field === 'score' ? 0 : null)"
+                          [attr.max]="(column.field === 'score' ? scoreMax : null)"
+                          [attr.step]="(column.field === 'sort' || column.field === 'scoringMethod') ? 1 : (column.field === 'score' ? 'any' : null)"
+                          [attr.inputmode]="(column.field === 'sort' || column.field === 'scoringMethod') ? 'numeric' : null"
+                          (keydown)="onInlineNumberKeydown(column.field, $event)"
+                          (input)="onInlineNumberInput(column.field, $event)"
+                          (blur)="onInlineNumberBlur(column.field, $event)"
+                          (click)="$event.stopPropagation()"
+                        />
+                      </ng-container>
+                      <ng-template #numberView>
+                        {{ getCellValue(row, column.field) }}
+                      </ng-template>
+                    </span>
+
+                    <!-- Select Dropdown -->
+                    <div *ngSwitchCase="'select'" class="tw-relative">
+                      <button
+                        type="button"
+                        cdkOverlayOrigin
+                        #origin="cdkOverlayOrigin"
+                        class="dropdown-button tw-border tw-border-gray-300 tw-rounded-md tw-px-3 tw-py-1 tw-w-full tw-text-sm tw-flex tw-items-center tw-justify-between tw-truncate tw-transition-all tw-duration-200 hover:tw-border-gray-400"
+                        [id]="'dropdown-button-' + i + '-' + column.field"
+                        (click)="toggleDropdown(i, column.field, origin, $event)"
+                        [attr.aria-expanded]="isDropdownOpen(i, column.field)"
+                        [ngClass]="[
+                          isDisabledForm ? 'tw-bg-gray-100' : 'tw-bg-white',
+                        ]">
+                        <span class="tw-text-left tw-w-full tw-truncate"
+                          [class.tw-text-gray-400]="!getCellValue(row, column.field)">
+                          {{ getCellValue(row, column.field) || 'Select' }}
+                        </span>
+                        <app-icon name="chevron-down" [size]="16" fill="currentColor"
+                          [extraClass]="'tw-ml-2 tw-flex-shrink-0 tw-transition-transform tw-duration-200 ' + (isDropdownOpen(i, column.field) ? 'tw-rotate-180' : '')">
+                        </app-icon>
+                      </button>
+                    </div>
+
+                    <!-- Button Content -->
+                    <button *ngSwitchCase="'button'"
+                      class="tw-text-white tw-px-3 tw-py-1 tw-rounded tw-font-medium tw-transition-all tw-duration-200 tw-min-w-[80px] disabled:tw-bg-gray-300 disabled:tw-cursor-not-allowed"
+                      [disabled]="!row.POType" (click)="onButtonClick(column, row, $event)"
+                      [ngClass]="{
+                        'tw-bg-blue-500 hover:tw-bg-blue-600': column.buttonText === 'Submit',
+                        'tw-bg-purple-700 hover:tw-bg-purple-800': column.buttonText === 'Register',
+                        'tw-bg-gray-500 hover:tw-bg-gray-600': !column.buttonText || (column.buttonText !== 'Submit' && column.buttonText !== 'Register')
+                      }">
+                      {{ column.buttonText || 'Click' }}
                     </button>
-                  </div>
 
-                  <!-- Button Content -->
-                  <button *ngSwitchCase="'button'"
-                    class="tw-text-white tw-px-3 tw-py-1 tw-rounded tw-font-medium tw-transition-all tw-duration-200 tw-min-w-[80px] disabled:tw-bg-gray-300 disabled:tw-cursor-not-allowed"
-                    [disabled]="!row.POType" (click)="onButtonClick(column, row, $event)"
-                    [ngClass]="{
-                      'tw-bg-blue-500 hover:tw-bg-blue-600': column.buttonText === 'Submit',
-                      'tw-bg-purple-700 hover:tw-bg-purple-800': column.buttonText === 'Register',
-                      'tw-bg-gray-500 hover:tw-bg-gray-600': !column.buttonText || (column.buttonText !== 'Submit' && column.buttonText !== 'Register')
-                    }">
-                    {{ column.buttonText || 'Click' }}
-                  </button>
+                    <!-- Date Content -->
+                    <span *ngSwitchCase="'date'">
+                      {{ getCellValue(row, column.field) | date: 'dd/MM/yyyy':'UTC' }}
+                    </span>
+                    <span *ngSwitchCase="'dateWithTime'">
+                      {{ getCellValue(row, column.field) | date: 'dd/MM/yyyy HH:mm':'UTC' }}
+                    </span>
 
-                  <!-- Date Content -->
-                  <span *ngSwitchCase="'date'">
-                    {{ getCellValue(row, column.field) | date: 'dd/MM/yyyy':'UTC' }}
-                  </span>
-                  <span *ngSwitchCase="'dateWithTime'">
-                    {{ getCellValue(row, column.field) | date: 'dd/MM/yyyy HH:mm':'UTC' }}
-                  </span>
+                    <!-- List Content -->
+                    <div *ngSwitchCase="'list'">
+                      <ol class="tw-list-decimal tw-pl-4 tw-space-y-1">
+                        <li *ngFor="let item of getCellValue(row, column.field); let idx = index" class="tw-text-sm">
+                          {{ item }}
+                        </li>
+                      </ol>
+                    </div>
 
-                  <!-- List Content -->
-                  <div *ngSwitchCase="'list'">
-                    <ol class="tw-list-decimal tw-pl-4 tw-space-y-1">
-                      <li *ngFor="let item of getCellValue(row, column.field); let idx = index" class="tw-text-sm">
-                        {{ item }}
-                      </li>
-                    </ol>
-                  </div>
+                    <!-- Icon Content -->
+                    <div *ngSwitchCase="'icon'" class="tw-flex tw-justify-center tw-items-center">
+                      <app-icon [name]="getCellValue(row, column.field)?.icon || 'default'"
+                        [size]="getCellValue(row, column.field)?.size || 20"
+                        [fill]="getCellValue(row, column.field)?.fill || 'currentColor'"
+                        [extraClass]="getCellValue(row, column.field)?.extraClass || '' + 'tw-transition-colors tw-duration-200'">
+                      </app-icon>
+                    </div>
 
-                  <!-- Icon Content -->
-                  <div *ngSwitchCase="'icon'" class="tw-flex tw-justify-center tw-items-center">
-                    <app-icon [name]="getCellValue(row, column.field)?.icon || 'default'"
-                      [size]="getCellValue(row, column.field)?.size || 20"
-                      [fill]="getCellValue(row, column.field)?.fill || 'currentColor'"
-                      [extraClass]="getCellValue(row, column.field)?.extraClass || '' + 'tw-transition-colors tw-duration-200'">
-                    </app-icon>
-                  </div>
+                    <!-- toggle Content -->
+                    <div *ngSwitchCase="'toggle'">
+                      <label class="tw-inline-flex tw-items-center tw-cursor-pointer" (click)="$event.stopPropagation()">
+                        <input type="checkbox" value="" class="tw-sr-only tw-peer" [checked]="row.activeStatus && row.status!==32  && row.status!==0" (click)="onToggleChange($event, row)">
+                        <div class="tw-relative tw-w-11 tw-h-6 peer-checked:tw-bg-[#00AA00] tw-bg-gray-200 tw-rounded-full tw-peer peer-checked:after:tw-translate-x-full rtl:peer-checked:after:tw--translate-x-full tw-border-white after:tw-content-[''] after:tw-absolute after:tw-top-[2px] after:tw-start-[2px] after:tw-bg-white after:tw-rounded-full after:tw-h-5 after:tw-w-5 after:tw-transition-all"
+                          [ngClass]="{
+                            'peer-checked:tw-bg-[#00AA00]/40': isDisabledForm
+                          }"
+                        ></div>
+                      </label>
+                    </div>
 
-                  <!-- toggle Content -->
-                  <div *ngSwitchCase="'toggle'">
-                    <label class="tw-inline-flex tw-items-center tw-cursor-pointer" (click)="$event.stopPropagation()">
-                      <input type="checkbox" value="" class="tw-sr-only tw-peer" [checked]="row.activeStatus && row.status!==32  && row.status!==0" (click)="onToggleChange($event, row)">
-                      <div class="tw-relative tw-w-11 tw-h-6 peer-checked:tw-bg-[#00AA00] tw-bg-gray-200 tw-rounded-full tw-peer peer-checked:after:tw-translate-x-full rtl:peer-checked:after:tw--translate-x-full tw-border-white after:tw-content-[''] after:tw-absolute after:tw-top-[2px] after:tw-start-[2px] after:tw-bg-white after:tw-rounded-full after:tw-h-5 after:tw-w-5 after:tw-transition-all"
-                        [ngClass]="{
-                          'peer-checked:tw-bg-[#00AA00]/40': isDisabledForm
-                        }"
-                      ></div>
-                    </label>
-                  </div>
-
-                  <!-- text link Content -->
-                  <div *ngSwitchCase="'textlink'" class="tw-flex tw-justify-center tw-gap-4"
-                    (click)="$event.stopPropagation()"
-                  >
-                    <a *ngIf="column.textlinkActions?.includes('view')" href="javascript:void(0)"
-                      class="tw-text-[#5500FF] hover:tw-text-[#5f31bb] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
-                      (click)="onClickView($event, row)">
-                      <app-icon name="eye" [size]="20"></app-icon> <span>View</span>
-                    </a>
-
-                    <a *ngIf="column.textlinkActions?.includes('edit-topopup')" href="javascript:void(0)"
-                      class="tw-text-[#D97706] hover:tw-text-[#a7671e] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
-                      [class.tw-pointer-events-none]="isDisabledForm"
-                      [class.tw-opacity-50]="isDisabledForm"
-                      (click)="onClickEditDialog($event, row)">
-                      <app-icon name="pen-to-square" [size]="20"></app-icon> <span>Edit</span>
-                    </a>
-
-                    <!-- <a *ngIf="column.textlinkActions?.includes('edit-card')" href="javascript:void(0)"
-                      class="tw-text-[#D97706] hover:tw-text-[#a7671e] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
-                      [class.tw-pointer-events-none]="isDisabledForm"
-                      [class.tw-opacity-50]="isDisabledForm"
-                      (click)="onClickEditCard($event, row)">
-                      <app-icon name="pen-to-square" [size]="20"></app-icon> <span>Edit</span>
-                    </a> -->
-
-                    <a *ngIf="column.textlinkActions?.includes('edit-inrow') && editingRowId !== i+1 && !row._isNew"
-                      class="tw-text-[#D97706] hover:tw-text-[#a7671e] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
-                      [class.tw-pointer-events-none]="isDisabledForm"
-                      [class.tw-opacity-50]="isDisabledForm"
-                      (click)="onClickEdit($event, row, i+1)">
-                      <app-icon name="pen-to-square" [size]="20"></app-icon> <span>Edit</span>
-                    </a>
-
-                    <!-- <ng-container *ngIf="row._isNew; else normalActions">
-                      <a href="javascript:void(0)"
-                        class="tw-text-[#00AA00] hover:tw-text-[#148014] tw-flex tw-items-center tw-gap-1 tw-font-semibold"
-                        (click)="saveInlineCreate(row); $event.stopPropagation()">
-                        <app-icon name="file-plus-circle" [size]="20"></app-icon> <span>Save</span>
+                    <!-- text link Content -->
+                    <div *ngSwitchCase="'textlink'" class="tw-flex tw-justify-center tw-gap-4" (click)="$event.stopPropagation()">
+                      <a *ngIf="getRowTextlinkActions(column, row).includes('view')" href="javascript:void(0)"
+                        class="tw-text-[#5500FF] hover:tw-text-[#5f31bb] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
+                        (click)="onClickView($event, row)">
+                        <app-icon name="eye" [size]="20"></app-icon>
+                        <span>View</span>
                       </a>
-                      <a href="javascript:void(0)"
-                        class="tw-text-[#6C757D] hover:tw-text-[#404447] tw-flex tw-items-center tw-gap-1 tw-font-semibold"
-                        (click)="cancelInlineCreate(row); $event.stopPropagation()">
-                        <app-icon name="xmark" [size]="20"></app-icon> <span>Cancel</span>
-                      </a>
-                    </ng-container> -->
 
-                    <!-- <ng-template #normalActions> -->
+                      <a *ngIf="getRowTextlinkActions(column, row).includes('edit-topopup')" href="javascript:void(0)"
+                        class="tw-text-[#D97706] hover:tw-text-[#a7671e] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
+                        [class.tw-pointer-events-none]="isDisabledForm" [class.tw-opacity-50]="isDisabledForm"
+                        (click)="onClickEditDialog($event, row)">
+                        <app-icon name="pen-to-square" [size]="20"></app-icon>
+                        <span>Edit</span>
+                      </a>
+
+                      <a *ngIf="getRowTextlinkActions(column, row).includes('edit-inrow') && editingRowId !== i+1 && !row._isNew"
+                        class="tw-text-[#D97706] hover:tw-text-[#a7671e] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
+                        [class.tw-pointer-events-none]="isDisabledForm" [class.tw-opacity-50]="isDisabledForm"
+                        (click)="onClickEdit($event, row, i+1)">
+                        <app-icon name="pen-to-square" [size]="20"></app-icon>
+                        <span>Edit</span>
+                      </a>
+
                       <ng-container *ngIf="editingRowId === i+1 && editRow">
                         <a href="javascript:void(0)"
                           class="tw-text-[#00AA00] hover:tw-text-[#148014] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
                           (click)="onClickSave($event, row)">
-                          <app-icon name="file-plus-circle" [size]="20"></app-icon> <span>Save</span>
+                          <app-icon name="file-plus-circle" [size]="20"></app-icon>
+                          <span>Save</span>
                         </a>
-
                         <a href="javascript:void(0)"
                           class="tw-text-[#6C757D] hover:tw-text-[#404447] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
                           (click)="onClickCancel($event, row)">
-                          <app-icon name="xmark" [size]="20"></app-icon> <span>Cancel</span>
+                          <app-icon name="xmark" [size]="20"></app-icon>
+                          <span>Cancel</span>
                         </a>
                       </ng-container>
-                    <!-- </ng-template> -->
 
-                    <a *ngIf="column.textlinkActions?.includes('delete') && editingRowId !== i+1 && !row._isNew" href="javascript:void(0)"
-                      class="tw-text-[#F00] hover:tw-text-[#AA0000] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
-                      [class.tw-pointer-events-none]="isDisabledForm"
-                      [class.tw-opacity-50]="isDisabledForm"
-                      (click)="onClickDelete($event, row)">
-                      <app-icon name="trash" [size]="20"></app-icon> <span>Delete</span>
-                    </a>
-                  </div>
+                      <a *ngIf="getRowTextlinkActions(column, row).includes('delete') && editingRowId !== i+1 && !row._isNew"
+                        href="javascript:void(0)"
+                        class="tw-text-[#F00] hover:tw-text-[#AA0000] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
+                        [class.tw-pointer-events-none]="isDisabledForm" [class.tw-opacity-50]="isDisabledForm"
+                        (click)="onClickDelete($event, row)">
+                        <app-icon name="trash" [size]="20"></app-icon>
+                        <span>Delete</span>
+                      </a>
+                    </div>
 
-                </ng-container>
-              </div>
-            </td>
+
+                  </ng-container>
+                </div>
+              </td>
+            </ng-template>
+
           </ng-container>
         </tr>
       </tbody>
@@ -435,28 +459,47 @@
                 <!-- number -->
                 <ng-container *ngSwitchCase="'number'">
                   <ng-container  *ngIf="column.field !== '__index'" >
-                    <input type="number"
+                    <input
+                      type="number"
                       class="tw-border tw-border-gray-300 tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white"
                       [ngClass]="footerErrors[column.field] ? 'tw-border-red-500' : 'tw-border-gray-300'"
                       [(ngModel)]="footerRow[column.field]"
-                      [attr.min]="(column.field === 'sort' || column.field === 'scoringMethod') ? 1 : null"
-                      [attr.step]="(column.field === 'sort' || column.field === 'scoringMethod') ? 1 : null"
+                      [attr.min]="(column.field === 'sort' || column.field === 'scoringMethod') ? 1 : (column.field === 'score' ? 0 : null)"
+                      [attr.max]="(column.field === 'score' ? scoreMax : null)"
+                      [attr.step]="(column.field === 'sort' || column.field === 'scoringMethod') ? 1 : (column.field === 'score' ? 'any' : null)"
                       [attr.inputmode]="(column.field === 'sort' || column.field === 'scoringMethod') ? 'numeric' : null"
                       (keydown)="onFooterKeydown(column.field, $event)"
                       (input)="onFooterInput(column.field, $event)"
                       (blur)="onFooterBlur(column.field, $event)"
                     />
+
                   </ng-container>
                 </ng-container>
 
                 <!-- text -->
                 <ng-container *ngSwitchDefault>
                   <ng-container *ngIf="column.type === 'text'; else emptyCell">
-                    <input type="text"
-                          class="tw-border tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white"
-                          [ngClass]="fieldErrors || footerErrors[column.field] ? 'tw-border-red-500' : 'tw-border-gray-300'"
-                          [(ngModel)]="footerRow[column.field]"
-                          (input)="onFooterInput(column.field, $event)" />
+                    <ng-container *ngIf="lockedPrefixConfig && column.field === lockedPrefixConfig.field; else normalFooterText">
+                      <div class="input-affix" [class.input-affix--error]="footerErrors[column.field]">
+                        <span class="input-affix__prefix">{{ lockedPrefixConfig.prefix }}</span>
+                        <input
+                          type="text"
+                          class="input-affix__input"
+                          [value]="extractLockedSuffix(footerRow[column.field] || '')"
+                          (input)="onLockedPrefixFooterInput(column.field, $event)"
+                        />
+                      </div>
+                    </ng-container>
+
+                    <ng-template #normalFooterText>
+                      <input
+                        type="text"
+                        class="tw-border tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white"
+                        [ngClass]="fieldErrors || footerErrors[column.field] ? 'tw-border-red-500' : 'tw-border-gray-300'"
+                        [(ngModel)]="footerRow[column.field]"
+                        (input)="onFooterInput(column.field, $event)"
+                      />
+                    </ng-template>
                   </ng-container>
                   <ng-template #emptyCell>
                     <span></span>

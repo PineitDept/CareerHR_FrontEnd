@@ -83,6 +83,11 @@ export class TablesComponent
   @Input() isConfirmDialogSaveRequired: boolean = true;
   @Input() tableFixed: boolean = true;
   @Input() isReasonSave: boolean = false;
+  @Input() lockedPrefixConfig: { field: string; prefix: string } | null = null;
+  @Input() mergeByFields: string[] = [];
+  @Input() inlineFieldErrors: Record<string, boolean> = {};
+  @Input() useExternalInlineSaveFlow: boolean = false;
+  @Input() scoreMax: number = 1;
 
   @Output() selectionChanged = new EventEmitter<any[]>();
   @Output() rowClicked = new EventEmitter<any>();
@@ -98,6 +103,9 @@ export class TablesComponent
   @Output() deleteRowClicked = new EventEmitter<any>();
   @Output() selectChanged = new EventEmitter<{ rowIndex: number; field: string; value: string }>();
   @Output() rowsReordered = new EventEmitter<{ previousIndex: number; currentIndex: number }>();
+  @Output() inlineSaveAttempt = new EventEmitter<{ draft: any; original: any }>();
+  @Output() inlineCancel = new EventEmitter<any>();
+  @Output() inlineFieldCommit = new EventEmitter<{ rowIndex: number; field: string; value: any }>();
 
   sortedColumns: string[] = [];
   clickedRows: Set<string> = new Set();
@@ -629,6 +637,18 @@ export class TablesComponent
   onClickSave(event: Event, row: any): void {
     event.stopPropagation();
 
+    const doEmitAttempt = () => {
+      // รวมร่าง draft = row ปัจจุบัน + editingBuffer (ค่าที่ผู้ใช้แก้)
+      const draft = this.editingBuffer ? { ...row, ...this.editingBuffer } : { ...row };
+      this.inlineSaveAttempt.emit({ draft, original: row });
+      // ❗ ไม่ปิดโหมดแก้ไข ปล่อยให้ parent ตัดสินใจ
+    };
+
+    if (this.useExternalInlineSaveFlow) {
+      doEmitAttempt();
+      return;
+    }
+
     if (this.isConfirmDialogSaveRequired) {
       Promise.resolve().then(() => {
         const container = document.querySelector('.cdk-overlay-container');
@@ -681,6 +701,7 @@ export class TablesComponent
     // this.editedValue = '';
     this.editRow = false;
     this.editingBuffer = null;
+    this.inlineCancel.emit(row);
     console.log('Cancelled edit');
   }
 
@@ -797,6 +818,19 @@ export class TablesComponent
     const err: Record<string, boolean> = {};
     for (const f of this.requiredFooterFields || []) {
       const v = this.footerRow?.[f];
+
+      if (this.hasLockedPrefix(f)) {
+        const suffix = this.extractLockedSuffix(String(v ?? ''));
+        if (suffix === '') err[f] = true;
+        continue;
+      }
+
+      if (f === 'score') {
+        const n = Number(v);
+        if (!Number.isFinite(n) || n < 0 || n > this.scoreMax) err[f] = true;
+        continue;
+      }
+
       if (f === 'sort' || f === 'scoringMethod') {
         const n = Number(v);
         if (!Number.isFinite(n) || n < 1) err[f] = true;
@@ -811,17 +845,46 @@ export class TablesComponent
   }
 
   onFooterInput(field: string, e: Event) {
-    if (field === 'sort') this.onNumberTyping(e, 'sort');
+    if (field === 'sort' || field === 'scoringMethod') {
+      this.onNumberTyping(e, field);
+    } else if (field === 'score') {
+      const el = e.target as HTMLInputElement;
+      const sanitized = this.sanitizeDecimalNonNegative(el.value);
+      if (sanitized !== el.value) el.value = sanitized;
+
+      let n = sanitized === '' ? undefined : Number(sanitized);
+      if (n !== undefined) {
+        if (n < 0) { n = 0; el.value = '0'; }
+        if (n > this.scoreMax) { n = this.scoreMax; el.value = String(this.scoreMax); }
+      }
+      this.footerRow[field] = n;
+    }
     if (this.isRequired(field)) this.validateFooterField(field);
     this.cdr.detectChanges();
   }
 
   onFooterKeydown(field: string, e: KeyboardEvent) {
-    if (field === 'sort') this.onNumberKeydown(e, 'sort');
+    if (field === 'sort' || field === 'scoringMethod') {
+      const blocked = ['e', 'E', '+', '-', '.'];
+      if (blocked.includes(e.key)) e.preventDefault();
+    } else if (field === 'score') {
+      const blocked = ['e', 'E', '+', '-']; // อนุญาต '.'
+      if (blocked.includes(e.key)) e.preventDefault();
+    }
   }
 
   onFooterBlur(field: string, e: Event) {
-    if (field === 'sort') this.onNumberBlur(e, 'sort');
+    if (field === 'sort' || field === 'scoringMethod') {
+      this.onNumberBlur(e, field);
+    } else if (field === 'score') {
+      const el = e.target as HTMLInputElement;
+      let n = Number(el.value);
+      if (!Number.isFinite(n)) n = 0;
+      if (n < 0) n = 0;
+      if (n > this.scoreMax) n = this.scoreMax;
+      el.value = String(n);
+      this.footerRow[field] = n;
+    }
     if (this.isRequired(field)) this.validateFooterField(field);
     this.cdr.detectChanges();
   }
@@ -835,7 +898,13 @@ export class TablesComponent
     const next = { ...this.footerErrors };
     delete next[field];
 
-    if (field === 'sort' || field === 'scoringMethod') {
+    if (this.hasLockedPrefix(field)) {
+      const suffix = this.extractLockedSuffix(String(v ?? ''));
+      if (suffix === '') next[field] = true;
+    } else if (field === 'score') {
+      const n = Number(v);
+      if (!Number.isFinite(n) || n < 0 || n > this.scoreMax) next[field] = true;
+    } else if (field === 'sort' || field === 'scoringMethod') {
       const n = Number(v);
       if (!Number.isFinite(n) || n < 1) next[field] = true;
     } else {
@@ -867,32 +936,202 @@ export class TablesComponent
   }
 
   onInlineNumberKeydown(field: string, e: KeyboardEvent) {
-    if (field !== 'sort' && field !== 'scoringMethod') return;
-    const blocked = ['e', 'E', '+', '-', '.'];
-    if (blocked.includes(e.key)) e.preventDefault();
+    if (field === 'sort' || field === 'scoringMethod') {
+      const blocked = ['e', 'E', '+', '-', '.'];
+      if (blocked.includes(e.key)) e.preventDefault();
+    } else if (field === 'score') {
+      const blocked = ['e', 'E', '+', '-']; // อนุญาต '.'
+      if (blocked.includes(e.key)) e.preventDefault();
+
+      if (e.key === 'Enter') {
+        // อ่านค่าปัจจุบันจาก input แล้ว emit commit
+        const el = e.target as HTMLInputElement;
+        const sanitized = this.sanitizeDecimalNonNegative(el.value);
+        const n = sanitized === '' ? undefined : Number(sanitized);
+        const rowIndex = this.getEditingRowIndex();
+        if (rowIndex >= 0) {
+          this.inlineFieldCommit.emit({ rowIndex, field, value: n });
+        }
+        // กัน Enter ไป trigger อื่น
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }
   }
 
   onInlineNumberInput(field: string, e: Event) {
-    if (field !== 'sort' && field !== 'scoringMethod') return;
-    const el = e.target as HTMLInputElement;
-    const onlyDigits = el.value.replace(/[^\d]/g, '');
-    if (onlyDigits !== el.value) el.value = onlyDigits;
-    if (this.editingBuffer) {
-      this.editingBuffer[field] = onlyDigits === '' ? undefined : Number(onlyDigits);
+    if (field === 'sort' || field === 'scoringMethod') {
+      const el = e.target as HTMLInputElement;
+      const onlyDigits = el.value.replace(/[^\d]/g, '');
+      if (onlyDigits !== el.value) el.value = onlyDigits;
+      if (this.editingBuffer) {
+        this.editingBuffer[field] = onlyDigits === '' ? undefined : Number(onlyDigits);
+      }
+    } else if (field === 'score') {
+      const el = e.target as HTMLInputElement;
+      const sanitized = this.sanitizeDecimalNonNegative(el.value);
+      if (sanitized !== el.value) el.value = sanitized;
+
+      let n = sanitized === '' ? undefined : Number(sanitized);
+      if (n !== undefined) {
+        if (n < 0) n = 0;
+        if (n > this.scoreMax) { n = this.scoreMax; el.value = String(this.scoreMax); }
+      }
+      if (this.editingBuffer) this.editingBuffer[field] = n;
     }
   }
 
   onInlineNumberBlur(field: string, e: Event) {
-    if (field !== 'sort' && field !== 'scoringMethod') return;
-    const el = e.target as HTMLInputElement;
-    let n = Number(el.value || 0);
-    if (!Number.isFinite(n) || n < 1) n = 1;
-    el.value = String(n);
-    if (this.editingBuffer) this.editingBuffer[field] = n;
+    if (field === 'sort' || field === 'scoringMethod') {
+      const el = e.target as HTMLInputElement;
+      let n = Number(el.value || 0);
+      if (!Number.isFinite(n) || n < 1) n = 1;
+      el.value = String(n);
+      if (this.editingBuffer) this.editingBuffer[field] = n;
+    } else if (field === 'score') {
+      const el = e.target as HTMLInputElement;
+      let n = Number(el.value);
+      if (!Number.isFinite(n)) n = 0;
+      if (n < 0) n = 0;
+      if (n > this.scoreMax) n = this.scoreMax;
+      el.value = String(n);
+      if (this.editingBuffer) this.editingBuffer[field] = n;
+
+      // แจ้ง parent ว่ามีการ commit ค่านี้แล้ว (ให้ parent ไปแมพ dropdown ต่อ)
+      const rowIndex = this.getEditingRowIndex();
+      if (rowIndex >= 0) {
+        this.inlineFieldCommit.emit({ rowIndex, field, value: n });
+      }
+    }
   }
 
   // onInlineKeydown(e: KeyboardEvent, row: any) {
   //   if (e.key === 'Enter') { e.preventDefault(); this.saveInlineCreate(row); }
   //   if (e.key === 'Escape') { e.preventDefault(); this.cancelInlineCreate(row); }
   // }
+
+  getRowTextlinkActions(column: Column, row: any): string[] {
+    // เคารพ row override เสมอ แม้จะเป็น []
+    if (column?.useRowTextlinkActions) {
+      return Array.isArray(row?.textlinkActions) ? row.textlinkActions : [];
+    }
+    // ถ้าไม่ได้ใช้ row override ค่อย fallback ไปที่คอลัมน์
+    return Array.isArray(column?.textlinkActions) ? column.textlinkActions! : [];
+  }
+
+  private sanitizeDecimalNonNegative(value: string): string {
+    // เอาเฉพาะตัวเลขและจุดทศนิยม
+    let s = value.replace(/[^0-9.]/g, '');
+    // ให้มีจุดได้แค่ 1 จุด
+    const parts = s.split('.');
+    if (parts.length > 2) s = parts[0] + '.' + parts.slice(1).join('');
+    return s;
+  }
+
+  private hasLockedPrefix(field: string): boolean {
+    return !!this.lockedPrefixConfig && this.lockedPrefixConfig.field === field;
+  }
+
+  extractLockedSuffix(value: string): string {
+    const prefix = this.lockedPrefixConfig?.prefix ?? '';
+    if (typeof value !== 'string') return '';
+    const s = value.startsWith(prefix) ? value.slice(prefix.length) : value;
+    return s.trim();
+  }
+
+  onLockedPrefixEditingInput(field: string, e: Event) {
+    const el = e.target as HTMLInputElement;
+    const sanitized = this.sanitizeDecimalNonNegative(el.value);
+    if (sanitized !== el.value) el.value = sanitized;
+    const prefix = this.lockedPrefixConfig?.prefix ?? '';
+    if (this.editingBuffer) this.editingBuffer[field] = prefix + sanitized;
+  }
+
+  onLockedPrefixFooterInput(field: string, e: Event) {
+    const el = e.target as HTMLInputElement;
+    const sanitized = this.sanitizeDecimalNonNegative(el.value);
+    if (sanitized !== el.value) el.value = sanitized;
+    const prefix = this.lockedPrefixConfig?.prefix ?? '';
+    this.footerRow[field] = prefix + sanitized;
+  }
+
+  // ---------- Helpers: merge row ----------
+  isMergeField(field: string): boolean {
+    return Array.isArray(this.mergeByFields) && this.mergeByFields.includes(field);
+  }
+
+  /** เรนเดอร์เซลล์เฉพาะ "หัวกลุ่ม" (แถวแรกของค่าซ้ำ) */
+  shouldRenderMergedCell(rowIndex: number, field: string): boolean {
+    if (!this.isMergeField(field)) return true;
+    if (rowIndex === 0) return true;
+    const curr = this.getCellValue(this.rowsValue[rowIndex], field);
+    const prev = this.getCellValue(this.rowsValue[rowIndex - 1], field);
+    return curr !== prev;
+  }
+
+  /** คำนวณ rowspan ของหัวกลุ่ม */
+  getRowspan(rowIndex: number, field: string): number {
+    if (!this.isMergeField(field)) return 1;
+    const rows = this.rowsValue;
+    if (rowIndex >= rows.length) return 1;
+    const val = this.getCellValue(rows[rowIndex], field);
+    let span = 1;
+    for (let i = rowIndex + 1; i < rows.length; i++) {
+      if (this.getCellValue(rows[i], field) === val) span++;
+      else break;
+    }
+    return span;
+  }
+
+  public commitInlineSave() {
+    // เอา buffer -> ผสานเข้า row แล้วปิดโหมดแก้ไข เหมือนเดิม
+    if (this.editingBuffer && this.editingRowId != null) {
+      const index = typeof this.editingRowId === 'number'
+        ? this.editingRowId - 1
+        : this.rowsValue.findIndex(r => r._tempId === this.editingRowId);
+
+      const row = index >= 0 ? this.rowsValue[index] : null;
+      if (row) Object.assign(row, this.editingBuffer);
+    }
+    this.editingRowId = null;
+    this.editRow = false;
+    const committed = this.editingBuffer;
+    this.editingBuffer = null;
+    this.cdr.detectChanges();
+
+    // คงปล่อยอีเวนต์เดิมไว้เพื่อความเข้ากันได้
+    if (committed) this.editClicked.emit(committed);
+  }
+
+  public openInlineEditAt(rowIndex: number): void {
+    if (rowIndex == null || rowIndex < 0 || rowIndex >= this.rowsValue.length) return;
+
+    const row = this.rowsValue[rowIndex];
+
+    // สำหรับแถวปกติ component ใช้ index+1 เป็น editingRowId
+    this.editingRowId = (row?._tempId ?? (rowIndex + 1));
+    this.editRow = true;
+
+    // clone ค่าปัจจุบันเข้าบัฟเฟอร์แก้ไข
+    this.editingBuffer = typeof structuredClone === 'function'
+      ? structuredClone(row)
+      : JSON.parse(JSON.stringify(row));
+
+    this.cdr.detectChanges();
+  }
+
+  /** true เมื่อเซลล์ merge (เริ่มที่ rowIndex) ครอบคลุมจนถึงแถวสุดท้ายของตาราง */
+  isEndOfMergedGroup(rowIndex: number, field: string): boolean {
+    const span = this.getRowspan(rowIndex, field);
+    return rowIndex + span >= this.rowsValue.length;
+  }
+
+  // --- helper หาตำแหน่งแถวที่กำลังแก้ไขอยู่ ---
+  private getEditingRowIndex(): number {
+    // ถ้า editingRowId เป็นหมายเลข index จะเป็นลำดับแถว (เริ่ม 1) -> ต้องลบ 1
+    if (typeof this.editingRowId === 'number') return this.editingRowId - 1;
+    // ถ้าเป็น tempId: หา index จาก _tempId
+    const idx = this.rowsValue.findIndex(r => r._tempId === this.editingRowId);
+    return idx >= 0 ? idx : -1;
+  }
 }

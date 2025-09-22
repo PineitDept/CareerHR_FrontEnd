@@ -21,6 +21,8 @@ export interface Column {
   sortDirection?: 'asc' | 'desc' | null;
 
   editing?: boolean;
+
+  useRowTextlinkActions?: boolean;
 }
 
 export type Columns = Column[];
