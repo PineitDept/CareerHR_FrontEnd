@@ -142,6 +142,7 @@ export class ScoreDetailsComponent implements PendingDraftsAware {
                   isDelete: !!r.isDelete,
                   isDisable: !!r.isDisable,
                 };
+                if (this.scoreType === 3 && this.isIncompleteNewRowType3(it)) return;
                 this.scoreSettingsFA.push(this.buildFG(it), { emitEvent: false });
               });
               this.rebuildRowsFromForm();
@@ -997,9 +998,9 @@ export class ScoreDetailsComponent implements PendingDraftsAware {
 
   private touchChanged() {
     this.setSaveEnabled(true);
-    // Auto-save draft ต่อ scoreType ลง sessionStorage
+    // Auto-save draft (sessionStorage) — ตัด incomplete row type=3 ทิ้งก่อนเสมอ
     try {
-      const draft = this.buildSavePayload(); // payload พร้อมใช้
+      const draft = this.buildDraftPayload();
       sessionStorage.setItem(this._draftKey(), JSON.stringify(draft));
     } catch {}
   }
@@ -1019,6 +1020,29 @@ export class ScoreDetailsComponent implements PendingDraftsAware {
         isActive: !!r.activeStatus,
         isDelete: !!r.isDelete,             // เผื่อ backend ต้องการรู้สิทธิ์
         isDisable: !!r.isDisable,           // ส่งตาม semantics ที่ถูกต้อง
+        sort: idx + 1,
+        isDeleted: false,
+      }))
+    };
+  }
+
+  private buildDraftPayload() {
+    const rows = (this.scoreSettingsFA.getRawValue() as ScoreItem[]) || [];
+
+    // กรองทิ้งเฉพาะ case type=3 ที่เป็น "แถวใหม่ + ยังไม่กรอกค่า GPA"
+    const filtered = rows.filter(r => !this.isIncompleteNewRowType3(r));
+
+    return {
+      type: this.scoreType,
+      scoreName: this.scoreName,
+      items: filtered.map((r, idx) => ({
+        id: r.id,
+        condition: r.condition,
+        conditionDetail: r.conditionDetail,
+        score: Number(r.score) || 0,
+        isActive: !!r.activeStatus,
+        isDelete: !!r.isDelete,
+        isDisable: !!r.isDisable,
         sort: idx + 1,
         isDeleted: false,
       }))
@@ -1215,6 +1239,13 @@ export class ScoreDetailsComponent implements PendingDraftsAware {
     if (this.scoreSettingsFA) {
       this._baselineSnapshot = JSON.stringify(this.scoreSettingsFA.getRawValue());
     }
+  }
+
+  private isIncompleteNewRowType3(it: ScoreItem): boolean {
+    if (this.scoreType !== 3) return false;
+    const isNew = it.id == null && !!it.tempId;
+    const condEmpty = it.condition == null || String(it.condition).trim() === '';
+    return isNew && condEmpty; // ยังไม่กรอก GPA เลขจริง (หลัง prefix)
   }
 
   // ======= Cleanup =======
