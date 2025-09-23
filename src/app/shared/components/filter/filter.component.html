@@ -93,8 +93,9 @@
     <!-- Dynamic Buttons -->
     <ng-container *ngFor="let btn of actionButtons">
       <button
-        [ngStyle]="{ 'background-color': btn.color || '#0A84FF' }"
-        class="tw-text-white tw-rounded-lg tw-px-4 tw-py-2 tw-text-base disabled:tw-opacity-50 disabled:tw-cursor-not-allowed tw-min-w-[120px]"
+        class="btn-dynamic tw-text-white tw-rounded-lg tw-px-4 tw-py-2 tw-text-base
+              disabled:tw-opacity-50 disabled:tw-cursor-not-allowed tw-min-w-[120px]"
+        [style.--btn-bg]="btn.color || '#0A84FF'"
         (click)="onActionButtonClick(btn.key)"
         [disabled]="disabledKeys.includes(btn.key) || ((btn.key === 'submit' || btn.key === 'register') && (!(selectedRows.length)))"
       >

@@ -1,1 +1,13 @@
-<p>application-form works!</p>
+<!-- sentinel สำหรับ back-to-top -->
+<div id="page-top-sentinel" class="tw-h-px tw-w-px tw-opacity-0" aria-hidden="true"></div>
+
+<div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
+  <app-header-content [headerName]="'Job Application Form'" [headerType]="''"></app-header-content>
+</div>
+
+<app-filter
+  [actionButtons]="filterButtons"
+  [disabledKeys]="disabledKeys"
+  [filterDynamicButton]="true"
+  (buttonClicked)="onFilterButtonClick($event)"
+></app-filter>
