@@ -174,6 +174,10 @@ export class FilterComponent {
 
   onAllListClick() {
     this.selectedMonth = 'All';
+
+    if (this.defaultYearAll) {
+      this.selectedYear = 'All';
+    }
     this.emitDateRange(true);
   }
 

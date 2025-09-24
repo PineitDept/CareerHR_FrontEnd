@@ -38,6 +38,7 @@ export interface EmailAttachment {
 }
 
 export interface SendEmailRequest {
+  appointmentId: string
   fromEmail: string;
   fromName: string;
   to: string;

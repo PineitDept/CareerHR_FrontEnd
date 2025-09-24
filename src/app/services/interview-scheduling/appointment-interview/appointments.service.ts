@@ -150,4 +150,39 @@ export class AppointmentsService {
       loading: false,
     });
   }
+
+  addMemberToTeam(body: { appointmentId: string; teamInterviewId: number; employeeIds: number[] }): Observable<any> {
+    return this.api.post<any>('AppointmentInterviews/add-member-to-team', body, {
+      withAuth: true,
+      loading: false,
+    });
+  }
+
+  updateInterviewDate(body: { appointmentId: string; interviewDate: string }): Observable<any> {
+    return this.api.patch<any>('AppointmentInterviews/interview-date', body, {
+      withAuth: true,
+      loading: false,
+    });
+  }
+
+  updateInterviewLocation(body: { appointmentId: string; location: number }): Observable<any> {
+    return this.api.patch<any>('AppointmentInterviews/interview-location', body, {
+      withAuth: true,
+      loading: false,
+    });
+  }
+
+  getInterviewer(appointmentId: string): Observable<any> {
+    return this.api.get<any>(`AppointmentInterviews/${appointmentId}`, {
+      withAuth: true,
+      loading: false,
+    });
+  }
+
+  getAppointmentsRevision(appointmentId: string): Observable<any> {
+    return this.api.get<any>(`${this.baseAPI}/revisions/${appointmentId}`, {
+      withAuth: true,
+      loading: false,
+    });
+  }
 }

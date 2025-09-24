@@ -243,6 +243,30 @@ export class InterviewRound1Component {
     });
   }
 
+  fetchTeamInterviewer(id: number): Promise<any> {
+    return new Promise((resolve, reject) => {
+      this.interviewerService.getTeamById(id).subscribe({
+        next: (res) => resolve(res),
+        error: (err) => {
+          console.error('Error fetching team:', err);
+          reject(err);
+        }
+      });
+    });
+  }
+
+  fetchIDInterviewer(appointmentId: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+      this.appointmentsService.getInterviewer(appointmentId).subscribe({
+        next: (res) => resolve(res),
+        error: (err) => {
+          console.error('Error fetching team:', err);
+          reject(err);
+        }
+      });
+    });
+  }
+
   currentPage = 1;
 
   loadInitialAppointments(updateTabCounts = false) {
@@ -258,8 +282,8 @@ export class InterviewRound1Component {
 
     const updatedParams = {
       ...this.currentFilterParams,
-      // month: this.monthData === 12 ? undefined : this.monthData,
-      // year: this.yearData,
+      month: this.monthData,
+      year: this.yearData,
       page: this.currentFilterParams.page ?? 1,
       search: this.currentFilterParams.search,
     };
@@ -304,7 +328,7 @@ export class InterviewRound1Component {
       }),
       catchError((err) => {
         console.error('Error fetching appointments:', err);
-        return of(null); // fallback ให้ forkJoin ไปต่อได้
+        return of(null);
       }),
       finalize(() => {
         this.loading = false;
@@ -342,8 +366,6 @@ export class InterviewRound1Component {
 
     const updatedParams = {
       ...this.currentFilterParams,
-      // month: this.monthData === 12 ? undefined : this.monthData,
-      // year: this.yearData,
       page: this.currentFilterParams.page ?? 1,
       search: this.currentFilterParams.search,
     };
@@ -431,17 +453,127 @@ export class InterviewRound1Component {
     this.startDate = range.startDate;
     this.endDate = range.endDate;
 
-    const start = new Date(this.endDate);
-    this.yearData = start.getFullYear();
-    this.monthData = start.getMonth() + 1;
+    if (this.startDate == 'Invalid Date') return;
 
+    const endY = this.endDate.split('-')[0]
+    const endM = Number(this.endDate.split('-')[1])
+    const startM = Number(this.startDate.split('-')[1])
+
+    if (endY !== 'NaN') {
+      this.yearData = Number(endY);
+
+      if(endM - startM !== 11) {
+        this.monthData = endM;
+      } else {
+        this.monthData = undefined;
+      }
+    } else {
+      this.yearData = undefined;
+      this.monthData = undefined;
+    }
+
+    this.currentFilterParams = {
+      page: 1,
+      pageSize: 5,
+    };
+
+    this.hasMoreData = true;
     this.appointments = [];
-    this.loadInitialAppointments(true);
 
-    console.log(this.yearData, '=>this.yearData')
-    console.log(this.monthData, '=>this.monthData')
+    this.fetchAppointments(true);
 
     this.updateTabCounts(this.appointments);
+  }
+
+
+  onDateChange(event: Event, item: any) {
+    const input = event.target as HTMLInputElement;
+    const dateOnly = input.value;
+    const time = '00:00:00';
+
+    const dateTimeString = `${dateOnly}T${time}`;
+
+    const payload = {
+      appointmentId: item.profile.appointmentId,
+      interviewDate: dateTimeString
+    }
+
+    this.appointmentsService.updateInterviewDate(payload).subscribe({
+      error: (err) => {
+        console.error('Error update date:', err);
+
+        this.notificationService.error('Error update date');
+      }
+    });
+  }
+
+  onLocationChange(selectedValue: number, item: any) {
+
+    const payload = {
+      appointmentId: item.profile.appointmentId,
+      location: selectedValue
+    }
+
+    this.appointmentsService.updateInterviewLocation(payload).subscribe({
+      error: (err) => {
+        console.error('Error update location:', err);
+
+        this.notificationService.error('Error update location');
+      }
+    });
+  }
+
+  onRevisionChange(selectedValue: number, item: any) {
+    const appointmentId = item.profile.appointmentId;
+    const AppointmentRevision = item.profile.appointmentId.slice(0, -1) + selectedValue;
+
+    this.appointmentsService.getAppointmentsRevision(AppointmentRevision).subscribe({
+      next: (res) => {
+        this.appointments = this.appointments.map(appointment => {
+          if (appointment.profile.appointmentId === appointmentId) {
+            console.log(res.items)
+            appointment.interview = res.items[0].interview
+          }
+
+          return {
+            ...appointment
+          };
+        });
+      },
+      error: (err) => {
+        console.error('Error get revision:', err);
+      }
+    });
+  }
+
+  onRescheduledClick(item: any) {
+    const appointmentid = item.profile.appointmentId;
+    const userId = item.profile.userId;
+    const round = item.interview.round;
+    const revision = item.interview.revision;
+
+    const payload = {
+      AppointmentId: appointmentid,
+      UserId: userId,
+      Round : round,
+      Revice: revision
+    }
+
+    this.appointments = this.appointments.map((item: any) => {
+      const revision = Number(item.interview?.revision + 1 || 1);
+
+      const revisionList = Array.from({ length: revision }, (_, i) => ({
+        label: i + 1,
+        value: i + 1
+      })).reverse();
+
+      return {
+        ...item,
+        revisionList
+      };
+    });
+
+    console.log(payload)
   }
 
   // ---------- Tab counts (preserve comments) ----------
@@ -647,19 +779,48 @@ export class InterviewRound1Component {
     });
   }
 
-  onAddTeamClick(item: any) {
+  async getEmployee(item: any) {
+    const existingIdInterviewers = await this.fetchIDInterviewer(item.profile.appointmentId)
+    return existingIdInterviewers.employees.length
+  }
+
+  async onAddTeamClick(item: any) {
+    let TeamAppointmentIds = [];
+    // let interviewerListMap = []
+
+    if (item.interview.teamId !== null) {
+      try {
+        // const existingInterviewers = await this.fetchTeamInterviewer(item.interview.teamId);
+        const existingIdInterviewers = await this.fetchIDInterviewer(item.profile.appointmentId);
+
+        // const teamIds = existingInterviewers.members.map((i: any) => i.interviewerId);
+        TeamAppointmentIds = existingIdInterviewers.employees.map((i: any) => i.employeeId);
+
+        // const allExcludedIds = new Set([...teamIds, ...TeamAppointmentIds]);
+
+        // interviewerListMap = this.interviewerList.filter(
+        //   (i: any) => !allExcludedIds.has(i.value)
+        // );
+        
+      } catch (err) {
+        console.error('Error fetching team:', err);
+      }
+    }
+
     this.dropdownConfigs = [
       {
         type: 'single',
         label: 'Team',
         placeholder: 'Select Team',
         options: this.teamList,
+        defaultValue: item.interview.teamId
       },
       {
         type: 'multi',
         label: 'Interviewers',
         isHistory: false,
         options: this.interviewerList,
+        defaultSelected: TeamAppointmentIds
       }
     ];
 
@@ -693,15 +854,49 @@ export class InterviewRound1Component {
           item.teamUser = selectionMap.Interviewers.length
         }
 
-        const valuesOnly = selectionMap.Interviewers.map((item: { value: any; }) => item.value);
+        let valuesOnly = []
+
+        if (selectionMap.Interviewers !== undefined) {
+          valuesOnly = selectionMap.Interviewers.map((item: { value: any; }) => item.value);
+        }
 
         const payload = {
-          appointmentsId: item.profile.appointmentId,
+          appointmentId: item.profile.appointmentId,
           teamInterviewId: selectionMap.Team?.value,
           employeeIds: valuesOnly
         }
-        
-        console.log(payload)
+
+        this.appointmentsService.addMemberToTeam(payload).subscribe({
+          next: () => {
+            const previousPage = this.currentFilterParams.page;
+            const focusedAppointmentId = item.profile.appointmentId;
+
+            this.appointments = [];
+            this.currentFilterParams.page = 1;
+            this.hasMoreData = true;
+
+            const fetchCalls: Observable<any>[] = [this.fetchAppointments(false, false)];
+
+            for (let page = 2; page <= previousPage; page++) {
+              this.currentFilterParams.page = page;
+              fetchCalls.push(this.fetchAppointments(false, false));
+            }
+
+            forkJoin(fetchCalls).subscribe(() => {
+              setTimeout(() => {
+                const el = document.getElementById(`appointment-${focusedAppointmentId}`);
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }, 0);
+            });
+          },
+          error: (err) => {
+            console.error('Error update team:', err);
+
+            this.notificationService.error('Error update team interview');
+          }
+        });
       }
     });
 
@@ -767,8 +962,6 @@ export class InterviewRound1Component {
         const appointmentId = currentAppointmentId;
         const missCallId = result.selectionMap.Status?.value || 0;
         const isNoShow = result.isNoShow;
-
-        console.log({ appointmentId, missCallId, isNoShow })
 
         this.appointmentsService.appointmentMisscall({
           appointmentId,
@@ -854,6 +1047,7 @@ export class InterviewRound1Component {
   onSendMail(item: any) {
     const statusCall = item.interview.isCalled;
     if (statusCall !== 'complete') return;
+    if (!item.interview.locationId || !item.interview.teamId || !item.interview.date) return;
 
     this.appointmentsService.getEmailTemplate(item.profile.appointmentId, 1).subscribe({
       next: (res) => {
@@ -894,6 +1088,7 @@ export class InterviewRound1Component {
             }
 
             const payload = {
+              appointmentId: item.profile.appointmentId,
               fromEmail: from,
               fromName: res.formName,
               to: to,
@@ -1050,8 +1245,8 @@ export class InterviewRound1Component {
       page: this.currentFilterParams.page,
       pageSize: this.currentFilterParams.pageSize,
       InterviewResult: this.selectedTab === 'total' ? undefined : this.selectedTab,
-      // month: this.monthData === 12 ? undefined : this.monthData,
-      // year: this.yearData,
+      month: this.monthData,
+      year: this.yearData,
     };
 
     this.appointmentsService.getAppointments<any>(params).subscribe({

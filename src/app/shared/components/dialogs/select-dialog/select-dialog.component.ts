@@ -59,9 +59,6 @@ export class SelectDialogComponent {
         this.lenOptions = config.options.length
       }
     });
-
-    // this.missCallCount = data.dropdownConfigs?.find(c => c.missCallCount !== undefined)?.missCallCount || 0;
-
   }
 
   onCancel(): void {
@@ -78,8 +75,6 @@ export class SelectDialogComponent {
 
   onSelectionChange(selectedOptions: SelectOption[]) {
     this.dataResult = selectedOptions
-
-    console.log(this.dataResult, '=>dataResult')
   }
 
   onSingleSelectChange(selectedValue: string | number, label: string, options: SelectOption[]) {
