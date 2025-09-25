@@ -1,9 +1,21 @@
 import { Component } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
+import { ApplicationService } from '../../../services/application/application.service';
+import { CandidatePagedResult } from '../../../interfaces/Application/application.interface';
+import {
+  CandidateTracking,
+  CandidateTrackStatus,
+} from '../../../interfaces/Application/tracking.interface';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+dayjs.extend(utc);
 
+// ====== Types สำหรับฝั่ง View ======
 type StepStatus = 'done' | 'pending';
+
 type Risk = 'Normal' | 'Warning';
+
 type ScreeningStatus = 'Accept' | 'Decline' | 'Hold';
 
 interface Applicant {
@@ -66,18 +78,28 @@ interface HistoryLog {
   action: string;
 }
 
+type Variant = 'green' | 'blue' | 'gray' | 'red' | 'white';
+interface StepperItem {
+  label: string;
+  sub?: string;
+  date?: string;
+  variant?: Variant;
+}
+
 @Component({
   selector: 'app-application-form',
   templateUrl: './application-form.component.html',
   styleUrl: './application-form.component.scss',
 })
 export class ApplicationFormComponent {
+  // ====== Filter ======
   filterButtons: { label: string; key: string; color: string }[] = [];
   disabledKeys: string[] = [];
 
+  // ====== Routing ======
   applicantId: number = 0;
 
-  // ====== DATA (กำหนดค่า default ให้ไม่เป็น null/undefined) ======
+  // ====== Data Model (View) ======
   applicant: Applicant = {
     id: '',
     name: '',
@@ -88,23 +110,12 @@ export class ApplicationFormComponent {
     positions: [],
     grade: '',
     views: 0,
-    avatarUrl: '', // ปล่อยว่างไว้ได้ ถ้าไม่มีรูป
+    avatarUrl: '',
   };
 
   steps: { label: string; date?: string; status: StepStatus; sub?: string }[] =
-    [
-      { label: 'Applied', sub: 'Accept', date: '07 Aug 2025', status: 'done' },
-      { label: 'Screened', sub: 'Accept', date: '08 Aug 2025', status: 'done' },
-      {
-        label: 'Interview 1',
-        sub: 'In Schedule',
-        date: '10 Aug 2025',
-        status: 'done',
-      },
-      { label: 'Interview 2', status: 'pending' },
-      { label: 'Offered', status: 'pending' },
-      { label: 'Hired', status: 'pending' },
-    ];
+    [];
+  currentIndex = -1; // ไม่มีขั้นไหนเสร็จ = -1
 
   assessments: AssessmentItem[] = [];
   assessmentTotalScore = 0;
@@ -114,7 +125,7 @@ export class ApplicationFormComponent {
   warnings: WarningItem[] = [];
 
   screening: Screening = {
-    screenedBy: '',
+    screenedBy: '—',
     screeningDate: '',
     status: 'Accept',
     reasons: [],
@@ -130,190 +141,261 @@ export class ApplicationFormComponent {
 
   comments: CommentItem[] = [];
   currentUserName = '';
-
   newCommentText = '';
 
   transcripts: Attachment[] = [];
   certifications: Attachment[] = [];
   historyLogs: HistoryLog[] = [];
 
-  applicationFormSubmittedDate: string | Date = '2025-07-09';
+  applicationFormSubmittedDate: string | Date = '';
 
-  // เพิ่มฟิลด์ sub และ index ปัจจุบันของกระบวนการ
-  currentIndex = 2; // 0-based: Applied(0), Screened(1), Interview 1(2) -> ตามรูป
-
+  // UI: ขนาดรอยบั้งของ chevron (ไม่ใช้แล้ว แต่คงไว้หากต้องกลับไปใช้ pipeline เดิม)
   chevW = 28;
+
+  // ====== Stepper bindings ======
+  stepperItems: StepperItem[] = [];
+  activeStepIndex = 0;
+  disabledStepLabels: string[] = [];
+
+  // Loading/State
+  isLoading = false;
+  isNotFound = false;
 
   private destroy$ = new Subject<void>();
 
-  constructor(private route: ActivatedRoute) {}
+  constructor(
+    private route: ActivatedRoute,
+    private applicationService: ApplicationService
+  ) {}
 
+  // ===================== Lifecycle =====================
   ngOnInit() {
     this.filterButtons = [{ label: 'Print', key: 'print', color: '#0055FF' }];
-
     this.route.queryParams
       .pipe(takeUntil(this.destroy$))
       .subscribe((params) => {
         this.applicantId = Number(params['id'] || 0);
-
-        console.log('Applicant ID:', this.applicantId);
+        this.fetchCandidateTracking();
       });
-
-    this.loadDataFromService();
-    this.recomputeAssessmentTotals();
   }
 
-  
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 
-  // ====== ตัวอย่างโหลดข้อมูลจาก service/route (ใส่ของจริงแทนได้) ======
-  private loadDataFromService() {
-    // สมมติว่าคุณดึงมาจาก API แล้วเซ็ตค่า (ตัวอย่างข้อมูลเพื่อแสดงโครงสร้างเท่านั้น)
+  // ===================== Data Fetch =====================
+  private fetchCandidateTracking() {
+    if (!this.applicantId) {
+      this.isNotFound = true;
+      return;
+    }
+
+    this.isLoading = true;
+
+    this.applicationService
+      .getTrackingApplications({
+        page: 1,
+        pageSize: 20,
+        search: String(this.applicantId), // ใช้ applicantId เป็น search filter ตามโจทย์
+      })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res: CandidatePagedResult<CandidateTracking>) => {
+          const items = res?.items || [];
+          if (!items.length) {
+            this.isNotFound = true;
+            this.isLoading = false;
+            return;
+          }
+
+          // * ถ้า API อาจคืนมาหลายคน ให้เลือกตัวที่ userID ตรงที่สุดก่อน
+          const exact =
+            items.find((i) => Number(i.userID) === this.applicantId) ||
+            items[0];
+
+          this.mapTrackingToView(exact);
+          this.isLoading = false;
+        },
+        error: (err) => {
+          console.error(
+            '[ApplicationForm] getTrackingApplications error:',
+            err
+          );
+          this.isNotFound = true;
+          this.isLoading = false;
+        },
+      });
+  }
+
+  // ===================== Mapping =====================
+  private mapTrackingToView(ct: CandidateTracking) {
+    // ----- Applicant header -----
     this.applicant = {
-      id: 'U123',
-      name: 'Mr. Pisitpong Dammoneonswat',
-      gpa: 3.41,
-      university: 'สถาบันเทคโนโลยีพระจอมเกล้าเจ้าคุณทหารลาดกระบัง', // ✅ อัปเดต
-      faculty: 'คณะวิศวกรรมศาสตร์', // ✅ เพิ่ม
-      program: 'สาขาเครื่องมือวัด', // ✅ เพิ่ม
-      appliedDate: '2025-07-08',
-      email: 'pisitpong.mail@gmail.com',
-      positions: ['Maintenance Engineer', 'Maintenance Engineer'],
-      grade: 'Applicant Grade A',
-      views: 440,
-      avatarUrl: '', // ถ้ามี url รูปก็ใส่
-      phone: '081-234-5678',
+      id: String(ct.userID ?? ''),
+      name: ct.fullName || ct.fullNameTH || '—',
+      gpa: Number(ct.gpa ?? 0),
+      university: ct.university || '—',
+      appliedDate: ct.submitDate || '',
+      email: ct.email || '—',
+      positions: Array.from(
+        new Set(
+          (ct.positions ?? [])
+            .map((p) => p?.namePosition)
+            .filter((n): n is string => !!n)
+        )
+      ),
+      grade: ct.gradeCandidate || '—',
+      views: Number(ct.countLike ?? 0),
+      avatarUrl: '',
+      faculty: ct.faculty,
+      program: ct.major,
+      phone: ct.phoneNumber,
     };
 
-    this.steps = [
-      { label: 'Applied', date: '08 Jul 2025', status: 'done' },
-      { label: 'Screened', date: '08 Aug 2025', status: 'done' },
-      { label: 'Interview 1', date: '15 Aug 2025', status: 'done' },
-      { label: 'Interview 2', status: 'pending' },
-      { label: 'Offered', status: 'pending' },
-      { label: 'Hired', status: 'pending' },
+    this.applicationFormSubmittedDate = ct.submitDate || '';
+
+    // ----- Steps / Pipeline (ข้อมูลต้นทาง) -----
+    const stepsRaw: Array<{
+      label: string;
+      date?: string;
+      status: StepStatus;
+      sub?: string;
+    }> = [
+      {
+        label: 'Applied',
+        date: formatDay(ct.applied?.date ?? ct.submitDate),
+        status: stepStatusFrom(ct.applied, ct.submitDate),
+        sub: subFrom(ct.applied, 'Submitted'),
+      },
+      {
+        label: 'Screened',
+        date: formatDay(ct.screened?.date ?? ct.lastUpdate),
+        status: stepStatusFrom(ct.screened),
+        sub: subFrom(ct.screened, 'Screened'),
+      },
+      {
+        label: 'Interview 1',
+        date: formatDay(ct.interview1?.date),
+        status: stepStatusFrom(ct.interview1),
+        sub: subFrom(ct.interview1),
+      },
+      {
+        label: 'Interview 2',
+        date: formatDay(ct.interview2?.date),
+        status: stepStatusFrom(ct.interview2),
+        sub: subFrom(ct.interview2),
+      },
+      {
+        label: 'Offered',
+        date: formatDay(ct.offer?.date),
+        status: stepStatusFrom(ct.offer),
+        sub: subFrom(ct.offer),
+      },
+      {
+        label: 'Hired',
+        date: formatDay(ct.hired?.date),
+        status: stepStatusFrom(ct.hired),
+        sub: subFrom(ct.hired),
+      },
     ];
 
+    // index สุดท้ายที่เป็น done
+    const lastDoneIndex = stepsRaw.map((s) => s.status).lastIndexOf('done');
+
+    this.steps = stepsRaw;
+    this.currentIndex = lastDoneIndex;
+
+    // ===== Map -> StepperComponent (เวอร์ชันมี sub/date/variant) =====
+    this.stepperItems = this.steps.map((s) => ({
+      label: s.label,
+      sub: s.sub || (s.status === 'done' ? 'Accept' : ''),
+      date: s.date || '',
+      variant: statusToVariant(s.sub), // ใช้ฟังก์ชันเดิมของไฟล์นี้
+    }));
+
+    // active = ขั้นล่าสุดที่ "done" ถ้ายังไม่มี done ให้ชี้สเต็ปแรก
+    this.activeStepIndex = this.currentIndex >= 0 ? this.currentIndex : 0;
+
+    // disable: คลิกได้สูงสุดถึง "ถัดจาก currentIndex" (i <= currentIndex + 1)
+    this.disabledStepLabels = this.steps
+      .map((s, i) => (i > this.currentIndex + 1 ? s.label : ''))
+      .filter(Boolean);
+
+    // ----- Assessments (ตัวอย่าง) -----
     this.assessments = [
       {
         no: 1,
         review: 'University Education',
         result: this.applicant.university,
-        score: 1,
+        score: this.applicant.university ? 1 : 0,
         visibility: true,
-        details: 'ผ่านเกณฑ์',
-        detailsPositive: true,
+        details: this.applicant.university ? 'ผ่านเกณฑ์' : '—',
+        detailsPositive: Boolean(this.applicant.university),
       },
       {
         no: 2,
         review: 'Graduation GPA',
-        result: String(this.applicant.gpa),
-        score: 1,
+        result: String(this.applicant.gpa ?? ''),
+        score: this.applicant.gpa >= 3.2 ? 1 : this.applicant.gpa > 0 ? 0.5 : 0,
         visibility: true,
-        details: 'เกิน 3.20',
-        detailsPositive: true,
+        details:
+          this.applicant.gpa >= 3.2
+            ? 'เกิน 3.20'
+            : this.applicant.gpa > 0
+            ? 'ต่ำกว่า 3.20'
+            : '—',
+        detailsPositive: this.applicant.gpa >= 3.2,
       },
       {
         no: 3,
         review: 'EQ Test Result',
-        result: '85/100',
-        score: 0.5,
+        result: '—',
+        score: 0,
         visibility: true,
-        details: 'EQ ดี',
+        details: '—',
       },
       {
         no: 4,
         review: 'Ethics Test Result',
-        result: '10/10/10',
-        score: 0.5,
+        result: '—',
+        score: 0,
         visibility: true,
-        details: 'เต็ม',
+        details: '—',
       },
     ];
+    this.recomputeAssessmentTotals();
 
+    // ----- Warnings (mock) -----
     this.warnings = [
       {
         no: 1,
-        warning: 'BMI',
-        result: '21.2',
-        risk: 'Normal',
-        visibility: true,
-        detail: 'ปกติ',
-      },
-      {
-        no: 2,
-        warning: 'Religion',
-        result: 'No Religion',
-        risk: 'Warning',
-        visibility: true,
-        detail: 'ตามสมควร',
-      },
-      {
-        no: 3,
-        warning: 'Address',
-        result: 'ยะลา/เบตง',
-        risk: 'Normal',
-        visibility: true,
-        detail: 'ใกล้เคียง',
-      },
-      {
-        no: 4,
         warning: 'Work History',
-        result: '6 Company',
-        risk: 'Warning',
-        visibility: true,
-        detail: 'เปลี่ยนงานหลายครั้ง',
-      },
-      {
-        no: 5,
-        warning: 'Diseases',
-        result: 'No',
+        result: '—',
         risk: 'Normal',
         visibility: true,
-        detail: 'ไม่มีโรคประจำตัว',
+        detail: '—',
       },
     ];
 
+    // ----- Screening Card -----
     this.screening = {
-      screenedBy: 'Pattisara Chongsermkong',
-      screeningDate: '2025-07-07',
+      screenedBy: '—',
+      screeningDate: (ct.screened?.date ||
+        ct.lastUpdate ||
+        ct.submitDate ||
+        '') as string,
       status: 'Accept',
-      reasons: ['cant-contact'], // key จาก screeningReasonOptions
-      description: 'รายละเอียดประกอบการพิจารณา…',
+      reasons: [],
+      description: '',
     };
 
-    this.comments = [
-      {
-        id: 'c1',
-        author: 'Wihadi Yingasif',
-        date: '9 September 2025, 10:02 AM',
-        text: 'Kings put on your head…',
-      },
-      {
-        id: 'c2',
-        author: 'Wihadi Yingasif',
-        date: '9 September 2025, 10:07 AM',
-        text: 'Kings put on your head…',
-      },
-    ];
-
-    this.currentUserName = 'Wihadi Yingasif';
-
-    this.transcripts = [
-      { name: 'Official_Degree_Transcript_01.pdf', file: 'Official_P.pdf' },
-      { name: 'Official_Degree_Transcript_02.pdf', file: 'Official_P.pdf' },
-      { name: 'Official_Degree_Transcript_03.pdf', file: 'Official_P.pdf' },
-    ];
-
-    this.certifications = [
-      { name: 'Certified_Electrician_2024.pdf', file: 'Official_P.pdf' },
-      { name: 'Certified_Maintenance_2025.pdf', file: 'Official_P.pdf' },
-      { name: 'Certified_Safety_2025.pdf', file: 'Official_P.pdf' },
-    ];
-
-    this.historyLogs = [
-      { date: '24/09/2024 10:26', action: 'Approved: Transfer to QC, Staff' },
-      { date: '31/10/2024 09:02', action: 'QC: Go to NewShop' },
-    ];
+    // ----- Attachments / Comments / Logs -----
+    this.comments = [];
+    this.currentUserName = '';
+    this.transcripts = [];
+    this.certifications = [];
+    this.historyLogs = [];
   }
 
   private recomputeAssessmentTotals() {
@@ -321,12 +403,12 @@ export class ApplicationFormComponent {
       (s, it) => s + (Number(it.score) || 0),
       0
     );
-    // สมมติ max = 4 (คุณจะปรับตามกติกาจริง/ค่าวิชันได้)
     this.assessmentMaxScore = 4;
     this.assessmentRecommendation =
       this.assessmentTotalScore >= 3 ? 'Recommend for Acceptance' : '—';
   }
 
+  // ===================== UI Events =====================
   onFilterButtonClick(key: string) {
     switch (key) {
       case 'print':
@@ -340,7 +422,6 @@ export class ApplicationFormComponent {
   }
 
   addComment() {
-    // ✅ เพิ่ม
     const text = (this.newCommentText || '').trim();
     if (!text) return;
     this.comments.push({
@@ -364,15 +445,85 @@ export class ApplicationFormComponent {
     console.log('Comment card clicked');
   }
 
-  // helper: ขั้นที่ “เสร็จ/เขียว”
+  // ====== Stepper events ======
+  onStepperChanged(index: number) {
+    // อัปเดต active เฉพาะใน UI
+    // ถ้าต้องโหลดข้อมูลของสเต็ปนั้นเพิ่ม สามารถใส่ logic เพิ่มได้ที่นี่
+    this.activeStepIndex = index;
+  }
+
+  // ===== Helpers เดิม (ยังเก็บไว้เผื่อใช้งานต่อ) =====
   isDone(i: number) {
-    // ทำเขียวจนถึง currentIndex (รวม)
     return i <= this.currentIndex;
   }
 
+  private stepVariant(i: number): 'green' | 'blue' | 'gray' | 'red' | 'white' {
+    const st = this.steps?.[i];
+    return statusToVariant(st?.sub);
+  }
+
+  private isColored(i: number) {
+    const v = this.stepVariant(i);
+    return v === 'green' || v === 'blue' || v === 'red';
+  }
+
+  stepBgTextClass(i: number) {
+    const v = this.stepVariant(i);
+    switch (v) {
+      case 'green':
+        return ['tw-text-white'].concat([`tw-bg-[${COLOR.green}]`]);
+      case 'blue':
+        return ['tw-text-white'].concat([`tw-bg-[${COLOR.blue}]`]);
+      case 'red':
+        return ['tw-text-white'].concat([`tw-bg-[${COLOR.red}]`]);
+      case 'gray':
+        return ['tw-text-gray-700', `tw-bg-[${COLOR.grayBg}]`];
+      case 'white':
+      default:
+        return ['tw-text-gray-700', 'tw-bg-white'];
+    }
+  }
+
+  circleClass(i: number) {
+    const v = this.stepVariant(i);
+    if (v === 'green' || v === 'blue' || v === 'red') {
+      return ['tw-border-2', 'tw-border-white/80', 'tw-text-white'];
+    }
+    return ['tw-border', 'tw-border-gray-300', 'tw-text-gray-600'];
+  }
+
+  labelClass(i: number) {
+    const v = this.stepVariant(i);
+    if (v === 'green' || v === 'blue' || v === 'red') return ['tw-text-white'];
+    return ['tw-text-gray-700'];
+  }
+
+  chevFill(i: number) {
+    const v = this.stepVariant(i);
+    switch (v) {
+      case 'green':
+        return COLOR.green;
+      case 'blue':
+        return COLOR.blue;
+      case 'red':
+        return COLOR.red;
+      case 'gray':
+        return COLOR.white;
+      case 'white':
+      default:
+        return COLOR.white;
+    }
+  }
+
+  chevStroke(i: number) {
+    const colored = this.isColored(i);
+    return colored ? COLOR.white : COLOR.grayBorder;
+  }
+
   clipLastGreen(i: number, last: boolean) {
-    if (!(this.isDone(i) && i === this.currentIndex) || last) return {};
-    const notch = this.chevW + 2; // เดิม +1 หรือเท่ากับ chevW -> เพิ่มเป็น +2
+    if (last) return {};
+    if (!this.isColored(i)) return {};
+    const notch = this.chevW + 2;
     const poly = `polygon(0 0, calc(100% - ${notch}px) 0, 100% 50%, calc(100% - ${notch}px) 100%, 0 100%)`;
     return {
       clipPath: poly,
@@ -382,8 +533,92 @@ export class ApplicationFormComponent {
     };
   }
 
-  ngOnDestroy() {
-    this.destroy$.next();
-    this.destroy$.complete();
+  variantBg(i: number) {
+    switch (this.stepVariant(i)) {
+      case 'green':
+        return COLOR.green;
+      case 'blue':
+        return COLOR.blue;
+      case 'red':
+        return COLOR.red;
+      case 'gray':
+        return COLOR.grayBg;
+      default:
+        return COLOR.white;
+    }
   }
+  variantText(i: number) {
+    return this.isColored(i) ? '#FFFFFF' : '#374151';
+  }
+}
+
+// ====== Helpers ======
+function has(v: any): boolean {
+  return v !== undefined && v !== null && String(v).trim() !== '';
+}
+
+function formatDay(d?: string): string | undefined {
+  if (!has(d)) return undefined;
+  const m = dayjs.utc(String(d));
+  if (!m.isValid()) return undefined;
+  return m.format('DD MMM YYYY');
+}
+
+function isInProcess(status?: string | null): boolean {
+  if (!status) return false;
+  const s = String(status).trim().toLowerCase();
+  return [
+    'inprocess',
+    'in process',
+    'pending',
+    'scheduled',
+    'schedule',
+    'in schedule',
+    'awaiting',
+    'waiting',
+  ].includes(s);
+}
+
+function stepStatusFrom(
+  s?: CandidateTrackStatus,
+  fallbackDate?: string
+): StepStatus {
+  if (!s) return has(fallbackDate) ? 'done' : 'pending';
+  if (isInProcess(s.status)) return 'pending';
+  return has(s.status) || has(s.date) ? 'done' : 'pending';
+}
+
+function subFrom(s?: CandidateTrackStatus, fallback = ''): string {
+  return (s?.status && String(s.status)) || fallback;
+}
+
+// ===== Palette =====
+const COLOR = {
+  green: '#0AAA2A',
+  blue: '#0A57C3',
+  red: '#DC2626',
+  grayBg: '#F3F4F6',
+  white: '#FFFFFF',
+  grayBorder: '#E5E7EB',
+};
+
+// สถานะ -> โทนสี
+function statusToVariant(
+  raw?: string | null
+): 'green' | 'blue' | 'gray' | 'red' | 'white' {
+  const s = String(raw || '').trim().toLowerCase();
+
+  if (!s) return 'white';
+  if (/(decline|declined|reject|rejected|fail|failed|decline offer)/.test(s))
+    return 'red';
+  if (/(inprocess|in process|scheduled|schedule|in schedule|inprogress)/.test(s))
+    return 'blue';
+  if (/(pending|awaiting|waiting)/.test(s)) return 'gray';
+  if (
+    /(accept|accepted|pass|passed|hired|applied|submitted|screened|offer|offered)/.test(
+      s
+    )
+  )
+    return 'green';
+  return 'white';
 }

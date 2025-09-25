@@ -1,30 +1,41 @@
 <!-- sentinel สำหรับ back-to-top -->
-<div id="page-top-sentinel" class="tw-h-px tw-w-px tw-opacity-0" aria-hidden="true"></div>
-
+<div
+  id="page-top-sentinel"
+  class="tw-h-px tw-w-px tw-opacity-0"
+  aria-hidden="true"
+></div>
 <div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
-  <app-header-content [headerName]="'Job Application Form'" [headerType]="''"></app-header-content>
+  <app-header-content
+    [headerName]="'Job Application Form'"
+    [headerType]="''"
+  ></app-header-content>
 </div>
-
-<app-filter [actionButtons]="filterButtons" [disabledKeys]="disabledKeys" [filterDynamicButton]="true"
-  (buttonClicked)="onFilterButtonClick($event)"></app-filter>
+<app-filter
+  [actionButtons]="filterButtons"
+  [disabledKeys]="disabledKeys"
+  [filterDynamicButton]="true"
+  (buttonClicked)="onFilterButtonClick($event)"
+></app-filter>
 
 <!-- ================= MAIN GRID ================= -->
 <div class="tw-grid tw-grid-cols-3 tw-gap-6 tw-px-6 tw-py-6 tw-bg-white">
-
   <!-- =============== LEFT (2 cols) =============== -->
   <div class="tw-col-span-2 tw-space-y-4">
-
     <!-- ===== Applicant Header Card ===== -->
     <section
-      class="tw-bg-white tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-flex tw-items-stretch overflow-hidden">
-
+      class="tw-bg-white tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-flex tw-items-stretch overflow-hidden"
+    >
       <!-- Avatar -->
       <div
-        class="tw-w-[20%] tw-shrink-0 tw-overflow-hidden tw-rounded-l-xl tw-flex tw-items-center tw-justify-center tw-bg-gray-100">
+        class="tw-w-[20%] tw-shrink-0 tw-overflow-hidden tw-rounded-l-xl tw-flex tw-items-center tw-justify-center tw-bg-gray-100"
+      >
         <ng-container *ngIf="applicant.avatarUrl; else noAvatar">
-          <img class="tw-w-full tw-h-full tw-object-cover" [src]="applicant.avatarUrl" alt="avatar" />
+          <img
+            class="tw-w-full tw-h-full tw-object-cover"
+            [src]="applicant.avatarUrl"
+            alt="avatar"
+          />
         </ng-container>
-
         <ng-template #noAvatar>
           <app-icon name="user" [size]="81" class="tw-text-gray-400"></app-icon>
         </ng-template>
@@ -35,19 +46,20 @@
         <div class="tw-flex tw-items-center tw-justify-between">
           <div>
             <div
-              class="tw-inline-flex tw-items-center tw-gap-2 tw-text-[14px] tw-font-semibold tw-bg-[#DDF7F8] tw-text-[#29C6CF] tw-px-2 tw-py-1 tw-rounded-md">
-              Applied date {{ applicant.appliedDate | date:'dd MMM yyyy' }}
+              class="tw-inline-flex tw-items-center tw-gap-2 tw-text-[14px] tw-font-semibold tw-bg-[#DDF7F8] tw-text-[#29C6CF] tw-px-2 tw-py-1 tw-rounded-md"
+            >
+              Applied Date {{ applicant.appliedDate | date : "dd MMM yyyy" }}
             </div>
           </div>
-          <!-- <button class="tw-text-gray-400 hover:tw-text-gray-600" aria-label="bookmark">
-            <app-icon name="bookmark" [size]="20"></app-icon>
-          </button> -->
         </div>
 
         <div class="tw-text-[22px] tw-font-semibold">{{ applicant.name }}</div>
+
         <div class="tw-text-[14px] tw-font-medium">
-          {{ applicant.university }} {{ applicant.faculty }} {{ applicant.program }}
+          {{ applicant.university }} {{ applicant.faculty }}
+          {{ applicant.program }}
         </div>
+
         <div class="tw-text-[14px] !tw-mt-0">
           <ng-container *ngIf="applicant.gpa as gpa">
             <span class="tw-font-medium">GPA </span>
@@ -57,21 +69,25 @@
 
         <div class="tw-space-y-2 tw-py-2 !tw-mb-2">
           <div class="tw-text-[14px]">
-            <div class="tw-text-gray-500 tw-font-medium">Applied Position </div>
+            <div class="tw-text-gray-500 tw-font-medium">Applied Position</div>
             <div class="tw-whitespace-pre-line">
-              <ng-container *ngFor="let pos of applicant.positions; let i = index">
-                {{ pos }}<ng-container *ngIf="i < (applicant.positions.length || 0) - 1"><br /></ng-container>
+              <ng-container
+                *ngFor="let pos of applicant.positions; let i = index"
+              >
+                {{ pos
+                }}<ng-container
+                  *ngIf="i < (applicant.positions.length || 0) - 1"
+                  ><br
+                /></ng-container>
               </ng-container>
             </div>
           </div>
-
 
           <div class="tw-pt-2">
             <div class="tw-text-[14px] tw-flex">
               <div class="tw-text-gray-500 tw-font-medium">Email :</div>
               <div class="tw-ml-1">{{ applicant.email }}</div>
             </div>
-
             <div class="tw-text-[14px] tw-flex">
               <div class="tw-text-gray-500 tw-font-medium">Phone :</div>
               <div class="tw-ml-1">{{ applicant.phone }}</div>
@@ -79,120 +95,58 @@
           </div>
         </div>
 
-        <hr class="tw--mx-0 !tw-mt-4">
+        <hr class="tw--mx-0 !tw-mt-4" />
 
-        <div class="tw-flex tw-items-center tw-justify-between tw-pt-3 tw-text-[14px] tw-text-gray-500">
-          <div class="tw-text-gray-500 tw-font-medium">{{ applicant.grade }}</div>
+        <div
+          class="tw-flex tw-items-center tw-justify-between tw-pt-3 tw-text-[14px] tw-text-gray-500"
+        >
+          <div class="tw-text-gray-500 tw-font-medium">
+            Applicant Grade {{ applicant.grade }}
+          </div>
           <div class="tw-flex tw-items-center tw-gap-2">
-            <app-icon name="thumbs-up" [size]="18"></app-icon> {{ applicant.views }}
+            <app-icon name="thumbs-up" [size]="18"></app-icon>
+            {{ applicant.views }}
           </div>
         </div>
       </div>
-
     </section>
 
-    <!-- ===== Process Tabs / Pipeline ===== -->
+    <!-- ===== Process Tabs / Pipeline (ใช้ StepperComponent) ===== -->
     <section class="tw-w-full">
-      <!-- ชั้นหุ้มสำหรับสกรอลล์แนวนอน -->
       <div class="tw-overflow-x-auto tw-py-2 tw-scroll-px-6">
-        <!-- ชั้นกลาง: อย่างน้อย 100% เสมอ -->
         <div class="tw-min-w-full">
-          <!-- ชั้นใน: กว้าง = max(100%, max-content) เพื่อทั้ง “เต็มพื้นที่” และ “ล้นแล้วสกรอลล์” -->
           <div class="tw-w-fit tw-min-w-full tw-mx-auto">
-            <!-- แทร็ก pipeline: Grid auto-cols minmax(180px,1fr) -->
-            <div
-              class="tw-grid tw-grid-flow-col tw-auto-cols-[minmax(180px,1fr)]
-                    tw-rounded-2xl tw-border tw-border-gray-300 tw-overflow-hidden">
-
-              <ng-container *ngFor="let s of steps; let i = index; let last = last">
-                <!-- step base: ไม่ต้อง min-w/flex-1 แล้ว ให้ Grid จัดให้ -->
-                <div
-                  class="tw-relative tw-flex tw-items-center tw-gap-3 tw-pl-5 tw-pr-8 tw-py-3 tw--mr-px"
-                  [ngClass]="{
-                    'tw-bg-[#0AAA2A] tw-text-white': isDone(i),
-                    'tw-bg-white tw-text-gray-700': !isDone(i)
-                  }"
-                  [style.zIndex]="(steps.length - i)"
-                  [ngStyle]="clipLastGreen(i, last)"
-                >
-                  <!-- circle number -->
-                  <div
-                    class="tw-flex tw-items-center tw-justify-center tw-w-9 tw-h-9 tw-rounded-full tw-text-[13px] tw-font-semibold"
-                    [ngClass]="{
-                      'tw-border-2 tw-border-white/80 tw-text-white': isDone(i),
-                      'tw-border tw-border-gray-300 tw-text-gray-600': !isDone(i)
-                    }"
-                  >
-                    {{ (i + 1) | number:'2.0' }}
-                  </div>
-
-                  <!-- labels -->
-                  <div class="tw-flex tw-flex-col tw-leading-tight">
-                    <div class="tw-text-[15px] tw-font-semibold"
-                        [ngClass]="{ 'tw-text-white': isDone(i), 'tw-text-gray-700': !isDone(i) }">
-                      {{ s.label }}
-                    </div>
-                    <div class="tw-text-[12px] tw-opacity-90">
-                      {{ s.sub || (isDone(i) ? 'Accept' : (i === currentIndex ? 'In Schedule' : '')) }}
-                    </div>
-                    <div class="tw-text-[12px] tw-opacity-90">
-                      {{ s.date }}
-                    </div>
-                  </div>
-
-                  <!-- chevron -->
-                  <div *ngIf="!last"
-                      class="tw-absolute tw-inset-y-0 tw-right-[-2px] tw-pointer-events-none"
-                      [style.width.px]="chevW + 2" style="z-index:30">
-                    <svg class="tw-absolute tw-top-0 tw-right-0 tw-h-full tw-block"
-                        [attr.width]="chevW + 2" viewBox="0 0 30 100"
-                        preserveAspectRatio="none" shape-rendering="geometricPrecision">
-                      <polygon points="0,-1 30,50 0,101"
-                              [attr.fill]="isDone(i) ? '#0AAA2A' : '#FFFFFF'"></polygon>
-                      <line x1="0.5" y1="0.5" x2="27.5" y2="50.5"
-                            [attr.stroke]="isDone(i) ? '#FFFFFF' : '#E5E7EB'"
-                            stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"
-                            vector-effect="non-scaling-stroke"/>
-                      <line x1="27.5" y1="50.5" x2="0.5" y2="100.5"
-                            [attr.stroke]="isDone(i + 1) ? '#FFFFFF' : '#E5E7EB'"
-                            stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"
-                            vector-effect="non-scaling-stroke"/>
-                    </svg>
-                  </div>
-                </div>
-              </ng-container>
-
-            </div>
+            <app-stepper
+              [items]="stepperItems"
+              [activeIndex]="activeStepIndex"
+              [disableStep]="disabledStepLabels"
+              [theme]="'soft'"
+              (stepChanged)="onStepperChanged($event)"
+            ></app-stepper>
           </div>
         </div>
       </div>
     </section>
-
   </div>
 
   <!-- =============== RIGHT (1 col) =============== -->
   <aside class="tw-col-span-1 tw-space-y-6">
-
     <!-- Card: Application Screening (Green) -->
     <button
       type="button"
-      class="tw-w-full tw-rounded-2xl tw-bg-[#0F5B17] tw-text-white tw-px-6 tw-py-6 tw-text-left
-            tw-shadow-[0_8px_16px_rgba(0,0,0,0.25)]
-            tw-transition-all tw-duration-200 tw-ease-in-out
-            hover:tw-brightness-110 hover:tw-shadow-[0_12px_20px_rgba(0,0,0,0.35)]
-            focus:tw-ring-2 focus:tw-ring-white/30"
+      class="tw-w-full tw-rounded-2xl tw-bg-[#0F5B17] tw-text-white tw-px-6 tw-py-6 tw-text-left tw-shadow-[0_8px_16px_rgba(0,0,0,0.25)] tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-brightness-110 hover:tw-shadow-[0_12px_20px_rgba(0,0,0,0.35)] focus:tw-ring-2 focus:tw-ring-white/30"
       (click)="onScreeningCardClick()"
     >
       <div class="tw-flex tw-items-center tw-gap-6">
         <app-icon name="user" [size]="54" class="tw-opacity-90"></app-icon>
         <div class="tw-flex-1">
           <div class="tw-text-[14px] tw-opacity-90">
-            Application Screening<br>
-            by {{ screening.screenedBy || '—' }}
-            on {{ screening.screeningDate | date:'dd MMMM yyyy' }}
+            Application Screening<br />
+            by {{ screening.screenedBy || "—" }} on
+            {{ screening.screeningDate | date : "dd MMMM yyyy" }}
           </div>
           <div class="tw-mt-1.5 tw-text-[28px] tw-font-bold leading-none">
-            {{ screening.status || '—' }}
+            {{ screening.status || "—" }}
           </div>
         </div>
       </div>
@@ -201,21 +155,21 @@
     <!-- Card: Application Form Submitted (Blue) -->
     <button
       type="button"
-      class="tw-w-full tw-rounded-2xl tw-bg-[#0A57C3] tw-text-white tw-px-6 tw-py-6 tw-text-left
-            tw-shadow-[0_8px_16px_rgba(0,0,0,0.25)]
-            tw-transition-all tw-duration-200 tw-ease-in-out
-            hover:tw-brightness-110 hover:tw-shadow-[0_12px_20px_rgba(0,0,0,0.35)]
-            focus:tw-ring-2 focus:tw-ring-white/30"
+      class="tw-w-full tw-rounded-2xl tw-bg-[#0A57C3] tw-text-white tw-px-6 tw-py-6 tw-text-left tw-shadow-[0_8px_16px_rgba(0,0,0,0.25)] tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-brightness-110 hover:tw-shadow-[0_12px_20px_rgba(0,0,0,0.35)] focus:tw-ring-2 focus:tw-ring-white/30"
       (click)="onViewDetailClick()"
     >
       <div class="tw-flex tw-items-center tw-gap-6">
-        <app-icon name="certificate-badge" [size]="54" class="tw-opacity-90"></app-icon>
+        <app-icon
+          name="certificate-badge"
+          [size]="54"
+          class="tw-opacity-90"
+        ></app-icon>
         <div class="tw-flex-1">
           <div class="tw-text-[14px] tw-opacity-95">
             Application Form Submitted
           </div>
           <div class="tw-text-[14px] tw-opacity-90">
-            on {{ applicationFormSubmittedDate | date:'dd MMMM yyyy' }}
+            on {{ applicationFormSubmittedDate | date : "dd MMMM yyyy" }}
           </div>
           <div class="tw-mt-1.5 tw-text-[28px] tw-font-bold leading-none">
             View Detail
@@ -227,18 +181,19 @@
     <!-- Card: Comment (Purple) -->
     <button
       type="button"
-      class="tw-w-full tw-rounded-2xl tw-bg-[#5500FF] tw-text-white tw-px-6 tw-py-6 tw-text-left
-            tw-shadow-[0_8px_16px_rgba(0,0,0,0.25)]
-            tw-transition-all tw-duration-200 tw-ease-in-out
-            hover:tw-brightness-110 hover:tw-shadow-[0_12px_20px_rgba(0,0,0,0.35)]
-            focus:tw-ring-2 focus:tw-ring-white/30"
+      class="tw-w-full tw-rounded-2xl tw-bg-[#5500FF] tw-text-white tw-px-6 tw-py-6 tw-text-left tw-shadow-[0_8px_16px_rgba(0,0,0,0.25)] tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-brightness-110 hover:tw-shadow-[0_12px_20px_rgba(0,0,0,0.35)] focus:tw-ring-2 focus:tw-ring-white/30"
       (click)="onCommentClick()"
     >
       <div class="tw-flex tw-items-center tw-gap-6">
-        <app-icon name="comment-text" [size]="54" class="tw-opacity-90"></app-icon>
+        <app-icon
+          name="comment-text"
+          [size]="54"
+          class="tw-opacity-90"
+        ></app-icon>
         <div class="tw-flex-1">
           <div class="tw-text-[14px] tw-opacity-95">
-            {{ comments.length }} {{ comments.length === 1 ? 'comment' : 'comments' }}
+            {{ comments.length }}
+            {{ comments.length === 1 ? "comment" : "comments" }}
           </div>
           <div class="tw-mt-1.5 tw-text-[28px] tw-font-bold leading-none">
             Comment
@@ -246,6 +201,5 @@
         </div>
       </div>
     </button>
-
   </aside>
 </div>
