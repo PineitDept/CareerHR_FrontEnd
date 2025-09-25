@@ -127,6 +127,98 @@
         </div>
       </div>
     </section>
+
+    <!-- ===== Application Assessment ===== -->
+    <section class="tw-w-full">
+      <form [formGroup]="formDetails">
+        <div class="tw-bg-[#FFFFFF]">
+          <div
+            class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]"
+          >
+            <!-- Header + Chevron (expand/collapse) -->
+            <div
+              class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer"
+              (click)="isRevOpen = !isRevOpen"
+            >
+              <label class="tw-text-lg tw-font-bold">Application Assessment</label>
+              <app-icon
+                name="chevron-down"
+                [size]="14"
+                [extraClass]="
+                  isRevOpen
+                    ? 'tw-rotate-180 tw-transition-transform'
+                    : 'tw-transition-transform'
+                "
+              ></app-icon>
+            </div>
+
+            <hr class="tw--mx-6 tw-mt-4" />
+
+            <!-- เนื้อหาโชว์เมื่อเปิด -->
+            <ng-container *ngIf="isRevOpen">
+              <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
+                <app-tables
+                  [rows]="assessmentRows"
+                  [columns]="assessmentColumns"
+                  [showCheckbox]="false"
+                  [splitRows]="false"
+                  [hasOverflowY]="false"
+                  [enableRowClick]="false"
+                  [withinCard]="true"
+                  [isDisabledForm]="true"
+                ></app-tables>
+              </div>
+            </ng-container>
+          </div>
+        </div>
+      </form>
+    </section>
+    <!-- /Application Assessment -->
+
+    <!-- ===== Candidate Warning ===== -->
+    <section class="tw-w-full">
+      <form [formGroup]="formDetails">
+        <div class="tw-bg-[#FFFFFF]">
+          <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+            <!-- Header + Chevron (expand/collapse) -->
+            <div
+              class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer"
+              (click)="isWarnOpen = !isWarnOpen"
+            >
+              <label class="tw-text-lg tw-font-bold">Candidate Warning</label>
+              <app-icon
+                name="chevron-down"
+                [size]="14"
+                [extraClass]="
+                  isWarnOpen
+                    ? 'tw-rotate-180 tw-transition-transform'
+                    : 'tw-transition-transform'
+                "
+              ></app-icon>
+            </div>
+
+            <hr class="tw--mx-6 tw-mt-4" />
+
+            <!-- เนื้อหาโชว์เมื่อเปิด -->
+            <ng-container *ngIf="isWarnOpen">
+              <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
+                <app-tables
+                  [rows]="warningRows"
+                  [columns]="warningColumns"
+                  [showCheckbox]="false"
+                  [splitRows]="false"
+                  [hasOverflowY]="false"
+                  [enableRowClick]="false"
+                  [withinCard]="true"
+                  [isDisabledForm]="true"
+                ></app-tables>
+              </div>
+            </ng-container>
+          </div>
+        </div>
+      </form>
+    </section>
+    <!-- /Candidate Warning -->
   </div>
 
   <!-- =============== RIGHT (1 col) =============== -->
@@ -203,3 +295,11 @@
     </button>
   </aside>
 </div>
+
+<!-- Floating Back-to-Top -->
+<app-back-to-top
+  [sentinelSelector]="'#page-top-sentinel'"
+  [buttonClass]="'tw-fixed tw-bottom-6 tw-right-6 tw-rounded-full tw-h-14 tw-w-14 tw-flex tw-items-center tw-justify-center tw-shadow-xl bg-red-blood hover:bg-maroon-1 tw-text-white tw-z-[60]'"
+  [iconName]="'arrow-upward'"
+  [iconSize]="26">
+</app-back-to-top>

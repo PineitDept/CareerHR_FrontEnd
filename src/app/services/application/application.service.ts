@@ -76,4 +76,11 @@ export class ApplicationService {
       }
     );
   }
+
+  getApplicationAssessmentAndCandidateWarning(id: number): Observable<any> {
+    return this.apiService.get<any>(`Validation/candidate-score/${id}`, {
+      loading: true,
+      withAuth: true,
+    });
+  }
 }

@@ -9,13 +9,12 @@ import {
 } from '../../../interfaces/Application/tracking.interface';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import { FormBuilder, FormGroup } from '@angular/forms';
 dayjs.extend(utc);
 
 // ====== Types สำหรับฝั่ง View ======
 type StepStatus = 'done' | 'pending';
-
 type Risk = 'Normal' | 'Warning';
-
 type ScreeningStatus = 'Accept' | 'Decline' | 'Hold';
 
 interface Applicant {
@@ -38,9 +37,9 @@ interface AssessmentItem {
   no: number;
   review: string;
   result: string;
-  score: number;
-  visibility: boolean;
-  details: string;
+  score: number | string;
+  visibility: any;
+  details: any;
   detailsPositive?: boolean;
 }
 
@@ -117,6 +116,7 @@ export class ApplicationFormComponent {
     [];
   currentIndex = -1; // ไม่มีขั้นไหนเสร็จ = -1
 
+  // (ไม่ใช้ mock assessments เดิมแล้ว จะ map จาก API แทน)
   assessments: AssessmentItem[] = [];
   assessmentTotalScore = 0;
   assessmentMaxScore = 0;
@@ -149,7 +149,7 @@ export class ApplicationFormComponent {
 
   applicationFormSubmittedDate: string | Date = '';
 
-  // UI: ขนาดรอยบั้งของ chevron (ไม่ใช้แล้ว แต่คงไว้หากต้องกลับไปใช้ pipeline เดิม)
+  // UI: ขนาดรอยบั้งของ chevron (สำหรับ pipeline เดิม)
   chevW = 28;
 
   // ====== Stepper bindings ======
@@ -161,15 +161,30 @@ export class ApplicationFormComponent {
   isLoading = false;
   isNotFound = false;
 
+  // ====== Assessment UI/Form ======
+  formDetails!: FormGroup;
+  isRevOpen = true; // ปุ่ม chevron พับ/กาง
+  assessmentRows: any[] = [];
+  assessmentColumns: any[] = [];
+
+  // ====== Candidate Warning UI ======
+  isWarnOpen = true;
+  warningRows: any[] = [];
+  warningColumns: any[] = [];
+
   private destroy$ = new Subject<void>();
 
   constructor(
     private route: ActivatedRoute,
-    private applicationService: ApplicationService
+    private applicationService: ApplicationService,
+    private fb: FormBuilder
   ) {}
 
   // ===================== Lifecycle =====================
   ngOnInit() {
+    // ฟอร์มเปล่าหุ้มการ์ดตาราง (ตามโครง ScoreDetails)
+    this.formDetails = this.fb.group({});
+
     this.filterButtons = [{ label: 'Print', key: 'print', color: '#0055FF' }];
     this.route.queryParams
       .pipe(takeUntil(this.destroy$))
@@ -177,6 +192,11 @@ export class ApplicationFormComponent {
         this.applicantId = Number(params['id'] || 0);
         this.fetchCandidateTracking();
       });
+
+    // ตารางคะแนน (Assessment)
+    this.initAssessmentColumns();
+    // ตาราง Warning
+    this.initWarningColumns();
   }
 
   ngOnDestroy() {
@@ -197,7 +217,7 @@ export class ApplicationFormComponent {
       .getTrackingApplications({
         page: 1,
         pageSize: 20,
-        search: String(this.applicantId), // ใช้ applicantId เป็น search filter ตามโจทย์
+        search: String(this.applicantId), // ใช้ applicantId เป็น search filter
       })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -209,7 +229,6 @@ export class ApplicationFormComponent {
             return;
           }
 
-          // * ถ้า API อาจคืนมาหลายคน ให้เลือกตัวที่ userID ตรงที่สุดก่อน
           const exact =
             items.find((i) => Number(i.userID) === this.applicantId) ||
             items[0];
@@ -255,7 +274,7 @@ export class ApplicationFormComponent {
 
     this.applicationFormSubmittedDate = ct.submitDate || '';
 
-    // ----- Steps / Pipeline (ข้อมูลต้นทาง) -----
+    // ----- Steps / Pipeline -----
     const stepsRaw: Array<{
       label: string;
       date?: string;
@@ -300,112 +319,170 @@ export class ApplicationFormComponent {
       },
     ];
 
-    // index สุดท้ายที่เป็น done
     const lastDoneIndex = stepsRaw.map((s) => s.status).lastIndexOf('done');
 
     this.steps = stepsRaw;
     this.currentIndex = lastDoneIndex;
 
-    // ===== Map -> StepperComponent (เวอร์ชันมี sub/date/variant) =====
+    // ===== Map -> StepperComponent =====
     this.stepperItems = this.steps.map((s) => ({
       label: s.label,
       sub: s.sub || (s.status === 'done' ? 'Accept' : ''),
       date: s.date || '',
-      variant: statusToVariant(s.sub), // ใช้ฟังก์ชันเดิมของไฟล์นี้
+      variant: statusToVariant(s.sub),
     }));
 
-    // active = ขั้นล่าสุดที่ "done" ถ้ายังไม่มี done ให้ชี้สเต็ปแรก
     this.activeStepIndex = this.currentIndex >= 0 ? this.currentIndex : 0;
 
-    // disable: คลิกได้สูงสุดถึง "ถัดจาก currentIndex" (i <= currentIndex + 1)
     this.disabledStepLabels = this.steps
       .map((s, i) => (i > this.currentIndex + 1 ? s.label : ''))
       .filter(Boolean);
 
-    // ----- Assessments (ตัวอย่าง) -----
-    this.assessments = [
-      {
-        no: 1,
-        review: 'University Education',
-        result: this.applicant.university,
-        score: this.applicant.university ? 1 : 0,
-        visibility: true,
-        details: this.applicant.university ? 'ผ่านเกณฑ์' : '—',
-        detailsPositive: Boolean(this.applicant.university),
-      },
-      {
-        no: 2,
-        review: 'Graduation GPA',
-        result: String(this.applicant.gpa ?? ''),
-        score: this.applicant.gpa >= 3.2 ? 1 : this.applicant.gpa > 0 ? 0.5 : 0,
-        visibility: true,
-        details:
-          this.applicant.gpa >= 3.2
-            ? 'เกิน 3.20'
-            : this.applicant.gpa > 0
-            ? 'ต่ำกว่า 3.20'
-            : '—',
-        detailsPositive: this.applicant.gpa >= 3.2,
-      },
-      {
-        no: 3,
-        review: 'EQ Test Result',
-        result: '—',
-        score: 0,
-        visibility: true,
-        details: '—',
-      },
-      {
-        no: 4,
-        review: 'Ethics Test Result',
-        result: '—',
-        score: 0,
-        visibility: true,
-        details: '—',
-      },
-    ];
-    this.recomputeAssessmentTotals();
-
-    // ----- Warnings (mock) -----
-    this.warnings = [
-      {
-        no: 1,
-        warning: 'Work History',
-        result: '—',
-        risk: 'Normal',
-        visibility: true,
-        detail: '—',
-      },
-    ];
-
-    // ----- Screening Card -----
-    this.screening = {
-      screenedBy: '—',
-      screeningDate: (ct.screened?.date ||
-        ct.lastUpdate ||
-        ct.submitDate ||
-        '') as string,
-      status: 'Accept',
-      reasons: [],
-      description: '',
-    };
-
-    // ----- Attachments / Comments / Logs -----
-    this.comments = [];
-    this.currentUserName = '';
-    this.transcripts = [];
-    this.certifications = [];
-    this.historyLogs = [];
+    // ----- โหลด Assessment/Warning จาก API จริง -----
+    this.fetchAssessmentAndWarnings(Number(this.applicant.id || 0));
   }
 
-  private recomputeAssessmentTotals() {
-    this.assessmentTotalScore = this.assessments.reduce(
-      (s, it) => s + (Number(it.score) || 0),
-      0
-    );
-    this.assessmentMaxScore = 4;
-    this.assessmentRecommendation =
-      this.assessmentTotalScore >= 3 ? 'Recommend for Acceptance' : '—';
+  // ===================== Assessment Columns =====================
+  private initAssessmentColumns() {
+    this.assessmentColumns = [
+      { header: 'No', field: 'no', type: 'text', align: 'center', width: '56px', minWidth: '56px' },
+      { header: 'Application Review', field: 'review', type: 'text', minWidth: '220px' },
+      { header: 'Result', field: 'result', type: 'text', minWidth: '140px' },
+      { header: 'Score', field: 'score', type: 'number', align: 'center', width: '90px', minWidth: '90px', maxWidth: '100px' },
+      { header: 'Visibility', field: 'visibility', type: 'icon', align: 'center', width: '110px', minWidth: '110px' },
+      { header: 'Details', field: 'details', type: 'badge', minWidth: '220px' },
+    ];
+  }
+
+  private initWarningColumns() {
+    this.warningColumns = [
+      { header: 'No',        field: 'no',       type: 'text',  align: 'center', width: '56px', minWidth: '56px' },
+      { header: 'Warning',   field: 'warning',  type: 'text',  minWidth: '220px' },
+      { header: 'Result',    field: 'result',   type: 'text',  minWidth: '160px' },
+      { header: 'Risk',      field: 'risk',     type: 'badge', align: 'center', minWidth: '120px' },
+      { header: 'Visibility',field: 'visibility', type: 'icon', align: 'center', width: '110px', minWidth: '110px' },
+      { header: 'Detail',    field: 'detail',   type: 'text',  minWidth: '220px' },
+    ];
+  }
+
+  // ===================== Fetch & Map Assessment =====================
+  private fetchAssessmentAndWarnings(userId: number) {
+    if (!userId) return;
+    this.applicationService
+      .getApplicationAssessmentAndCandidateWarning(userId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => this.mapAssessmentFromApi(res),
+        error: (err) => console.error('[ApplicationForm] assessment error:', err),
+      });
+  }
+
+  private mapAssessmentFromApi(payload: any) {
+    // ===== Assessment (typeCondition: 1) =====
+    const groups = Array.isArray(payload?.validationGroups) ? payload.validationGroups : [];
+    const assess = groups.find((g: any) => Number(g?.typeCondition) === 1);
+
+    const rows: AssessmentItem[] = [];
+    const list = Array.isArray(assess?.validationResults) ? assess.validationResults : [];
+
+    list.forEach((it: any, idx: number) => {
+      const passed = !!it?.isPassed;
+      const resultText = has(it?.viewColumnResult) ? String(it.viewColumnResult) :
+                         has(it?.columnValue) ? String(it.columnValue) : '—';
+      const detailLabel = passed
+        ? (resultText || 'Pass')
+        : (String(it?.errorMessage || it?.conditionName || 'Failed').trim());
+
+      rows.push({
+        no: idx + 1,
+        review: String(it?.conditionName || '—').trim(),
+        result: resultText,
+        score: has(it?.columnValue) ? Number(it.columnValue) : (passed ? 1 : 0),
+        visibility: {
+          icon: passed ? 'check-circle' : 'xmark-circle',
+          fill: passed ? 'green' : 'red',
+          size: 18,
+        },
+        details: {
+          label: detailLabel,
+          class: passed
+            ? ['tw-bg-green-50', 'tw-ring-green-300', 'tw-text-green-700']
+            : ['tw-bg-red-50', 'tw-ring-red-300', 'tw-text-red-700'],
+        },
+      });
+    });
+
+    // แถว Total + Recommendation
+    const total = Number(assess?.summary?.totalConditions || rows.length || 0);
+    const passedCnt = Number(assess?.summary?.passedConditions || 0);
+    const totalScoreText = `${passedCnt}/${total || rows.length || 1}`;
+    const passPct = Number(assess?.summary?.passPercentage || (total ? (passedCnt * 100) / total : 0));
+    const recommend = passPct >= 50 ? 'Recommend for Acceptance' : 'Not Recommended for Acceptance';
+
+    rows.push({
+      no: '' as any,
+      review: 'Total',
+      result: '',
+      score: totalScoreText,
+      visibility: {
+        icon: passPct >= 50 ? 'check-circle' : 'xmark-circle',
+        fill: passPct >= 50 ? 'green' : 'red',
+        size: 18,
+      },
+      details: {
+        label: recommend,
+        class: passPct >= 50
+          ? ['tw-bg-green-50','tw-ring-green-300','tw-text-green-700']
+          : ['tw-bg-red-50','tw-ring-red-300','tw-text-red-700'],
+      },
+    });
+
+    this.assessmentRows = rows;
+
+    // ===== Candidate Warning (typeCondition: 2) =====
+    const warn = groups.find((g: any) => Number(g?.typeCondition) === 2);
+    const wlist = Array.isArray(warn?.validationResults) ? warn.validationResults : [];
+
+    const wrows = wlist.map((it: any, idx: number) => {
+      const passed = !!it?.isPassed; // ผ่าน = ไม่มีความเสี่ยง
+      const riskLabel = passed ? 'Normal' : 'Warning';
+
+      // Result แสดง viewColumnResult ถ้ามี ไม่งั้นใช้ columnValue
+      const resultText =
+        has(it?.viewColumnResult) ? String(it.viewColumnResult) :
+        has(it?.columnValue)      ? String(it.columnValue)      : '—';
+
+      // Detail: ถ้าผ่าน ใส่ข้อความกลางๆ, ถ้าไม่ผ่าน ใช้ errorMessage หรือ conditionName
+      const detailText = passed
+        ? 'No issue detected'
+        : (String(it?.errorMessage || it?.conditionName || 'Needs attention').trim());
+
+      return {
+        no: idx + 1,
+        warning: String(it?.columnName || it?.conditionName || '—').trim(),
+        result: resultText,
+
+        // Badge สีตามความเสี่ยง
+        risk: {
+          label: riskLabel,
+          class: passed
+            ? ['tw-bg-green-50','tw-ring-green-300','tw-text-green-700']
+            : ['tw-bg-red-500','tw-text-white','tw-ring-red-600'], // โทนแดงชัดแบบในภาพ
+        },
+
+        // ไอคอนสถานะ
+        visibility: {
+          icon: passed ? 'check-circle' : 'xmark-circle',
+          fill: passed ? 'green' : 'red',
+          size: 18,
+        },
+
+        // รายละเอียด
+        detail: detailText,
+      };
+    });
+
+    this.warningRows = wrows;
   }
 
   // ===================== UI Events =====================
@@ -447,8 +524,6 @@ export class ApplicationFormComponent {
 
   // ====== Stepper events ======
   onStepperChanged(index: number) {
-    // อัปเดต active เฉพาะใน UI
-    // ถ้าต้องโหลดข้อมูลของสเต็ปนั้นเพิ่ม สามารถใส่ logic เพิ่มได้ที่นี่
     this.activeStepIndex = index;
   }
 
@@ -615,7 +690,7 @@ function statusToVariant(
     return 'blue';
   if (/(pending|awaiting|waiting)/.test(s)) return 'gray';
   if (
-    /(accept|accepted|pass|passed|hired|applied|submitted|screened|offer|offered)/.test(
+    /(accept|accepted|pass|passed|hired|hire|applied|submitted|screened|offer|offered)/.test(
       s
     )
   )
