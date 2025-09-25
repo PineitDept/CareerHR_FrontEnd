@@ -1,0 +1,108 @@
+<!-- sentinel สำหรับ back-to-top -->
+<div id="page-top-sentinel" class="tw-h-px tw-w-px tw-opacity-0" aria-hidden="true"></div>
+
+<div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
+  <app-header-content [headerName]="'Score Details'" [headerType]="''"></app-header-content>
+</div>
+
+<app-filter
+  [actionButtons]="filterButtons"
+  [disabledKeys]="disabledKeys"
+  [filterDynamicButton]="true"
+  (buttonClicked)="onFilterButtonClick($event)"
+></app-filter>
+
+<app-loading></app-loading>
+
+<form [formGroup]="formDetails">
+  <div class="tw-px-6 tw-pb-4 tw-bg-[#FFFFFF]">
+    <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+      <div class="tw-flex tw-items-center tw-justify-between">
+        <label class="tw-text-lg tw-font-bold">Score Details</label>
+      </div>
+
+      <hr class="tw--mx-6 tw-mt-4">
+
+      <div class="tw-my-4">
+        <div class="tw-mb-1.5">
+          <label class="tw-text-sm tw-font-semibold">Score Name</label>
+        </div>
+        <input
+          type="text"
+          class="tw-w-full tw-bg-[#FFFFFF] tw-border tw-border-[#CED4DA] tw-rounded-lg tw-px-4 tw-py-2 tw-text-sm disabled:tw-text-[#6C757D] disabled:tw-bg-[#E9ECEF]"
+          formControlName="scoreName" />
+      </div>
+
+      <div class="tw-flex tw-items-center tw-justify-between tw-mb-4">
+        <div></div>
+
+        <button
+          *ngIf="canShowAddButton"
+          type="button"
+          (click)="onAddConditionClicked()"
+          class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-azure hover:bg-azure-dark
+                tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
+                tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-azure focus-visible:ring-azure"
+          [ngClass]="{
+            'tw-pointer-events-none tw-opacity-50': !isEditMode
+          }"
+          aria-label="Add Condition"
+        >
+          <app-icon [name]="'plus'" [size]="18" extraClass="tw-text-white"></app-icon>
+          <span class="tw-font-semibold">Add Condition</span>
+        </button>
+      </div>
+
+      <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
+        <app-tables
+          #scoreDetailsTable
+          [rows]="scoreDetailsRows"
+          [columns]="scoreDetailsColumns"
+          [showCheckbox]="false"
+          [splitRows]="false"
+          [hasOverflowY]="false"
+          [enableRowClick]="false"
+          [withinCard]="true"
+          (createInlineSave)="onInlineSave($event)"
+          (createInlineCancel)="onInlineCancel()"
+          [isAddMode]="isAddingRow"
+          [fieldErrors]="fieldErrors"
+          [highlightRowIndex]="duplicateRowIndex"
+          (deleteRowClicked)="onDeleteRowClicked($event)"
+          [requiredFooterFields]="detailsRequiredFooterFields"
+          [isConfirmDialogToggleRequired]="false"
+          [isConfirmDialogSaveRequired]="false"
+          (editClicked)="onInlineEditSave($event)"
+          [isDisabledForm]="!isEditMode"
+          (toggleChange)="onToggleChangeDetails($event)"
+          [lockedPrefixConfig]="conditionLockedCfg"
+          [inlineFieldErrors]="inlineFieldErrors"
+          [mergeByFields]="scoreType === 3 ? ['universityName'] : []"
+          [useExternalInlineSaveFlow]="scoreType === 3"
+          (inlineSaveAttempt)="onInlineSaveAttempt($event)"
+          (inlineCancel)="onInlineCancelRow($event)"
+          [scoreMax]="scoreType === 10 ? 5 : 1"
+          (selectChanged)="onSelectChanged($event)"
+          (inlineFieldCommit)="onInlineFieldCommit($event)"
+        ></app-tables>
+      </div>
+
+      <!-- Revision History footer -->
+      <app-revision-history-footer
+        [label]="'Score Detail Revision History'"
+        [revisionOptions]="revisionOptions"
+        [currentRevision]="currentRevision"
+        (revisionChange)="onRevisionChange($event)">
+      </app-revision-history-footer>
+      <!-- /Revision History footer -->
+    </div>
+  </div>
+</form>
+
+<!-- Floating Back-to-Top -->
+<app-back-to-top
+  [sentinelSelector]="'#page-top-sentinel'"
+  [buttonClass]="'tw-fixed tw-bottom-6 tw-right-6 tw-rounded-full tw-h-14 tw-w-14 tw-flex tw-items-center tw-justify-center tw-shadow-xl bg-red-blood hover:bg-maroon-1 tw-text-white tw-z-[60]'"
+  [iconName]="'arrow-upward'"
+  [iconSize]="26">
+</app-back-to-top>

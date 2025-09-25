@@ -6,21 +6,34 @@ export interface CandidateTrackStatus {
   date?: string; // ใช้ string เพื่อรองรับ DateTime ISO จาก API
 }
 
+export interface Positions {
+  iDjobPST?: number;
+  namePosition?: string;
+}
+
 export interface CandidateTracking {
   userID: number;
   fullName: string;
   fullNameTH: string;
   gradeCandidate: string;
+  countLike?: number;
   submitDate?: string;
+  email?: string;
+  phoneNumber?: string;
   gpa?: number;
   university: string;
   uniID?: number;
+  faculty?: string;
+  major?: string;
   statusCSD: number;
+  applied: CandidateTrackStatus;
+  screened: CandidateTrackStatus;
   interview1: CandidateTrackStatus;
   interview2: CandidateTrackStatus;
   offer: CandidateTrackStatus;
   hired: CandidateTrackStatus;
   lastUpdate?: string;
+  positions?: Positions[];
 }
 
 export interface TrackingRow {

@@ -31,6 +31,8 @@ export class OfferEmploymentComponent {
   createInitialTabs(): TabMenu[] {
     return [
       { key: 'total', label: 'All Status', count: 0 },
+    //   { key: 'hire', label: 'Hire', count: 0 },
+    //   { key: 'not-hire', label: 'Not Hire', count: 0 },
       { key: 'pending', label: 'Pending', count: 0 },
       { key: 'in-process', label: 'In Process', count: 0 },
       { key: 'scheduled', label: 'Scheduled', count: 0 }

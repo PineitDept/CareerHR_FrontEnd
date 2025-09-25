@@ -41,6 +41,8 @@ import { MailDialogComponent } from './components/dialogs/mail-dialog/mail-dialo
 import { RevisionHistoryFooterComponent } from './components/revision-history-footer/revision-history-footer.component';
 import { QuillModule } from 'ngx-quill';
 import { quillInitFactory } from '../app.module';
+import { UniversityPickerDialogComponent } from './components/dialogs/university-picker-dialog/university-picker-dialog.component';
+import { StepperComponent } from './components/stepper/stepper.component';
 
 @NgModule({
   declarations: [
@@ -67,6 +69,8 @@ import { quillInitFactory } from '../app.module';
     SelectDialogComponent,
     MailDialogComponent,
     RevisionHistoryFooterComponent,
+    UniversityPickerDialogComponent,
+    StepperComponent,
   ],
   imports: [
     CommonModule,
@@ -110,9 +114,11 @@ import { quillInitFactory } from '../app.module';
     FullCalendarModule,
     SlickCarouselModule,
     RevisionHistoryFooterComponent,
+    UniversityPickerDialogComponent,
+    StepperComponent,
   ],
   providers: [
     { provide: APP_INITIALIZER, useFactory: quillInitFactory, multi: true },
-  ],
+  ]
 })
 export class SharedModule { }

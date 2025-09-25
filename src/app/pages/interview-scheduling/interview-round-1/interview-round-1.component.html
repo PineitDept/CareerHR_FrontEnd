@@ -128,7 +128,7 @@
                             <p class="tw-mb-3"><strong>Interview Date </strong><span class="text-red">*</span></p>
                             <input [ngClass]="(item.interview.isEmailSent || item.revisionList[0].value !== item.interview.revision) ? 'tw-pointer-events-none' : ''"
                                 class="tw-w-full tw-block tw-bg-gray-light-4 tw-border tw-border-[#d1d5db] tw-rounded-[8px] tw-p-2 tw-text-sm tw-outline-none tw-gap-2 placeholder:tw-text-[#ADB5BD]"
-                                type="date" [min]="today" [value]="item.interview.date | date:'yyyy-MM-dd'" (change)="onDateChange($event, item)">
+                                type="datetime-local" [min]="today" [value]="item.interview.date | date:'yyyy-MM-ddTHH:mm'" (change)="onDateChange($event, item)">
                         </div>
                         <div class="tw-flex-1">
                             <p class="tw-mb-3"><strong>Interview Location </strong><span class="text-red">*</span></p>
@@ -202,6 +202,9 @@
                             <p class="tw-text-[10px] tw-mt-2" *ngIf="item.interview.missCallCount">
                                 {{ item.interview.missCallHistory[0].missCallAt | date:'dd/MM/yyyy hh:mm a' }} {{
                                 item.interview.missCallHistory[0].missCallReason }}
+                            </p>
+                            <p class="tw-text-[10px] tw-mt-2" *ngIf="item.interview.sendAt">
+                                {{ item.interview.sendAt | date:'dd/MM/yyyy hh:mm a' }} The email has been sent.
                             </p>
                         </div>
                     </div>

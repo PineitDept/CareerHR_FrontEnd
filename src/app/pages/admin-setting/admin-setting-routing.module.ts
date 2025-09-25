@@ -26,6 +26,8 @@ import { JobPositionDetalisComponent } from './pages/data-setting/manpower/job-p
 import { InterviewerListComponent } from './pages/data-setting/interviewer/interviewer-list/interviewer-list.component';
 import { InterviewerTeamsComponent } from './pages/data-setting/interviewer/interviewer-teams/interviewer-teams.component';
 import { InterviewerTeamsDetailsComponent } from './pages/data-setting/interviewer/interviewer-teams/pages/interviewer-teams-details/interviewer-teams-details.component';
+import { ScoreComponent } from './pages/data-setting/application/score/score.component';
+import { ScoreDetailsComponent } from './pages/data-setting/application/score/pages/score-details/score-details.component';
 
 const routes: Routes = [
   {
@@ -132,6 +134,15 @@ const routes: Routes = [
       {
         path: 'data-setting/interviewer/interviewer-teams/details',
         component: InterviewerTeamsDetailsComponent,
+        canDeactivate: [PendingDraftsGuard]
+      },
+      {
+        path: 'data-setting/application/score',
+        component: ScoreComponent
+      },
+      {
+        path: 'data-setting/application/score/details',
+        component: ScoreDetailsComponent,
         canDeactivate: [PendingDraftsGuard]
       },
     ],

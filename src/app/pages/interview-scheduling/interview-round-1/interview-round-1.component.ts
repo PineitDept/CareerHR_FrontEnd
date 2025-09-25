@@ -496,14 +496,11 @@ export class InterviewRound1Component {
 
   onDateChange(event: Event, item: any) {
     const input = event.target as HTMLInputElement;
-    const dateOnly = input.value;
-    const time = '00:00:00';
-
-    const dateTimeString = `${dateOnly}T${time}`;
+    const dateTime = input.value;
 
     const payload = {
       appointmentId: item.profile.appointmentId,
-      interviewDate: dateTimeString
+      interviewDate: dateTime
     }
 
     this.appointmentsService.updateInterviewDate(payload).subscribe({

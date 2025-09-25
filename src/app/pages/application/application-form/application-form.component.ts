@@ -1,12 +1,12 @@
 import { Component } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
-import { ApplicationService } from '../../../../../services/application/application.service';
-import { CandidatePagedResult } from '../../../../../interfaces/Application/application.interface';
+import { ApplicationService } from '../../../services/application/application.service';
+import { CandidatePagedResult } from '../../../interfaces/Application/application.interface';
 import {
   CandidateTracking,
   CandidateTrackStatus,
-} from '../../../../../interfaces/Application/tracking.interface';
+} from '../../../interfaces/Application/tracking.interface';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 dayjs.extend(utc);
@@ -87,11 +87,11 @@ interface StepperItem {
 }
 
 @Component({
-  selector: 'app-interview-form-details',
-  templateUrl: './interview-form-details.component.html',
-  styleUrl: './interview-form-details.component.scss'
+  selector: 'app-application-form',
+  templateUrl: './application-form.component.html',
+  styleUrl: './application-form.component.scss',
 })
-export class InterviewFormDetailsComponent {
+export class ApplicationFormComponent {
   // ====== Filter ======
   filterButtons: { label: string; key: string; color: string }[] = [];
   disabledKeys: string[] = [];
@@ -214,6 +214,7 @@ export class InterviewFormDetailsComponent {
             items.find((i) => Number(i.userID) === this.applicantId) ||
             items[0];
 
+          this.mapTrackingToView(exact);
           this.isLoading = false;
         },
         error: (err) => {
@@ -228,6 +229,174 @@ export class InterviewFormDetailsComponent {
   }
 
   // ===================== Mapping =====================
+  private mapTrackingToView(ct: CandidateTracking) {
+    // ----- Applicant header -----
+    this.applicant = {
+      id: String(ct.userID ?? ''),
+      name: ct.fullName || ct.fullNameTH || '—',
+      gpa: Number(ct.gpa ?? 0),
+      university: ct.university || '—',
+      appliedDate: ct.submitDate || '',
+      email: ct.email || '—',
+      positions: Array.from(
+        new Set(
+          (ct.positions ?? [])
+            .map((p) => p?.namePosition)
+            .filter((n): n is string => !!n)
+        )
+      ),
+      grade: ct.gradeCandidate || '—',
+      views: Number(ct.countLike ?? 0),
+      avatarUrl: '',
+      faculty: ct.faculty,
+      program: ct.major,
+      phone: ct.phoneNumber,
+    };
+
+    this.applicationFormSubmittedDate = ct.submitDate || '';
+
+    // ----- Steps / Pipeline (ข้อมูลต้นทาง) -----
+    const stepsRaw: Array<{
+      label: string;
+      date?: string;
+      status: StepStatus;
+      sub?: string;
+    }> = [
+      {
+        label: 'Applied',
+        date: formatDay(ct.applied?.date ?? ct.submitDate),
+        status: stepStatusFrom(ct.applied, ct.submitDate),
+        sub: subFrom(ct.applied, 'Submitted'),
+      },
+      {
+        label: 'Screened',
+        date: formatDay(ct.screened?.date ?? ct.lastUpdate),
+        status: stepStatusFrom(ct.screened),
+        sub: subFrom(ct.screened, 'Screened'),
+      },
+      {
+        label: 'Interview 1',
+        date: formatDay(ct.interview1?.date),
+        status: stepStatusFrom(ct.interview1),
+        sub: subFrom(ct.interview1),
+      },
+      {
+        label: 'Interview 2',
+        date: formatDay(ct.interview2?.date),
+        status: stepStatusFrom(ct.interview2),
+        sub: subFrom(ct.interview2),
+      },
+      {
+        label: 'Offered',
+        date: formatDay(ct.offer?.date),
+        status: stepStatusFrom(ct.offer),
+        sub: subFrom(ct.offer),
+      },
+      {
+        label: 'Hired',
+        date: formatDay(ct.hired?.date),
+        status: stepStatusFrom(ct.hired),
+        sub: subFrom(ct.hired),
+      },
+    ];
+
+    // index สุดท้ายที่เป็น done
+    const lastDoneIndex = stepsRaw.map((s) => s.status).lastIndexOf('done');
+
+    this.steps = stepsRaw;
+    this.currentIndex = lastDoneIndex;
+
+    // ===== Map -> StepperComponent (เวอร์ชันมี sub/date/variant) =====
+    this.stepperItems = this.steps.map((s) => ({
+      label: s.label,
+      sub: s.sub || (s.status === 'done' ? 'Accept' : ''),
+      date: s.date || '',
+      variant: statusToVariant(s.sub), // ใช้ฟังก์ชันเดิมของไฟล์นี้
+    }));
+
+    // active = ขั้นล่าสุดที่ "done" ถ้ายังไม่มี done ให้ชี้สเต็ปแรก
+    this.activeStepIndex = this.currentIndex >= 0 ? this.currentIndex : 0;
+
+    // disable: คลิกได้สูงสุดถึง "ถัดจาก currentIndex" (i <= currentIndex + 1)
+    this.disabledStepLabels = this.steps
+      .map((s, i) => (i > this.currentIndex + 1 ? s.label : ''))
+      .filter(Boolean);
+
+    // ----- Assessments (ตัวอย่าง) -----
+    this.assessments = [
+      {
+        no: 1,
+        review: 'University Education',
+        result: this.applicant.university,
+        score: this.applicant.university ? 1 : 0,
+        visibility: true,
+        details: this.applicant.university ? 'ผ่านเกณฑ์' : '—',
+        detailsPositive: Boolean(this.applicant.university),
+      },
+      {
+        no: 2,
+        review: 'Graduation GPA',
+        result: String(this.applicant.gpa ?? ''),
+        score: this.applicant.gpa >= 3.2 ? 1 : this.applicant.gpa > 0 ? 0.5 : 0,
+        visibility: true,
+        details:
+          this.applicant.gpa >= 3.2
+            ? 'เกิน 3.20'
+            : this.applicant.gpa > 0
+            ? 'ต่ำกว่า 3.20'
+            : '—',
+        detailsPositive: this.applicant.gpa >= 3.2,
+      },
+      {
+        no: 3,
+        review: 'EQ Test Result',
+        result: '—',
+        score: 0,
+        visibility: true,
+        details: '—',
+      },
+      {
+        no: 4,
+        review: 'Ethics Test Result',
+        result: '—',
+        score: 0,
+        visibility: true,
+        details: '—',
+      },
+    ];
+    this.recomputeAssessmentTotals();
+
+    // ----- Warnings (mock) -----
+    this.warnings = [
+      {
+        no: 1,
+        warning: 'Work History',
+        result: '—',
+        risk: 'Normal',
+        visibility: true,
+        detail: '—',
+      },
+    ];
+
+    // ----- Screening Card -----
+    this.screening = {
+      screenedBy: '—',
+      screeningDate: (ct.screened?.date ||
+        ct.lastUpdate ||
+        ct.submitDate ||
+        '') as string,
+      status: 'Accept',
+      reasons: [],
+      description: '',
+    };
+
+    // ----- Attachments / Comments / Logs -----
+    this.comments = [];
+    this.currentUserName = '';
+    this.transcripts = [];
+    this.certifications = [];
+    this.historyLogs = [];
+  }
 
   private recomputeAssessmentTotals() {
     this.assessmentTotalScore = this.assessments.reduce(

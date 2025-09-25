@@ -34,7 +34,9 @@ export class InterviewRound1HistoryComponent {
       { key: 'pass-interview', label: 'Pass Interview', count: 0 },
       { key: 'not-pass-interview', label: 'Not Pass Interview', count: 0 },
       { key: 'no-show', label: 'No Show', count: 0 },
-      { key: 'candidate-decline', label: 'Candidate Decline', count: 0 },
+      { key: 'candidate-decline-interview', label: 'Candidate Decline', count: 0 },
+      // { key: 'hire-offer', label: 'Hire', count: 0 },
+      // { key: 'candidate-decline-offer', label: 'Not Hire', count: 0 },
     ];
   }
 
@@ -496,14 +498,11 @@ export class InterviewRound1HistoryComponent {
 
   onDateChange(event: Event, item: any) {
     const input = event.target as HTMLInputElement;
-    const dateOnly = input.value;
-    const time = '00:00:00';
-
-    const dateTimeString = `${dateOnly}T${time}`;
+    const dateTime = input.value;
 
     const payload = {
       appointmentId: item.profile.appointmentId,
-      interviewDate: dateTimeString
+      interviewDate: dateTime
     }
 
     this.appointmentsService.updateInterviewDate(payload).subscribe({

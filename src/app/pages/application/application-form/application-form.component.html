@@ -6,7 +6,7 @@
 ></div>
 <div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
   <app-header-content
-    [headerName]="'Interview Result'"
+    [headerName]="'Job Application Form'"
     [headerType]="''"
   ></app-header-content>
 </div>
@@ -106,6 +106,23 @@
           <div class="tw-flex tw-items-center tw-gap-2">
             <app-icon name="thumbs-up" [size]="18"></app-icon>
             {{ applicant.views }}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Process Tabs / Pipeline (ใช้ StepperComponent) ===== -->
+    <section class="tw-w-full">
+      <div class="tw-overflow-x-auto tw-py-2 tw-scroll-px-6">
+        <div class="tw-min-w-full">
+          <div class="tw-w-fit tw-min-w-full tw-mx-auto">
+            <app-stepper
+              [items]="stepperItems"
+              [activeIndex]="activeStepIndex"
+              [disableStep]="disabledStepLabels"
+              [theme]="'soft'"
+              (stepChanged)="onStepperChanged($event)"
+            ></app-stepper>
           </div>
         </div>
       </div>

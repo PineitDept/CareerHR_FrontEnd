@@ -1,0 +1,67 @@
+/* ใช้ CSS variable:
+   --step-bg         : สีพื้นของ step
+   --divider-color   : สีเส้นคั่นหลัก
+   --divider-shadow  : สีเงาเบลอของเส้นคั่น
+*/
+.tw-triangle-right {
+  position: relative;
+  will-change: transform;
+}
+
+/* หัวสามเหลี่ยม (พื้น) */
+.tw-triangle-right::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -28px;                  /* ความกว้างหัวสามเหลี่ยม */
+  width: 28px;
+  height: 100%;
+  background: var(--step-bg, #ffffff);
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+  pointer-events: none;
+  z-index: 1;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* เส้นคั่นตามสันสามเหลี่ยม — double-stroke: outer halo + inner core */
+.tw-triangle-right::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -28px;
+  width: 28px;
+  height: 100%;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-image: url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 100' preserveAspectRatio='none'>\
+  <!-- เส้นนอก (halo) โปร่งแสงเพื่อเพิ่มความชัดโดยไม่เปลี่ยนสีรวม -->\
+  <path d='M1,1 L27,50 L1,99' fill='none' stroke='var(--divider-color,%23E5E7EB)' stroke-opacity='0.35' stroke-width='3' stroke-linecap='round' stroke-linejoin='round' vector-effect='non-scaling-stroke'/>\
+  <!-- เส้นใน (core) คมชัด -->\
+  <path d='M1,1 L27,50 L1,99' fill='none' stroke='var(--divider-color,%23E5E7EB)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' vector-effect='non-scaling-stroke'/>\
+</svg>");
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+  pointer-events: none;
+  z-index: 2;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  /* เงาบางมากช่วยคมขึ้นเล็กน้อยโดยไม่โดด */
+  filter: drop-shadow(0 0 0.5px var(--divider-shadow, transparent));
+}
+
+/* step สุดท้ายไม่ต้องมีหัวสามเหลี่ยมหรือเส้น */
+.tw-triangle-none::after,
+.tw-triangle-none::before {
+  display: none;
+}
+
+/* ไม่ต้องมีขอบซ้อนระหว่างปุ่มติดกัน */
+.tw-triangle-right + .tw-triangle-right {
+  border-left: none;
+}
+
+/* เพิ่มช่องว่างระหว่างหัวสามเหลี่ยมของ step ก่อนหน้า กับวงกลมเลขของ step ถัดไป */
+.tw-triangle-right:not(:first-child) > .step-index {
+  margin-left: clamp(10px, 1.6vw, 16px);
+}
