@@ -133,6 +133,8 @@ export class CalendarComponent implements AfterViewInit {
     const eventInterviewType = clickInfo.event.extendedProps?.['interview'];
     const eventUserID = clickInfo.event.extendedProps?.['userId']
 
+    console.log(clickInfo.event.extendedProps, '=>clickInfo.event.extendedProps')
+
     // if (eventInterviewType === 1) {
     //   this.router.navigate(['/interview-scheduling/interview-round-1']);
     //   console.log('Navigating to Interview Round 1');
@@ -145,9 +147,10 @@ export class CalendarComponent implements AfterViewInit {
     // }
 
     const queryParams = {
-      userid: eventUserID
+      id: eventUserID,
+      interview: eventInterviewType
     }
-    this.router.navigate(['/interview-scheduling/interview-round-1'], { queryParams });
+    this.router.navigate(['/interview-scheduling/interview-form/details'], { queryParams });
   }
 
   gotoDate(dateStr: string) {

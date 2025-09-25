@@ -182,6 +182,13 @@ export class AppointmentsService {
   getAppointmentsRevision(appointmentId: string): Observable<any> {
     return this.api.get<any>(`${this.baseAPI}/revisions/${appointmentId}`, {
       withAuth: true,
+      loading: true,
+    });
+  }
+
+  postReschedule(body: { appointmentId: string; userId: number; round: number; revice: number }): Observable<any> {
+    return this.api.post<any>('AppointmentInterviews/reschedule', body, {
+      withAuth: true,
       loading: false,
     });
   }

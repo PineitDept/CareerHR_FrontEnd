@@ -1,20 +1,20 @@
 import { ChangeDetectorRef, Component, computed, ElementRef, QueryList, signal, ViewChild, ViewChildren } from '@angular/core';
-import { InterviewerService } from '../../../services/admin-setting/interviewer/interviewer.service';
+import { InterviewerService } from '../../../../../services/admin-setting/interviewer/interviewer.service';
 import { ActivatedRoute, Router } from '@angular/router';
-import { DateRange, SearchForm } from '../../../interfaces/interview-scheduling/interview.interface';
-import { ICandidateFilterRequest, TabMenu } from '../../../interfaces/Application/application.interface';
+import { DateRange, SearchForm } from '../../../../../interfaces/interview-scheduling/interview.interface';
+import { ICandidateFilterRequest, TabMenu } from '../../../../../interfaces/Application/application.interface';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
-import { SelectDialogComponent, SelectOption } from '../../../shared/components/dialogs/select-dialog/select-dialog.component';
-import { GeneralBenefitsService } from '../../../services/admin-setting/general-benefits/general-benefits.service';
-import { IApiResponse, IBenefitsFilterRequest, IUniversityWithPositionsDto } from '../../../interfaces/admin-setting/general-benefits.interface';
-import { JobPositionService } from '../../../services/admin-setting/job-position/job-position.service';
+import { SelectDialogComponent, SelectOption } from '../../../../../shared/components/dialogs/select-dialog/select-dialog.component';
+import { GeneralBenefitsService } from '../../../../../services/admin-setting/general-benefits/general-benefits.service';
+import { IApiResponse, IBenefitsFilterRequest, IUniversityWithPositionsDto } from '../../../../../interfaces/admin-setting/general-benefits.interface';
+import { JobPositionService } from '../../../../../services/admin-setting/job-position/job-position.service';
 import { SlickCarouselComponent } from 'ngx-slick-carousel';
-import { MailDialogComponent } from '../../../shared/components/dialogs/mail-dialog/mail-dialog.component';
-import { AppointmentsService } from '../../../services/interview-scheduling/appointment-interview/appointments.service';
-import { AlertDialogComponent } from '../../../shared/components/dialogs/alert-dialog/alert-dialog.component';
+import { MailDialogComponent } from '../../../../../shared/components/dialogs/mail-dialog/mail-dialog.component';
+import { AppointmentsService } from '../../../../../services/interview-scheduling/appointment-interview/appointments.service';
+import { AlertDialogComponent } from '../../../../../shared/components/dialogs/alert-dialog/alert-dialog.component';
 import { catchError, finalize, forkJoin, map, Observable, of, tap } from 'rxjs';
-import { NotificationService } from '../../../shared/services/notification/notification.service';
+import { NotificationService } from '../../../../../shared/services/notification/notification.service';
 
 const SEARCH_OPTIONS: string[] = [
   'Applicant ID',
@@ -22,19 +22,19 @@ const SEARCH_OPTIONS: string[] = [
 ] as const;
 
 @Component({
-  selector: 'app-interview-round-1',
-  templateUrl: './interview-round-1.component.html',
-  styleUrl: './interview-round-1.component.scss'
+  selector: 'app-interview-round-2-history',
+  templateUrl: './interview-round-2-history.component.html',
+  styleUrl: './interview-round-2-history.component.scss'
 })
-
-export class InterviewRound1Component {
+export class InterviewRound2HistoryComponent {
 
   createInitialTabs(): TabMenu[] {
     return [
       { key: 'total', label: 'All Status', count: 0 },
-      { key: 'pending', label: 'Pending', count: 0 },
-      { key: 'in-process', label: 'In Process', count: 0 },
-      { key: 'scheduled', label: 'Scheduled', count: 0 }
+      { key: 'pass-interview', label: 'Pass Interview', count: 0 },
+      { key: 'not-pass-interview', label: 'Not Pass Interview', count: 0 },
+      { key: 'no-show', label: 'No Show', count: 0 },
+      { key: 'candidate-decline', label: 'Candidate Decline', count: 0 },
     ];
   }
 
@@ -153,8 +153,8 @@ export class InterviewRound1Component {
     const day = String(now.getDate()).padStart(2, '0');
 
     this.today = `${year}-${month}-${day}`;
-
-    this.appointmentsService.setAppointmentsType(1);
+    
+    this.appointmentsService.setAppointmentsType(2);
 
     const savedSearch = sessionStorage.getItem('interviewSearchForm');
     if (savedSearch) {
@@ -172,7 +172,7 @@ export class InterviewRound1Component {
     this.fetchInterviewer();
     this.fetchStatusCall();
 
-    this.filterButtons = [{ label: 'History', key: 'history', color: 'transparent', outlineBtn: true }];
+    this.filterButtons = [{ label: 'Scheduled', key: 'back', color: 'transparent', outlineBtn: true }];
   }
 
   // ---------- Data fetching ----------
@@ -296,7 +296,7 @@ export class InterviewRound1Component {
       search: this.currentFilterParams.search,
     };
 
-    const obs$ = this.appointmentsService.getAppointments<any>(updatedParams).pipe(
+    const obs$ = this.appointmentsService.getAppointmentsHistory<any>(updatedParams).pipe(
       tap((res) => {
         const newItems = res.items || [];
         this.appointments = [...this.appointments, ...newItems];
@@ -628,7 +628,7 @@ export class InterviewRound1Component {
   onInterviewFormClicked(item: any) {
     const queryParams = {
       id: item.profile.appointmentId,
-      interview: 1
+      interview: 2
     }
     this.router.navigate(['/interview-scheduling/interview-form/details'], { queryParams });
   }
@@ -1253,14 +1253,14 @@ export class InterviewRound1Component {
 
   getButtonClass(resultCode: number): string {
     switch (resultCode) {
-      case 12:
-        return 'tw-bg-[#FAFBC8] tw-text-[#AAAA00]'; // pending
-      case 15:
-        return 'tw-bg-[#F9E9C8] tw-text-[#AA5500]'; // in process
-      case 16:
-        return 'tw-bg-[#E0EEFA] tw-text-[#0085FF]'; // scheduled
+      case 21:
+        return 'tw-bg-[#AAFFAA] tw-text-[#00AA00]'; // pass
+      case 22:
+        return 'tw-bg-[#9300001A] tw-text-[#660708]'; // not pass
+      case 25:
+        return 'tw-bg-[#FF00551F] tw-text-[#FF0055]'; // candidate decline
       default:
-        return 'tw-bg-[#e9e9e9] tw-text-[#373737]';
+        return 'tw-bg-[#e9e9e9] tw-text-[#373737]'; // No Show
     }
   }
 
@@ -1335,7 +1335,7 @@ export class InterviewRound1Component {
       year: this.yearData,
     };
 
-    this.appointmentsService.getAppointments<any>(params).subscribe({
+    this.appointmentsService.getAppointmentsHistory<any>(params).subscribe({
       next: (res) => {
         const newItems = res.items || [];
 
@@ -1378,8 +1378,8 @@ export class InterviewRound1Component {
 
   onFilterButtonClick(key: string) {
     switch (key) {
-      case 'history':
-        this.router.navigate(['/interview-scheduling/interview-round-1/history']);
+      case 'back':
+        this.router.navigate(['/interview-scheduling/interview-round-2']);
         break;
     }
   }

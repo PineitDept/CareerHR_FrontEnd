@@ -14,6 +14,7 @@ import { MailDialogComponent } from '../../../shared/components/dialogs/mail-dia
 import { AppointmentsService } from '../../../services/interview-scheduling/appointment-interview/appointments.service';
 import { AlertDialogComponent } from '../../../shared/components/dialogs/alert-dialog/alert-dialog.component';
 import { catchError, finalize, forkJoin, map, Observable, of, tap } from 'rxjs';
+import { NotificationService } from '../../../shared/services/notification/notification.service';
 
 const SEARCH_OPTIONS: string[] = [
   'Applicant ID',
@@ -69,6 +70,8 @@ export class InterviewRound2Component {
   teamList: any;
   interviewerList: any;
   revisionList: any;
+  teamName = "Team"
+  teamUser = 0
 
   // ---------- Appointments / UI state ----------
   appointments: any[] = [];
@@ -92,12 +95,7 @@ export class InterviewRound2Component {
   dataStatusCall: any[] = [];
   dataStatusCallFirst: any[] = [];
   dataStatusCallSecond: any[] = [];
-
-  historyData = [
-    { date: '2025/09/18', time: '10:00am', status: 'โทรติดแต่ไม่รับสาย', value: 1 },
-    { date: '2025/09/17', time: '10:00am', status: 'โทรไม่ติด / ปิดเครื่อง', value: 2 },
-    { date: '2025/09/16', time: '10:00am', status: 'Voicemail', value: 3 },
-  ];
+  historyData: any[] = [];
 
   selectedPositions: { label: string; value: number }[] = [];
 
@@ -137,13 +135,12 @@ export class InterviewRound2Component {
   constructor(
     private interviewerService: InterviewerService,
     private router: Router,
-    private route: ActivatedRoute,
-    private fb: FormBuilder,
     private dialog: MatDialog,
     private cdr: ChangeDetectorRef,
     private benefitsService: GeneralBenefitsService,
     private jobPositionService: JobPositionService,
     private appointmentsService: AppointmentsService,
+    private notificationService: NotificationService,
   ) { }
 
   // ---------- Lifecycle ----------
@@ -177,10 +174,12 @@ export class InterviewRound2Component {
         const list = Array.isArray(res) ? res : ((res as any)?.items ?? (res as any)?.data ?? []);
         const activeLocations = (list as any[]).filter(x => x?.isActive !== false);
 
-        this.locationsList = activeLocations.map(loc => ({
-          label: loc.locationName,
-          value: loc.locationId
-        }));
+        this.locationsList = activeLocations
+          .filter(loc => loc.locationId !== 95)
+          .map(loc => ({
+            label: loc.locationName,
+            value: loc.locationId
+          }));
       },
       error: (error) => {
         console.error('Error fetching location details:', error);
@@ -245,6 +244,30 @@ export class InterviewRound2Component {
     });
   }
 
+  fetchTeamInterviewer(id: number): Promise<any> {
+    return new Promise((resolve, reject) => {
+      this.interviewerService.getTeamById(id).subscribe({
+        next: (res) => resolve(res),
+        error: (err) => {
+          console.error('Error fetching team:', err);
+          reject(err);
+        }
+      });
+    });
+  }
+
+  fetchIDInterviewer(appointmentId: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+      this.appointmentsService.getInterviewer(appointmentId).subscribe({
+        next: (res) => resolve(res),
+        error: (err) => {
+          console.error('Error fetching team:', err);
+          reject(err);
+        }
+      });
+    });
+  }
+
   currentPage = 1;
 
   loadInitialAppointments(updateTabCounts = false) {
@@ -260,7 +283,8 @@ export class InterviewRound2Component {
 
     const updatedParams = {
       ...this.currentFilterParams,
-      month: this.monthData === 12 ? undefined : this.monthData,
+      month: this.monthData,
+      year: this.yearData,
       page: this.currentFilterParams.page ?? 1,
       search: this.currentFilterParams.search,
     };
@@ -305,7 +329,7 @@ export class InterviewRound2Component {
       }),
       catchError((err) => {
         console.error('Error fetching appointments:', err);
-        return of(null); // fallback ให้ forkJoin ไปต่อได้
+        return of(null);
       }),
       finalize(() => {
         this.loading = false;
@@ -343,8 +367,6 @@ export class InterviewRound2Component {
 
     const updatedParams = {
       ...this.currentFilterParams,
-      month: this.monthData === 12 ? undefined : this.monthData,
-      // year: this.yearData,
       page: this.currentFilterParams.page ?? 1,
       search: this.currentFilterParams.search,
     };
@@ -432,14 +454,176 @@ export class InterviewRound2Component {
     this.startDate = range.startDate;
     this.endDate = range.endDate;
 
-    const start = new Date(this.endDate);
-    this.yearData = start.getFullYear();
-    this.monthData = start.getMonth() + 1;
+    if (this.startDate == 'Invalid Date') return;
 
+    const endY = this.endDate.split('-')[0]
+    const endM = Number(this.endDate.split('-')[1])
+    const startM = Number(this.startDate.split('-')[1])
+
+    if (endY !== 'NaN') {
+      this.yearData = Number(endY);
+
+      if(endM - startM !== 11) {
+        this.monthData = endM;
+      } else {
+        this.monthData = undefined;
+      }
+    } else {
+      this.yearData = undefined;
+      this.monthData = undefined;
+    }
+
+    this.currentFilterParams = {
+      page: 1,
+      pageSize: 5,
+    };
+
+    this.hasMoreData = true;
     this.appointments = [];
-    this.loadInitialAppointments(true);
 
-    // this.updateTabCounts(this.appointments);
+    this.fetchAppointments(true);
+
+    this.updateTabCounts(this.appointments);
+  }
+
+
+  onDateChange(event: Event, item: any) {
+    const input = event.target as HTMLInputElement;
+    const dateOnly = input.value;
+    const time = '00:00:00';
+
+    const dateTimeString = `${dateOnly}T${time}`;
+
+    const payload = {
+      appointmentId: item.profile.appointmentId,
+      interviewDate: dateTimeString
+    }
+
+    this.appointmentsService.updateInterviewDate(payload).subscribe({
+      error: (err) => {
+        console.error('Error update date:', err);
+
+        this.notificationService.error('Error update date');
+      }
+    });
+  }
+
+  onLocationChange(selectedValue: number, item: any) {
+
+    const payload = {
+      appointmentId: item.profile.appointmentId,
+      location: selectedValue
+    }
+
+    this.appointmentsService.updateInterviewLocation(payload).subscribe({
+      error: (err) => {
+        console.error('Error update location:', err);
+
+        this.notificationService.error('Error update location');
+      }
+    });
+  }
+
+  changeRevision: boolean | undefined;
+  onRevisionChange(selectedValue: number, item: any) {
+    const appointmentId = item.profile.appointmentId;
+    const AppointmentRevision = item.profile.appointmentId.slice(0, -1) + selectedValue;
+
+    this.appointmentsService.getAppointmentsRevision(AppointmentRevision).subscribe({
+      next: (res) => {
+        this.appointments = this.appointments.map(appointment => {
+          if (appointment.profile.appointmentId === appointmentId) {
+            this.changeRevision = true
+            appointment.interview = res.items[0].interview
+          }
+
+          return {
+            ...appointment
+          };
+        });
+      },
+      error: (err) => {
+        console.error('Error get revision:', err);
+      }
+    });
+  }
+
+  onRescheduledClick(item: any) {
+    Promise.resolve().then(() => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.add('dimmed-overlay');
+    });
+
+    const dialogRef = this.dialog.open(AlertDialogComponent, {
+      width: '496px',
+      panelClass: 'custom-dialog-container',
+      autoFocus: false,
+      disableClose: true,
+      data: {
+        title: 'Confirmation',
+        message: 'Do you want to reschedule this appointment?',
+        confirm: true
+      }
+    });
+
+    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.remove('dimmed-overlay');
+
+      if (confirmed) {
+        const appointmentid = item.profile.appointmentId;
+        const userId = item.profile.userId;
+        const round = item.interview.round;
+        const revision = item.interview.revision;
+
+        const payload = {
+          appointmentId: appointmentid,
+          userId: userId,
+          round : round,
+          revice: revision
+        }
+
+        this.appointmentsService.postReschedule(payload).subscribe({
+          next: () => {
+            const previousPage = this.currentFilterParams.page;
+            const focusedAppointmentId = item.profile.appointmentId;
+
+            this.appointments = [];
+            this.currentFilterParams.page = 1;
+            this.hasMoreData = true;
+
+            const fetchCalls: Observable<any>[] = [this.fetchAppointments(false, false)];
+
+            for (let page = 2; page <= previousPage; page++) {
+              this.currentFilterParams.page = page;
+              fetchCalls.push(this.fetchAppointments(false, false));
+            }
+
+            forkJoin(fetchCalls).subscribe(() => {
+              setTimeout(() => {
+                const el = document.getElementById(`appointment-${focusedAppointmentId}`);
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }, 500);
+            });
+          },
+          error: (err) => {
+            console.error('Error Rescheduled:', err);
+
+            this.notificationService.error('Error Rescheduled');
+          }
+        });
+      }
+    })
+  }
+
+  onInterviewFormClicked(item: any) {
+    const queryParams = {
+      id: item.profile.appointmentId,
+      interview: 2
+    }
+    this.router.navigate(['/interview-scheduling/interview-form/details'], { queryParams });
   }
 
   // ---------- Tab counts (preserve comments) ----------
@@ -494,11 +678,7 @@ export class InterviewRound2Component {
       )
     );
 
-    this.historyData = [
-      { date: '2025/09/18', time: '10:00am', status: 'โทรติดแต่ไม่รับสาย', value: 1 },
-      { date: '2025/09/17', time: '10:00am', status: 'โทรไม่ติด / ปิดเครื่อง', value: 2 },
-      { date: '2025/09/16', time: '10:00am', status: 'Voicemail', value: 3 },
-    ];
+    this.historyData = [];
 
     this.fetchPositionLogFor(this.appointments[index]).subscribe(() => {
       const dataPosLogs = this.appointments[index].positionLogs;
@@ -649,19 +829,48 @@ export class InterviewRound2Component {
     });
   }
 
-  onAddTeamClick() {
+  async getEmployee(item: any) {
+    const existingIdInterviewers = await this.fetchIDInterviewer(item.profile.appointmentId)
+    return existingIdInterviewers.employees.length
+  }
+
+  async onAddTeamClick(item: any) {
+    let TeamAppointmentIds = [];
+    // let interviewerListMap = []
+
+    if (item.interview.teamId !== null) {
+      try {
+        // const existingInterviewers = await this.fetchTeamInterviewer(item.interview.teamId);
+        const existingIdInterviewers = await this.fetchIDInterviewer(item.profile.appointmentId);
+
+        // const teamIds = existingInterviewers.members.map((i: any) => i.interviewerId);
+        TeamAppointmentIds = existingIdInterviewers.employees.map((i: any) => i.employeeId);
+
+        // const allExcludedIds = new Set([...teamIds, ...TeamAppointmentIds]);
+
+        // interviewerListMap = this.interviewerList.filter(
+        //   (i: any) => !allExcludedIds.has(i.value)
+        // );
+        
+      } catch (err) {
+        console.error('Error fetching team:', err);
+      }
+    }
+
     this.dropdownConfigs = [
       {
         type: 'single',
         label: 'Team',
         placeholder: 'Select Team',
         options: this.teamList,
+        defaultValue: item.interview.teamId
       },
       {
         type: 'multi',
         label: 'Interviewers',
         isHistory: false,
         options: this.interviewerList,
+        defaultSelected: TeamAppointmentIds
       }
     ];
 
@@ -680,14 +889,72 @@ export class InterviewRound2Component {
       }
     });
 
-    dialogRef.afterClosed().subscribe((result: boolean) => {
+    dialogRef.afterClosed().subscribe(async (result: any) => {
       const container = document.querySelector('.cdk-overlay-container');
       container?.classList.remove('dimmed-overlay');
 
       if (result) {
-        console.log('Selected values from dialog:', result);
+        const selectionMap = result.selectionMap;
+
+        item.teamName = this.getTeamNameById(selectionMap.Team?.value)
+
+        let valuesOnly = []
+        let teamId = '';
+
+        if (selectionMap.Interviewers === undefined) {
+          item.teamUser = 0
+          valuesOnly = TeamAppointmentIds
+        } else {
+          item.teamUser = selectionMap.Interviewers.length
+          valuesOnly = selectionMap.Interviewers.map((item: { value: any; }) => item.value);
+        }
+
+        if (selectionMap.Team !== undefined) {
+          teamId = selectionMap.Team?.value
+        } else {
+          teamId = item.interview.teamId
+        }
+
+        const payload = {
+          appointmentId: item.profile.appointmentId,
+          teamInterviewId: Number(teamId),
+          employeeIds: valuesOnly
+        }
+
+        this.appointmentsService.addMemberToTeam(payload).subscribe({
+          next: () => {
+            const previousPage = this.currentFilterParams.page;
+            const focusedAppointmentId = item.profile.appointmentId;
+
+            this.appointments = [];
+            this.currentFilterParams.page = 1;
+            this.hasMoreData = true;
+
+            const fetchCalls: Observable<any>[] = [this.fetchAppointments(false, false)];
+
+            for (let page = 2; page <= previousPage; page++) {
+              this.currentFilterParams.page = page;
+              fetchCalls.push(this.fetchAppointments(false, false));
+            }
+
+            forkJoin(fetchCalls).subscribe(() => {
+              setTimeout(() => {
+                const el = document.getElementById(`appointment-${focusedAppointmentId}`);
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }, 500);
+            });
+          },
+          error: (err) => {
+            console.error('Error update team:', err);
+
+            this.notificationService.error('Error update team interview');
+          }
+        });
       }
     });
+
   }
 
   onAddCallStatus(item: any) {
@@ -747,13 +1014,9 @@ export class InterviewRound2Component {
       container?.classList.remove('dimmed-overlay');
 
       if (result) {
-        console.log('Selected values from dialog:', result);
-
         const appointmentId = currentAppointmentId;
         const missCallId = result.selectionMap.Status?.value || 0;
         const isNoShow = result.isNoShow;
-
-        console.log({ appointmentId, missCallId, isNoShow })
 
         this.appointmentsService.appointmentMisscall({
           appointmentId,
@@ -781,7 +1044,7 @@ export class InterviewRound2Component {
                 if (el) {
                   el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
-              }, 0);
+              }, 500);
             });
           },
           error: (err) => {
@@ -824,7 +1087,7 @@ export class InterviewRound2Component {
       data: {
         title: 'Call Status History',
         quality: 0,
-        confirm: true,
+        confirm: false,
         options: this.dataOptions,
         dropdownConfigs: this.dropdownConfigs
       }
@@ -833,39 +1096,103 @@ export class InterviewRound2Component {
     dialogRef.afterClosed().subscribe((result: boolean) => {
       const container = document.querySelector('.cdk-overlay-container');
       container?.classList.remove('dimmed-overlay');
-
-      if (result) {
-        console.log('Selected values from dialog:', result);
-      }
     });
   }
 
   onSendMail(item: any) {
     const statusCall = item.interview.isCalled;
-    if (statusCall !== 'complete') return
+    if (statusCall !== 'complete') return;
+    if (!item.interview.locationId || !item.interview.teamId || !item.interview.date) return;
 
-    Promise.resolve().then(() => {
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.add('dimmed-overlay');
-    });
+    this.appointmentsService.getEmailTemplate(item.profile.appointmentId, 1).subscribe({
+      next: (res) => {
+        const container = document.querySelector('.cdk-overlay-container');
+        container?.classList.add('dimmed-overlay');
 
-    const dialogRef = this.dialog.open(MailDialogComponent, {
-      width: '1140px',
-      data: {
-        title: 'Send Mail',
-        quality: 0,
-        confirm: true,
-        options: this.dataOptions,
-        dropdownConfigs: this.dropdownConfigs
-      }
-    });
+        const dialogRef = this.dialog.open(MailDialogComponent, {
+          width: '1140px',
+          data: {
+            title: 'Send Mail',
+            quality: 0,
+            confirm: true,
+            options: this.dataOptions,
+            dropdownConfigs: this.dropdownConfigs,
+            dataMail: res
+          }
+        });
 
-    dialogRef.afterClosed().subscribe((result: boolean) => {
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.remove('dimmed-overlay');
+        dialogRef.afterClosed().subscribe(async (result: any) => {
+          container?.classList.remove('dimmed-overlay');
+          if (result) {
+            const formData = result.formData as FormData;
+            const from = formData.get('from') as string;
+            const to = formData.get('to') as string;
+            const subject = formData.get('subject') as string;
+            const message = formData.get('message') as string;
+            const attachments = formData.getAll('attachments') as File[];
 
-      if (result) {
-        console.log('Selected values from dialog:', result);
+            const emailAttachments = [];
+
+            for (const file of attachments) {
+              const base64Content = await this.fileToBase64(file);
+              emailAttachments.push({
+                fileName: file.name,
+                content: base64Content,
+                contentType: file.type
+              });
+            }
+
+            const payload = {
+              appointmentId: item.profile.appointmentId,
+              fromEmail: from,
+              fromName: res.formName,
+              to: to,
+              cc: [],
+              bcc: [],
+              subject: subject,
+              body: message,
+              isHtml: true,
+              attachments: emailAttachments,
+              priority: 0
+            };
+
+            this.appointmentsService.sendEmail(payload).subscribe({
+              next: () => {
+                const previousPage = this.currentFilterParams.page;
+                const focusedAppointmentId = item.profile.appointmentId;
+
+                this.appointments = [];
+                this.currentFilterParams.page = 1;
+                this.hasMoreData = true;
+
+                const fetchCalls: Observable<any>[] = [this.fetchAppointments(false, false)];
+
+                for (let page = 2; page <= previousPage; page++) {
+                  this.currentFilterParams.page = page;
+                  fetchCalls.push(this.fetchAppointments(false, false));
+                }
+
+                forkJoin(fetchCalls).subscribe(() => {
+                  setTimeout(() => {
+                    const el = document.getElementById(`appointment-${focusedAppointmentId}`);
+                    if (el) {
+                      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                  }, 500);
+                });
+              },
+              error: (err) => {
+                console.error('Error Sent Mail:', err);
+
+                this.notificationService.error('Error Sent Mail');
+              }
+            });
+          }
+        });
+
+      },
+      error: (err) => {
+        console.error('Get Email Template Error:', err);
       }
     });
   }
@@ -917,14 +1244,14 @@ export class InterviewRound2Component {
     return team?.label ?? '';
   }
 
-  getButtonClass(resultText: string): string {
-    switch (resultText?.toLowerCase()) {
-      case 'pending':
-        return 'tw-bg-[#FAFBC8] tw-text-[#AAAA00]';
-      case 'in process':
-        return 'tw-bg-[#F9E9C8] tw-text-[#AA5500]';
-      case 'scheduled':
-        return 'tw-bg-[#E0EEFA] tw-text-[#0085FF]';
+  getButtonClass(resultCode: number): string {
+    switch (resultCode) {
+      case 12:
+        return 'tw-bg-[#FAFBC8] tw-text-[#AAAA00]'; // pending
+      case 15:
+        return 'tw-bg-[#F9E9C8] tw-text-[#AA5500]'; // in process
+      case 16:
+        return 'tw-bg-[#E0EEFA] tw-text-[#0085FF]'; // scheduled
       default:
         return 'tw-bg-[#e9e9e9] tw-text-[#373737]';
     }
@@ -956,13 +1283,25 @@ export class InterviewRound2Component {
 
     const formattedDate = `${day}/${month}/${year}`;
 
-    const formattedTime = date.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit', 
-      hour12: true 
+    const formattedTime = date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
     });
 
     return { formattedDate, formattedTime };
+  }
+
+  fileToBase64(file: File): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64String = (reader.result as string).split(',')[1]; // ตัดเอาเฉพาะ base64 หลัง comma
+        resolve(base64String);
+      };
+      reader.onerror = error => reject(error);
+      reader.readAsDataURL(file);
+    });
   }
 
   // ---------- Infinite scroll ----------
@@ -985,8 +1324,8 @@ export class InterviewRound2Component {
       page: this.currentFilterParams.page,
       pageSize: this.currentFilterParams.pageSize,
       InterviewResult: this.selectedTab === 'total' ? undefined : this.selectedTab,
-      month: this.monthData === 12 ? undefined : this.monthData,
-      // year: this.yearData,
+      month: this.monthData,
+      year: this.yearData,
     };
 
     this.appointmentsService.getAppointments<any>(params).subscribe({

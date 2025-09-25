@@ -1,5 +1,9 @@
-<header class="tw-bg-black tw-border-b-4 tw-border-[#930000] tw-h-20 tw-flex tw-items-center tw-px-6">
+<header class="tw-bg-black tw-border-b-4 tw-border-[#930000] tw-h-20 tw-flex tw-items-center tw-px-6 tw-justify-between">
   <div class="tw-flex tw-items-center tw-cursor-pointer" (click)="handleLogoClick()">
     <img src="assets/logo/logo-pinepim.svg" alt="PINEPIM-Logo" class="tw-h-10 tw-mr-2" />
   </div>
+    <div class="tw-flex tw-gap-3 tw-items-center" *ngIf="currentUser">
+      <app-icon [name]="'user'" [size]="32" class="tw-text-white"></app-icon>
+      <p class="tw-text-white tw-font-bold">{{currentUser}}</p>
+    </div>
 </header>

@@ -5,7 +5,7 @@
 </div>
 <app-loading></app-loading>
 
-<app-filter [filterDate]="true" [filterDateRange]="filterDateRange" (dateRangeSelected)="onDateRangeSelected($event)"
+<app-filter [showAllYearOption]="true" [defaultYearAll]="true" [filterDate]="true" [filterDateRange]="filterDateRange" (dateRangeSelected)="onDateRangeSelected($event)"
     [actionButtons]="filterButtons" (buttonClicked)="onFilterButtonClick($event)"></app-filter>
 
 <app-tab-menus [tabs]="tabMenus" (tabChanged)="onTabChange($event)" [activeTab]="activeTab"></app-tab-menus>
@@ -65,7 +65,7 @@
                                 <span>Phone</span><span>{{ item.profile.phoneNumber }}</span>
                             </p>
                         </div>
-                        <p class="tag" [ngClass]="getButtonClass(item.result.interviewResultText)">
+                        <p class="tag" [ngClass]="getButtonClass(item.result.interviewResult)">
                             {{item.result.interviewResultText}}</p>
                     </div>
                 </div>
@@ -125,28 +125,28 @@
                 <div class="tw-flex tw-flex-col tw-gap-6">
                     <div class="tw-grid tw-grid-cols-2 tw-gap-6">
                         <div class="tw-flex-1">
-                            <p class="tw-mb-3"><strong>Interview Date</strong></p>
-                            <input
+                            <p class="tw-mb-3"><strong>Interview Date </strong><span class="text-red">*</span></p>
+                            <input [ngClass]="(item.interview.isEmailSent || item.revisionList[0].value !== item.interview.revision) ? 'tw-pointer-events-none' : ''"
                                 class="tw-w-full tw-block tw-bg-gray-light-4 tw-border tw-border-[#d1d5db] tw-rounded-[8px] tw-p-2 tw-text-sm tw-outline-none tw-gap-2 placeholder:tw-text-[#ADB5BD]"
-                                type="date" [value]="item.interview.date | date:'yyyy-MM-dd'">
+                                type="date" [value]="item.interview.date | date:'yyyy-MM-dd'" (change)="onDateChange($event, item)">
                         </div>
                         <div class="tw-flex-1">
                             <p class="tw-mb-3"><strong>Interview Location </strong><span class="text-red">*</span></p>
-                            <app-cdk-dropdown [options]="locationsList" placeholder="Location"
-                                [value]="item.interview.locationId"></app-cdk-dropdown>
+                            <app-cdk-dropdown [options]="locationsList" placeholder="Location" [ngClass]="(item.interview.isEmailSent || item.revisionList[0].value !== item.interview.revision) ? 'tw-pointer-events-none' : ''"
+                                [value]="item.interview.locationId" (valueChange)="onLocationChange($event, item)"></app-cdk-dropdown>
                         </div>
                     </div>
 
                     <div class="tw-grid tw-grid-cols-2 tw-gap-6">
                         <div class="tw-flex-1">
                             <p class="tw-mb-3"><strong>Interviewers Team </strong><span class="text-red">*</span></p>
-                            <button type="button" (click)="onAddTeamClick()"
+                            <button type="button" (click)="onAddTeamClick(item)" [ngClass]="(item.interview.isEmailSent || item.revisionList[0].value !== item.interview.revision) ? 'tw-pointer-events-none' : ''"
                                 class="tw-w-full tw-flex tw-justify-between tw-h-10 tw-items-center tw-rounded-lg tw-border-[#e5e5e5] tw-border hover:tw-bg-[#f5f5f5] tw-text-black tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5">
                                 <span class="tw-font-normal">
-                                    {{ getTeamNameById(item.interview.teamId) || 'Team' }}
+                                    {{ item.interview.teamId ?  getTeamNameById(item.interview.teamId) : 'Team' }}
+                                    <span class="tw-font-normal" *ngIf="item.interview.exists">...</span>
                                 </span>
-                                <app-icon [name]="'sliders-horizontal-square'" [size]="18"
-                                    extraClass="tw-relative tw-bottom-[1px]"></app-icon>
+                                <app-icon [name]="'sliders-horizontal-square'" [size]="18" extraClass="tw-relative tw-bottom-[1px]"></app-icon>
                             </button>
                         </div>
                         <div class="tw-flex-1">
@@ -162,11 +162,12 @@
                                     <span class="tw-font-semibold">Send</span>
                                 </button> -->
                                 <button type="button" (click)="onSendMail(item)" class="tw-rounded-tl-lg tw-rounded-bl-lg tw-min-h-[40px] tw-w-full tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5"
-                                    [disabled]="item.interview.lastCalledAt === null || item.interview.isEmailSent"
                                     [ngClass]="[
-                                        item.interview.isEmailSent ? 'tw-bg-[#0A0] hover:tw-bg-[#038d03]' : 'tw-bg-[#afafaf] hover:tw-bg-[#858585]',
+                                        item.interview.isEmailSent ? 'tw-bg-[#0A0] tw-pointer-events-none' : 'tw-bg-[#afafaf] hover:tw-bg-[#858585]',
                                         item.interview.isCalled !== 'complete' ? 'tw-cursor-no-drop hover:tw-bg-[#afafaf]' : '',
-                                    ]">
+                                        !item.interview.locationId || !item.interview.teamId || !item.interview.date ? 'tw-cursor-no-drop hover:tw-bg-[#afafaf]' : '',
+                                        item.revisionList[0].value !== item.interview.revision ? 'tw-pointer-events-none' : ''
+                                        ]">
                                     <app-icon [name]="'mail'" [size]="18"
                                         extraClass="tw-text-white tw-relative tw-bottom-[1px] tw-mr-2"></app-icon>
                                     <span class="tw-font-semibold">Send</span>
@@ -186,7 +187,8 @@
                                         [ngClass]="[
                                             item.interview.isCalled === 'complete' ? 'tw-bg-[#0A0] hover:tw-bg-[#038d03] tw-pointer-events-none' : '',
                                             item.interview.isCalled === 'inprocess' ? 'tw-bg-[#FFC107] hover:tw-bg-[#e0a800]' : '',
-                                            item.interview.isCalled === 'pending' ? 'tw-bg-[#afafaf] hover:tw-bg-[#858585]' : ''
+                                            item.interview.isCalled === 'pending' ? 'tw-bg-[#afafaf] hover:tw-bg-[#858585]' : '',
+                                            item.revisionList[0].value !== item.interview.revision ? 'tw-pointer-events-none' : ''
                                         ]">
                                         <app-icon [name]="'phone'" [size]="18"
                                             extraClass="tw-relative tw-bottom-[1px] tw-text-white"></app-icon>
@@ -197,23 +199,25 @@
 
 
 
-                            <p class="tw-text-[10px] tw-mt-2" *ngIf="item.interview.missCalled">
-                                {{ item.interview.lastCalledAt | date:'dd/MM/yyyy hh:mm a' }} {{
-                                item.interview.missCalled }}
+                            <p class="tw-text-[10px] tw-mt-2" *ngIf="item.interview.missCallCount">
+                                {{ item.interview.missCallHistory[0].missCallAt | date:'dd/MM/yyyy hh:mm a' }} {{
+                                item.interview.missCallHistory[0].missCallReason }}
                             </p>
                         </div>
                     </div>
                 </div>
 
                 <div class="tw-grid tw-grid-cols-2 tw-gap-6">
-                    <div class="tw-flex tw-gap-2" *ngIf="item.interview.isCalled === 'complete'">
+                    <div class="tw-flex tw-gap-2" *ngIf="item.interview.isEmailSent && (item.revisionList[0].value === item.interview.revision)">
                         <button type="button"
                             class="tw-w-fit tw-rounded-lg tw-border-[#e5e5e5] tw-border hover:tw-bg-[#f5f5f5] tw-text-black tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5">
-                            <span class="tw-font-semibold">Rescheduled</span>
+                            <span class="tw-font-semibold" (click)="onRescheduledClick(item)">Rescheduled</span>
                         </button>
-                        <app-cdk-dropdown class="tw-block tw-w-fit" [options]="item.revisionList" [value]="item.revisionList[0].value"></app-cdk-dropdown>
+                        <div *ngIf="item.revisionList[0].value > 1">
+                            <app-cdk-dropdown class="tw-block tw-w-fit" [options]="item.revisionList" [value]="item.interview.revision" (valueChange)="onRevisionChange($event, item)"></app-cdk-dropdown>
+                        </div>
                     </div>
-                    <button type="button" *ngIf="item.interview.isEmailSent" 
+                    <button type="button" *ngIf="item.interview.isEmailSent && (item.revisionList[0].value === item.interview.revision)" (click)="onInterviewFormClicked(item)"  
                         class="tw-w-fit tw-rounded-lg tw-bg-[#00AAFF] hover:tw-bg-[#028cd1] tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5">
                         <span class="tw-font-semibold">Interview Form </span>
                     </button>
