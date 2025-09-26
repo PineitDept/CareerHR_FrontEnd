@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { Subject, takeUntil } from 'rxjs';
+import { forkJoin, map, Subject, switchMap, takeUntil } from 'rxjs';
 import { ApplicationService } from '../../../services/application/application.service';
 import { CandidatePagedResult } from '../../../interfaces/Application/application.interface';
 import {
@@ -10,6 +10,7 @@ import {
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { FormBuilder, FormGroup } from '@angular/forms';
+import { ReasonService } from '../../../services/admin-setting/reason/reason.service';
 dayjs.extend(utc);
 
 // ====== Types สำหรับฝั่ง View ======
@@ -83,6 +84,34 @@ interface StepperItem {
   sub?: string;
   date?: string;
   variant?: Variant;
+}
+
+// ===== Stage History (view) =====
+type CategoryOption = { categoryId: number; categoryName: string };
+type ReasonOption   = { reasonId: number; reasonText: string; checked?: boolean };
+
+interface StageSection {
+  historyId: number;
+  stageId: number;
+  stageName: string;
+  stageNameNormalized: string;  // lower-cased for switch
+  headerTitle: string;
+
+  hrUserName: string;
+  stageDate: string | Date;
+
+  categories: CategoryOption[];
+  selectedCategoryId?: number;
+
+  reasons: ReasonOption[];
+
+  // notes: ใช้กับ Screened/Offered
+  notes?: string | null;
+  // ใช้กับ Interview 1/2 (ถ้า API ยังไม่มี แสดง '—')
+  strength?: string | null;
+  concern?: string | null;
+
+  open: boolean;
 }
 
 @Component({
@@ -174,10 +203,13 @@ export class ApplicationFormComponent {
 
   private destroy$ = new Subject<void>();
 
+  stageSections: StageSection[] = [];
+
   constructor(
     private route: ActivatedRoute,
     private applicationService: ApplicationService,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private reasonService: ReasonService,
   ) {}
 
   // ===================== Lifecycle =====================
@@ -340,6 +372,8 @@ export class ApplicationFormComponent {
 
     // ----- โหลด Assessment/Warning จาก API จริง -----
     this.fetchAssessmentAndWarnings(Number(this.applicant.id || 0));
+
+    this.fetchStageHistoryAndReasons(Number(this.applicant.id || 0));
   }
 
   // ===================== Assessment Columns =====================
@@ -356,16 +390,16 @@ export class ApplicationFormComponent {
 
   private initWarningColumns() {
     this.warningColumns = [
-      { header: 'No',        field: 'no',       type: 'text',  align: 'center', width: '56px', minWidth: '56px' },
-      { header: 'Warning',   field: 'warning',  type: 'text',  minWidth: '220px' },
-      { header: 'Result',    field: 'result',   type: 'text',  minWidth: '160px' },
-      { header: 'Risk',      field: 'risk',     type: 'badge', align: 'center', minWidth: '120px' },
-      { header: 'Visibility',field: 'visibility', type: 'icon', align: 'center', width: '110px', minWidth: '110px' },
-      { header: 'Detail',    field: 'detail',   type: 'text',  minWidth: '220px' },
+      { header: 'No', field: 'no', type: 'text', align: 'center', width: '56px', minWidth: '56px' },
+      { header: 'Warning', field: 'warning', type: 'text', minWidth: '220px' },
+      { header: 'Result', field: 'result', type: 'text', minWidth: '140px' },
+      { header: 'Risk', field: 'risk', type: 'badge', align: 'center', width: '110px', minWidth: '110px' },
+      { header: 'Visibility', field: 'visibility', type: 'icon', align: 'center', width: '110px', minWidth: '110px' },
+      { header: 'Detail', field: 'detail', type: 'text', minWidth: '220px' },
     ];
   }
 
-  // ===================== Fetch & Map Assessment =====================
+  // ===================== Fetch & Map =====================
   private fetchAssessmentAndWarnings(userId: number) {
     if (!userId) return;
     this.applicationService
@@ -483,6 +517,89 @@ export class ApplicationFormComponent {
     });
 
     this.warningRows = wrows;
+  }
+
+  private fetchStageHistoryAndReasons(appId: number) {
+    this.applicationService.getCandidateStageHistoryById(appId)
+      .pipe(
+        switchMap((histories: any[]) => {
+          const uniqStageIds = Array.from(new Set(histories.map(h => Number(h.stageId))));
+          const reasonsReq = uniqStageIds.map(id =>
+            this.reasonService.getRecruitmentStagesWithReasons(id).pipe(
+              map((cats: any[]) => ({ stageId: id, cats }))
+            )
+          );
+          return forkJoin(reasonsReq).pipe(map(reasonsPacks => ({ histories, reasonsPacks })));
+        })
+      )
+      .subscribe({
+        next: ({ histories, reasonsPacks }) => {
+          const packByStage = new Map<number, any[]>(reasonsPacks.map(p => [p.stageId, p.cats]));
+
+          const orderWeight: Record<string, number> = {
+            screened: 1,
+            'interview 1': 2,
+            'interview 2': 3,
+            offered: 4,
+          };
+
+          this.stageSections = histories.map((h, idx): StageSection => {
+            const stageId = Number(h.stageId);
+            const stageName = String(h.stageName || '');
+            const stageNameNorm = stageName.trim().toLowerCase();
+
+            // header title
+            const headerTitle = stageNameNorm === 'screened'
+              ? 'Application Screening'
+              : `Application ${stageName}`;
+
+            // categories (from reasons API)
+            const cats = (packByStage.get(stageId) || []).map(c => ({
+              categoryId: c.categoryId,
+              categoryName: c.categoryName
+            })) as CategoryOption[];
+
+            // selected category
+            const selectedCategoryId = Number(h.categoryId) || undefined;
+
+            // reasons list for the selected category
+            const selectedCat = (packByStage.get(stageId) || []).find(c => Number(c.categoryId) === selectedCategoryId);
+            const allReasons: ReasonOption[] = (selectedCat?.rejectionReasons || []).map((r: any) => ({
+              reasonId: r.reasonId,
+              reasonText: r.reasonText,
+              checked: Array.isArray(h.selectedReasonIds) ? h.selectedReasonIds.includes(r.reasonId) :
+                      Array.isArray(h.selectedReasonTexts) ? h.selectedReasonTexts.includes(r.reasonText) : false
+            }));
+
+            // notes/strength/concern (API มีแต่ notes -> แยกไว้รองรับอนาคต)
+            const notes = h.notes ?? null;
+
+            return {
+              historyId: Number(h.historyId),
+              stageId,
+              stageName,
+              stageNameNormalized: stageNameNorm,
+              headerTitle,
+              hrUserName: h.hrUserName || '—',
+              stageDate: h.stageDate || '',
+              categories: cats,
+              selectedCategoryId,
+              reasons: allReasons,
+              notes,
+              strength: h.strength ?? null,
+              concern:  h.concern ?? null,
+              open: true
+            };
+          });
+
+          this.stageSections.sort((a, b) => {
+            const wa = orderWeight[a.stageNameNormalized] ?? 999;
+            const wb = orderWeight[b.stageNameNormalized] ?? 999;
+            return wa - wb;
+          });
+        },
+        error: (e) => console.error('[ApplicationForm] stage history error:', e)
+      });
   }
 
   // ===================== UI Events =====================
@@ -624,6 +741,25 @@ export class ApplicationFormComponent {
   }
   variantText(i: number) {
     return this.isColored(i) ? '#FFFFFF' : '#374151';
+  }
+
+  getCategoryBtnClass(c: CategoryOption, selectedId?: number) {
+    const isActive = c.categoryId === selectedId;
+
+    // โทนสีโดยชื่อ category (แก้เพิ่มได้ตามระบบจริง)
+    const name = (c.categoryName || '').toLowerCase();
+    const tone =
+      name.includes('accept') ? 'tw-bg-green-500 tw-text-white tw-border-green-600' :
+      name.includes('decline') ? 'tw-bg-red-500 tw-text-white tw-border-red-600' :
+      name.includes('application decline') ? 'tw-bg-red-500 tw-text-white tw-border-red-600' :
+      name.includes('no-show') ? 'tw-bg-gray-200 tw-text-gray-800 tw-border-gray-300' :
+      name.includes('on hold') ? 'tw-bg-amber-500 tw-text-white tw-border-amber-600' :
+      'tw-bg-white tw-text-gray-700 tw-border-gray-300';
+
+    const inactive = 'hover:tw-brightness-105';
+    const activeRing = 'tw-ring-2 tw-ring-white/40';
+
+    return isActive ? `${tone} ${activeRing}` : `tw-bg-white tw-text-gray-700 tw-border-gray-300 ${inactive}`;
   }
 }
 

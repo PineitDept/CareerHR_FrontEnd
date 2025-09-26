@@ -20,7 +20,7 @@
 <!-- ================= MAIN GRID ================= -->
 <div class="tw-grid tw-grid-cols-3 tw-gap-6 tw-px-6 tw-py-6 tw-bg-white">
   <!-- =============== LEFT (2 cols) =============== -->
-  <div class="tw-col-span-2 tw-space-y-4">
+  <div class="tw-col-span-2 tw-space-y-6">
     <!-- ===== Applicant Header Card ===== -->
     <section
       class="tw-bg-white tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-flex tw-items-stretch overflow-hidden"
@@ -113,7 +113,7 @@
 
     <!-- ===== Process Tabs / Pipeline (ใช้ StepperComponent) ===== -->
     <section class="tw-w-full">
-      <div class="tw-overflow-x-auto tw-py-2 tw-scroll-px-6">
+      <div class="tw-overflow-x-auto tw-scroll-px-6">
         <div class="tw-min-w-full">
           <div class="tw-w-fit tw-min-w-full tw-mx-auto">
             <app-stepper
@@ -219,6 +219,126 @@
       </form>
     </section>
     <!-- /Candidate Warning -->
+
+    <!-- ===== Stage History (read-only) ===== -->
+    <section class="tw-w-full" *ngFor="let s of stageSections; let k = index">
+      <form [formGroup]="formDetails">
+        <div class="tw-bg-[#FFFFFF]">
+          <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+            <!-- Header + Chevron -->
+            <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer"
+                (click)="s.open = !s.open">
+              <label class="tw-text-lg tw-font-bold">
+                {{ s.headerTitle }}
+              </label>
+              <app-icon name="chevron-down" [size]="14"
+                [extraClass]="s.open ? 'tw-rotate-180 tw-transition-transform' : 'tw-transition-transform'">
+              </app-icon>
+            </div>
+
+            <hr class="tw--mx-6 tw-mt-4" />
+
+            <ng-container *ngIf="s.open">
+              <div class="tw-grid tw-grid-cols-2 tw-gap-4 tw-my-4">
+                <div>
+                  <div class="tw-text-[13px] tw-font-medium">Screened By</div>
+                  <input
+                    class="tw-w-full tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+                    [value]="s.hrUserName" disabled />
+                </div>
+                <div>
+                  <div class="tw-text-[13px] tw-font-medium">Screening Date</div>
+                  <input
+                    class="tw-w-full tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+                    [value]="s.stageDate | date:'dd/MM/yyyy'" disabled />
+                </div>
+              </div>
+
+              <!-- Result -->
+              <div class="tw-mb-4">
+                <div class="tw-text-[13px] tw-font-medium">Result</div>
+                <div class="tw-flex tw-flex-wrap tw-gap-2 tw-mt-1">
+                  <button type="button"
+                          *ngFor="let c of s.categories"
+                          class="tw-text-sm tw-rounded-lg tw-px-3 tw-py-1.5 tw-border tw-transition"
+                          [ngClass]="getCategoryBtnClass(c, s.selectedCategoryId)"
+                          disabled>
+                    {{ c.categoryName }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Reason -->
+              <div class="tw-mb-4">
+                <div class="tw-text-[13px] tw-font-medium">Reason</div>
+                <div class="tw-grid md:tw-grid-cols-2 tw-gap-y-3 tw-gap-x-4 tw-mt-2">
+                  <div class="tw-flex tw-items-start tw-gap-2" *ngFor="let r of s.reasons">
+                    <!-- กล่องสี่เหลี่ยม (แสดงผลแทน checkbox) -->
+                    <span
+                      role="checkbox"
+                      [attr.aria-checked]="r.checked"
+                      class="tw-inline-flex tw-items-center tw-justify-center tw-rounded-[4px] tw-border tw-align-middle tw-mt-0.5"
+                      [ngClass]="[
+                        r.checked ? 'tw-border-green-500 tw-bg-green-50' : 'tw-border-gray-300 tw-bg-white'
+                      ]"
+                      style="width:18px;height:18px;min-width:18px;min-height:18px"
+                    >
+                      <app-icon
+                        *ngIf="r.checked"
+                        name="check"
+                        [size]="14"
+                        class="tw-text-green-600"
+                      ></app-icon>
+                    </span>
+
+                    <span class="tw-text-[14px]">{{ r.reasonText }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Notes / Strength & Concern -->
+              <div class="tw-space-y-3 tw-pb-4">
+                <ng-container [ngSwitch]="s.stageNameNormalized">
+                  <ng-container *ngSwitchCase="'screened'">
+                    <div>
+                      <div class="tw-text-[13px] tw-font-medium">Notes</div>
+                      <textarea
+                        class="tw-w-full tw-h-32 tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+                        [value]="s.notes || '—'" disabled></textarea>
+                    </div>
+                  </ng-container>
+
+                  <ng-container *ngSwitchCase="'offered'">
+                    <div>
+                      <div class="tw-text-[13px] tw-font-medium">Notes</div>
+                      <textarea
+                        class="tw-w-full tw-h-32 tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+                        [value]="s.notes || '—'" disabled></textarea>
+                    </div>
+                  </ng-container>
+
+                  <ng-container *ngSwitchDefault>
+                    <div>
+                      <div class="tw-text-[13px] tw-font-medium">Strength</div>
+                      <textarea
+                        class="tw-w-full tw-h-28 tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+                        [value]="s.strength || '—'" disabled></textarea>
+                    </div>
+                    <div>
+                      <div class="tw-text-[13px] tw-font-medium">Concern</div>
+                      <textarea
+                        class="tw-w-full tw-h-28 tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+                        [value]="s.concern || '—'" disabled></textarea>
+                    </div>
+                  </ng-container>
+                </ng-container>
+              </div>
+            </ng-container>
+          </div>
+        </div>
+      </form>
+    </section>
+
   </div>
 
   <!-- =============== RIGHT (1 col) =============== -->

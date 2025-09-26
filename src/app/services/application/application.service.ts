@@ -83,4 +83,25 @@ export class ApplicationService {
       withAuth: true,
     });
   }
+
+  getCandidateStageHistoryById(
+    id: number,
+    stageId?: number
+  ): Observable<any> {
+    const endpoint = stageId
+      ? `CandidateStageHistory/by-application/${id}?stageId=${stageId}`
+      : `CandidateStageHistory/by-application/${id}`;
+
+    return this.apiService.get<any>(endpoint, {
+      loading: true,
+      withAuth: true,
+    });
+  }
+
+  getCommentsById(id: number): Observable<any> {
+    return this.apiService.get<any>(`Comments/candidate/${id}`, {
+      loading: true,
+      withAuth: true,
+    });
+  }
 }
