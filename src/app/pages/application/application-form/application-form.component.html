@@ -18,9 +18,9 @@
 ></app-filter>
 
 <!-- ================= MAIN GRID ================= -->
-<div class="tw-grid tw-grid-cols-3 tw-gap-6 tw-px-6 tw-py-6 tw-bg-white">
-  <!-- =============== LEFT (2 cols) =============== -->
-  <div class="tw-col-span-2 tw-space-y-6">
+<div class="tw-grid tw-grid-cols-4 tw-gap-6 tw-px-6 tw-py-6 tw-bg-white">
+  <!-- =============== LEFT (3 cols) =============== -->
+  <div class="tw-col-span-3 tw-space-y-6">
     <!-- ===== Applicant Header Card ===== -->
     <section
       class="tw-bg-white tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-flex tw-items-stretch overflow-hidden"
@@ -243,13 +243,13 @@
                 <div>
                   <div class="tw-text-[13px] tw-font-medium">Screened By</div>
                   <input
-                    class="tw-w-full tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+                    class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
                     [value]="s.hrUserName" disabled />
                 </div>
                 <div>
                   <div class="tw-text-[13px] tw-font-medium">Screening Date</div>
                   <input
-                    class="tw-w-full tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+                    class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
                     [value]="s.stageDate | date:'dd/MM/yyyy'" disabled />
                 </div>
               </div>
@@ -303,7 +303,7 @@
                     <div>
                       <div class="tw-text-[13px] tw-font-medium">Notes</div>
                       <textarea
-                        class="tw-w-full tw-h-32 tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+                        class="tw-w-full tw-text-[14px] tw-h-32 tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
                         [value]="s.notes || '—'" disabled></textarea>
                     </div>
                   </ng-container>
@@ -312,7 +312,7 @@
                     <div>
                       <div class="tw-text-[13px] tw-font-medium">Notes</div>
                       <textarea
-                        class="tw-w-full tw-h-32 tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+                        class="tw-w-full tw-text-[14px] tw-h-32 tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
                         [value]="s.notes || '—'" disabled></textarea>
                     </div>
                   </ng-container>
@@ -321,13 +321,13 @@
                     <div>
                       <div class="tw-text-[13px] tw-font-medium">Strength</div>
                       <textarea
-                        class="tw-w-full tw-h-28 tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+                        class="tw-w-full tw-text-[14px] tw-h-28 tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
                         [value]="s.strength || '—'" disabled></textarea>
                     </div>
                     <div>
                       <div class="tw-text-[13px] tw-font-medium">Concern</div>
                       <textarea
-                        class="tw-w-full tw-h-28 tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+                        class="tw-w-full tw-text-[14px] tw-h-28 tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
                         [value]="s.concern || '—'" disabled></textarea>
                     </div>
                   </ng-container>
@@ -350,14 +350,14 @@
       (click)="onScreeningCardClick()"
     >
       <div class="tw-flex tw-items-center tw-gap-6">
-        <app-icon name="user" [size]="54" class="tw-opacity-90"></app-icon>
+        <app-icon name="user" [size]="48" class="tw-opacity-90"></app-icon>
         <div class="tw-flex-1">
           <div class="tw-text-[14px] tw-opacity-90">
             Application Screening<br />
             by {{ screening.screenedBy || "—" }} on
             {{ screening.screeningDate | date : "dd MMMM yyyy" }}
           </div>
-          <div class="tw-mt-1.5 tw-text-[28px] tw-font-bold leading-none">
+          <div class="tw-text-[24px] tw-font-bold leading-none">
             {{ screening.status || "—" }}
           </div>
         </div>
@@ -373,7 +373,7 @@
       <div class="tw-flex tw-items-center tw-gap-6">
         <app-icon
           name="certificate-badge"
-          [size]="54"
+          [size]="48"
           class="tw-opacity-90"
         ></app-icon>
         <div class="tw-flex-1">
@@ -383,7 +383,7 @@
           <div class="tw-text-[14px] tw-opacity-90">
             on {{ applicationFormSubmittedDate | date : "dd MMMM yyyy" }}
           </div>
-          <div class="tw-mt-1.5 tw-text-[28px] tw-font-bold leading-none">
+          <div class="tw-text-[24px] tw-font-bold leading-none">
             View Detail
           </div>
         </div>
@@ -399,7 +399,7 @@
       <div class="tw-flex tw-items-center tw-gap-6">
         <app-icon
           name="comment-text"
-          [size]="54"
+          [size]="48"
           class="tw-opacity-90"
         ></app-icon>
         <div class="tw-flex-1">
@@ -407,7 +407,7 @@
             {{ comments.length }}
             {{ comments.length === 1 ? "comment" : "comments" }}
           </div>
-          <div class="tw-mt-1.5 tw-text-[28px] tw-font-bold leading-none">
+          <div class="tw-text-[24px] tw-font-bold leading-none">
             Comment
           </div>
         </div>
