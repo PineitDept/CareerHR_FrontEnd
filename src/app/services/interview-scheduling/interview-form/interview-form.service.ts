@@ -63,5 +63,12 @@ export class InterviewFormService {
       loading: true,
     });
   }
+
+  getApplicantTracking(applicationId: number): Observable<any> {
+    return this.api.get<any>(`Applicants/track-interview-form/${applicationId}`, {
+      withAuth: true,
+      loading: true,
+    });
+  }
 }
 

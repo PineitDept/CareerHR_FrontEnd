@@ -89,7 +89,7 @@
         <section class="tw-flex tw-gap-4">
             <div class="tw-bg-black tw-w-full tw-rounded-[20px]">
                 <button type="button"
-                    class="tw-h-full tw-w-full tw-rounded-2xl tw-bg-[#FFAA00] tw-text-white tw-px-6 tw-py-4 tw-text-left tw-shadow-[0_4px_8px_rgba(0,0,0,0.1)] tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-brightness-110 hover:tw-shadow-[0_8px_12px_rgba(0,0,0,0.1)] focus:tw-ring-2 focus:tw-ring-white/30"
+                    class="tw-w-full tw-rounded-2xl tw-bg-[#FFAA00] tw-text-white tw-px-6 tw-py-4 tw-text-left tw-shadow-[0_4px_8px_rgba(0,0,0,0.1)] tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-brightness-110 hover:tw-shadow-[0_8px_12px_rgba(0,0,0,0.1)] focus:tw-ring-2 focus:tw-ring-white/30"
                     (click)="onInterviewClick('tab1')" [class.active]="selectedTab === 'tab1'">
                     <div class="tw-w-full tw-flex tw-items-center tw-justify-between tw-gap-3">
                         <div>
@@ -111,7 +111,7 @@
             </div>
             <div class="tw-bg-black tw-w-full tw-rounded-[20px]">
                 <button type="button"
-                    class="tw-h-full tw-w-full tw-rounded-2xl tw-bg-[#F8F9FA] tw-text-black tw-px-6 tw-py-4 tw-text-left tw-shadow-[0_4px_8px_rgba(0,0,0,0.1)] tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-brightness-110 hover:tw-shadow-[0_8px_12px_rgba(0,0,0,0.1)] focus:tw-ring-2 focus:tw-ring-white/30"
+                    class="tw-w-full tw-rounded-2xl tw-bg-[#F8F9FA] tw-text-black tw-px-6 tw-py-4 tw-text-left tw-shadow-[0_4px_8px_rgba(0,0,0,0.1)] tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-brightness-110 hover:tw-shadow-[0_8px_12px_rgba(0,0,0,0.1)] focus:tw-ring-2 focus:tw-ring-white/30"
                     (click)="onInterviewClick('tab2')" [class.active]="selectedTab === 'tab2'">
                     <div class="tw-w-full tw-flex tw-items-center tw-justify-between tw-gap-3">
                         <div>
@@ -175,11 +175,11 @@
         </section>
 
 
-        <section class="tw-relative group" *ngIf="reviewHistory.length">
+        <section class="tw-relative group">
             <ngx-slick-carousel #slickCarousel class="tw-grid grid-cols-auto tw-gap-8" [config]="slideConfig"
                 (init)="onCarouselInit($event, 0)" (afterChange)="onSlideChanged($event, 0)">
 
-                <div ngxSlickItem *ngFor="let review of reviewHistory let i = index"
+                <div ngxSlickItem *ngFor="let review of reviewHistory"
                     class="tw-col-span-2 tw-row-span-2 tw-space-y-4 tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.1)]">
 
                     <div class="header-slide">
@@ -200,10 +200,9 @@
                         <div class="tw-flex tw-items-end tw-gap-2">
                             <div>
                                 <app-icon *ngFor="let star of [1,2,3,4,5]; let i = index" name="star" [size]="16"
-                                    [class.tw-text-[#FFD600]]="i < review.satisfaction"
-                                    [class.tw-text-[#C4C4C4]]="i >= review.satisfaction"></app-icon>
+                                    [class.tw-text-[#FFD600]]="i < 4" [class.tw-text-[#C4C4C4]]="i >= 4"></app-icon>
                             </div>
-                            <p class="tw-text-gray-500 tw-text-xs">{{review.satisfaction}} (5)</p>
+                            <p class="tw-text-gray-500 tw-text-xs">3 (5)</p>
                         </div>
                         <!-- <p class="tw-text-xs tw-mt-3" *ngIf="review.notes">
                             {{ review.notes || "No notes available." }}
@@ -232,36 +231,18 @@
                             <div class="tw-mb-1.5">
                                 <label class="tw-text-sm tw-font-semibold">Strength</label>
                             </div>
-
-                            <div class="review-card">
-                                <span #strengthText [ngClass]="{ 'ellipsis-3-lines': !review.expandState.strength }"
-                                    class="tw-text-sm tw-text-gray-800">
-                                    {{ review.strength || '-' }}
-                                </span>
-
-                                <a *ngIf="review.overflowState.strength" (click)="toggleExpand(i,'strength')"
-                                    class="tw-text-black tw-font-bold tw-text-sm tw-mt-1 tw-underline tw-bg-transparent tw-border-0 tw-p-0 tw-cursor-pointer">
-                                    {{ review.expandState.strength ? 'ย่อลง' : 'อ่านต่อ' }}
-                                </a>
-                            </div>
+                            <input
+                                class="tw-w-full tw-bg-[#FFFFFF] tw-border tw-border-[#CED4DA] tw-rounded-lg tw-px-4 tw-py-2 tw-text-sm"
+                                type="text" [value]="review.strength || '-'" readonly />
                         </div>
 
                         <div>
                             <div class="tw-mb-1.5">
                                 <label class="tw-text-sm tw-font-semibold">Concern</label>
                             </div>
-
-                            <div class="review-card">
-                                <span #concernText [ngClass]="{ 'ellipsis-3-lines': !review.expandState.concern }"
-                                    class="tw-text-sm tw-text-gray-800">
-                                    {{ review.concern || '-' }}
-                                </span>
-
-                                <a *ngIf="review.overflowState.concern" (click)="toggleExpand(i,'concern')"
-                                    class="tw-text-black tw-font-bold tw-text-sm tw-mt-1 tw-underline tw-bg-transparent tw-border-0 tw-p-0 tw-cursor-pointer">
-                                    {{ review.expandState.concern ? 'ย่อลง' : 'อ่านต่อ' }}
-                                </a>
-                            </div>
+                            <input
+                                class="tw-w-full tw-bg-[#FFFFFF] tw-border tw-border-[#CED4DA] tw-rounded-lg tw-px-4 tw-py-2 tw-text-sm"
+                                type="text" [value]="review.concern || '-'" readonly />
                         </div>
                     </div>
                 </div>
@@ -298,81 +279,86 @@
 
         <section class="tw-w-full">
             <!-- <form [formGroup]="formDetails"> -->
-            <div class="tw-bg-[#FFFFFF]">
-                <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
-                    <!-- Header + Chevron -->
-                    <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer">
-                        <label class="tw-text-lg tw-font-bold">
-                            Application Interview 1
-                        </label>
-                    </div>
-
-                    <hr class="tw--mx-6 tw-mt-4" />
-
-                    <ng-container>
-                        <div class="tw-grid tw-grid-cols-2 tw-gap-4 tw-my-4">
-                            <div>
-                                <div class="tw-text-[13px] tw-font-medium">Screened By</div>
-                                <input
-                                    class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100 tw-text-[#8b8b8b]"
-                                    [value]="usernameLogin" disabled />
-                            </div>
-                            <div>
-                                <div class="tw-text-[13px] tw-font-medium">Screening Date</div>
-                                <input
-                                    class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2"
-                                    type="date" [min]="today" [value]="nowDate" />
-                            </div>
+                <div class="tw-bg-[#FFFFFF]">
+                    <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+                        <!-- Header + Chevron -->
+                        <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer">
+                            <label class="tw-text-lg tw-font-bold">
+                                Application Interview 1
+                            </label>
                         </div>
 
-                        <!-- Result -->
-                        <div class="tw-mb-4">
-                            <div class="tw-text-[13px] tw-font-medium">Result</div>
-                            <div class="tw-flex tw-flex-wrap tw-gap-2 tw-mt-1">
-                                <div *ngFor="let s of reasonsInterview1">
-                                    <button type="button" (click)="selectCategory(s.categoryId)"
-                                        class="tw-text-sm tw-rounded-lg tw-px-3 tw-py-1.5 tw-border tw-transition"
-                                        [ngClass]="getCategoryBtnClass(s, selectedCategoryId)">
-                                        {{ s.categoryName }}
+                        <hr class="tw--mx-6 tw-mt-4" />
+
+                        <ng-container>
+                            <div class="tw-grid tw-grid-cols-2 tw-gap-4 tw-my-4">
+                                <div>
+                                    <div class="tw-text-[13px] tw-font-medium">Screened By</div>
+                                    <input
+                                        class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100 tw-text-[#8b8b8b]"
+                                        [value]="usernameLogin" disabled />
+                                </div>
+                                <div>
+                                    <div class="tw-text-[13px] tw-font-medium">Screening Date</div>
+                                    <input
+                                        class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2"
+                                        type="date" [min]="today" [value]="null | date:'dd/MM/yyyy'" />
+                                </div>
+                            </div>
+
+                            <!-- Result -->
+                            <div class="tw-mb-4">
+                                <div class="tw-text-[13px] tw-font-medium">Result</div>
+                                <div class="tw-flex tw-flex-wrap tw-gap-2 tw-mt-1">
+                                    <button type="button" class="tw-text-sm tw-rounded-lg tw-px-3 tw-py-1.5 tw-border tw-transition tw-bg-[#AAFFAA] tw-text-[#262626]" >
+                                        Accept
                                     </button>
+                                    <button type="button" class="tw-text-sm tw-rounded-lg tw-px-3 tw-py-1.5 tw-border tw-transition tw-bg-red-500 tw-text-white tw-border-red-600" >
+                                        Decline
+                                    </button>
+                                    <button type="button" class="tw-text-sm tw-rounded-lg tw-px-3 tw-py-1.5 tw-border tw-transition tw-bg-white tw-text-gray-700 tw-border-gray-300" >
+                                        Application Decline
+                                    </button>
+                                    <!-- <button type="button"
+                                        class="tw-text-sm tw-rounded-lg tw-px-3 tw-py-1.5 tw-border tw-transition"
+                                        [ngClass]="getCategoryBtnClass(c, s.selectedCategoryId)" disabled>
+                                        {{ c.categoryName }}
+                                    </button> -->
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Reason -->
-                        <div class="tw-mb-4" *ngIf="selectedCategoryId">
-                            <div class="tw-text-[13px] tw-font-medium">Reason</div>
-                            <div class="tw-grid md:tw-grid-cols-2 tw-gap-y-3 tw-gap-x-4 tw-mt-2">
-                                <div class="tw-flex tw-items-start tw-gap-2"
-                                    *ngFor="let r of getRejectionReasons(selectedCategoryId)" (click)="toggleReasonCheck(r)">
-                                    <span role="checkbox" [attr.aria-checked]="r.checked"
-                                        class="tw-inline-flex tw-items-center tw-justify-center tw-rounded-[4px] tw-border tw-align-middle tw-mt-0.5"
-                                        [ngClass]="[r.checked ? 'tw-border-green-500 tw-bg-green-50' : 'tw-border-gray-300 tw-bg-white']"
-                                        style="width:18px;height:18px;min-width:18px;min-height:18px">
-                                        <app-icon *ngIf="r.checked" name="check" [size]="14"
-                                            class="tw-text-green-600"></app-icon>
-                                    </span>
+                            <!-- Reason -->
+                            <div class="tw-mb-4">
+                                <div class="tw-text-[13px] tw-font-medium">Reason</div>
+                                <div class="tw-grid md:tw-grid-cols-2 tw-gap-y-3 tw-gap-x-4 tw-mt-2">
+                                    <!-- <div class="tw-flex tw-items-start tw-gap-2" *ngFor="let r of s.reasons">
+                                        <span role="checkbox" [attr.aria-checked]="r.checked"
+                                            class="tw-inline-flex tw-items-center tw-justify-center tw-rounded-[4px] tw-border tw-align-middle tw-mt-0.5"
+                                            [ngClass]="[
+                                r.checked ? 'tw-border-green-500 tw-bg-green-50' : 'tw-border-gray-300 tw-bg-white'
+                            ]" style="width:18px;height:18px;min-width:18px;min-height:18px">
+                                            <app-icon *ngIf="r.checked" name="check" [size]="14"
+                                                class="tw-text-green-600"></app-icon>
+                                        </span>
 
-
-                                    <span class="tw-text-[14px]">{{ r.reasonText }}</span>
+                                        <span class="tw-text-[14px]">{{ r.reasonText }}</span>
+                                    </div> -->
                                 </div>
                             </div>
-                        </div>
 
-
-                        <!-- Notes / Strength & Concern -->
-                        <div class="tw-space-y-3 tw-pb-4">
-                            <ng-container>
+                            <!-- Notes / Strength & Concern -->
+                            <div class="tw-space-y-3 tw-pb-4">
                                 <ng-container>
-                                    <div>
-                                        <div class="tw-text-[13px] tw-font-medium">Notes</div>
-                                        <textarea
-                                            class="tw-w-full tw-text-[14px] tw-h-32 tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2"
-                                            [value]=""></textarea>
-                                    </div>
-                                </ng-container>
+                                    <ng-container>
+                                        <div>
+                                            <div class="tw-text-[13px] tw-font-medium">Notes</div>
+                                            <textarea
+                                                class="tw-w-full tw-text-[14px] tw-h-32 tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2"
+                                                [value]=""></textarea>
+                                        </div>
+                                    </ng-container>
 
-                                <!-- <ng-container *ngSwitchCase="'offered'">
+                                    <!-- <ng-container *ngSwitchCase="'offered'">
                                         <div>
                                             <div class="tw-text-[13px] tw-font-medium">Notes</div>
                                             <textarea
@@ -395,18 +381,16 @@
                                                 [value]="s.concern || '—'" disabled></textarea>
                                         </div>
                                     </ng-container> -->
-                            </ng-container>
-                        </div>
+                                </ng-container>
+                            </div>
 
-                        <div class="tw-flex tw-gap-3 tw-justify-end tw-pb-6">
-                            <button type="button"
-                                class="tw-rounded-lg tw-bg-[#D97706] tw-text-white tw-py-2 tw-px-4 tw-text-center tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-bg-[#c46b07]">Confirm</button>
-                            <button type="button"
-                                class="tw-rounded-lg tw-border tw-border-[#E5E5E5] tw-text-black tw-py-2 tw-px-4 tw-text-center tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-bg-[#E5E5E5]">Cancel</button>
-                        </div>
-                    </ng-container>
+                            <div class="tw-flex tw-gap-3 tw-justify-end tw-pb-6">
+                                <button type="button" class="tw-rounded-lg tw-bg-[#D97706] tw-text-white tw-py-2 tw-px-4 tw-text-center tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-bg-[#c46b07]" >Confirm</button>
+                                <button type="button" class="tw-rounded-lg tw-border tw-border-[#E5E5E5] tw-text-black tw-py-2 tw-px-4 tw-text-center tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-bg-[#E5E5E5]" >Cancel</button>
+                            </div>
+                        </ng-container>
+                    </div>
                 </div>
-            </div>
             <!-- </form> -->
         </section>
 
