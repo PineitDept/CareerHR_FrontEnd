@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component, QueryList, ViewChildren } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { ApplicationService } from '../../../../../services/application/application.service';
@@ -9,6 +9,13 @@ import {
 } from '../../../../../interfaces/Application/tracking.interface';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import { AlertDialogComponent } from '../../../../../shared/components/dialogs/alert-dialog/alert-dialog.component';
+import { MatDialog } from '@angular/material/dialog';
+import { FormBuilder, FormGroup } from '@angular/forms';
+import * as QRCode from 'qrcode';
+import { SlickCarouselComponent, SlickItemDirective } from 'ngx-slick-carousel';
+import { InterviewFormService } from '../../../../../services/interview-scheduling/interview-form/interview-form.service';
+
 dayjs.extend(utc);
 
 // ====== Types สำหรับฝั่ง View ======
@@ -32,6 +39,10 @@ interface Applicant {
   faculty?: string;
   program?: string;
   phone?: string;
+  interview1Date?: string;
+  interview1Status?: string;
+  interview2Date?: string;
+  interview2Status?: string;
 }
 
 interface AssessmentItem {
@@ -132,6 +143,11 @@ export class InterviewFormDetailsComponent {
     description: '',
   };
 
+  isEditing = false;
+  private initialSnapshot: any = null;
+
+  formDetails!: FormGroup;
+
   screeningReasonOptions: { key: string; label: string }[] = [
     { key: 'cant-contact', label: 'ติดต่อไม่ได้/ปิดเครื่อง/ไม่รับสาย' },
     { key: 'education-mismatch', label: 'ศึกษาไม่ตรงสายที่รับสมัคร' },
@@ -146,6 +162,7 @@ export class InterviewFormDetailsComponent {
   transcripts: Attachment[] = [];
   certifications: Attachment[] = [];
   historyLogs: HistoryLog[] = [];
+  today: string | undefined;
 
   applicationFormSubmittedDate: string | Date = '';
 
@@ -162,21 +179,91 @@ export class InterviewFormDetailsComponent {
   isNotFound = false;
 
   private destroy$ = new Subject<void>();
+  qrCodeImageUrl: string | undefined;
 
   constructor(
     private route: ActivatedRoute,
-    private applicationService: ApplicationService
-  ) {}
+    private dialog: MatDialog,
+    private applicationService: ApplicationService,
+    private cdr: ChangeDetectorRef,
+    private fb: FormBuilder,
+    private interviewFormService: InterviewFormService
+  ) { }
+
+  // ---------- Carousel config ----------
+  @ViewChildren(SlickItemDirective) slickItems!: QueryList<SlickItemDirective>;
+
+  slideConfig: any = {
+    slidesToShow: 2,
+    slidesToScroll: 1,
+    dots: false,
+    arrows: false,
+    infinite: false,
+    responsive: [
+      {
+        breakpoint: 768,
+        settings: {
+          slidesToShow: 1,
+          dots: false
+        }
+      }
+    ]
+  };
+
+  // ---------- Carousel controls ----------
+  currentSlide: number[] = [];
+  totalSlides: number[] = [];
+  canGoPrev: boolean[] = [];
+  canGoNext: boolean[] = [];
+
+  @ViewChildren('slickCarousel') carousels!: QueryList<SlickCarouselComponent>;
+
+  // ====== Assessment UI/Form ======
+  isRevOpen = true; // ปุ่ม chevron พับ/กาง
+  assessmentRows: any[] = [];
+  assessmentColumns: any[] = [];
+
+  // ====== Candidate Warning UI ======
+  isWarnOpen = true;
+  warningRows: any[] = [];
+  warningColumns: any[] = [];
+
+  reviewHistory: any[] = [];
+
+  private initWarningColumns() {
+    this.warningColumns = [
+      { header: 'No', field: 'no', type: 'text', align: 'center', width: '56px', minWidth: '56px' },
+      { header: 'Question', field: 'warning', type: 'text', minWidth: '220px' },
+      { header: 'Interview 1', field: 'result', type: 'input', minWidth: '160px' }
+    ];
+  }
 
   // ===================== Lifecycle =====================
   ngOnInit() {
+    this.formDetails = this.fb.group({});
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+
+    this.today = `${year}-${month}-${day}`;
+
     this.filterButtons = [{ label: 'Print', key: 'print', color: '#0055FF' }];
     this.route.queryParams
       .pipe(takeUntil(this.destroy$))
       .subscribe((params) => {
         this.applicantId = Number(params['id'] || 0);
         this.fetchCandidateTracking();
+        this.fetchInterviewer();
       });
+
+    // ตาราง Warning
+    this.initWarningColumns();
+  }
+
+  ngAfterViewInit() {
+    this.nextTick(() => this.setActionButtons('view'));
   }
 
   ngOnDestroy() {
@@ -197,7 +284,7 @@ export class InterviewFormDetailsComponent {
       .getTrackingApplications({
         page: 1,
         pageSize: 20,
-        search: String(this.applicantId), // ใช้ applicantId เป็น search filter ตามโจทย์
+        search: String(this.applicantId),
       })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -209,12 +296,14 @@ export class InterviewFormDetailsComponent {
             return;
           }
 
-          // * ถ้า API อาจคืนมาหลายคน ให้เลือกตัวที่ userID ตรงที่สุดก่อน
           const exact =
             items.find((i) => Number(i.userID) === this.applicantId) ||
             items[0];
 
+          this.mapTrackingToView(exact);
           this.isLoading = false;
+
+          console.log(res, '=>res')
         },
         error: (err) => {
           console.error(
@@ -227,7 +316,219 @@ export class InterviewFormDetailsComponent {
       });
   }
 
+  fetchInterviewer() {
+    this.applicantId = 202409003
+    this.interviewFormService.getApplicantReview(Number(this.applicantId)).subscribe({
+      next: (res) => {
+        console.log(res, '=>resHis')
+        this.reviewHistory = res
+
+        setTimeout(() => {
+          console.log(this.reviewHistory.length)
+          this.slideConfig = {
+              ...this.slideConfig,
+              dots: this.reviewHistory.length > 2,
+              responsive: [
+                {
+                  breakpoint: 768,
+                  settings: {
+                    slidesToShow: 1,
+                    dots: this.reviewHistory.length > 1
+                  }
+                }
+              ]
+            };
+
+            // Force re-initialize slick (ต้องรอ config update เสร็จก่อน)
+            setTimeout(() => {
+              this.carousels.forEach((carousel) => {
+                carousel.unslick();      // ล้างของเดิม
+                carousel.initSlick();    // สร้างใหม่
+              });
+            }, 0);
+        });
+      },
+      error: (error) => {
+        console.error('Error fetching category types:', error);
+      }
+    });
+  }
+
   // ===================== Mapping =====================
+  private mapTrackingToView(ct: CandidateTracking) {
+    // ----- Applicant header -----
+    this.applicant = {
+      id: String(ct.userID ?? ''),
+      name: ct.fullName || ct.fullNameTH || '—',
+      gpa: Number(ct.gpa ?? 0),
+      university: ct.university || '—',
+      appliedDate: ct.submitDate || '',
+      email: ct.email || '—',
+      positions: Array.from(
+        new Set(
+          (ct.positions ?? [])
+            .map((p) => p?.namePosition)
+            .filter((n): n is string => !!n)
+        )
+      ),
+      grade: ct.gradeCandidate || '—',
+      views: Number(ct.countLike ?? 0),
+      avatarUrl: '',
+      faculty: ct.faculty,
+      program: ct.major,
+      phone: ct.phoneNumber,
+      interview1Date: dayjs(ct.interview1.date).format('DD MMMM YYYY'),
+      interview1Status: ct.interview1.status,
+      interview2Date: dayjs(ct.interview2.date).format('DD MMMM YYYY'),
+      interview2Status: ct.interview2.status,
+    };
+
+    console.log(this.applicant)
+
+    this.applicationFormSubmittedDate = ct.submitDate || '';
+
+    // ----- Steps / Pipeline (ข้อมูลต้นทาง) -----
+    const stepsRaw: Array<{
+      label: string;
+      date?: string;
+      status: StepStatus;
+      sub?: string;
+    }> = [
+        {
+          label: 'Applied',
+          date: formatDay(ct.applied?.date ?? ct.submitDate),
+          status: stepStatusFrom(ct.applied, ct.submitDate),
+          sub: subFrom(ct.applied, 'Submitted'),
+        },
+        {
+          label: 'Screened',
+          date: formatDay(ct.screened?.date ?? ct.lastUpdate),
+          status: stepStatusFrom(ct.screened),
+          sub: subFrom(ct.screened, 'Screened'),
+        },
+        {
+          label: 'Interview 1',
+          date: formatDay(ct.interview1?.date),
+          status: stepStatusFrom(ct.interview1),
+          sub: subFrom(ct.interview1),
+        },
+        {
+          label: 'Interview 2',
+          date: formatDay(ct.interview2?.date),
+          status: stepStatusFrom(ct.interview2),
+          sub: subFrom(ct.interview2),
+        },
+        {
+          label: 'Offered',
+          date: formatDay(ct.offer?.date),
+          status: stepStatusFrom(ct.offer),
+          sub: subFrom(ct.offer),
+        },
+        {
+          label: 'Hired',
+          date: formatDay(ct.hired?.date),
+          status: stepStatusFrom(ct.hired),
+          sub: subFrom(ct.hired),
+        },
+      ];
+
+    // index สุดท้ายที่เป็น done
+    const lastDoneIndex = stepsRaw.map((s) => s.status).lastIndexOf('done');
+
+    this.steps = stepsRaw;
+    this.currentIndex = lastDoneIndex;
+
+    // ===== Map -> StepperComponent (เวอร์ชันมี sub/date/variant) =====
+    this.stepperItems = this.steps.map((s) => ({
+      label: s.label,
+      sub: s.sub || (s.status === 'done' ? 'Accept' : ''),
+      date: s.date || '',
+      variant: statusToVariant(s.sub), // ใช้ฟังก์ชันเดิมของไฟล์นี้
+    }));
+
+    // active = ขั้นล่าสุดที่ "done" ถ้ายังไม่มี done ให้ชี้สเต็ปแรก
+    this.activeStepIndex = this.currentIndex >= 0 ? this.currentIndex : 0;
+
+    // disable: คลิกได้สูงสุดถึง "ถัดจาก currentIndex" (i <= currentIndex + 1)
+    this.disabledStepLabels = this.steps
+      .map((s, i) => (i > this.currentIndex + 1 ? s.label : ''))
+      .filter(Boolean);
+
+    // ----- Assessments (ตัวอย่าง) -----
+    this.assessments = [
+      {
+        no: 1,
+        review: 'University Education',
+        result: this.applicant.university,
+        score: this.applicant.university ? 1 : 0,
+        visibility: true,
+        details: this.applicant.university ? 'ผ่านเกณฑ์' : '—',
+        detailsPositive: Boolean(this.applicant.university),
+      },
+      {
+        no: 2,
+        review: 'Graduation GPA',
+        result: String(this.applicant.gpa ?? ''),
+        score: this.applicant.gpa >= 3.2 ? 1 : this.applicant.gpa > 0 ? 0.5 : 0,
+        visibility: true,
+        details:
+          this.applicant.gpa >= 3.2
+            ? 'เกิน 3.20'
+            : this.applicant.gpa > 0
+              ? 'ต่ำกว่า 3.20'
+              : '—',
+        detailsPositive: this.applicant.gpa >= 3.2,
+      },
+      {
+        no: 3,
+        review: 'EQ Test Result',
+        result: '—',
+        score: 0,
+        visibility: true,
+        details: '—',
+      },
+      {
+        no: 4,
+        review: 'Ethics Test Result',
+        result: '—',
+        score: 0,
+        visibility: true,
+        details: '—',
+      },
+    ];
+    this.recomputeAssessmentTotals();
+
+    // ----- Warnings (mock) -----
+    this.warnings = [
+      {
+        no: 1,
+        warning: 'Work History',
+        result: '—',
+        risk: 'Normal',
+        visibility: true,
+        detail: '—',
+      },
+    ];
+
+    // ----- Screening Card -----
+    this.screening = {
+      screenedBy: '—',
+      screeningDate: (ct.screened?.date ||
+        ct.lastUpdate ||
+        ct.submitDate ||
+        '') as string,
+      status: 'Accept',
+      reasons: [],
+      description: '',
+    };
+
+    // ----- Attachments / Comments / Logs -----
+    this.comments = [];
+    this.currentUserName = '';
+    this.transcripts = [];
+    this.certifications = [];
+    this.historyLogs = [];
+  }
 
   private recomputeAssessmentTotals() {
     this.assessmentTotalScore = this.assessments.reduce(
@@ -242,14 +543,38 @@ export class InterviewFormDetailsComponent {
   // ===================== UI Events =====================
   onFilterButtonClick(key: string) {
     switch (key) {
-      case 'print':
-        this.onPrintClicked();
+      case 'edit':
+        // this.setActionButtons('edit');
+        this.onEditClicked();
+        // this.isEditing = true
+        // this.formDetails.enable();
+        break;
+      case 'save':
+        this.onSaveClicked()
         break;
     }
   }
 
-  onPrintClicked() {
-    console.log('Print clicked');
+  onEditClicked() {
+    this.isEditing = true;
+    this.formDetails.enable();
+    // this.initialSnapshot = this.buildSnapshot();
+
+    this.nextTick(() => this.setActionButtons('edit'));
+  }
+
+  private setActionButtons(mode: 'view' | 'edit') {
+    if (mode === 'view') {
+      this.filterButtons = [{ label: 'Edit', key: 'edit', color: '#000000' }];
+      this.disabledKeys = [];
+    } else {
+      this.filterButtons = [{ label: 'Save', key: 'save', color: '#000055' }];
+      this.disabledKeys = ['save'];
+    }
+  }
+
+  private nextTick(fn: () => void) {
+    Promise.resolve().then(fn);
   }
 
   addComment() {
@@ -264,16 +589,50 @@ export class InterviewFormDetailsComponent {
     this.newCommentText = '';
   }
 
-  onScreeningCardClick() {
-    console.log('Screening card clicked');
-  }
-
-  onViewDetailClick() {
-    console.log('View detail clicked');
-  }
-
   onCommentClick() {
     console.log('Comment card clicked');
+  }
+
+  generateQRCode(text: string): void {
+    QRCode.toDataURL(text, (err: any, url: string) => {
+      if (err) {
+        console.error(err);
+        return;
+      }
+
+      this.qrCodeImageUrl = url;
+    });
+  }
+
+  onSaveClicked() {
+    // if (!this.hasFormChanged()) return;
+
+    Promise.resolve().then(() => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.add('dimmed-overlay');
+    });
+
+    const dialogRef = this.dialog.open(AlertDialogComponent, {
+      width: '496px',
+      panelClass: 'custom-dialog-container',
+      autoFocus: false,
+      disableClose: true,
+      data: {
+        title: 'Confirmation',
+        message: 'Are you sure you want to save this data?',
+        confirm: true
+      }
+    });
+
+    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.remove('dimmed-overlay');
+
+      if (confirmed) {
+        console.log('Save Click')
+      }
+    });
+
   }
 
   // ====== Stepper events ======
@@ -380,6 +739,47 @@ export class InterviewFormDetailsComponent {
   }
   variantText(i: number) {
     return this.isColored(i) ? '#FFFFFF' : '#374151';
+  }
+
+  // ---------- Carousel ----------
+  onPrevClick(index: number) {
+    const carousel = this.carousels.get(index);
+    carousel?.slickPrev();
+  }
+
+  onNextClick(index: number) {
+    const carousel = this.carousels.get(index);
+    carousel?.slickNext();
+  }
+
+  onCarouselInit(e: any, index: number) {
+    this.totalSlides[index] = e.slick.slideCount;
+    this.currentSlide[index] = 0;
+    this.updateArrowState(index);
+
+    this.cdr.detectChanges();
+  }
+
+  onSlideChanged(e: any, index: number) {
+    this.currentSlide[index] = e.currentSlide;
+    this.updateArrowState(index);
+  }
+
+  updateArrowState(index: number) {
+    const visibleSlides = this.getVisibleSlides();
+    const maxStartIndex = this.totalSlides[index] - visibleSlides;
+
+    this.canGoPrev[index] = this.currentSlide[index] > 0;
+    this.canGoNext[index] = this.currentSlide[index] < maxStartIndex;
+  }
+
+  getVisibleSlides(): number {
+    const width = window.innerWidth;
+
+    if (width < 1800) {
+      return 3;
+    }
+    return 4;
   }
 }
 

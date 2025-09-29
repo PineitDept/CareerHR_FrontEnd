@@ -1,4 +1,4 @@
-import { formatDate } from '@angular/common';
+import { formatDate, Location } from '@angular/common';
 import {
   Component,
   ElementRef,
@@ -64,7 +64,8 @@ export class FilterComponent {
   @ViewChild('gradeDropdown') gradeDropdown!: ElementRef;
 
   constructor(
-    private router: Router
+    private router: Router,
+    private location: Location
   ) { }
 
   ngOnInit() {
@@ -96,35 +97,37 @@ export class FilterComponent {
   }
 
   onBackClick() {
-    const fullUrl = this.router.url;           // เช่น /applications/screening/application-form?id=123
-    const [pathOnly] = fullUrl.split('?');     // ตัด query ออก -> /applications/screening/application-form
+    // const fullUrl = this.router.url;           // เช่น /applications/screening/application-form?id=123
+    // const [pathOnly] = fullUrl.split('?');     // ตัด query ออก -> /applications/screening/application-form
 
-    // ===== [A] รองรับเส้นทางของ application module =====
-    if (pathOnly.startsWith('/applications/')) {
-      // กรณีหน้าแบบ /applications/.../application-form[/*]
-      if (/\/application-form(?:\/.*)?$/.test(pathOnly)) {
-        const basePath = pathOnly.replace(/\/application-form(?:\/.*)?$/, '');
-        this.router.navigateByUrl(basePath || '/applications');
-        return;
-      }
+    // // ===== [A] รองรับเส้นทางของ application module =====
+    // if (pathOnly.startsWith('/applications/')) {
+    //   // กรณีหน้าแบบ /applications/.../application-form[/*]
+    //   if (/\/application-form(?:\/.*)?$/.test(pathOnly)) {
+    //     const basePath = pathOnly.replace(/\/application-form(?:\/.*)?$/, '');
+    //     this.router.navigateByUrl(basePath || '/applications');
+    //     return;
+    //   }
 
-      // เผื่อกรณีอนาคต: /applications/.../details[/*]
-      if (/\/details(?:\/.*)?$/.test(pathOnly)) {
-        const basePath = pathOnly.replace(/\/details(?:\/.*)?$/, '');
-        this.router.navigateByUrl(basePath || '/applications');
-        return;
-      }
-    }
+    //   // เผื่อกรณีอนาคต: /applications/.../details[/*]
+    //   if (/\/details(?:\/.*)?$/.test(pathOnly)) {
+    //     const basePath = pathOnly.replace(/\/details(?:\/.*)?$/, '');
+    //     this.router.navigateByUrl(basePath || '/applications');
+    //     return;
+    //   }
+    // }
 
-    // ===== [B] พฤติกรรมเดิม (หน้าทั่วไปที่ลงท้ายด้วย /details) =====
-    if (pathOnly.includes('/details')) {
-      const basePath = pathOnly.replace(/\/details(?:\/.*)?$/, '');
-      this.router.navigateByUrl(basePath || '/');
-      return;
-    }
+    // // ===== [B] พฤติกรรมเดิม (หน้าทั่วไปที่ลงท้ายด้วย /details) =====
+    // if (pathOnly.includes('/details')) {
+    //   const basePath = pathOnly.replace(/\/details(?:\/.*)?$/, '');
+    //   this.router.navigateByUrl(basePath || '/');
+    //   return;
+    // }
 
     // หากไม่เข้าเงื่อนไขใด ๆ จะไม่ทำอะไรเพิ่มเติม หรือจะใส่ fallback ก็ได้ตามต้องการ
     // this.router.navigateByUrl('/');
+
+    this.location.back()
   }
 
   toggleDropdown(type: 'year' | 'month' | 'grade') {

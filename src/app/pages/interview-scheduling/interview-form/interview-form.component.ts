@@ -677,9 +677,12 @@ export class InterviewFormComponent {
   // table
   onViewRowClicked(row: any) {
     const queryParams = {
-      categoryType: row.categoryType
+      id: row.profile.userId,
+      interview: 1
     }
 
-    this.router.navigate(['/admin-setting/data-setting/application/application-question/details'], { queryParams });
+    console.log(row.profile.appointmentId)
+
+    this.router.navigate(['/interview-scheduling/interview-form/details'], { queryParams });
   }
 }
