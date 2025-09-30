@@ -359,7 +359,7 @@
         <div *ngIf="commentsLoading" class="tw-text-sm tw-text-gray-500 tw-py-4">Loading comments...</div>
 
         <!-- List -->
-        <div class="tw-space-y-6 tw-py-4" *ngIf="!commentsLoading">
+        <div class="tw-space-y-6 tw-py-4" *ngIf="!commentsLoading && totalComments > 0">
           <!-- ใช้ template recursive เพื่อเรนเดอร์คอมเมนต์และรีพลาย -->
           <ng-container
             *ngTemplateOutlet="renderCommentList; context: { $implicit: commentsTree, depth: 0 }">
@@ -391,7 +391,7 @@
                       {{ c.commentType }}
                     </span>
 
-                    <span *ngIf="c.updatedAt && c.updatedAt !== c.createdAt">· edited</span>
+                    <span *ngIf="isEditedAtSecond(c.createdAt, c.updatedAt)">· edited</span>
                   </div>
 
                   <!-- Content / Edit Mode -->
@@ -486,7 +486,7 @@
           </ng-template>
         </div>
 
-        <hr class="tw--mx-6" />
+        <hr class="tw--mx-6" *ngIf="totalComments > 0" />
 
         <!-- Composer -->
         <div class="tw-py-4">
@@ -524,10 +524,12 @@
 
   <!-- =============== RIGHT (1 col) =============== -->
   <aside class="tw-col-span-1 tw-space-y-6">
-    <!-- Card: Application Screening (Green) -->
+    <!-- Card: Application Screening -->
     <button
       type="button"
-      class="tw-w-full tw-rounded-2xl tw-bg-[#0F5B17] tw-text-white tw-px-6 tw-py-6 tw-text-left tw-shadow-[0_8px_16px_rgba(0,0,0,0.25)] tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-brightness-110 hover:tw-shadow-[0_12px_20px_rgba(0,0,0,0.35)] focus:tw-ring-2 focus:tw-ring-white/30"
+      [disabled]="true"
+      class="tw-w-full tw-rounded-2xl tw-text-white tw-px-6 tw-py-6 tw-text-left tw-shadow-[0_8px_16px_rgba(0,0,0,0.25)] tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-brightness-110 hover:tw-shadow-[0_12px_20px_rgba(0,0,0,0.35)] focus:tw-ring-2 focus:tw-ring-white/30 tw-cursor-default tw-pointer-events-none"
+      [style.backgroundColor]="screeningCardBg"
       (click)="onScreeningCardClick()"
     >
       <div class="tw-flex tw-items-center tw-gap-6">

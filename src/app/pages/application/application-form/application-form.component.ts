@@ -19,7 +19,7 @@ dayjs.extend(utc);
 // ====== Types สำหรับฝั่ง View ======
 type StepStatus = 'done' | 'pending';
 type Risk = 'Normal' | 'Warning';
-type ScreeningStatus = 'Accept' | 'Decline' | 'Hold';
+type ScreeningStatus = 'Accept' | 'Decline' | 'On Hold' | 'Pending' | null;
 
 interface Applicant {
   id: string;
@@ -193,7 +193,7 @@ export class ApplicationFormComponent {
   screening: Screening = {
     screenedBy: '—',
     screeningDate: '',
-    status: 'Accept',
+    status: null,
     reasons: [],
     description: '',
   };
@@ -246,6 +246,9 @@ export class ApplicationFormComponent {
   commentsLoading = false;
   commentsTree: ViewComment[] = [];
   commentCtrl!: FormControl<string>;
+
+  screeningCardBg: string = '#6C757D'; // สีพื้นฐานตอนยังไม่รู้ผล
+  private hasScreenedPending = false;   // จาก getTrackingApplications
 
   constructor(
     private route: ActivatedRoute,
@@ -349,6 +352,19 @@ export class ApplicationFormComponent {
     };
 
     this.applicationFormSubmittedDate = ct.submitDate || '';
+
+    // reset ค่าเริ่มต้นของการ์ด Screening ทุกครั้ง
+    this.screening.screenedBy = '—';
+    this.screening.screeningDate = '';
+    this.screening.status = null;
+    this.screeningCardBg = '#6C757D'; // สีกลาง
+
+    // ----- Screening card color by tracking (Pending -> ดำ) -----
+    this.hasScreenedPending = String(ct?.screened?.status || '').trim().toLowerCase() === 'pending';
+    if (this.hasScreenedPending) {
+      this.screeningCardBg = '#000000';
+      this.screening.status = 'Pending';
+    }
 
     // ----- Steps / Pipeline -----
     const stepsRaw: Array<{
@@ -643,6 +659,29 @@ export class ApplicationFormComponent {
             const wb = orderWeight[b.stageNameNormalized] ?? 999;
             return wa - wb;
           });
+
+          // ===== Apply Screening card from Stage History (ถ้า tracking ไม่ได้ pending) =====
+          if (!this.hasScreenedPending) {
+            const screenedList = (Array.isArray(histories) ? histories : [])
+              .filter(h => String(h.stageName || '').trim().toLowerCase() === 'screened');
+
+            if (screenedList.length) {
+              // เลือกรายการล่าสุดตาม stageDate
+              const pickLatest = screenedList
+                .slice()
+                .sort((a, b) => new Date(b.stageDate || 0).getTime() - new Date(a.stageDate || 0).getTime())[0];
+
+              const hrName = pickLatest?.hrUserName || '—';
+              const catName = String(pickLatest?.categoryName || '');
+              const status  = this.normalizeCategoryToStatus(catName); // 'Accept' | 'Decline' | 'Hold' | null
+              const bg      = this.categoryToBg(catName);              // สีตาม category
+
+              this.screening.screenedBy   = hrName;
+              this.screening.screeningDate = pickLatest?.stageDate || this.screening.screeningDate || '';
+              this.screening.status       = status;    // อนุญาต null ได้
+              this.screeningCardBg        = bg;        // ปรับสีการ์ดตาม category
+            }
+          }
         },
         error: (e) => console.error('[ApplicationForm] stage history error:', e)
       });
@@ -1078,6 +1117,34 @@ export class ApplicationFormComponent {
     if (targetId) this.scrollToId(targetId);
   }
 
+  // เทียบ ISO datetime โดยสนใจแค่ถึงระดับวินาที (YYYY-MM-DDTHH:mm:ss)
+  private sameIsoSecond(a?: string, b?: string): boolean {
+    if (!a || !b) return true; // ถ้าขาดค่าใดค่าหนึ่ง ถือว่า "ไม่แก้ไข"
+    const A = String(a).trim().slice(0, 19); // "2025-09-29T10:52:52"
+    const B = String(b).trim().slice(0, 19);
+    return A === B;
+  }
+
+  isEditedAtSecond(createdAt?: string, updatedAt?: string): boolean {
+    if (!updatedAt) return false;
+    return !this.sameIsoSecond(createdAt, updatedAt);
+  }
+
+  private normalizeCategoryToStatus(cat?: string): ScreeningStatus {
+    const s = String(cat || '').trim().toLowerCase();
+    if (s === 'accept') return 'Accept';
+    if (s === 'decline') return 'Decline';
+    if (s === 'on hold' || s === 'hold') return 'On Hold';
+    return null; // ไม่รู้จัก -> แสดง "—"
+  }
+
+  private categoryToBg(cat?: string): string {
+    const s = String(cat || '').trim().toLowerCase();
+    if (s === 'accept')  return '#005500';
+    if (s === 'decline') return '#930000';
+    if (s === 'on hold' || s === 'hold') return '#FFAA00';
+    return '#6C757D';
+  }
 }
 
 // ====== Helpers ======
