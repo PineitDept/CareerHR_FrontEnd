@@ -45,9 +45,9 @@ export class StepperComponent {
 
   /** palette โทน soft (ใกล้พาสเทล) */
   private PALETTE_SOFT = {
-    green: '#45C08A', // เขียวนุ่ม
+    green: '#00AA55', // เขียว
     blue:  '#4EA7F5', // ฟ้าน้ำทะเล
-    red:   '#F06A6A', // แดงโทนอุ่น
+    red:   '#930000', // แดง
     gray:  '#F5F7FA', // เทาอ่อน
     white: '#FFFFFF',
     grayBorder: '#E5E7EB',

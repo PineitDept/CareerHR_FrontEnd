@@ -793,7 +793,7 @@ export class ApplicationQuestionDetailsComponent {
 
     const dialogRef = this.dialog.open(ConfirmChangesDialogComponent, {
       width: '856px',
-      panelClass: 'custom-dialog-container',
+      panelClass: ['custom-dialog-container', 'pp-rounded-dialog'],
       disableClose: true,
       autoFocus: false,
       data: {
@@ -1126,7 +1126,7 @@ export class ApplicationQuestionDetailsComponent {
 
     const dialogRef = this.dialog.open(CaptchaDialogComponent, {
       width: '520px',
-      panelClass: 'custom-dialog-container',
+      panelClass: ['custom-dialog-container', 'pp-rounded-dialog'],
       disableClose: true,
       data: {
         title: 'Delete',

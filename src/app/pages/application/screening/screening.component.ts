@@ -6,6 +6,7 @@ import {
   ViewChild,
   ElementRef,
   effect,
+  Injector,
 } from '@angular/core';
 
 import { BaseApplicationComponent } from '../../../shared/base/base-application.component';
@@ -43,7 +44,10 @@ export class ScreeningComponent extends BaseApplicationComponent {
   hasOverflowY = false;
   private ro?: ResizeObserver;
 
-  constructor(private dialog: MatDialog) {
+  constructor (
+    private dialog: MatDialog,
+    private injector: Injector,
+  ) {
     super();
   }
 
@@ -175,7 +179,7 @@ export class ScreeningComponent extends BaseApplicationComponent {
     effect(() => {
       const _ = this.rows();          // อ่านค่าเพื่อให้ effect ติดตาม
       queueMicrotask(() => this.measureOverflow()); // วัดหลัง DOM อัปเดต
-    }, { injector: this.destroyRef as any });
+    }, { injector: this.injector });
   }
 
   measureOverflow(): void {

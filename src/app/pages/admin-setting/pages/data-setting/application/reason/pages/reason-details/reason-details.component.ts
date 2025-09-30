@@ -259,7 +259,7 @@ export class ReasonDetailsComponent {
 
     const dialogRef = this.dialog.open(ConfirmChangesDialogComponent, {
       width: '860px',
-      panelClass: 'custom-dialog-container',
+      panelClass: ['custom-dialog-container', 'pp-rounded-dialog'],
       disableClose: true,
       data: {
         title: 'Confirm Changes',
@@ -740,7 +740,7 @@ export class ReasonDetailsComponent {
 
     const dialogRef = this.dialog.open(CaptchaDialogComponent, {
       width: '520px',
-      panelClass: 'custom-dialog-container',
+      panelClass: ['custom-dialog-container', 'pp-rounded-dialog'],
       disableClose: true,
       data: { title: 'Delete', message: 'Are you sure you want to delete this item?', length: 6 },
     });
