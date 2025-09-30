@@ -270,6 +270,7 @@ export class JobPositionDetalisComponent {
 
     const dialogRef = this.dialog.open(QualityDialogComponent, {
       width: '350px',
+      panelClass: ['custom-dialog-container', 'pp-rounded-dialog'],
       data: {
         quality: this.formDetails.get('qualityPst')?.value,
         confirm: true
@@ -802,7 +803,7 @@ export class JobPositionDetalisComponent {
 
     const dialogRef = this.dialog.open(CaptchaDialogComponent, {
       width: '520px',
-      panelClass: 'custom-dialog-container',
+      panelClass: ['custom-dialog-container', 'pp-rounded-dialog'],
       disableClose: true,
       data: {
         title: 'Delete',

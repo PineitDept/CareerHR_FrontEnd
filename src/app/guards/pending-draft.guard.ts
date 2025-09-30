@@ -26,6 +26,7 @@ export class PendingDraftsGuard implements CanDeactivate<PendingDraftsAware> {
       ConfirmLeaveDialogComponent,
       {
         width: '480px',
+        panelClass: ['custom-dialog-container', 'pp-rounded-dialog'],
         data: {
           title: 'You have unsaved changes',
           message: 'Do you want to leave this page?'

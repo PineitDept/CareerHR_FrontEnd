@@ -109,7 +109,7 @@ export class SidebarComponent {
       return;
     }
     if (item.path) {
-      this.selectedByDepth[0] = item.label; 
+      this.selectedByDepth[0] = item.label;
       this.navigateToSubPagePath(item.path);
       this.saveStack = [];
       this.saveStack = this.selectedByDepth;
@@ -262,7 +262,7 @@ export class SidebarComponent {
 
     const dialogRef = this.dialog.open(AlertDialogComponent, {
       width: '400px',
-      panelClass: 'custom-dialog-container',
+      panelClass: ['custom-dialog-container', 'pp-rounded-dialog'],
       autoFocus: false,
       disableClose: true,
       data: {

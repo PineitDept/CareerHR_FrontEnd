@@ -104,4 +104,32 @@ export class ApplicationService {
       withAuth: true,
     });
   }
+
+  addCommentByCandidateId(body: any): Observable<any> {
+    return this.apiService.post<any>(`Comments`, body, {
+      loading: true,
+      withAuth: true,
+    });
+  }
+
+  editCommentById(id: number, body: any): Observable<any> {
+    return this.apiService.put<any>(`Comments/${id}`, body, {
+      loading: true,
+      withAuth: true,
+    });
+  }
+
+  deleteCommentById(id: number): Observable<any> {
+    return this.apiService.delete<any>(`Comments/${id}`, {
+      loading: true,
+      withAuth: true,
+    });
+  }
+
+  getCurrentStageByCandidateId(id: number): Observable<any> {
+    return this.apiService.get<any>(`Appointments/currentStage/${id}`, {
+      loading: true,
+      withAuth: true,
+    });
+  }
 }
