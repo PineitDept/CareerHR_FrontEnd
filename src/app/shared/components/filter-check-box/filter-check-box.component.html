@@ -37,7 +37,8 @@
       </div>
 
       <!-- Content Area -->
-      <div class="tw-overflow-hidden tw-transition-all tw-animate-in tw-slide-in-from-top-2 tw-fade-in tw-duration-300"
+      <div class="tw-transition-all tw-animate-in tw-slide-in-from-top-2 tw-fade-in tw-duration-300"
+        [ngClass]="canScroll ? 'tw-overflow-auto tw-max-h-[350px]' : 'tw-overflow-hidden'"
         [class.tw-max-h-0]="!isExpanded(group.groupKey)" [class.tw-max-h-96]="isExpanded(group.groupKey)">
         @if (isExpanded(group.groupKey)) {
         <div class="tw-space-y-1">

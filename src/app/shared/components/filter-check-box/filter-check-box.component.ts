@@ -19,6 +19,7 @@ export interface FilterConfig {
 })
 export class FilterCheckBoxComponent implements OnInit {
   @Input() directCol: boolean = false
+  @Input() canScroll: boolean = false
   @Input() items: GroupedCheckboxOption[] = [];
   @Input() config: FilterConfig = {};
   @Output() selected = new EventEmitter<Record<string, string[]>>();

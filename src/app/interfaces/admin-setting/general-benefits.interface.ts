@@ -10,6 +10,7 @@ export interface IBenefitsFilterRequest {
   sortFields?: string;
   TypeScoreMin?: number;
   TypeScoreMax?: number;
+  InterviewResult?: string;
 }
 
 export interface IBenefitsWithPositionsDto {

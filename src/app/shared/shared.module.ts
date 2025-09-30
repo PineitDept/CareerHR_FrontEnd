@@ -1,4 +1,4 @@
-import { NgModule } from '@angular/core';
+import { APP_INITIALIZER, NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
 
@@ -35,7 +35,12 @@ import { CdkDropdownComponent } from './components/cdk-dropdown/cdk-dropdown.com
 import { BackToTopComponent } from './components/back-to-top/back-to-top.component';
 import { FullCalendarModule } from '@fullcalendar/angular';
 import { CalendarComponent } from './components/calendar/calendar.component';
+import { SlickCarouselModule } from 'ngx-slick-carousel';
+import { SelectDialogComponent } from './components/dialogs/select-dialog/select-dialog.component';
+import { MailDialogComponent } from './components/dialogs/mail-dialog/mail-dialog.component';
 import { RevisionHistoryFooterComponent } from './components/revision-history-footer/revision-history-footer.component';
+import { QuillModule } from 'ngx-quill';
+import { quillInitFactory } from '../app.module';
 import { UniversityPickerDialogComponent } from './components/dialogs/university-picker-dialog/university-picker-dialog.component';
 import { StepperComponent } from './components/stepper/stepper.component';
 
@@ -61,6 +66,8 @@ import { StepperComponent } from './components/stepper/stepper.component';
     CdkDropdownComponent,
     BackToTopComponent,
     CalendarComponent,
+    SelectDialogComponent,
+    MailDialogComponent,
     RevisionHistoryFooterComponent,
     UniversityPickerDialogComponent,
     StepperComponent,
@@ -78,7 +85,9 @@ import { StepperComponent } from './components/stepper/stepper.component';
     OverlayModule,
     PortalModule,
     ScrollingModule,
-    FullCalendarModule
+    FullCalendarModule,
+    SlickCarouselModule,
+    QuillModule.forRoot(),
 ],
   exports: [
     HeaderContentComponent,
@@ -103,9 +112,13 @@ import { StepperComponent } from './components/stepper/stepper.component';
     // PurchaseOrderDetailsFormComponent
     CalendarComponent,
     FullCalendarModule,
+    SlickCarouselModule,
     RevisionHistoryFooterComponent,
     UniversityPickerDialogComponent,
     StepperComponent,
+  ],
+  providers: [
+    { provide: APP_INITIALIZER, useFactory: quillInitFactory, multi: true },
   ]
 })
 export class SharedModule { }
