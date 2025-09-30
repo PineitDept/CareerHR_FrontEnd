@@ -5,6 +5,7 @@ import {
   ViewChild,
   ElementRef,
   effect,
+  Injector,
 } from '@angular/core';
 
 import { BaseApplicationComponent } from '../../../shared/base/base-application.component';
@@ -40,6 +41,12 @@ export class AllApplicationComponent extends BaseApplicationComponent {
   @ViewChild('scrollArea') scrollArea!: ElementRef<HTMLDivElement>;
   hasOverflowY = false;
   private ro?: ResizeObserver;
+
+  constructor(
+    private injector: Injector,
+  ) {
+    super();
+  }
 
   // Table Configuration
   readonly columns: Columns = [
@@ -170,7 +177,7 @@ export class AllApplicationComponent extends BaseApplicationComponent {
     effect(() => {
       const _ = this.rows();          // อ่านค่าเพื่อให้ effect ติดตาม
       queueMicrotask(() => this.measureOverflow()); // วัดหลัง DOM อัปเดต
-    }, { injector: this.destroyRef as any });
+    }, { injector: this.injector });
   }
 
   measureOverflow(): void {

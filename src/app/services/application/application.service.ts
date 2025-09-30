@@ -76,4 +76,60 @@ export class ApplicationService {
       }
     );
   }
+
+  getApplicationAssessmentAndCandidateWarning(id: number): Observable<any> {
+    return this.apiService.get<any>(`Validation/candidate-score/${id}`, {
+      loading: true,
+      withAuth: true,
+    });
+  }
+
+  getCandidateStageHistoryById(
+    id: number,
+    stageId?: number
+  ): Observable<any> {
+    const endpoint = stageId
+      ? `CandidateStageHistory/by-application/${id}?stageId=${stageId}`
+      : `CandidateStageHistory/by-application/${id}`;
+
+    return this.apiService.get<any>(endpoint, {
+      loading: true,
+      withAuth: true,
+    });
+  }
+
+  getCommentsById(id: number): Observable<any> {
+    return this.apiService.get<any>(`Comments/candidate/${id}`, {
+      loading: true,
+      withAuth: true,
+    });
+  }
+
+  addCommentByCandidateId(body: any): Observable<any> {
+    return this.apiService.post<any>(`Comments`, body, {
+      loading: true,
+      withAuth: true,
+    });
+  }
+
+  editCommentById(id: number, body: any): Observable<any> {
+    return this.apiService.put<any>(`Comments/${id}`, body, {
+      loading: true,
+      withAuth: true,
+    });
+  }
+
+  deleteCommentById(id: number): Observable<any> {
+    return this.apiService.delete<any>(`Comments/${id}`, {
+      loading: true,
+      withAuth: true,
+    });
+  }
+
+  getCurrentStageByCandidateId(id: number): Observable<any> {
+    return this.apiService.get<any>(`Appointments/currentStage/${id}`, {
+      loading: true,
+      withAuth: true,
+    });
+  }
 }

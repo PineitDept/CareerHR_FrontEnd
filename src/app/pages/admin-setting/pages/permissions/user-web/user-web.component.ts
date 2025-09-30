@@ -140,7 +140,7 @@ export class UserWebComponent extends BaseUserWebComponent {
 
     const dialogRef = this.dialog.open(FormDialogComponent, {
       width: '496px',
-      panelClass: 'custom-dialog-container',
+      panelClass: ['custom-dialog-container', 'pp-rounded-dialog'],
       autoFocus: false,
       disableClose: true,
       data: {
@@ -206,7 +206,7 @@ export class UserWebComponent extends BaseUserWebComponent {
 
         const dialogRef = this.dialog.open(FormDialogComponent, {
           width: '496px',
-          panelClass: 'custom-dialog-container',
+          panelClass: ['custom-dialog-container', 'pp-rounded-dialog'],
           autoFocus: false,
           disableClose: true,
           data: {
