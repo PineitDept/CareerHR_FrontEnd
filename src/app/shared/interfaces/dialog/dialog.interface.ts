@@ -5,7 +5,11 @@ export interface AlertDialogData {
   selectedRows?: any[];
   columns?: any[];
   poType?: string[];
+  options?: any[];
+  dropdownConfigs?: any[];
   quality?: number;
+  missCallCount?: number;
+  dataMail?: any;
 }
 
 export interface FormDialogData {

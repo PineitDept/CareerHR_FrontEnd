@@ -1,0 +1,36 @@
+/* ปุ่ม Dynamic ใช้สีพื้นฐานจากตัวแปร --btn-bg */
+.btn-dynamic {
+  background-color: var(--btn-bg);
+  color: #fff;
+  border-radius: 0.5rem;
+  transition: background-color .15s ease, filter .15s ease, box-shadow .15s ease, transform .02s ease;
+  outline: none;
+}
+
+/* Hover & Focus (รองรับเบราว์เซอร์สมัยใหม่ด้วย color-mix) */
+@supports (background: color-mix(in srgb, red, white)) {
+  .btn-dynamic:not(:disabled):hover,
+  .btn-dynamic:not(:disabled):focus-visible {
+    background-color: color-mix(in srgb, var(--btn-bg) 90%, black 10%);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--btn-bg) 30%, transparent);
+  }
+}
+
+/* Fallback สำหรับเบราว์เซอร์ที่ไม่รองรับ color-mix */
+@supports not (background: color-mix(in srgb, red, white)) {
+  .btn-dynamic:not(:disabled):hover,
+  .btn-dynamic:not(:disabled):focus-visible {
+    filter: brightness(0.9);
+    box-shadow: 0 0 0 3px rgba(0,0,0,0.08);
+  }
+}
+
+/* Active กดแล้วมี feedback เล็กน้อย */
+.btn-dynamic:not(:disabled):active {
+  transform: translateY(0.5px);
+}
+
+/* โฟกัสด้วยคีย์บอร์ดให้เห็นชัด */
+.btn-dynamic:focus-visible {
+  outline: 0;
+}

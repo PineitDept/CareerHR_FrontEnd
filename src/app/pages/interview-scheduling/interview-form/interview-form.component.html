@@ -1,0 +1,24 @@
+<div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
+    <app-header-content [headerName]="'Interview Form Tracking'" [headerType]="'search'" (search)="onSearch()"
+        (clearSearch)="onClearSearch()" [searchByOptions]="searchByOptions"
+        [searchForm]="searchForm"></app-header-content>
+</div>
+
+<app-filter [showAllYearOption]="true" [defaultYearAll]="true" [filterDate]="true" [filterDateRange]="filterDateRange"
+    (dateRangeSelected)="onDateRangeSelected($event)" (buttonClicked)="onFilterButtonClick($event)"></app-filter>
+
+<app-tab-menus [tabs]="tabMenus" (tabChanged)="onTabChange($event)" [activeTab]="activeTab"></app-tab-menus>
+
+<app-loading></app-loading>
+
+<div class="tw-h-[calc(100vh-300px)] tw-overflow-y-auto tw-mt-6" #scrollArea>
+  <app-tables
+    [columns]="columns"
+    [rows]="rows"
+    [showCheckbox]="false"
+    [enableRowClick]="false"
+    (viewRowClicked)="onViewRowClicked($event)"
+    [hasOverflowY]="hasOverflowY"
+    [isToggleAlert]="true"
+  ></app-tables>
+</div>

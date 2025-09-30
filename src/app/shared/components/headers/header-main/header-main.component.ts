@@ -9,10 +9,20 @@ import { AuthService } from '../../../services/auth/auth.service';
 })
 export class HeaderMainComponent {
 
+  currentUser: string | undefined;
+
   constructor(
     private router: Router,
     private authService: AuthService
   ) {}
+
+  ngOnInit(): void {
+    const userString = sessionStorage.getItem('user');
+    if (userString) {
+      const user = JSON.parse(userString);
+      this.currentUser = user.username;
+    }
+  }
 
   handleLogoClick() {
     const token = this.authService.getAccessToken();

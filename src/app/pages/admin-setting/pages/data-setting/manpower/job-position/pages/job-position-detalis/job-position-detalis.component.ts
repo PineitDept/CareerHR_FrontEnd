@@ -126,17 +126,20 @@ export class JobPositionDetalisComponent {
   dropdownCtx: DropdownCtx = null;
   dropdownSearch = '';
 
-  educationOptions: DropdownOption[] = [
-    { label: "Bachelor's Degree or Higher", value: 'BD' },
-    { label: "Master's Degree or Higher", value: 'MD' },
-    { label: "High School or Higher", value: 'HS' },
-  ];
+  educationOptions: DropdownOption[] = [];
+  workingOptions: DropdownOption[] = [];
 
-  workingOptions: DropdownOption[] = [
-    { label: 'Full Time', value: 61 },
-    { label: 'Part Time', value: 62 },
-    { label: 'Contract', value: 63 },
-  ];
+  // educationOptions: DropdownOption[] = [
+  //   { label: "Bachelor's Degree or Higher", value: 'BD' },
+  //   { label: "Master's Degree or Higher", value: 'MD' },
+  //   { label: "High School or Higher", value: 'HS' },
+  // ];
+
+  // workingOptions: DropdownOption[] = [
+  //   { label: 'Full Time', value: 61 },
+  //   { label: 'Part Time', value: 62 },
+  //   { label: 'Contract', value: 63 },
+  // ];
 
   @ViewChild('dropdownOverlayTpl', { static: true }) dropdownOverlayTpl!: TemplateRef<any>;
 
@@ -196,6 +199,8 @@ export class JobPositionDetalisComponent {
     // ที่เหลือตามเดิม
     this.route.queryParams.subscribe(params => {
       this.idjobPst = params['idjobPst'] || '';
+      this.fetchWorkDetailsDetails();
+      this.fetchEducationLevelsDetails();
       this.fetchBenefitsDetails();
       this.fetchLanguageDetails();
       this.fetchComputerDetails();
@@ -456,6 +461,34 @@ export class JobPositionDetalisComponent {
       },
       error: (error) => {
         console.error('Error fetching category types details:', error);
+      },
+    });
+  }
+
+  fetchEducationLevelsDetails() {
+    this.jobPositionService.getAllJobEducationLevels().subscribe({
+      next: (res) => {
+        this.educationOptions = res.map((item: any) => ({
+          label: item.educationName,
+          value: item.educationId,
+        }));
+      },
+      error: (error) => {
+        console.error('Error fetching education levels:', error);
+      },
+    });
+  }
+
+  fetchWorkDetailsDetails() {
+    this.jobPositionService.getAllJobWorkDetails().subscribe({
+      next: (res) => {
+        this.workingOptions = res.map((item: any) => ({
+          label: item.workDetailName,
+          value: item.workDetailsId,
+        }));
+      },
+      error: (error) => {
+        console.error('Error fetching work details:', error);
       },
     });
   }

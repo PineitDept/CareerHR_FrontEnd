@@ -1,4 +1,4 @@
-import { formatDate } from '@angular/common';
+import { formatDate, Location } from '@angular/common';
 import {
   Component,
   ElementRef,
@@ -18,7 +18,7 @@ import dayjs from 'dayjs';
 })
 export class FilterComponent {
 
-  @Input() actionButtons: { label: string; key: string; color?: string }[] = [];
+  @Input() actionButtons: { label: string; key: string; color?: string; outlineBtn?: boolean }[] = [];
   @Input() disabledKeys: string[] = [];
   @Input() selectedRows: any[] = [];
   @Input() filterDynamicButton: boolean = false;
@@ -28,10 +28,13 @@ export class FilterComponent {
   @Input() disabledFilterDateRange: boolean = false;
   @Input() GradeSelect: boolean = false;
   @Input() DateCalendar: boolean = false;
+  @Input() showAllYearOption: boolean = false;
+  @Input() defaultYearAll: boolean = false;
 
   @Output() buttonClicked = new EventEmitter<string>();
   @Output() dateRangeSelected = new EventEmitter<{ startDate: string; endDate: string }>();
   @Output() gradeSelected = new EventEmitter<string>();
+  @Output() DateToday = new EventEmitter<Date>();
 
   currentYear = new Date().getFullYear();
   currentMonth = new Date().getMonth(); // 0-indexed
@@ -61,11 +64,17 @@ export class FilterComponent {
   @ViewChild('gradeDropdown') gradeDropdown!: ElementRef;
 
   constructor(
-    private router: Router
+    private router: Router,
+    private location: Location
   ) { }
 
   ngOnInit() {
-    this.emitDateRange();
+    this.years = this.getYearsWithOptionalAll();
+    this.selectedYear = this.defaultYearAll ? 'All' : String(this.currentYear);
+
+    if (!this.DateCalendar) {
+      this.emitDateRange();
+    }
 
     const storedGradeIndex = localStorage.getItem('benefitsFiterSettings_Grade');
     const value = this.allGrade[Number(storedGradeIndex)]
@@ -82,27 +91,43 @@ export class FilterComponent {
     }
   }
 
+  getYearsWithOptionalAll(): string[] {
+    const baseYears = Array.from({ length: 6 }, (_, i) => String(this.currentYear - i));
+    return this.showAllYearOption ? ['All', ...baseYears] : baseYears;
+  }
+
   onBackClick() {
-    const fullUrl = this.router.url;                  // e.g. /admin-setting/.../application-question/details?categoryType=AboutMe
-    const [pathOnly] = fullUrl.split('?');            // ตัด query ออกก่อน
+    // const fullUrl = this.router.url;           // เช่น /applications/screening/application-form?id=123
+    // const [pathOnly] = fullUrl.split('?');     // ตัด query ออก -> /applications/screening/application-form
 
-    if (pathOnly.includes('/details')) {
-      // ตัดตั้งแต่คำว่า /details และทุกอย่างหลังจากนั้นออก
-      const basePath = pathOnly.replace(/\/details(?:\/.*)?$/, '');
-      // นำทางกลับไปที่ path ที่ตัดแล้ว (เช่น /admin-setting/data-setting/application/application-question)
-      this.router.navigateByUrl(basePath || '/');
-      return;
-    }
-    // const currentUrl = this.router.url;
-    // const matched = currentUrl.match(/\/purchasing\/(.*?)-po\/details|\/purchasing\/purchase-order\/details/);
+    // // ===== [A] รองรับเส้นทางของ application module =====
+    // if (pathOnly.startsWith('/applications/')) {
+    //   // กรณีหน้าแบบ /applications/.../application-form[/*]
+    //   if (/\/application-form(?:\/.*)?$/.test(pathOnly)) {
+    //     const basePath = pathOnly.replace(/\/application-form(?:\/.*)?$/, '');
+    //     this.router.navigateByUrl(basePath || '/applications');
+    //     return;
+    //   }
 
-    // if (matched) {
-    //   const poType = matched[1]; // e.g., 'asset', 'tools', etc., or undefined if it's a purchase-order
-    //   const target = poType ? `/purchasing/${poType}-po` : `/purchasing/purchase-order`;
-    //   this.router.navigate([target]);
-    // } else {
-    //   this.router.navigate(['/purchasing/purchase-order']);
+    //   // เผื่อกรณีอนาคต: /applications/.../details[/*]
+    //   if (/\/details(?:\/.*)?$/.test(pathOnly)) {
+    //     const basePath = pathOnly.replace(/\/details(?:\/.*)?$/, '');
+    //     this.router.navigateByUrl(basePath || '/applications');
+    //     return;
+    //   }
     // }
+
+    // // ===== [B] พฤติกรรมเดิม (หน้าทั่วไปที่ลงท้ายด้วย /details) =====
+    // if (pathOnly.includes('/details')) {
+    //   const basePath = pathOnly.replace(/\/details(?:\/.*)?$/, '');
+    //   this.router.navigateByUrl(basePath || '/');
+    //   return;
+    // }
+
+    // หากไม่เข้าเงื่อนไขใด ๆ จะไม่ทำอะไรเพิ่มเติม หรือจะใส่ fallback ก็ได้ตามต้องการ
+    // this.router.navigateByUrl('/');
+
+    this.location.back()
   }
 
   toggleDropdown(type: 'year' | 'month' | 'grade') {
@@ -161,13 +186,35 @@ export class FilterComponent {
 
   onAllListClick() {
     this.selectedMonth = 'All';
+
+    if (this.defaultYearAll) {
+      this.selectedYear = 'All';
+    }
     this.emitDateRange(true);
+  }
+
+  onClickToday() {
+    const today = new Date();
+
+    this.selectedYear = String(today.getFullYear());
+    this.selectedMonth = this.allMonths[today.getMonth()];
+
+    this.emitDateRange();
+
+    this.DateToday.emit();
   }
 
   emitDateRange(isAllList = false) {
     const year = Number(this.selectedYear);
     let startDate: string;
     let endDate: string;
+
+    // if (this.selectedYear === 'All') {
+    //   startDate = `${year}-01-01`;
+    //   endDate = `${year}-12-31`;
+    //   this.dateRangeSelected.emit({ startDate, endDate });
+    // }
+
 
     if (this.selectedMonth === 'All') {
       startDate = `${year}-01-01`;

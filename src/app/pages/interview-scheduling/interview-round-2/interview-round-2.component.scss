@@ -1,0 +1,166 @@
+.box-shadow {
+    border: 1px solid #DEE2E6;
+    background: #fff;
+    min-width: 380px;
+}
+
+.flex-box {
+    display: flex;
+    align-items: center;
+}
+
+.flex-box-col {
+    display: flex;
+    justify-content: space-between;
+    flex-direction: column;
+    height: 100%;
+    gap: 24px;
+}
+
+::ng-deep .slick-track {
+    display: flex;
+
+    // display: grid;
+    // grid-template-columns: 1fr 1fr 1fr 1fr;
+}
+
+.h-unset {
+    height: unset;
+}
+
+.ribbon {
+    position: absolute;
+    top: 20px;
+    right: -55px;
+    transform: rotate(45deg);
+    background-color: #1e88e5;
+    color: white;
+    padding: 5px 60px;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.tag {
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 8px;
+    text-align: center;
+    margin-top: 24px;
+    font-weight: 600;
+}
+
+.tag-grade-a {
+    color: #00AA00;
+    border-color: #00AA00;
+}
+
+.tag-grade-b {
+    color: #77CA24;
+    border-color: #77CA24;
+}
+
+.tag-grade-c {
+    color: #D0D03E;
+    border-color: #D0D03E;
+}
+
+.tag-grade-d {
+    color: #EE9241;
+    border-color: #EE9241;
+}
+
+.tag-grade-f {
+    color: #C25D5E;
+    border-color: #C25D5E;
+}
+
+.tag-grade-default {
+    color: #ADB5BD;
+    border-color: #ADB5BD;
+}
+
+.grade-tag {
+    display: block;
+    text-align: center;
+    border: 2px solid;
+    font-size: 14px;
+    border-radius: 25px;
+    font-weight: 600;
+    min-width: 24px;
+    height: 24px;
+    position: relative;
+    top: 4px;
+}
+
+button:disabled,
+.disabled-btn {
+    color: #ffffff;
+    background: #afafaf;
+    // cursor: no-drop;
+}
+
+.grid-cols-auto {
+    grid-template-columns: 1fr 1fr 1fr;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.carousel {
+    margin: 20px auto;
+    width: 80%;
+}
+
+.slide {
+    padding: 10px;
+    min-width: 360px;
+}
+
+::ng-deep .slick-next::before,
+::ng-deep .slick-prev::before {
+    color: #333;
+}
+
+::ng-deep .slick-next {
+    right: 16px;
+    z-index: 2;
+}
+
+::ng-deep .slick-prev {
+    left: 16px;
+    z-index: 2;
+}
+
+::ng-deep .slick-disabled {
+    opacity: 0.8;
+}
+
+
+.nav-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    transition: background 0.3s ease;
+
+    height: 40px;
+    width: 40px;
+    border-radius: 100%;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.left-arrow {
+    left: -.5rem;
+}
+
+.right-arrow {
+    right: -.5rem;
+}

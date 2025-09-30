@@ -60,4 +60,18 @@ export class JobPositionService {
       loading: true,
     });
   }
+
+  getAllJobEducationLevels(): Observable<any> {
+    return this.apiService.get<any>(`${this.base}/EducationLevels`, {
+      withAuth: true,
+      loading: true
+    });
+  }
+
+  getAllJobWorkDetails(): Observable<any> {
+    return this.apiService.get<any>(`${this.base}/WorkDetails`, {
+      withAuth: true,
+      loading: true
+    });
+  }
 }

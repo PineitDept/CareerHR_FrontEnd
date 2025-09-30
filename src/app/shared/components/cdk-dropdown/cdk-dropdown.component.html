@@ -1,3 +1,5 @@
+<p *ngIf="label" class="tw-text-sm tw-font-bold tw-mb-2 text-black">{{ label }} <span *ngIf="require" class="text-red">*</span></p>
+
 <!-- Trigger -->
 <button #trigger type="button" class="dd-trigger" [class.dd-disabled]="disabledSelected" [disabled]="disabledSelected"
     (click)="open(trigger)" (keydown)="onTriggerKeydown($event, trigger)">
