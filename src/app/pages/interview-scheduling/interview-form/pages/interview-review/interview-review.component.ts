@@ -358,40 +358,40 @@ export class InterviewReviewComponent {
 
   fetchInterviewer() {
     this.applicantId = 202409003
-    this.interviewFormService.getApplicantReview(Number(this.applicantId)).subscribe({
-      next: (res) => {
-        console.log(res, '=>resHis')
-        this.reviewHistory = res
+    // this.interviewFormService.getApplicantReview(Number(this.applicantId)).subscribe({
+    //   next: (res) => {
+    //     console.log(res, '=>resHis')
+    //     this.reviewHistory = res
 
-        setTimeout(() => {
-          console.log(this.reviewHistory.length)
-          this.slideConfig = {
-              ...this.slideConfig,
-              dots: this.reviewHistory.length > 2,
-              responsive: [
-                {
-                  breakpoint: 768,
-                  settings: {
-                    slidesToShow: 1,
-                    dots: this.reviewHistory.length > 1
-                  }
-                }
-              ]
-            };
+    //     setTimeout(() => {
+    //       console.log(this.reviewHistory.length)
+    //       this.slideConfig = {
+    //           ...this.slideConfig,
+    //           dots: this.reviewHistory.length > 2,
+    //           responsive: [
+    //             {
+    //               breakpoint: 768,
+    //               settings: {
+    //                 slidesToShow: 1,
+    //                 dots: this.reviewHistory.length > 1
+    //               }
+    //             }
+    //           ]
+    //         };
 
-            // Force re-initialize slick (ต้องรอ config update เสร็จก่อน)
-            setTimeout(() => {
-              this.carousels.forEach((carousel) => {
-                carousel.unslick();      // ล้างของเดิม
-                carousel.initSlick();    // สร้างใหม่
-              });
-            }, 0);
-        });
-      },
-      error: (error) => {
-        console.error('Error fetching category types:', error);
-      }
-    });
+    //         // Force re-initialize slick (ต้องรอ config update เสร็จก่อน)
+    //         setTimeout(() => {
+    //           this.carousels.forEach((carousel) => {
+    //             carousel.unslick();      // ล้างของเดิม
+    //             carousel.initSlick();    // สร้างใหม่
+    //           });
+    //         }, 0);
+    //     });
+    //   },
+    //   error: (error) => {
+    //     console.error('Error fetching category types:', error);
+    //   }
+    // });
   }
 
   // ===================== Mapping =====================

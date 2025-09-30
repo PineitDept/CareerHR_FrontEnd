@@ -16,6 +16,7 @@ import { AlertDialogComponent } from '../../../shared/components/dialogs/alert-d
 import { catchError, finalize, forkJoin, map, Observable, of, tap } from 'rxjs';
 import { NotificationService } from '../../../shared/services/notification/notification.service';
 import { Columns } from '../../../shared/interfaces/tables/column.interface';
+import { InterviewFormService } from '../../../services/interview-scheduling/interview-form/interview-form.service';
 
 const SEARCH_OPTIONS: string[] = [
   'Applicant ID',
@@ -113,16 +114,16 @@ export class InterviewFormComponent {
   readonly columns: Columns = [
     {
       header: 'Applicant ID.',
-      field: 'profile.userId',
+      field: 'userID',
       type: 'text',
       align: 'center',
       width: '8%',
     },
     {
       header: 'Applicant Name',
-      field: 'profile.fullName',
+      field: 'fullName',
       type: 'text',
-      align: 'center',
+      // align: 'center',
       width: '12%',
     },
     {
@@ -135,14 +136,14 @@ export class InterviewFormComponent {
     },
     {
       header: 'Grade',
-      field: 'profile.candidateGrade',
+      field: 'gradeCandidate',
       type: 'text',
       align: 'center',
       width: '5%',
     },
     {
       header: 'Interview 1 Result',
-      field: 'result.interviewResultText',
+      field: 'interview1ResultText',
       type: 'badge',
       align: 'center',
       width: '8%',
@@ -157,14 +158,14 @@ export class InterviewFormComponent {
     },
     {
       header: 'Interview 1 Submit Date',
-      field: 'interview.date',
+      field: 'interview1TimeSubmit',
       type: 'text',
       align: 'center',
       width: '15%',
     },
     {
       header: 'Interview 2 Result',
-      field: 'screening',
+      field: 'interview2ResultText',
       type: 'badge',
       align: 'center',
       width: '8%',
@@ -179,7 +180,7 @@ export class InterviewFormComponent {
     },
     {
       header: 'Interview 2 Submit Date',
-      field: 'interview.date',
+      field: 'interview2TimeSubmit',
       type: 'text',
       align: 'center',
       width: '15%',
@@ -199,6 +200,7 @@ export class InterviewFormComponent {
     private jobPositionService: JobPositionService,
     private appointmentsService: AppointmentsService,
     private notificationService: NotificationService,
+    private interviewFormService: InterviewFormService,
   ) { }
 
   // ---------- Lifecycle ----------
@@ -247,7 +249,7 @@ export class InterviewFormComponent {
       search: this.currentFilterParams.search,
     };
 
-    const obs$ = this.appointmentsService.getAppointments<any>(updatedParams).pipe(
+    const obs$ = this.interviewFormService.getTrackingForm<any>(updatedParams).pipe(
       tap((res) => {
 
         this.rows = (res.items ?? []).map((item: any, idx: number) => ({
@@ -272,6 +274,8 @@ export class InterviewFormComponent {
 
     return obs$;
   }
+
+  
 
   // fetchCategoryTypes() {
   //   this.applicationQuestionService.getCategoryTypesInfoQuestion().subscribe({
@@ -391,100 +395,6 @@ export class InterviewFormComponent {
         this.notificationService.error('Error update date');
       }
     });
-  }
-
-  changeRevision: boolean | undefined;
-  onRevisionChange(selectedValue: number, item: any) {
-    const appointmentId = item.profile.appointmentId;
-    const AppointmentRevision = item.profile.appointmentId.slice(0, -1) + selectedValue;
-
-    this.appointmentsService.getAppointmentsRevision(AppointmentRevision).subscribe({
-      next: (res) => {
-        this.appointments = this.appointments.map(appointment => {
-          if (appointment.profile.appointmentId === appointmentId) {
-            this.changeRevision = true
-            appointment.interview = res.items[0].interview
-          }
-
-          return {
-            ...appointment
-          };
-        });
-      },
-      error: (err) => {
-        console.error('Error get revision:', err);
-      }
-    });
-  }
-
-  onRescheduledClick(item: any) {
-    Promise.resolve().then(() => {
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.add('dimmed-overlay');
-    });
-
-    const dialogRef = this.dialog.open(AlertDialogComponent, {
-      width: '496px',
-      panelClass: 'custom-dialog-container',
-      autoFocus: false,
-      disableClose: true,
-      data: {
-        title: 'Confirmation',
-        message: 'Do you want to reschedule this appointment?',
-        confirm: true
-      }
-    });
-
-    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.remove('dimmed-overlay');
-
-      if (confirmed) {
-        const appointmentid = item.profile.appointmentId;
-        const userId = item.profile.userId;
-        const round = item.interview.round;
-        const revision = item.interview.revision;
-
-        const payload = {
-          appointmentId: appointmentid,
-          userId: userId,
-          round: round,
-          revice: revision
-        }
-
-        this.appointmentsService.postReschedule(payload).subscribe({
-          next: () => {
-            const previousPage = this.currentFilterParams.page;
-            const focusedAppointmentId = item.profile.appointmentId;
-
-            this.appointments = [];
-            this.currentFilterParams.page = 1;
-            this.hasMoreData = true;
-
-            const fetchCalls: Observable<any>[] = [this.fetchAppointments(false, false)];
-
-            for (let page = 2; page <= previousPage; page++) {
-              this.currentFilterParams.page = page;
-              fetchCalls.push(this.fetchAppointments(false, false));
-            }
-
-            forkJoin(fetchCalls).subscribe(() => {
-              setTimeout(() => {
-                const el = document.getElementById(`appointment-${focusedAppointmentId}`);
-                if (el) {
-                  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-              }, 500);
-            });
-          },
-          error: (err) => {
-            console.error('Error Rescheduled:', err);
-
-            this.notificationService.error('Error Rescheduled');
-          }
-        });
-      }
-    })
   }
 
   onInterviewFormClicked(item: any) {
@@ -676,12 +586,11 @@ export class InterviewFormComponent {
 
   // table
   onViewRowClicked(row: any) {
+    console.log(row)
     const queryParams = {
-      id: row.profile.userId,
+      id: row.userID,
       interview: 1
     }
-
-    console.log(row.profile.appointmentId)
 
     this.router.navigate(['/interview-scheduling/interview-form/details'], { queryParams });
   }

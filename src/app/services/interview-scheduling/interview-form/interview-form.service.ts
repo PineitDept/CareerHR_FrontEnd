@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from '../../../shared/services/api/api.service';
-import { IAppointmentFilterRequest, SendEmailRequest } from '../../../interfaces/interview-scheduling/interview.interface';
+import { IAppointmentFilterRequest, SendEmailRequest, SendReviewInterview } from '../../../interfaces/interview-scheduling/interview.interface';
 
 @Injectable({
   providedIn: 'root'
@@ -37,28 +37,28 @@ export class InterviewFormService {
     return out;
   }
 
-  // getAppointments<T>(params: IAppointmentFilterRequest): Observable<T> {
-  //   const query = this.clean({
-  //     Search: params.search,
-  //     PositionId: params.positionId,
-  //     Month: params.month,
-  //     Year: params.year,
-  //     InterviewDate: params.interviewDate,
-  //     InterviewResult: params.InterviewResult,
-  //     SortFields: params.sortFields,
-  //     page: params.page ?? 1,
-  //     pageSize: params.pageSize ?? 10,
-  //   });
+  getTrackingForm<T>(params: IAppointmentFilterRequest): Observable<T> {
+    const query = this.clean({
+      Search: params.search,
+      PositionId: params.positionId,
+      Month: params.month,
+      Year: params.year,
+      InterviewDate: params.interviewDate,
+      InterviewResult: params.InterviewResult,
+      SortFields: params.sortFields,
+      page: params.page ?? 1,
+      pageSize: params.pageSize ?? 10,
+    });
 
-  //   return this.api.get<T>(`${this.base}`, {
-  //     params: query,
-  //     withAuth: true,
-  //     loading: true,
-  //   });
-  // }
+    return this.api.get<T>(`Applicants/track-interview-form`, {
+      params: query,
+      withAuth: true,
+      loading: true,
+    });
+  }
 
-  getApplicantReview(applicationId: number): Observable<any> {
-    return this.api.get<any>(`${this.baseCandidate}/by-application/${applicationId}`, {
+  getApplicantReview(applicationId: number, stageId: number): Observable<any> {
+    return this.api.get<any>(`${this.baseCandidate}/by-application/${applicationId}?stageId=${stageId}`, {
       withAuth: true,
       loading: true,
     });
@@ -68,6 +68,13 @@ export class InterviewFormService {
     return this.api.get<any>(`Applicants/track-interview-form/${applicationId}`, {
       withAuth: true,
       loading: true,
+    });
+  }
+
+  postInterviewReview(body: SendReviewInterview): Observable<any> {
+    return this.api.post<any>(`${this.baseCandidate}`, body, {
+      withAuth: true,
+      loading: false,
     });
   }
 }

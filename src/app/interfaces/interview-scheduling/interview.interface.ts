@@ -50,3 +50,17 @@ export interface SendEmailRequest {
   attachments?: EmailAttachment[];
   priority?: number;
 }
+
+export interface SendReviewInterview {
+  applicationId: number,
+  stageId: number,
+  categoryId: number,
+  isSummary: boolean,
+  stageDate: any,
+  appointmentId: string,
+  satisfaction: number | null,
+  notes: string,
+  strength: string,
+  concern: string,
+  selectedReasonIds: any[]
+}

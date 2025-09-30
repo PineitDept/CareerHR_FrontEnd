@@ -1,5 +1,5 @@
 import { ChangeDetectorRef, Component, ElementRef, QueryList, ViewChild, ViewChildren } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { ApplicationService } from '../../../../../services/application/application.service';
 import { CandidatePagedResult } from '../../../../../interfaces/Application/application.interface';
@@ -11,7 +11,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { AlertDialogComponent } from '../../../../../shared/components/dialogs/alert-dialog/alert-dialog.component';
 import { MatDialog } from '@angular/material/dialog';
-import { FormBuilder, FormGroup } from '@angular/forms';
+import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import * as QRCode from 'qrcode';
 import { SlickCarouselComponent, SlickItemDirective } from 'ngx-slick-carousel';
 import { InterviewFormService } from '../../../../../services/interview-scheduling/interview-form/interview-form.service';
@@ -138,6 +138,9 @@ export class InterviewFormDetailsComponent {
 
   // ====== Routing ======
   applicantId: number = 0;
+  stageId: number = 0;
+  interview1AppointmentId: string | undefined;
+  interview2AppointmentId: string | undefined;
 
   // ====== Data Model (View) ======
   applicant: Applicant = {
@@ -219,6 +222,7 @@ export class InterviewFormDetailsComponent {
 
   constructor(
     private route: ActivatedRoute,
+    private router: Router,
     private dialog: MatDialog,
     private cdr: ChangeDetectorRef,
     private fb: FormBuilder,
@@ -280,8 +284,6 @@ export class InterviewFormDetailsComponent {
 
   // ===================== Lifecycle =====================
   ngOnInit() {
-    this.formDetails = this.fb.group({});
-
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -290,11 +292,14 @@ export class InterviewFormDetailsComponent {
     this.today = `${year}-${month}-${day}`;
     this.nowDate = this.today;
 
+    this.initializeForm()
+
     this.filterButtons = [{ label: 'Print', key: 'print', color: '#0055FF' }];
     this.route.queryParams
       .pipe(takeUntil(this.destroy$))
       .subscribe((params) => {
         this.applicantId = Number(params['id'] || 0);
+        this.stageId = Number(params['interview'] || 1);
         this.selectedTab = 'tab' + params['interview'];
         this.fetchCandidateTracking();
         this.fetchInterviewer();
@@ -321,6 +326,13 @@ export class InterviewFormDetailsComponent {
   }
 
   // ===================== Data Fetch =====================
+  initializeForm() {
+    this.formDetails = this.fb.group({
+      dateInterviewReview: [this.nowDate],
+      noteInterviewReview: ['']
+    });
+  }
+
   private fetchCandidateTracking() {
     if (!this.applicantId) {
       this.isNotFound = true;
@@ -329,46 +341,56 @@ export class InterviewFormDetailsComponent {
 
     this.isLoading = true;
 
-    this.applicationService
-      .getTrackingApplications({
-        page: 1,
-        pageSize: 20,
-        search: String(this.applicantId),
-      })
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (res: CandidatePagedResult<CandidateTracking>) => {
-          const items = res?.items || [];
-          if (!items.length) {
-            this.isNotFound = true;
-            this.isLoading = false;
-            return;
-          }
-
-          const exact =
-            items.find((i) => Number(i.userID) === this.applicantId) ||
-            items[0];
-
-          this.mapTrackingToView(exact);
-          this.isLoading = false;
-
-          console.log(res, '=>res')
-        },
-        error: (err) => {
-          console.error(
-            '[ApplicationForm] getTrackingApplications error:',
-            err
-          );
+    this.applicationService.getTrackingApplications({
+      page: 1,
+      pageSize: 20,
+      search: String(this.applicantId),
+    })
+    .pipe(takeUntil(this.destroy$))
+    .subscribe({
+      next: (res: CandidatePagedResult<CandidateTracking>) => {
+        const items = res?.items || [];
+        if (!items.length) {
           this.isNotFound = true;
           this.isLoading = false;
-        },
-      });
+          return;
+        }
+
+        const exact =
+          items.find((i) => Number(i.userID) === this.applicantId) ||
+          items[0];
+
+        this.mapTrackingToView(exact);
+        this.isLoading = false;
+      },
+      error: (err) => {
+        console.error(
+          '[ApplicationForm] getTrackingApplications error:',
+          err
+        );
+        this.isNotFound = true;
+        this.isLoading = false;
+      },
+    });
+
+    this.interviewFormService.getApplicantTracking(this.applicantId).subscribe({
+      next: (res) => {
+        this.interview1AppointmentId = res.interview1AppointmentId
+        this.interview2AppointmentId = res.interview2AppointmentId
+      },
+      error: (err) => {
+        console.error(err);
+      },
+    });
   }
 
   fetchInterviewer() {
     this.applicantId = 202409003;
 
-    this.interviewFormService.getApplicantReview(Number(this.applicantId)).subscribe({
+    this.interviewFormService.getApplicantReview(
+      Number(this.applicantId),
+      Number(this.stageId) + 1
+    ).subscribe({
       next: (res) => {
         this.reviewHistory = res.map((item: any) => ({
           ...item,
@@ -419,7 +441,6 @@ export class InterviewFormDetailsComponent {
   }
 
   fetchRecruitmentStagesWithReasons(interview: number) {
-    console.log('fetchRecruitmentStagesWithReasons');
     this.reasonService.getRecruitmentStagesWithReasons(interview).subscribe({
       next: (response) => {
         this.reasonsInterview1 = response;
@@ -437,7 +458,6 @@ export class InterviewFormDetailsComponent {
       },
     });
   }
-
 
   // ===================== Mapping =====================
   private mapTrackingToView(ct: CandidateTracking) {
@@ -467,8 +487,6 @@ export class InterviewFormDetailsComponent {
       interview2Date: dayjs(ct.interview2.date).format('DD MMMM YYYY'),
       interview2Status: ct.interview2.status,
     };
-
-    console.log(this.applicant)
 
     this.applicationFormSubmittedDate = ct.submitDate || '';
 
@@ -640,6 +658,50 @@ export class InterviewFormDetailsComponent {
     }
   }
 
+  formatDateForInput(dateString: string | null | undefined): string {
+    if (!dateString) return '';
+
+    if (dateString.includes('T')) {
+      return dateString.split('T')[0];
+    }
+
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+  }
+
+  formatTimeForInput(dateString: string | null | undefined): string {
+    if (!dateString) return '';
+
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+
+    return `${hours}:${minutes}`;
+  }
+
+  formatTimeForInputWithOffset(dateString: string | null | undefined, offsetMinutes = 30): string {
+    if (!dateString) return '';
+
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+
+    // บวกเวลา offset (เช่น 30 นาที)
+    date.setMinutes(date.getMinutes() + offsetMinutes);
+
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+
+    return `${hours}:${minutes}`;
+  }
+
   toggleReasonCheck(reason: any) {
     reason.checked = !reason.checked;
   }
@@ -664,6 +726,14 @@ export class InterviewFormDetailsComponent {
   }
 
   selectCategory(categoryId: number) {
+    this.reasonsInterview1 = this.reasonsInterview1.map((category: any) => ({
+        ...category,
+        rejectionReasons: category.rejectionReasons.map((reason: any) => ({
+          ...reason,
+          checked: false
+        }))
+      }));
+
     if (this.selectedCategoryId === categoryId) {
       this.selectedCategoryId = null; // ถ้ากดซ้ำ → reset
     } else {
@@ -699,6 +769,53 @@ export class InterviewFormDetailsComponent {
       }
     });
   }
+
+  onComfirmReiew() {
+    const payload = this.formDetails.value;
+
+    const isoDate = new Date(payload.dateInterviewReview).toISOString();
+    let checkedReasonIds = []
+    checkedReasonIds = this.reasonsInterview1.flatMap((category: { rejectionReasons: any[]; }) =>
+      category.rejectionReasons
+        .filter(reason => reason.checked === true)
+        .map(reason => reason.reasonId)
+    );
+
+    const checkedCategoryIds = this.reasonsInterview1
+      .filter(category => category.rejectionReasons.some((reason: { checked: boolean; }) => reason.checked === true))
+      .map(category => category.categoryId);
+
+    const appointmentIdKey = `interview${this.stageId}AppointmentId`;
+    const appointmentId = (this as any)[appointmentIdKey];
+
+    console.log(typeof isoDate)
+
+    const transformedPayload = {
+      applicationId: this.applicantId,
+      stageId: this.stageId + 1,
+      categoryId: checkedCategoryIds[0],
+      isSummary: true,
+      stageDate: isoDate,
+      appointmentId: appointmentId,
+      satisfaction: null,
+      notes: payload.noteInterviewReview,
+      strength: "",
+      concern: "",
+      selectedReasonIds: checkedReasonIds
+    }
+
+    this.interviewFormService.postInterviewReview(transformedPayload).subscribe({
+      next: () => {
+        console.log('Complete Review by HR')
+      },
+      error: (err) => {
+        console.error('Error Rescheduled:', err);
+
+        // this.notificationService.error('Error Rescheduled');
+      }
+    });
+  }
+
 
   onEditClicked() {
     this.isEditing = true;
@@ -740,19 +857,33 @@ export class InterviewFormDetailsComponent {
 
   onInterviewClick(tab: string) {
     this.selectedTab = tab;
-    console.log(this.selectedTab)
+    const interviewNumber = tab === 'tab1' ? '1' : '2';
+    this.stageId = Number(interviewNumber)
+
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { interview: interviewNumber },
+      queryParamsHandling: 'merge',
+      replaceUrl: true 
+    });
   }
+
+  getInterviewDateByStage(): string {
+    const key = `interview${this.stageId}Date`;
+    return (this.applicant as Record<string, any>)?.[key] ?? '';
+  }
+
 
   getCategoryBtnClass(c: CategoryOption, selectedId?: number | null) {
     const isActive = c.categoryId === selectedId;
     const name = (c.categoryName || '').toLowerCase();
     const tone =
       name.includes('accept') ? 'tw-bg-green-500 tw-text-white tw-border-green-600' :
-      name.includes('decline') ? 'tw-bg-red-500 tw-text-white tw-border-red-600' :
-      name.includes('application decline') ? 'tw-bg-red-500 tw-text-white tw-border-red-600' :
-      name.includes('no-show') ? 'tw-bg-gray-200 tw-text-gray-800 tw-border-gray-300' :
-      name.includes('on hold') ? 'tw-bg-amber-500 tw-text-white tw-border-amber-600' :
-      'tw-bg-white tw-text-gray-700 tw-border-gray-300';
+        name.includes('decline') ? 'tw-bg-red-500 tw-text-white tw-border-red-600' :
+          name.includes('application decline') ? 'tw-bg-red-500 tw-text-white tw-border-red-600' :
+            name.includes('no-show') ? 'tw-bg-gray-200 tw-text-gray-800 tw-border-gray-300' :
+              name.includes('on hold') ? 'tw-bg-amber-500 tw-text-white tw-border-amber-600' :
+                'tw-bg-white tw-text-gray-700 tw-border-gray-300';
 
     const inactive = 'hover:tw-brightness-105';
     const activeRing = 'tw-ring-2 tw-ring-white/40';
