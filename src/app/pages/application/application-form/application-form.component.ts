@@ -45,6 +45,7 @@ interface AssessmentItem {
   visibility: any;
   details: any;
   detailsPositive?: boolean;
+  isTotalRow?: boolean;
 }
 
 interface WarningItem {
@@ -446,7 +447,13 @@ export class ApplicationFormComponent {
       { header: 'Result', field: 'result', type: 'text', minWidth: '140px' },
       { header: 'Score', field: 'score', type: 'number', align: 'center', width: '90px', minWidth: '90px', maxWidth: '100px' },
       { header: 'Visibility', field: 'visibility', type: 'icon', align: 'center', width: '110px', minWidth: '110px' },
-      { header: 'Details', field: 'details', type: 'badge', minWidth: '220px' },
+      {
+        header: 'Details',
+        field: 'details',
+        type: 'text',              // default คือ text
+        minWidth: '220px',
+        typeFn: (row: AssessmentItem) => row?.isTotalRow ? 'badge' : 'text',
+      },
     ];
   }
 
@@ -486,7 +493,7 @@ export class ApplicationFormComponent {
       const resultText = has(it?.viewColumnResult) ? String(it.viewColumnResult) :
                          has(it?.columnValue) ? String(it.columnValue) : '—';
       const detailLabel = passed
-        ? (resultText || 'Pass')
+        ? ''
         : (String(it?.errorMessage || it?.conditionName || 'Failed').trim());
 
       rows.push({
@@ -499,39 +506,39 @@ export class ApplicationFormComponent {
           fill: passed ? 'green' : 'red',
           size: 18,
         },
-        details: {
-          label: detailLabel,
-          class: passed
-            ? ['tw-bg-green-50', 'tw-ring-green-300', 'tw-text-green-700']
-            : ['tw-bg-red-50', 'tw-ring-red-300', 'tw-text-red-700'],
-        },
-      });
+        details: detailLabel,
+      } as AssessmentItem);
     });
 
-    // แถว Total + Recommendation
-    const total = Number(assess?.summary?.totalConditions || rows.length || 0);
-    const passedCnt = Number(assess?.summary?.passedConditions || 0);
-    const totalScoreText = `${passedCnt}/${total || rows.length || 1}`;
-    const passPct = Number(assess?.summary?.passPercentage || (total ? (passedCnt * 100) / total : 0));
-    const recommend = passPct >= 50 ? 'Recommend for Acceptance' : 'Not Recommended for Acceptance';
+    // ===== คำนวณ Total แบบผลรวมคะแนน =====
+    const maxScore = rows.length; // คะแนนเต็ม = จำนวนเงื่อนไข (เช่น 4)
+    const sumScore = rows.reduce((acc, r) => {
+      const n = typeof r.score === 'number' ? r.score : Number(r.score);
+      return acc + (Number.isFinite(n) ? n : 0);
+    }, 0);
+
+    const passRatio = maxScore > 0 ? sumScore / maxScore : 0;
+    const recommend = passRatio >= 0.5 ? 'Recommend for Acceptance' : 'Not Recommended for Acceptance';
+    const fmt = (n: number) => (Number.isInteger(n) ? String(n) : String(+n.toFixed(2))); // 1.5 ไม่ใช่ 1.50
 
     rows.push({
       no: '' as any,
       review: 'Total',
       result: '',
-      score: totalScoreText,
+      score: `${fmt(sumScore)}/${maxScore}`,
       visibility: {
-        icon: passPct >= 50 ? 'check-circle' : 'xmark-circle',
-        fill: passPct >= 50 ? 'green' : 'red',
+        icon: passRatio >= 0.5 ? 'check-circle' : 'xmark-circle',
+        fill: passRatio >= 0.5 ? 'green' : 'red',
         size: 18,
       },
       details: {
         label: recommend,
-        class: passPct >= 50
+        class: passRatio >= 0.5
           ? ['tw-bg-green-50','tw-ring-green-300','tw-text-green-700']
           : ['tw-bg-red-50','tw-ring-red-300','tw-text-red-700'],
       },
-    });
+      isTotalRow: true,
+    } as AssessmentItem);
 
     this.assessmentRows = rows;
 
@@ -541,7 +548,7 @@ export class ApplicationFormComponent {
 
     const wrows = wlist.map((it: any, idx: number) => {
       const passed = !!it?.isPassed; // ผ่าน = ไม่มีความเสี่ยง
-      const riskLabel = passed ? 'Normal' : 'Warning';
+      const riskLabel = passed ? 'Strength' : 'Weakness';
 
       // Result แสดง viewColumnResult ถ้ามี ไม่งั้นใช้ columnValue
       const resultText =
@@ -550,12 +557,12 @@ export class ApplicationFormComponent {
 
       // Detail: ถ้าผ่าน ใส่ข้อความกลางๆ, ถ้าไม่ผ่าน ใช้ errorMessage หรือ conditionName
       const detailText = passed
-        ? 'No issue detected'
+        ? ''
         : (String(it?.errorMessage || it?.conditionName || 'Needs attention').trim());
 
       return {
         no: idx + 1,
-        warning: String(it?.columnName || it?.conditionName || '—').trim(),
+        warning: String(it?.conditionName || '—').trim(),
         result: resultText,
 
         // Badge สีตามความเสี่ยง
@@ -1210,7 +1217,7 @@ function statusToVariant(
     return 'blue';
   if (/(pending|awaiting|waiting)/.test(s)) return 'gray';
   if (
-    /(accept|accepted|pass|passed|hired|hire|applied|submitted|screened|offer|offered)/.test(
+    /(accept|accepted|pass|passed|hired|hire|applied|submitted|screened|offer|offered|onboarded|onboard)/.test(
       s
     )
   )
