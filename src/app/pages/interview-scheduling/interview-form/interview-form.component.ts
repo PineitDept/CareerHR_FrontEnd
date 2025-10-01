@@ -128,11 +128,10 @@ export class InterviewFormComponent {
     },
     {
       header: 'Job Position',
-      // field: jobPosition.jobList?.map((pos: IPositionDto) => pos.namePosition) || [],
-      field: 'jobPosition.jobList',
+      field: 'position',
       type: 'list',
-      align: 'center',
-      width: '17%',
+      width: '22%',
+      wrapText: true,
     },
     {
       header: 'Grade',
@@ -150,18 +149,19 @@ export class InterviewFormComponent {
     },
     {
       header: 'Interview 1',
-      field: 'textlink',
-      type: 'textlink',
+      field: 'interview1FormResult',
+      type: 'textlink-custom',
       align: 'center',
       width: '6%',
       textlinkActions: ['view'],
+      iconLink: 'pen-to-square'
     },
     {
       header: 'Interview 1 Submit Date',
       field: 'interview1TimeSubmit',
       type: 'text',
       align: 'center',
-      width: '15%',
+      width: '10%',
     },
     {
       header: 'Interview 2 Result',
@@ -172,18 +172,19 @@ export class InterviewFormComponent {
     },
     {
       header: 'Interview 2',
-      field: 'textlink',
-      type: 'textlink',
+      field: 'interview2FormResult',
+      type: 'textlink-custom',
       align: 'center',
       width: '6%',
       textlinkActions: ['view'],
+      iconLink: 'pen-to-square'
     },
     {
       header: 'Interview 2 Submit Date',
       field: 'interview2TimeSubmit',
       type: 'text',
       align: 'center',
-      width: '15%',
+      width: '10%',
     },
   ] as const;
 
@@ -223,6 +224,8 @@ export class InterviewFormComponent {
         page: 1,
       };
     }
+    
+    this.fetchAppointments(true);
 
     // this.filterButtons = [{ label: 'History', key: 'history', color: 'transparent', outlineBtn: true }];
   }
@@ -252,11 +255,45 @@ export class InterviewFormComponent {
     const obs$ = this.interviewFormService.getTrackingForm<any>(updatedParams).pipe(
       tap((res) => {
 
-        this.rows = (res.items ?? []).map((item: any, idx: number) => ({
-          ...item,
-        }));
+        this.rows = (res.items ?? []).map((item: any) => {
+          const interview1Text = item.interview1ResultText;
+          const interview2Text = item.interview2ResultText;
 
-        console.log(this.rows)
+          const interview1Hidden = !interview1Text;
+          const interview2Hidden = !interview2Text;
+
+          return {
+            ...item,
+            interview1ResultText: {
+              label: interview1Text,
+              class: [
+                ...(item.interview1Result === 21
+                  ? ['tw-bg-green-50', 'tw-ring-green-300', 'tw-text-green-700']
+                  : ['tw-bg-red-50', 'tw-ring-red-300', 'tw-text-red-700']),
+                ...(interview1Hidden ? ['tw-hidden'] : []),
+              ],
+            },
+            interview2ResultText: {
+              label: interview2Text,
+              class: [
+                ...(item.interview2Result === 21
+                  ? ['tw-bg-green-50', 'tw-ring-green-300', 'tw-text-green-700']
+                  : ['tw-bg-red-50', 'tw-ring-red-300', 'tw-text-red-700']),
+                ...(interview2Hidden ? ['tw-hidden'] : []),
+              ],
+            },
+            interview1TimeSubmit: item.interview1TimeSubmit
+              ? this.formatCreateDateTimeDMY(item.interview1TimeSubmit).formattedDate
+              : undefined,
+            interview2TimeSubmit: item.interview2TimeSubmit
+              ? this.formatCreateDateTimeDMY(item.interview2TimeSubmit).formattedDate
+              : undefined,
+            interview1FormResult: item.interview1FormResult ? item.interview1FormResult : undefined,
+            interview2FormResult: item.interview2FormResult ? item.interview2FormResult : undefined,
+            position: item.positions?.map((pos: IPositionDto) => pos.namePosition) || [],
+          };
+        });
+
 
       }),
       catchError((err) => {
@@ -275,7 +312,7 @@ export class InterviewFormComponent {
     return obs$;
   }
 
-  
+
 
   // fetchCategoryTypes() {
   //   this.applicationQuestionService.getCategoryTypesInfoQuestion().subscribe({

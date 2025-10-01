@@ -511,6 +511,19 @@ export class TablesComponent
     return field.split('.').reduce((obj, key) => obj?.[key], row);
   }
 
+  dynamicClassBtn(value: string): string[] {
+    if (value.toLocaleLowerCase().trim() === 'pending') {
+      return ['tw-text-[#FFAA00]', 'hover:tw-text-[#D5920A]'];
+    } else if (value.toLocaleLowerCase().trim() === 'inprocess') {
+      return ['tw-text-[#5500FF]', 'hover:tw-text-[#5f31bb]'];
+    } else if (value.toLocaleLowerCase().trim() === 'complete') {
+      return ['tw-text-[#00AA00]', 'hover:tw-text-[#068506]'];
+    } else {
+      return ['tw-text-[#919191]', 'hover:tw-text-[#656161]'];
+    }
+  }
+
+
   getVisibleColumnCount(): number {
     let count = this.columns.filter(
       (col) => !col.subColumn || this.isSubColumnVisible(col)

@@ -221,10 +221,17 @@
                         </div>
                         
                     </div>
-                    <button type="button" *ngIf="item.interview.isEmailSent && (item.revisionList[0].value === item.interview.revision)" (click)="onInterviewFormClicked(item)"  
-                        class="tw-w-fit tw-rounded-lg tw-bg-[#00AAFF] hover:tw-bg-[#028cd1] tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5">
-                        <span class="tw-font-semibold">Interview Form </span>
-                    </button>
+                    
+                    <div class="tw-flex tw-gap-2">
+                        <button type="button" *ngIf="item.interview.isEmailSent && (item.revisionList[0].value === item.interview.revision)" (click)="onInterviewFormClicked(item)"  
+                            class="tw-w-fit tw-rounded-lg tw-bg-[#00AAFF] hover:tw-bg-[#028cd1] tw-text-white tw-text-sm tw-font-semibold tw-px-[10px] tw-py-1.5">
+                            <span class="tw-font-semibold">Interview Form</span>
+                        </button>
+                        <button type="button" *ngIf="item.interview.isEmailSent && (item.revisionList[0].value === item.interview.revision)" (click)="onInterviewDetailsClicked(item)"  
+                            class="tw-w-fit tw-rounded-lg tw-bg-[#4b0082] hover:tw-bg-[#3c0266] tw-text-white tw-text-sm tw-font-semibold tw-px-[10px] tw-py-1.5">
+                            <span class="tw-font-semibold">View Details</span>
+                        </button>
+                    </div>
                 </div>
 
             </div>

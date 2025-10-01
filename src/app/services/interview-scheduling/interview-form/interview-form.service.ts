@@ -9,23 +9,6 @@ import { IAppointmentFilterRequest, SendEmailRequest, SendReviewInterview } from
 export class InterviewFormService {
   private baseCandidate = 'CandidateStageHistory';
 
-
-  // setAppointmentsType(type?: number) {
-  //   switch (type) {
-  //     case 1:
-  //       this.base = 'Appointments/appointments/1';
-  //       break;
-  //     case 2:
-  //       this.base = 'Appointments/appointments/2';
-  //       break;
-  //     case 3:
-  //       this.base = 'Appointments/appointments/3';
-  //       break;
-  //     default:
-  //       this.base = 'Appointments/appointments';
-  //   }
-  // }
-
   constructor(private api: ApiService) { }
 
   private clean(obj: Record<string, any>) {

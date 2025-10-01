@@ -632,6 +632,13 @@ export class InterviewRound2HistoryComponent {
     this.router.navigate(['/interview-scheduling/interview-form/details'], { queryParams });
   }
 
+  onInterviewDetailsClicked(item: any) {
+    const queryParams = {
+      id: item.profile.userId
+    }
+    this.router.navigate(['/applications/screening/application-form'], { queryParams });
+  }
+
   // ---------- Tab counts (preserve comments) ----------
   updateTabCounts(appointments: any[]) {
     const counts: { [key: string]: number } = {

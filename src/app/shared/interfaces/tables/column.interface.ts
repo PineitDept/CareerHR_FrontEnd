@@ -1,7 +1,7 @@
 export interface Column {
   header: string;           // Displayed column header name
   field: string;           // Field name to map with row data
-  type?: 'text' | 'badge' | 'number' | 'select' | 'button' | 'date' | 'dateWithTime' | 'list' | 'icon' | 'expandable' | 'toggle' | 'textlink'; // Column type
+  type?: 'text' | 'badge' | 'number' | 'select' | 'button' | 'date' | 'dateWithTime' | 'list' | 'icon' | 'expandable' | 'toggle' | 'textlink' | 'textlink-custom'; // Column type
   textlinkActions?: Array<'view' | 'edit-topopup' | 'edit-inrow' | 'save' | 'cancel' | 'delete'>; // type: textlink
   width?: string;
   minWidth?: string;
@@ -23,6 +23,9 @@ export interface Column {
   editing?: boolean;
 
   useRowTextlinkActions?: boolean;
+
+  // textlink-custom
+  iconLink?: string
 }
 
 export type Columns = Column[];
