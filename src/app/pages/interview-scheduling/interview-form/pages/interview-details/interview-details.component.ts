@@ -166,11 +166,11 @@ interface ViewComment {
 }
 
 @Component({
-  selector: 'app-interview-form-details',
-  templateUrl: './interview-form-details.component.html',
-  styleUrl: './interview-form-details.component.scss'
+  selector: 'app-interview-details',
+  templateUrl: './interview-details.component.html',
+  styleUrl: './interview-details.component.scss'
 })
-export class InterviewFormDetailsComponent {
+export class InterviewDetailsComponent {
   // ====== Filter ======
   filterButtons: { label: string; key: string; color: string }[] = [];
   disabledKeys: string[] = [];
@@ -1400,6 +1400,32 @@ export class InterviewFormDetailsComponent {
 
 
   // Form Interview Detail
+  // fetchFormById(stageId: number) {
+  //   this.interviewDetailsFormService.getFormById(stageId).subscribe({
+  //     next: (response) => {
+  //       const resp = response as any; // cast ให้รู้จัก fields
+  //       resp.fields.forEach((item: any, idx: number) => {
+  //         this.warningRows.push({
+  //           no: idx + 1,
+  //           warning: item.questionName,
+  //           result1: '',
+  //           result2: ''
+  //         })
+  //       });
+
+  //       this.warningRows.push({
+  //         no: '',
+  //         warning: '',
+  //         result1: '',
+  //         result2: ''
+  //       });
+  //     },
+  //     error: (error) => {
+  //       console.error('Error fetching Recruitment Stages with reasons:', error);
+  //     },
+  //   });
+  // }
+
   result1Type = '';
   result2Type = '';
   fetchFormById(stageId: number) {
@@ -1418,8 +1444,8 @@ export class InterviewFormDetailsComponent {
         this.warningColumns = [
           { header: 'No', field: 'no', type: 'text', align: 'center', width: '56px', minWidth: '56px' },
           { header: 'Question', field: 'warning', type: 'text', minWidth: '220px', wrapText: true },
-          { header: 'Interview 1', field: 'result1', type: 'text', minWidth: '160px' },
-          { header: 'Interview 2', field: 'result2', type: 'text', minWidth: '160px' }
+          { header: 'Interview 1', field: 'result1', type: 'dynamic', minWidth: '160px' },
+          { header: 'Interview 2', field: 'result2', type: 'dynamic', minWidth: '160px' }
         ];
 
         // map ข้อมูล rows ตามเดิม
@@ -1427,9 +1453,9 @@ export class InterviewFormDetailsComponent {
           no: idx + 1,
           warning: item.questionName,
           result1: '',
-          // result1Type: this.mapFieldType(item.fieldType),
+          result1Type: this.mapFieldType(item.fieldType),
           result2: '',
-          // result2Type: 'input'
+          result2Type: 'input'
         }));
 
         // console.log(this.warningColumns, this.warningRows);

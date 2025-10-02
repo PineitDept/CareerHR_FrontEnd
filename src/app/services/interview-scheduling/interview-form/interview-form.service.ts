@@ -60,5 +60,19 @@ export class InterviewFormService {
       loading: false,
     });
   }
+  
+  updateInterviewDateStart(body: { appointmentId: string; interviewStartTime: string }): Observable<any> {
+    return this.api.patch<any>('AppointmentInterviews/interview-start-time', body, {
+      withAuth: true,
+      loading: false,
+    });
+  }
+  
+  updateInterviewDateEnd(body: { appointmentId: string; interviewEndTime: string }): Observable<any> {
+    return this.api.patch<any>('AppointmentInterviews/interview-end-time', body, {
+      withAuth: true,
+      loading: false,
+    });
+  }
 }
 

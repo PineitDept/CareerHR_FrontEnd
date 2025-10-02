@@ -215,7 +215,7 @@ export class InterviewFormComponent {
 
     this.appointmentsService.setAppointmentsType(1);
 
-    const savedSearch = sessionStorage.getItem('interviewSearchForm');
+    const savedSearch = sessionStorage.getItem('interviewTrackingSearchForm');
     if (savedSearch) {
       this.searchForm = JSON.parse(savedSearch);
       this.currentFilterParams = {
@@ -224,7 +224,7 @@ export class InterviewFormComponent {
         page: 1,
       };
     }
-    
+
     this.fetchAppointments(true);
 
     // this.filterButtons = [{ label: 'History', key: 'history', color: 'transparent', outlineBtn: true }];
@@ -237,6 +237,8 @@ export class InterviewFormComponent {
   loadInitialAppointments(updateTabCounts = false) {
     this.appointments = [];
     this.currentFilterParams.page = 1;
+
+    this.fetchAppointments(true);
   }
 
   fetchAppointments(updateTabCounts = false, autoSubscribe = true): Observable<any> {
@@ -254,6 +256,8 @@ export class InterviewFormComponent {
 
     const obs$ = this.interviewFormService.getTrackingForm<any>(updatedParams).pipe(
       tap((res) => {
+
+        this.hasMoreData = res.hasNextPage;
 
         this.rows = (res.items ?? []).map((item: any) => {
           const interview1Text = item.interview1ResultText;
@@ -332,7 +336,7 @@ export class InterviewFormComponent {
 
   // ---------- Search / filter actions ----------
   onSearch() {
-    sessionStorage.setItem('interviewSearchForm', JSON.stringify(this.searchForm));
+    sessionStorage.setItem('interviewTrackingSearchForm', JSON.stringify(this.searchForm));
 
     this.currentFilterParams = {
       ...this.currentFilterParams,
@@ -348,11 +352,11 @@ export class InterviewFormComponent {
 
   onClearSearch() {
     this.searchForm = { searchBy: '', searchValue: '' };
-    sessionStorage.removeItem('interviewSearchForm');
+    sessionStorage.removeItem('interviewTrackingSearchForm');
 
     this.currentFilterParams = {
       page: 1,
-      pageSize: 5,
+      pageSize: 20,
     };
 
     this.appointments = [];
@@ -361,23 +365,24 @@ export class InterviewFormComponent {
     this.loadInitialAppointments(true);
   }
 
-  onTabChange(tabKey: string): void {
-    this.selectedTab = tabKey;
-    this.currentFilterParams.page = 1;
-    this.hasMoreData = true;
+  // onTabChange(tabKey: string): void {
+  //   this.selectedTab = tabKey;
+  //   this.currentFilterParams.page = 1;
+  //   this.hasMoreData = true;
 
-    const updatedParams = {
-      ...this.currentFilterParams,
-      InterviewResult: tabKey === 'total' ? undefined : tabKey,
-      page: 1
-    };
+  //   const updatedParams = {
+  //     ...this.currentFilterParams,
+  //     InterviewResult: tabKey === 'total' ? undefined : tabKey,
+  //     page: 1,
+  //     pageSize: 20,
+  //   };
 
-    this.filterRequest.set(updatedParams);
-    this.currentFilterParams = updatedParams;
+  //   this.filterRequest.set(updatedParams);
+  //   this.currentFilterParams = updatedParams;
 
-    this.appointments = [];
-    this.loadInitialAppointments(false);
-  }
+  //   this.appointments = [];
+  //   this.loadInitialAppointments(false);
+  // }
 
   // ---------- Date range ----------
   onDateRangeSelected(range: { startDate: string; endDate: string }) {
@@ -405,7 +410,7 @@ export class InterviewFormComponent {
 
     this.currentFilterParams = {
       page: 1,
-      pageSize: 5,
+      pageSize: 20,
     };
 
     this.hasMoreData = true;
@@ -439,7 +444,7 @@ export class InterviewFormComponent {
       id: item.profile.appointmentId,
       interview: 1
     }
-    this.router.navigate(['/interview-scheduling/interview-form/details'], { queryParams });
+    this.router.navigate(['/interview-scheduling/interview-form/result'], { queryParams });
   }
 
   // ---------- Tab counts (preserve comments) ----------
@@ -564,47 +569,66 @@ export class InterviewFormComponent {
     this.loading = true;
     this.currentFilterParams.page++;
 
-    const params: any = {
-      page: this.currentFilterParams.page,
-      pageSize: this.currentFilterParams.pageSize,
-      InterviewResult: this.selectedTab === 'total' ? undefined : this.selectedTab,
+    const updatedParams = {
+      ...this.currentFilterParams,
       month: this.monthData,
       year: this.yearData,
+      page: this.currentFilterParams.page ?? 1,
+      search: this.currentFilterParams.search,
     };
 
-    this.appointmentsService.getAppointments<any>(params).subscribe({
+    this.interviewFormService.getTrackingForm<any>(updatedParams).subscribe({
       next: (res) => {
         const newItems = res.items || [];
 
-        this.appointments = [...this.appointments, ...newItems];
+        const mappedItems = newItems.map((item: any) => {
+          const interview1Text = item.interview1ResultText;
+          const interview2Text = item.interview2ResultText;
 
+          const interview1Hidden = !interview1Text;
+          const interview2Hidden = !interview2Text;
+
+          return {
+            ...item,
+            interview1ResultText: {
+              label: interview1Text,
+              class: [
+                ...(item.interview1Result === 21
+                  ? ['tw-bg-green-50', 'tw-ring-green-300', 'tw-text-green-700']
+                  : ['tw-bg-red-50', 'tw-ring-red-300', 'tw-text-red-700']),
+                ...(interview1Hidden ? ['tw-hidden'] : []),
+              ],
+            },
+            interview2ResultText: {
+              label: interview2Text,
+              class: [
+                ...(item.interview2Result === 21
+                  ? ['tw-bg-green-50', 'tw-ring-green-300', 'tw-text-green-700']
+                  : ['tw-bg-red-50', 'tw-ring-red-300', 'tw-text-red-700']),
+                ...(interview2Hidden ? ['tw-hidden'] : []),
+              ],
+            },
+            interview1TimeSubmit: item.interview1TimeSubmit
+              ? this.formatCreateDateTimeDMY(item.interview1TimeSubmit).formattedDate
+              : undefined,
+            interview2TimeSubmit: item.interview2TimeSubmit
+              ? this.formatCreateDateTimeDMY(item.interview2TimeSubmit).formattedDate
+              : undefined,
+            interview1FormResult: item.interview1FormResult || undefined,
+            interview2FormResult: item.interview2FormResult || undefined,
+            position: item.positions?.map((pos: IPositionDto) => pos.namePosition) || [],
+          };
+        });
+
+        // ✅ ต่อข้อมูลใหม่เข้า rows เดิม
+        this.rows = [...this.rows, ...mappedItems];
+
+        // ✅ เช็คว่าไม่มีข้อมูลเพิ่มแล้ว
         if (newItems.length < Number(this.currentFilterParams.pageSize)) {
           this.hasMoreData = false;
         }
 
         this.loading = false;
-
-        this.appointments = this.appointments.map((item: any) => {
-          const revision = Number(item.interview?.revision || 1);
-
-          const revisionList = Array.from({ length: revision }, (_, i) => ({
-            label: i + 1,
-            value: i + 1
-          })).reverse();
-
-          return {
-            ...item,
-            revisionList
-          };
-        });
-
-        this.appointments = this.appointments.map(appointment => {
-          const offeredCount = appointment.jobPosition.jobList.filter((job: any) => job.isOffered === true).length;
-          return {
-            ...appointment,
-            isHidden: offeredCount >= 2
-          };
-        });
       },
       error: (err) => {
         console.error('Load more failed:', err);
@@ -622,13 +646,27 @@ export class InterviewFormComponent {
   }
 
   // table
+  ColumnClicked: any;
+
+  handleColumnRowClick(event: { column: any; row: any }) {
+    this.ColumnClicked = event.column;
+    this.onViewRowClicked(event.row);
+  }
+
   onViewRowClicked(row: any) {
-    console.log(row)
+    let interview = 0
+
+    if (this.ColumnClicked === 'interview1FormResult') {
+      interview = 1
+    } else if (this.ColumnClicked === 'interview2FormResult') {
+      interview = 2
+    }
     const queryParams = {
       id: row.userID,
-      interview: 1
-    }
+      interview: interview
+    };
 
-    this.router.navigate(['/interview-scheduling/interview-form/details'], { queryParams });
+    this.router.navigate(['/interview-scheduling/interview-form/result'], { queryParams });
   }
+
 }

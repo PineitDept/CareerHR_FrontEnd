@@ -614,7 +614,7 @@ export class InterviewRound1HistoryComponent {
       id: item.profile.userId,
       interview: 1
     }
-    this.router.navigate(['/interview-scheduling/interview-form/details'], { queryParams });
+    this.router.navigate(['/interview-scheduling/interview-form/result'], { queryParams });
   }
 
   onInterviewDetailsClicked(item: any) {

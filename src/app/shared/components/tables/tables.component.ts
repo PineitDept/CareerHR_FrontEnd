@@ -98,6 +98,7 @@ export class TablesComponent
   @Output() editClicked = new EventEmitter<any>();
   @Output() editCardClicked = new EventEmitter<any>();
   @Output() viewRowClicked = new EventEmitter<any>();
+  @Output() columnRowClicked = new EventEmitter<{ column: Column; row: any }>();
   @Output() createInlineSave = new EventEmitter<any>();
   @Output() createInlineCancel = new EventEmitter<void>();
   @Output() deleteRowClicked = new EventEmitter<any>();
@@ -613,11 +614,18 @@ export class TablesComponent
     }
   }
 
+  getCellType(row: any, column: any): string {
+    const rowType = row?.[`${column.field}Type`];
+    if (rowType) return rowType;
+    return column.type || 'text';
+  }
+
   // textlin on click
-  onClickView(event: Event, row: any): void {
+  onClickView(event: Event, row: any, column?: any): void {
     event.stopPropagation();
     console.log('View', row);
     this.viewRowClicked.emit(row);
+    this.columnRowClicked.emit({ column, row });
   }
 
   onClickEditDialog(event: Event, row: any): void {
