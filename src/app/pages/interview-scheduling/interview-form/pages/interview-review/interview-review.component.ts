@@ -741,6 +741,10 @@ export class InterviewReviewComponent {
     this.nextTick(() => this.setActionButtons('edit'));
   }
 
+  satisfactionClick() {
+    console.log(111111)
+  }
+
   private setActionButtons(mode: 'view' | 'edit') {
     if (mode === 'view') {
       this.filterButtons = [{ label: 'Edit', key: 'edit', color: '#000000' }];

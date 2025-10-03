@@ -311,12 +311,15 @@ export class InterviewFormDetailsComponent {
 
   // ====== Candidate Warning UI ======
   isRevOpen = true; // ปุ่ม chevron พับ/กาง
-  isWarnOpen = true;
+  isWarnOpen = false;
   warningRows: any[] = [];
   warningColumns: any[] = [];
 
   reviewHistory: any[] = [];
   selectedCategoryId: number | null = null;
+
+  editReview = false;
+  allowEditButton = false;
 
   private initWarningColumns() {
     this.warningColumns = [
@@ -371,6 +374,13 @@ export class InterviewFormDetailsComponent {
 
   ngAfterViewInit() {
     this.nextTick(() => this.setActionButtons('view'));
+      this.setInitialEditState();
+  }
+
+  ngOnChanges() {
+    if (this.applicant) {
+      this.setInitialEditState();
+    }
   }
 
   ngOnDestroy() {
@@ -499,6 +509,15 @@ export class InterviewFormDetailsComponent {
 
         setTimeout(() => this.checkAllOverflow(), 0);
         this.foundisSummary = this.reviewHistory.find(user => user.isSummary === true);
+
+        // const countIsSummaryTrue = this.reviewHistory.filter(item => item.isSummary === true).length;
+        // if (!countIsSummaryTrue) {
+        //   this.editReview = false;
+        //   this.allowEditButton = true;
+        // } else {
+        //   this.editReview = true;
+        //   this.allowEditButton = false;
+        // }
 
         this.initializeForm()
 
@@ -764,6 +783,8 @@ export class InterviewFormDetailsComponent {
       next: () => {
         this.fetchInterviewer()
         this.foundisSummary = this.reviewHistory.find(user => user.isSummary === true);
+        this.editReview = false;
+        this.allowEditButton = true;
       },
       error: (err) => {
         console.error('Error Rescheduled:', err);
@@ -774,8 +795,30 @@ export class InterviewFormDetailsComponent {
   onCancelReview() {
     this.initializeForm()
     this.selectedCategoryId = null;
+    this.editReview = false;
+    this.allowEditButton = true;
   }
 
+  onEditReview() {
+    this.initializeForm()
+    this.editReview = true;
+    this.allowEditButton = false;
+  }
+
+  setInitialEditState() {
+    const resultKey = `interview${this.stageId}Result` as keyof typeof this.applicant;
+    const result = this.applicant?.[resultKey];
+
+    // ถ้าเป็น 21 → ให้โชว์ปุ่ม Edit (ยังไม่เข้าสู่โหมดแก้)
+    if (result === 21) {
+      this.allowEditButton = true;
+      this.editReview = false;
+    } else {
+      // ถ้าไม่ใช่ 21 ก็เข้าโหมดแก้ไขได้เลย
+      this.allowEditButton = false;
+      this.editReview = true;
+    }
+  }
 
   onEditClicked() {
     this.isEditing = true;
@@ -815,6 +858,8 @@ export class InterviewFormDetailsComponent {
     this.selectedTab = tab;
     const interviewNumber = tab === 'tab1' ? '1' : '2';
     this.stageId = Number(interviewNumber)
+
+    this.setInitialEditState()
 
     this.router.navigate([], {
       relativeTo: this.route,
@@ -923,6 +968,27 @@ export class InterviewFormDetailsComponent {
       default: return 'tw-bg-gray-300 tw-text-black';            // Default สีเทา
     }
   }
+
+  disableInputPass(): string {
+    const resultKey = `interview${this.stageId}Result` as keyof typeof this.applicant;
+
+    const result = this.applicant?.[resultKey];
+
+    switch (result) {
+      case 21:
+        return 'tw-pointer-events-none tw-bg-gray-100 tw-text-[#8b8b8b]'; // Pass Interview
+      default:
+        return ''; // Default
+    }
+  }
+
+  hideBtnPass() {
+    const resultKey = `interview${this.stageId}Result` as keyof typeof this.applicant;
+    const result = this.applicant?.[resultKey];
+
+    this.editReview = result !== 21;
+  }
+
 
   getCategoryBtnClass(c: CategoryOption, selectedId?: number | null) {
     const isActive = c.categoryId === selectedId;

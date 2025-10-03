@@ -117,7 +117,7 @@
             <div class="tw-bg-black tw-w-full tw-rounded-[20px]"
                 [ngClass]="applicant.interview2Date === 'Invalid Date' ? 'tw-pointer-events-none tw-opacity-40':''">
                 <button type="button"
-                    class="tw-h-full tw-w-full tw-rounded-2xl tw-bg-[#F8F9FA] tw-text-black tw-px-6 tw-py-4 tw-text-left tw-shadow-[0_4px_8px_rgba(0,0,0,0.1)] tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-brightness-110 hover:tw-shadow-[0_8px_12px_rgba(0,0,0,0.1)] focus:tw-ring-2 focus:tw-ring-white/30"
+                    class="tw-h-full tw-w-full tw-rounded-2xl tw-px-6 tw-py-4 tw-text-left tw-shadow-[0_4px_8px_rgba(0,0,0,0.1)] tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-brightness-110 hover:tw-shadow-[0_8px_12px_rgba(0,0,0,0.1)] focus:tw-ring-2 focus:tw-ring-white/30"
                     (click)="onInterviewClick('tab2')" [class.active]="selectedTab === 'tab2'"
                     [ngClass]="getInterview2StatusClass()">
                     <div class="tw-w-full tw-flex tw-items-center tw-justify-between tw-gap-3">
@@ -168,7 +168,7 @@
                     <input
                         class="tw-w-full tw-block tw-bg-gray-light-4 tw-border tw-border-[#d1d5db] tw-rounded-[8px] tw-p-2 tw-text-sm tw-outline-none tw-gap-2 placeholder:tw-text-[#ADB5BD]"
                         type="time" [value]="formatTimeForInput(getInterviewDateByStage())"
-                        (input)="onTimeStartChange($event)">
+                        [ngClass]="disableInputPass()" (input)="onTimeStartChange($event)">
                 </div>
                 <div class="tw-flex-1">
                     <div class="tw-mb-1.5">
@@ -178,7 +178,7 @@
                     <input
                         class="tw-w-full tw-block tw-bg-gray-light-4 tw-border tw-border-[#d1d5db] tw-rounded-[8px] tw-p-2 tw-text-sm tw-outline-none tw-gap-2 placeholder:tw-text-[#ADB5BD]"
                         type="time" [value]="formatTimeForInputWithOffset(getInterviewDateByStage(), 30)"
-                        (input)="onTimeEndChange($event)">
+                        [ngClass]="disableInputPass()" (input)="onTimeEndChange($event)">
                 </div>
             </div>
         </section>
@@ -214,13 +214,14 @@
                 (init)="onCarouselInit($event, 0)" (afterChange)="onSlideChanged($event, 0)">
 
                 <div ngxSlickItem *ngFor="let review of filteredReviewHistory; let i = index">
-                    <div
-                        class="tw-col-span-2 tw-row-span-2 tw-space-y-4 tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.1)]" style=" height: -webkit-fill-available; ">
+                    <div class="tw-col-span-2 tw-row-span-2 tw-space-y-4 tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.1)]"
+                        style=" height: -webkit-fill-available; ">
                         <div class="header-slide">
                             <div class="tw-flex tw-items-center tw-justify-between tw-mb-3">
                                 <div>
                                     <span class="tw-text-[20px] tw-mr-3 tw-font-bold">{{ review.hrUserName }}</span>
-                                    <button><app-icon name="pen-to-square" [size]="16" class="tw-text-[#D97706]" (click)="onReviewClick(review.satisfaction)"></app-icon></button>
+                                    <button><app-icon name="pen-to-square" [size]="16" class="tw-text-[#D97706]"
+                                            (click)="onReviewClick(review.satisfaction)"></app-icon></button>
                                 </div>
                                 <div class="tw-p-1 tw-px-2 tw-border tw-rounded-lg tw-font-bold" [ngClass]="{
                                 'tw-border-[#D3F3DF] tw-text-[#16A34A] tw-bg-[#d3f3df63]': review.categoryName.includes('Accept'),
@@ -230,14 +231,14 @@
                                 </div>
 
                             </div>
-                            <div class="tw-flex tw-items-end tw-gap-2">
+                            <!-- <div class="tw-flex tw-items-end tw-gap-2">
                                 <div>
                                     <app-icon *ngFor="let star of [1,2,3,4,5]; let i = index" name="star" [size]="16"
                                         [class.tw-text-[#FFD600]]="i < review.satisfaction"
                                         [class.tw-text-[#C4C4C4]]="i >= review.satisfaction"></app-icon>
                                 </div>
                                 <p class="tw-text-gray-500 tw-text-xs">{{review.satisfaction}} (5)</p>
-                            </div>
+                            </div> -->
                             <!-- <p class="tw-text-xs tw-mt-3" *ngIf="review.notes">
                             {{ review.notes || "No notes available." }}
                         </p> -->
@@ -328,7 +329,7 @@
                                 <div>
                                     <div class="tw-text-[13px] tw-font-medium">Screening Date</div>
                                     <input
-                                        [ngClass]="foundisSummary ? 'tw-pointer-events-none tw-text-[#8b8b8b] tw-bg-gray-100':''"
+                                        [ngClass]="[!editReview || foundisSummary ? 'tw-pointer-events-none tw-text-[#8b8b8b] tw-bg-gray-100':'', disableInputPass()]"
                                         class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2"
                                         type="date" [min]="today" formControlName="dateInterviewReview" />
                                 </div>
@@ -341,7 +342,7 @@
                                     <div *ngFor="let s of reasonsInterview1">
                                         <button type="button" (click)="selectCategory(s.categoryId)"
                                             class="tw-text-sm tw-rounded-lg tw-px-3 tw-py-1.5 tw-border tw-transition"
-                                            [ngClass]="[getCategoryBtnClass(s, selectedCategoryId), foundisSummary ? 'tw-pointer-events-none':'']">
+                                            [ngClass]="[getCategoryBtnClass(s, selectedCategoryId), !editReview || foundisSummary ? 'tw-pointer-events-none':'', disableInputPass()]">
                                             {{ s.categoryName }}
                                         </button>
                                     </div>
@@ -358,7 +359,7 @@
                                         <span role="checkbox" [attr.aria-checked]="r.checked"
                                             class="tw-inline-flex tw-items-center tw-justify-center tw-rounded-[4px] tw-border tw-align-middle tw-mt-0.5"
                                             [ngClass]="[r.checked ? 'tw-border-green-500 tw-bg-green-50' : 'tw-border-gray-300 tw-bg-white',
-                                                foundisSummary ? 'tw-pointer-events-none':''
+                                                !editReview || foundisSummary ? 'tw-pointer-events-none':'', disableInputPass()
                                             ]" style="width:18px;height:18px;min-width:18px;min-height:18px">
                                             <app-icon *ngIf="r.checked" name="check" [size]="14"
                                                 class="tw-text-green-600"></app-icon>
@@ -374,7 +375,7 @@
                                         <div>
                                             <div class="tw-text-[13px] tw-font-medium">Notes</div>
                                             <textarea
-                                                [ngClass]="foundisSummary ? 'tw-pointer-events-none tw-text-[#8b8b8b] tw-bg-gray-100':''"
+                                                [ngClass]="[!editReview || foundisSummary ? 'tw-pointer-events-none tw-text-[#8b8b8b] tw-bg-gray-100':'', disableInputPass()]"
                                                 class="tw-w-full tw-text-[14px] tw-h-32 tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2"
                                                 [value]="" formControlName="noteInterviewReview"></textarea>
                                         </div>
@@ -382,12 +383,26 @@
                                 </ng-container>
                             </div>
 
-                            <div class="tw-flex tw-gap-3 tw-justify-end tw-pb-6" *ngIf="!foundisSummary">
-                                <button type="button" (click)="onComfirmReview()"
-                                    class="tw-rounded-lg tw-bg-[#D97706] tw-text-white tw-py-2 tw-px-4 tw-text-center tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-bg-[#c46b07]">Confirm</button>
-                                <button type="button" (click)="onCancelReview()"
-                                    class="tw-rounded-lg tw-border tw-border-[#E5E5E5] tw-text-black tw-py-2 tw-px-4 tw-text-center tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-bg-[#E5E5E5]">Cancel</button>
+                            <div class="tw-flex tw-gap-3 tw-justify-end tw-pb-6">
+                                <!-- ปุ่ม Edit: แสดงเมื่อยังไม่เข้าสู่โหมดแก้ -->
+                                <button *ngIf="allowEditButton" type="button" (click)="onEditReview()"
+                                    class="tw-rounded-lg tw-bg-[#00AAFF] tw-text-white tw-py-2 tw-px-4 tw-text-center tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-bg-[#0c95da]">
+                                    Edit
+                                </button>
+
+                                <!-- ปุ่ม Confirm / Cancel: แสดงเมื่อกำลังแก้ -->
+                                <ng-container *ngIf="editReview">
+                                    <button type="button" (click)="onComfirmReview()"
+                                        class="tw-rounded-lg tw-bg-[#D97706] tw-text-white tw-py-2 tw-px-4 tw-text-center tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-bg-[#c46b07]">
+                                        Confirm
+                                    </button>
+                                    <button type="button" (click)="onCancelReview()"
+                                        class="tw-rounded-lg tw-border tw-border-[#E5E5E5] tw-text-black tw-py-2 tw-px-4 tw-text-center tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-bg-[#E5E5E5]">
+                                        Cancel
+                                    </button>
+                                </ng-container>
                             </div>
+
                         </ng-container>
                     </div>
                 </div>
