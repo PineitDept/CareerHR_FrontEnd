@@ -505,6 +505,14 @@ export class TrackingComponent
     );
   }
 
+  override onRowClick(row: any): void {
+    const id = (row as any)?.id;
+    if (!id) return;
+
+    const queryParams = { id };
+    this.router.navigate(['/applications/tracking/application-form'], { queryParams });
+  }
+
   private normalizeTrackingFilter(f: ICandidateFilterRequest | null | undefined): ICandidateFilterRequest {
     const src: any = f || {};
     const status = src.status ?? src.statusGroup ?? undefined;
