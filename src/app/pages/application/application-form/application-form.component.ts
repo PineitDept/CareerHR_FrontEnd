@@ -576,6 +576,7 @@ export class ApplicationFormComponent {
     });
 
     this.warningRows = wrows;
+    console.log(this.warningRows, '=>this.warningRows')
   }
 
   private fetchStageHistoryAndReasons(appId: number) {

@@ -180,7 +180,7 @@
                     'tw-text-gray-800': !isDisabledForm
                   }"
                 >
-                  <ng-container [ngSwitch]="column.typeFn ? column.typeFn(row) : column.type || 'text'">
+                  <ng-container [ngSwitch]="column.typeFn ? column.typeFn(row) : (column.type || 'text')">
 
                     <!-- Text Content -->
                     <span *ngSwitchCase="'text'">
@@ -257,6 +257,11 @@
                       </ng-template>
                     </span>
 
+                    <!-- input content -->
+                    <span *ngSwitchCase="'input'">
+                      <input type="text" class="tw-border tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white tw-border-gray-300" (click)="$event.stopPropagation()" />
+                    </span>
+
                     <!-- Select Dropdown -->
                     <div *ngSwitchCase="'select'" class="tw-relative">
                       <button
@@ -278,6 +283,10 @@
                           [extraClass]="'tw-ml-2 tw-flex-shrink-0 tw-transition-transform tw-duration-200 ' + (isDropdownOpen(i, column.field) ? 'tw-rotate-180' : '')">
                         </app-icon>
                       </button>
+                    </div>
+
+                    <div *ngSwitchCase="'multiselect'">
+                      <app-multi-select-dropdown [inTable]="true"></app-multi-select-dropdown>
                     </div>
 
                     <!-- Button Content -->
@@ -380,6 +389,17 @@
                       </a>
                     </div>
 
+                    <div *ngSwitchCase="'textlink-custom'" class="tw-flex tw-justify-center tw-gap-4" (click)="$event.stopPropagation()">
+                      <div *ngIf="getCellValue(row, column.field)">
+                        <a href="javascript:void(0)"
+                          class="tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
+                          [ngClass]="dynamicClassBtn(getCellValue(row, column.field))"
+                          (click)="onClickView($event, row, column.field)">
+                          <app-icon *ngIf="column.iconLink" [name]="column.iconLink" [size]="20"></app-icon>
+                          <span>{{ getCellValue(row, column.field) }}</span>
+                        </a>
+                      </div>
+                    </div>
 
                   </ng-container>
                 </div>

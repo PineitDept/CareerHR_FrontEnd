@@ -630,7 +630,7 @@ export class OfferEmploymentComponent {
     const queryParams = {
       id: item.profile.userId
     }
-    this.router.navigate(['/interview-scheduling/interview-form/details'], { queryParams });
+    this.router.navigate(['/interview-scheduling/interview-form/result'], { queryParams });
   }
 
   // ---------- Tab counts (preserve comments) ----------

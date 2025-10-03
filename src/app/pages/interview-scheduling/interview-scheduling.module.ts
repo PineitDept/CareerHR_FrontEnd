@@ -12,6 +12,7 @@ import { InterviewRound2HistoryComponent } from './interview-round-2/pages/inter
 import { InterviewFormComponent } from './interview-form/interview-form.component';
 import { InterviewFormDetailsComponent } from './interview-form/pages/interview-form-details/interview-form-details.component';
 import { InterviewReviewComponent } from './interview-form/pages/interview-review/interview-review.component';
+import { InterviewDetailsComponent } from './interview-form/pages/interview-details/interview-details.component';
 
 @NgModule({
   declarations: [
@@ -23,6 +24,7 @@ import { InterviewReviewComponent } from './interview-form/pages/interview-revie
     InterviewFormComponent,
     InterviewFormDetailsComponent,
     InterviewReviewComponent,
+    InterviewDetailsComponent,
   ],
   imports: [
     CommonModule,
