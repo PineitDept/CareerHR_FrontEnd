@@ -93,18 +93,18 @@ export abstract class BaseGeneralBenefitsComponent<T> implements OnInit, OnDestr
     readonly currentSort = computed(() => this.sortConfig());
 
     readonly resetCounter = signal<number>(0);
-    
+
     // Subjects for reactive streams
     protected readonly searchSubject = new BehaviorSubject<SearchForm>({
         searchBy: '',
         searchValue: '',
     });
-    
+
     protected readonly tabChangeSubject = new BehaviorSubject<string>('');
     protected readonly columnSortSubject = new BehaviorSubject<string>('');
     protected readonly scrollSubject = new Subject<Event>();
     protected isFiltering: boolean = false;
-    
+
     // Public Properties
     readonly searchByOptions = SEARCH_OPTIONS;
     searchForm: SearchForm = { searchBy: '', searchValue: '' };
@@ -118,7 +118,7 @@ export abstract class BaseGeneralBenefitsComponent<T> implements OnInit, OnDestr
     ngOnDestroy(): void {
         this.persistCurrentState();
     }
-    
+
     // Public Event Handlers
     onSearch(form: SearchForm): void {
         // this.searchSubject.next(form);
@@ -181,7 +181,7 @@ export abstract class BaseGeneralBenefitsComponent<T> implements OnInit, OnDestr
         this.setupColumnSortStream();
         this.setupScrollStream();
     }
-    
+
     protected setupSearchStream(): void {
         this.searchSubject
             .pipe(
@@ -230,7 +230,7 @@ export abstract class BaseGeneralBenefitsComponent<T> implements OnInit, OnDestr
             takeUntilDestroyed(this.destroyRef)
         ).subscribe();
     }
-    
+
     // Protected Stream Handlers
     protected handleSearch(searchForm: SearchForm): Observable<void> {
         const updatedFilter = this.updateFilterForSearch(searchForm);
@@ -289,7 +289,7 @@ export abstract class BaseGeneralBenefitsComponent<T> implements OnInit, OnDestr
         );
     }
 
-    
+
     protected persistSearchForm(form: SearchForm): void {
         const storageKeys = this.getStorageKeys();
         this.saveToStorage(storageKeys.FILTER_SETTINGS + '_SEARCH_FORM', form);
@@ -307,7 +307,7 @@ export abstract class BaseGeneralBenefitsComponent<T> implements OnInit, OnDestr
 
     protected clearGrade(): void {
         const storageKeys = this.getStorageKeys();
-        localStorage.removeItem(storageKeys.FILTER_SETTINGS + '_Grade');
+        sessionStorage.removeItem(storageKeys.FILTER_SETTINGS + '_Grade');
     }
 
     protected setupRouteChangeListener(): void {
@@ -325,7 +325,7 @@ export abstract class BaseGeneralBenefitsComponent<T> implements OnInit, OnDestr
 
     protected clearPersistedSearchForm(): void {
         const storageKeys = this.getStorageKeys();
-        localStorage.removeItem(storageKeys.FILTER_SETTINGS + '_SEARCH_FORM');
+        sessionStorage.removeItem(storageKeys.FILTER_SETTINGS + '_SEARCH_FORM');
     }
 
     protected loadInitialData(): void {
@@ -367,7 +367,7 @@ export abstract class BaseGeneralBenefitsComponent<T> implements OnInit, OnDestr
             append ? [...currentRows, ...processedRows] : processedRows
         );
     }
-    
+
     // Protected Filter Updates
     protected updateFilterForSearch(
         searchForm: SearchForm
@@ -479,18 +479,18 @@ export abstract class BaseGeneralBenefitsComponent<T> implements OnInit, OnDestr
 
     protected saveToStorage<T>(key: string, data: T): void {
         try {
-            localStorage.setItem(key, JSON.stringify(data));
+            sessionStorage.setItem(key, JSON.stringify(data));
         } catch (error) {
-            console.warn(`Failed to save ${key} to localStorage:`, error);
+            console.warn(`Failed to save ${key} to sessionStorage:`, error);
         }
     }
 
     protected loadFromStorage<T>(key: string): T | null {
         try {
-            const item = localStorage.getItem(key);
+            const item = sessionStorage.getItem(key);
             return item ? JSON.parse(item) : null;
         } catch (error) {
-            console.warn(`Failed to load ${key} from localStorage:`, error);
+            console.warn(`Failed to load ${key} from sessionStorage:`, error);
             return null;
         }
     }

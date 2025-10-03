@@ -500,18 +500,18 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
 
   protected saveToStorage<T>(key: string, data: T): void {
     try {
-      localStorage.setItem(key, JSON.stringify(data));
+      sessionStorage.setItem(key, JSON.stringify(data));
     } catch (error) {
-      console.warn(`Failed to save ${key} to localStorage:`, error);
+      console.warn(`Failed to save ${key} to sessionStorage:`, error);
     }
   }
 
   protected loadFromStorage<T>(key: string): T | null {
     try {
-      const item = localStorage.getItem(key);
+      const item = sessionStorage.getItem(key);
       return item ? JSON.parse(item) : null;
     } catch (error) {
-      console.warn(`Failed to load ${key} from localStorage:`, error);
+      console.warn(`Failed to load ${key} from sessionStorage:`, error);
       return null;
     }
   }
