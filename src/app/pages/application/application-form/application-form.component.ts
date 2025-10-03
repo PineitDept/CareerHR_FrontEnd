@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, QueryList, ViewChildren } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { catchError, forkJoin, map, of, Subject, switchMap, takeUntil } from 'rxjs';
 import { ApplicationService } from '../../../services/application/application.service';
@@ -14,9 +14,11 @@ import { ReasonService } from '../../../services/admin-setting/reason/reason.ser
 import { MatDialog } from '@angular/material/dialog';
 import { AlertDialogData } from '../../../shared/interfaces/dialog/dialog.interface';
 import { AlertDialogComponent } from '../../../shared/components/dialogs/alert-dialog/alert-dialog.component';
+import { SlickCarouselComponent, SlickItemDirective } from 'ngx-slick-carousel';
+
 dayjs.extend(utc);
 
-// ====== Types สำหรับฝั่ง View ======
+// ====== Types (View) ======
 type StepStatus = 'done' | 'pending';
 type Risk = 'Normal' | 'Warning';
 type ScreeningStatus = 'Accept' | 'Decline' | 'On Hold' | 'Pending' | null;
@@ -45,6 +47,7 @@ interface AssessmentItem {
   visibility: any;
   details: any;
   detailsPositive?: boolean;
+  isTotalRow?: boolean;
 }
 
 interface WarningItem {
@@ -67,7 +70,7 @@ interface Screening {
 interface CommentItem {
   id: string;
   author: string;
-  date: string; // แสดงผลแล้วฟอร์แมตรูปแบบ
+  date: string;
   text: string;
 }
 
@@ -97,7 +100,7 @@ interface StageSection {
   historyId: number;
   stageId: number;
   stageName: string;
-  stageNameNormalized: string;  // lower-cased for switch
+  stageNameNormalized: string;  // lower-cased
   headerTitle: string;
 
   hrUserName: string;
@@ -108,12 +111,11 @@ interface StageSection {
 
   reasons: ReasonOption[];
 
-  // notes: ใช้กับ Screened/Offered
-  notes?: string | null;
-  // ใช้กับ Interview 1/2 (ถ้า API ยังไม่มี แสดง '—')
-  strength?: string | null;
-  concern?: string | null;
+  notes?: string | null;      // Screened/Offered
+  strength?: string | null;   // Interview 1/2
+  concern?: string | null;    // Interview 1/2
 
+  isSummary?: boolean;        // << สำคัญสำหรับแยกแสดง
   open: boolean;
 }
 
@@ -178,11 +180,9 @@ export class ApplicationFormComponent {
     avatarUrl: '',
   };
 
-  steps: { label: string; date?: string; status: StepStatus; sub?: string }[] =
-    [];
-  currentIndex = -1; // ไม่มีขั้นไหนเสร็จ = -1
+  steps: { label: string; date?: string; status: StepStatus; sub?: string }[] = [];
+  currentIndex = -1;
 
-  // (ไม่ใช้ mock assessments เดิมแล้ว จะ map จาก API แทน)
   assessments: AssessmentItem[] = [];
   assessmentTotalScore = 0;
   assessmentMaxScore = 0;
@@ -215,9 +215,6 @@ export class ApplicationFormComponent {
 
   applicationFormSubmittedDate: string | Date = '';
 
-  // UI: ขนาดรอยบั้งของ chevron (สำหรับ pipeline เดิม)
-  chevW = 28;
-
   // ====== Stepper bindings ======
   stepperItems: StepperItem[] = [];
   activeStepIndex = 0;
@@ -229,7 +226,7 @@ export class ApplicationFormComponent {
 
   // ====== Assessment UI/Form ======
   formDetails!: FormGroup;
-  isRevOpen = true; // ปุ่ม chevron พับ/กาง
+  isRevOpen = true;
   assessmentRows: any[] = [];
   assessmentColumns: any[] = [];
 
@@ -247,8 +244,36 @@ export class ApplicationFormComponent {
   commentsTree: ViewComment[] = [];
   commentCtrl!: FormControl<string>;
 
-  screeningCardBg: string = '#6C757D'; // สีพื้นฐานตอนยังไม่รู้ผล
-  private hasScreenedPending = false;   // จาก getTrackingApplications
+  screeningCardBg: string = '#6C757D';
+  private hasScreenedPending = false;
+
+  // ===== Non-summary reviews for Interview 1 & 2 =====
+  interview1NonSummary: any[] = [];
+  interview2NonSummary: any[] = [];
+
+  // Slide configs
+  slideConfigI1: any = {
+    slidesToShow: 2, slidesToScroll: 1, dots: false, arrows: false, infinite: false,
+    responsive: [{ breakpoint: 768, settings: { slidesToShow: 1, dots: false } }]
+  };
+  slideConfigI2: any = {
+    slidesToShow: 2, slidesToScroll: 1, dots: false, arrows: false, infinite: false,
+    responsive: [{ breakpoint: 768, settings: { slidesToShow: 1, dots: false } }]
+  };
+
+  // overflow/expand helpers
+  @ViewChildren('i1StrengthText') i1StrengthTexts!: QueryList<ElementRef>;
+  @ViewChildren('i1ConcernText')  i1ConcernTexts!: QueryList<ElementRef>;
+  @ViewChildren('i2StrengthText') i2StrengthTexts!: QueryList<ElementRef>;
+  @ViewChildren('i2ConcernText')  i2ConcernTexts!: QueryList<ElementRef>;
+  @ViewChildren(SlickItemDirective) slickItems!: QueryList<SlickItemDirective>;
+  @ViewChildren('i1Carousel') i1Carousels!: QueryList<SlickCarouselComponent>;
+  @ViewChildren('i2Carousel') i2Carousels!: QueryList<SlickCarouselComponent>;
+
+  currentSlide: number[] = [];
+  totalSlides: number[] = [];
+  canGoPrev: boolean[] = [];
+  canGoNext: boolean[] = [];
 
   constructor(
     private route: ActivatedRoute,
@@ -256,15 +281,16 @@ export class ApplicationFormComponent {
     private fb: FormBuilder,
     private reasonService: ReasonService,
     private dialog: MatDialog,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   // ===================== Lifecycle =====================
   ngOnInit() {
-    // ฟอร์มเปล่าหุ้มการ์ดตาราง (ตามโครง ScoreDetails)
     this.formDetails = this.fb.group({});
     this.commentCtrl = this.fb.control<string>('', { nonNullable: true });
 
     this.filterButtons = [{ label: 'Print', key: 'print', color: '#0055FF' }];
+
     this.route.queryParams
       .pipe(takeUntil(this.destroy$))
       .subscribe((params) => {
@@ -272,9 +298,7 @@ export class ApplicationFormComponent {
         this.fetchCandidateTracking();
       });
 
-    // ตารางคะแนน (Assessment)
     this.initAssessmentColumns();
-    // ตาราง Warning
     this.initWarningColumns();
   }
 
@@ -296,7 +320,7 @@ export class ApplicationFormComponent {
       .getTrackingApplications({
         page: 1,
         pageSize: 20,
-        search: String(this.applicantId), // ใช้ applicantId เป็น search filter
+        search: String(this.applicantId),
       })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -316,10 +340,7 @@ export class ApplicationFormComponent {
           this.isLoading = false;
         },
         error: (err) => {
-          console.error(
-            '[ApplicationForm] getTrackingApplications error:',
-            err
-          );
+          console.error('[ApplicationForm] getTrackingApplications error:', err);
           this.isNotFound = true;
           this.isLoading = false;
         },
@@ -328,7 +349,7 @@ export class ApplicationFormComponent {
 
   // ===================== Mapping =====================
   private mapTrackingToView(ct: CandidateTracking) {
-    // ----- Applicant header -----
+    // Header
     this.applicant = {
       id: String(ct.userID ?? ''),
       name: ct.fullName || ct.fullNameTH || '—',
@@ -337,11 +358,9 @@ export class ApplicationFormComponent {
       appliedDate: ct.submitDate || '',
       email: ct.email || '—',
       positions: Array.from(
-        new Set(
-          (ct.positions ?? [])
-            .map((p) => p?.namePosition)
-            .filter((n): n is string => !!n)
-        )
+        new Set((ct.positions ?? [])
+          .map((p) => p?.namePosition)
+          .filter((n): n is string => !!n))
       ),
       grade: ct.gradeCandidate || '—',
       views: Number(ct.countLike ?? 0),
@@ -353,26 +372,20 @@ export class ApplicationFormComponent {
 
     this.applicationFormSubmittedDate = ct.submitDate || '';
 
-    // reset ค่าเริ่มต้นของการ์ด Screening ทุกครั้ง
+    // Screening card (Pending -> black)
     this.screening.screenedBy = '—';
     this.screening.screeningDate = '';
     this.screening.status = null;
-    this.screeningCardBg = '#6C757D'; // สีกลาง
+    this.screeningCardBg = '#6C757D';
 
-    // ----- Screening card color by tracking (Pending -> ดำ) -----
     this.hasScreenedPending = String(ct?.screened?.status || '').trim().toLowerCase() === 'pending';
     if (this.hasScreenedPending) {
       this.screeningCardBg = '#000000';
       this.screening.status = 'Pending';
     }
 
-    // ----- Steps / Pipeline -----
-    const stepsRaw: Array<{
-      label: string;
-      date?: string;
-      status: StepStatus;
-      sub?: string;
-    }> = [
+    // Steps / Pipeline
+    const stepsRaw: Array<{ label: string; date?: string; status: StepStatus; sub?: string; }> = [
       {
         label: 'Applied',
         date: formatDay(ct.applied?.date ?? ct.submitDate),
@@ -416,7 +429,6 @@ export class ApplicationFormComponent {
     this.steps = stepsRaw;
     this.currentIndex = lastDoneIndex;
 
-    // ===== Map -> StepperComponent =====
     this.stepperItems = this.steps.map((s) => ({
       label: s.label,
       sub: s.sub || (s.status === 'done' ? 'Accept' : ''),
@@ -425,16 +437,15 @@ export class ApplicationFormComponent {
     }));
 
     this.activeStepIndex = this.currentIndex >= 0 ? this.currentIndex : 0;
-
     this.disabledStepLabels = this.steps
       .map((s, i) => (i > this.currentIndex + 1 ? s.label : ''))
       .filter(Boolean);
 
-    // ----- โหลด Assessment/Warning/StageHistory -----
+    // Load detail sections
     this.fetchAssessmentAndWarnings(Number(this.applicant.id || 0));
     this.fetchStageHistoryAndReasons(Number(this.applicant.id || 0));
 
-    // ----- โหลด Comments -----
+    // Comments
     this.loadComments(Number(this.applicant.id || 0));
   }
 
@@ -446,7 +457,13 @@ export class ApplicationFormComponent {
       { header: 'Result', field: 'result', type: 'text', minWidth: '140px' },
       { header: 'Score', field: 'score', type: 'number', align: 'center', width: '90px', minWidth: '90px', maxWidth: '100px' },
       { header: 'Visibility', field: 'visibility', type: 'icon', align: 'center', width: '110px', minWidth: '110px' },
-      { header: 'Details', field: 'details', type: 'badge', minWidth: '220px' },
+      {
+        header: 'Details',
+        field: 'details',
+        type: 'text',
+        minWidth: '220px',
+        typeFn: (row: AssessmentItem) => row?.isTotalRow ? 'badge' : 'text',
+      },
     ];
   }
 
@@ -474,7 +491,7 @@ export class ApplicationFormComponent {
   }
 
   private mapAssessmentFromApi(payload: any) {
-    // ===== Assessment (typeCondition: 1) =====
+    // Assessment
     const groups = Array.isArray(payload?.validationGroups) ? payload.validationGroups : [];
     const assess = groups.find((g: any) => Number(g?.typeCondition) === 1);
 
@@ -483,11 +500,9 @@ export class ApplicationFormComponent {
 
     list.forEach((it: any, idx: number) => {
       const passed = !!it?.isPassed;
-      const resultText = has(it?.viewColumnResult) ? String(it.viewColumnResult) :
-                         has(it?.columnValue) ? String(it.columnValue) : '—';
-      const detailLabel = passed
-        ? (resultText || 'Pass')
-        : (String(it?.errorMessage || it?.conditionName || 'Failed').trim());
+      const resultText = has(it?.viewColumnResult) ? String(it.viewColumnResult)
+                      : has(it?.columnValue)      ? String(it.columnValue) : '—';
+      const detailLabel = passed ? '' : (String(it?.errorMessage || it?.conditionName || 'Failed').trim());
 
       rows.push({
         no: idx + 1,
@@ -499,81 +514,63 @@ export class ApplicationFormComponent {
           fill: passed ? 'green' : 'red',
           size: 18,
         },
-        details: {
-          label: detailLabel,
-          class: passed
-            ? ['tw-bg-green-50', 'tw-ring-green-300', 'tw-text-green-700']
-            : ['tw-bg-red-50', 'tw-ring-red-300', 'tw-text-red-700'],
-        },
-      });
+        details: detailLabel,
+      } as AssessmentItem);
     });
 
-    // แถว Total + Recommendation
-    const total = Number(assess?.summary?.totalConditions || rows.length || 0);
-    const passedCnt = Number(assess?.summary?.passedConditions || 0);
-    const totalScoreText = `${passedCnt}/${total || rows.length || 1}`;
-    const passPct = Number(assess?.summary?.passPercentage || (total ? (passedCnt * 100) / total : 0));
-    const recommend = passPct >= 50 ? 'Recommend for Acceptance' : 'Not Recommended for Acceptance';
+    const maxScore = rows.length;
+    const sumScore = rows.reduce((acc, r) => acc + (Number(r.score) || 0), 0);
+    const passRatio = maxScore > 0 ? sumScore / maxScore : 0;
+    const recommend = passRatio >= 0.5 ? 'Recommend for Acceptance' : 'Not Recommended for Acceptance';
+    const fmt = (n: number) => (Number.isInteger(n) ? String(n) : String(+n.toFixed(2)));
 
     rows.push({
       no: '' as any,
       review: 'Total',
       result: '',
-      score: totalScoreText,
+      score: `${fmt(sumScore)}/${maxScore}`,
       visibility: {
-        icon: passPct >= 50 ? 'check-circle' : 'xmark-circle',
-        fill: passPct >= 50 ? 'green' : 'red',
+        icon: passRatio >= 0.5 ? 'check-circle' : 'xmark-circle',
+        fill: passRatio >= 0.5 ? 'green' : 'red',
         size: 18,
       },
       details: {
         label: recommend,
-        class: passPct >= 50
+        class: passRatio >= 0.5
           ? ['tw-bg-green-50','tw-ring-green-300','tw-text-green-700']
           : ['tw-bg-red-50','tw-ring-red-300','tw-text-red-700'],
       },
-    });
+      isTotalRow: true,
+    } as AssessmentItem);
 
     this.assessmentRows = rows;
 
-    // ===== Candidate Warning (typeCondition: 2) =====
+    // Candidate Warning
     const warn = groups.find((g: any) => Number(g?.typeCondition) === 2);
     const wlist = Array.isArray(warn?.validationResults) ? warn.validationResults : [];
 
     const wrows = wlist.map((it: any, idx: number) => {
-      const passed = !!it?.isPassed; // ผ่าน = ไม่มีความเสี่ยง
-      const riskLabel = passed ? 'Normal' : 'Warning';
-
-      // Result แสดง viewColumnResult ถ้ามี ไม่งั้นใช้ columnValue
-      const resultText =
-        has(it?.viewColumnResult) ? String(it.viewColumnResult) :
-        has(it?.columnValue)      ? String(it.columnValue)      : '—';
-
-      // Detail: ถ้าผ่าน ใส่ข้อความกลางๆ, ถ้าไม่ผ่าน ใช้ errorMessage หรือ conditionName
-      const detailText = passed
-        ? 'No issue detected'
-        : (String(it?.errorMessage || it?.conditionName || 'Needs attention').trim());
+      const passed = !!it?.isPassed;
+      const riskLabel = passed ? 'Strength' : 'Weakness';
+      const resultText = has(it?.viewColumnResult) ? String(it.viewColumnResult)
+                       : has(it?.columnValue)      ? String(it.columnValue)      : '—';
+      const detailText = passed ? '' : (String(it?.errorMessage || it?.conditionName || 'Needs attention').trim());
 
       return {
         no: idx + 1,
-        warning: String(it?.columnName || it?.conditionName || '—').trim(),
+        warning: String(it?.conditionName || '—').trim(),
         result: resultText,
-
-        // Badge สีตามความเสี่ยง
         risk: {
           label: riskLabel,
           class: passed
             ? ['tw-bg-green-50','tw-ring-green-300','tw-text-green-700']
-            : ['tw-bg-red-500','tw-text-white','tw-ring-red-600'], // โทนแดงชัดแบบในภาพ
+            : ['tw-bg-red-500','tw-text-white','tw-ring-red-600'],
         },
-
-        // ไอคอนสถานะ
         visibility: {
           icon: passed ? 'check-circle' : 'xmark-circle',
           fill: passed ? 'green' : 'red',
           size: 18,
         },
-
-        // รายละเอียด
         detail: detailText,
       };
     });
@@ -605,35 +602,74 @@ export class ApplicationFormComponent {
             offered: 4,
           };
 
-          this.stageSections = histories.map((h, idx): StageSection => {
+          // ===== Non-Summary Reviews (Interview 1/2) =====
+          const i1 = (histories || []).filter(h =>
+            String(h.stageName || '').trim().toLowerCase() === 'interview 1' && !h.isSummary
+          );
+          const i2 = (histories || []).filter(h =>
+            String(h.stageName || '').trim().toLowerCase() === 'interview 2' && !h.isSummary
+          );
+
+          const enrich = (arr: any[]) => arr.map(it => ({
+            ...it,
+            expandState: { strength: false, concern: false },
+            overflowState: { strength: false, concern: false },
+          }));
+
+          this.interview1NonSummary = enrich(i1);
+          this.interview2NonSummary = enrich(i2);
+
+          // ปรับ dots/slidesToShow ตามจำนวน
+          const tuneConfig = (len: number) => ({
+            slidesToShow: len === 1 ? 1 : 2,
+            dots: len > 2,
+          });
+
+          setTimeout(() => {
+            this.slideConfigI1 = {
+              ...this.slideConfigI1,
+              ...tuneConfig(this.interview1NonSummary.length),
+              responsive: [{ breakpoint: 768, settings: { slidesToShow: 1, dots: this.interview1NonSummary.length > 1 } }]
+            };
+            this.slideConfigI2 = {
+              ...this.slideConfigI2,
+              ...tuneConfig(this.interview2NonSummary.length),
+              responsive: [{ breakpoint: 768, settings: { slidesToShow: 1, dots: this.interview2NonSummary.length > 1 } }]
+            };
+
+            setTimeout(() => {
+              this.i1Carousels?.forEach(c => { try { c.unslick(); c.initSlick(); } catch {} });
+              this.i2Carousels?.forEach(c => { try { c.unslick(); c.initSlick(); } catch {} });
+            }, 0);
+
+            setTimeout(() => this.checkAllOverflowNonSummary(), 0);
+          }, 0);
+
+          // ===== Stage Sections (summary + เดิม) =====
+          this.stageSections = histories.map((h): StageSection => {
             const stageId = Number(h.stageId);
             const stageName = String(h.stageName || '');
             const stageNameNorm = stageName.trim().toLowerCase();
 
-            // header title
             const headerTitle = stageNameNorm === 'screened'
               ? 'Application Screening'
               : `Application ${stageName}`;
 
-            // categories (from reasons API)
             const cats = (packByStage.get(stageId) || []).map(c => ({
               categoryId: c.categoryId,
               categoryName: c.categoryName
             })) as CategoryOption[];
 
-            // selected category
             const selectedCategoryId = Number(h.categoryId) || undefined;
 
-            // reasons list for the selected category
             const selectedCat = (packByStage.get(stageId) || []).find(c => Number(c.categoryId) === selectedCategoryId);
             const allReasons: ReasonOption[] = (selectedCat?.rejectionReasons || []).map((r: any) => ({
               reasonId: r.reasonId,
               reasonText: r.reasonText,
-              checked: Array.isArray(h.selectedReasonIds) ? h.selectedReasonIds.includes(r.reasonId) :
-                      Array.isArray(h.selectedReasonTexts) ? h.selectedReasonTexts.includes(r.reasonText) : false
+              checked: Array.isArray(h.selectedReasonIds) ? h.selectedReasonIds.includes(r.reasonId)
+                    : Array.isArray(h.selectedReasonTexts) ? h.selectedReasonTexts.includes(r.reasonText) : false
             }));
 
-            // notes/strength/concern (API มีแต่ notes -> แยกไว้รองรับอนาคต)
             const notes = h.notes ?? null;
 
             return {
@@ -650,36 +686,43 @@ export class ApplicationFormComponent {
               notes,
               strength: h.strength ?? null,
               concern:  h.concern ?? null,
+              isSummary: h.isSummary,     // << เก็บ flag ไว้ให้ template ใช้ซ่อน non-summary
               open: true
             };
           });
 
+          // sort ตามลำดับ stage
           this.stageSections.sort((a, b) => {
             const wa = orderWeight[a.stageNameNormalized] ?? 999;
             const wb = orderWeight[b.stageNameNormalized] ?? 999;
-            return wa - wb;
+            if (wa !== wb) return wa - wb;
+
+            // ภายใน stage เดียวกัน: ให้ summary มาก่อน/หลังอะไรก็ได้
+            // แต่เราแสดงเฉพาะ summary ในการ์ดเดิม (*ngIf ใน template จะซ่อน non-summary)
+            const da = new Date(a.stageDate || 0).getTime();
+            const db = new Date(b.stageDate || 0).getTime();
+            return da - db;
           });
 
-          // ===== Apply Screening card from Stage History (ถ้า tracking ไม่ได้ pending) =====
+          // ===== Screening card จาก Stage History (ถ้า tracking ไม่ pending) =====
           if (!this.hasScreenedPending) {
             const screenedList = (Array.isArray(histories) ? histories : [])
               .filter(h => String(h.stageName || '').trim().toLowerCase() === 'screened');
 
             if (screenedList.length) {
-              // เลือกรายการล่าสุดตาม stageDate
               const pickLatest = screenedList
                 .slice()
                 .sort((a, b) => new Date(b.stageDate || 0).getTime() - new Date(a.stageDate || 0).getTime())[0];
 
               const hrName = pickLatest?.hrUserName || '—';
               const catName = String(pickLatest?.categoryName || '');
-              const status  = this.normalizeCategoryToStatus(catName); // 'Accept' | 'Decline' | 'Hold' | null
-              const bg      = this.categoryToBg(catName);              // สีตาม category
+              const status  = this.normalizeCategoryToStatus(catName);
+              const bg      = this.categoryToBg(catName);
 
-              this.screening.screenedBy   = hrName;
+              this.screening.screenedBy    = hrName;
               this.screening.screeningDate = pickLatest?.stageDate || this.screening.screeningDate || '';
-              this.screening.status       = status;    // อนุญาต null ได้
-              this.screeningCardBg        = bg;        // ปรับสีการ์ดตาม category
+              this.screening.status        = status;
+              this.screeningCardBg         = bg;
             }
           }
         },
@@ -689,27 +732,11 @@ export class ApplicationFormComponent {
 
   // ===================== UI Events =====================
   onFilterButtonClick(key: string) {
-    switch (key) {
-      case 'print':
-        this.onPrintClicked();
-        break;
-    }
+    if (key === 'print') this.onPrintClicked();
   }
 
   onPrintClicked() {
     console.log('Print clicked');
-  }
-
-  addComment() {
-    const text = (this.newCommentText || '').trim();
-    if (!text) return;
-    this.comments.push({
-      id: 'c' + (this.comments.length + 1),
-      author: this.currentUserName || 'Current User',
-      date: new Date().toLocaleString(),
-      text,
-    });
-    this.newCommentText = '';
   }
 
   onScreeningCardClick() {
@@ -720,125 +747,7 @@ export class ApplicationFormComponent {
     console.log('View detail clicked');
   }
 
-  // ===== Helpers เดิม (ยังเก็บไว้เผื่อใช้งานต่อ) =====
-  isDone(i: number) {
-    return i <= this.currentIndex;
-  }
-
-  private stepVariant(i: number): 'green' | 'blue' | 'gray' | 'red' | 'white' {
-    const st = this.steps?.[i];
-    return statusToVariant(st?.sub);
-  }
-
-  private isColored(i: number) {
-    const v = this.stepVariant(i);
-    return v === 'green' || v === 'blue' || v === 'red';
-  }
-
-  stepBgTextClass(i: number) {
-    const v = this.stepVariant(i);
-    switch (v) {
-      case 'green':
-        return ['tw-text-white'].concat([`tw-bg-[${COLOR.green}]`]);
-      case 'blue':
-        return ['tw-text-white'].concat([`tw-bg-[${COLOR.blue}]`]);
-      case 'red':
-        return ['tw-text-white'].concat([`tw-bg-[${COLOR.red}]`]);
-      case 'gray':
-        return ['tw-text-gray-700', `tw-bg-[${COLOR.grayBg}]`];
-      case 'white':
-      default:
-        return ['tw-text-gray-700', 'tw-bg-white'];
-    }
-  }
-
-  circleClass(i: number) {
-    const v = this.stepVariant(i);
-    if (v === 'green' || v === 'blue' || v === 'red') {
-      return ['tw-border-2', 'tw-border-white/80', 'tw-text-white'];
-    }
-    return ['tw-border', 'tw-border-gray-300', 'tw-text-gray-600'];
-  }
-
-  labelClass(i: number) {
-    const v = this.stepVariant(i);
-    if (v === 'green' || v === 'blue' || v === 'red') return ['tw-text-white'];
-    return ['tw-text-gray-700'];
-  }
-
-  chevFill(i: number) {
-    const v = this.stepVariant(i);
-    switch (v) {
-      case 'green':
-        return COLOR.green;
-      case 'blue':
-        return COLOR.blue;
-      case 'red':
-        return COLOR.red;
-      case 'gray':
-        return COLOR.white;
-      case 'white':
-      default:
-        return COLOR.white;
-    }
-  }
-
-  chevStroke(i: number) {
-    const colored = this.isColored(i);
-    return colored ? COLOR.white : COLOR.grayBorder;
-  }
-
-  clipLastGreen(i: number, last: boolean) {
-    if (last) return {};
-    if (!this.isColored(i)) return {};
-    const notch = this.chevW + 2;
-    const poly = `polygon(0 0, calc(100% - ${notch}px) 0, 100% 50%, calc(100% - ${notch}px) 100%, 0 100%)`;
-    return {
-      clipPath: poly,
-      WebkitClipPath: poly,
-      backfaceVisibility: 'hidden',
-      transform: 'translateZ(0)',
-    };
-  }
-
-  variantBg(i: number) {
-    switch (this.stepVariant(i)) {
-      case 'green':
-        return COLOR.green;
-      case 'blue':
-        return COLOR.blue;
-      case 'red':
-        return COLOR.red;
-      case 'gray':
-        return COLOR.grayBg;
-      default:
-        return COLOR.white;
-    }
-  }
-  variantText(i: number) {
-    return this.isColored(i) ? '#FFFFFF' : '#374151';
-  }
-
-  getCategoryBtnClass(c: CategoryOption, selectedId?: number) {
-    const isActive = c.categoryId === selectedId;
-
-    // โทนสีโดยชื่อ category (แก้เพิ่มได้ตามระบบจริง)
-    const name = (c.categoryName || '').toLowerCase();
-    const tone =
-      name.includes('accept') ? 'tw-bg-green-500 tw-text-white tw-border-green-600' :
-      name.includes('decline') ? 'tw-bg-red-500 tw-text-white tw-border-red-600' :
-      name.includes('application decline') ? 'tw-bg-red-500 tw-text-white tw-border-red-600' :
-      name.includes('no-show') ? 'tw-bg-gray-200 tw-text-gray-800 tw-border-gray-300' :
-      name.includes('on hold') ? 'tw-bg-amber-500 tw-text-white tw-border-amber-600' :
-      'tw-bg-white tw-text-gray-700 tw-border-gray-300';
-
-    const inactive = 'hover:tw-brightness-105';
-    const activeRing = 'tw-ring-2 tw-ring-white/40';
-
-    return isActive ? `${tone} ${activeRing}` : `tw-bg-white tw-text-gray-700 tw-border-gray-300 ${inactive}`;
-  }
-
-  // โหลดคอมเมนต์ทั้งหมดของผู้สมัคร
+  // Comments
   loadComments(applicantId: number) {
     if (!applicantId) return;
     this.commentsLoading = true;
@@ -857,7 +766,6 @@ export class ApplicationFormComponent {
       });
   }
 
-  // map API -> view + เตรียม state UI
   private toViewComment(c: ApiComment): ViewComment {
     return {
       id: c.id,
@@ -879,17 +787,11 @@ export class ApplicationFormComponent {
     };
   }
 
-  // helper: ตัดสินใจชนิดคอมเมนต์
   private resolveCommentType(parent?: ViewComment): string {
-    // ถ้าเป็นรีพลาย ให้ใช้ชนิดเดียวกับคอมเมนต์แม่
     if (parent?.commentType) return parent.commentType;
-
-    // ถ้าเป็นคอมเมนต์หลัก คุณเลือกได้: จาก UI / จาก step ปัจจุบัน / หรือ default
-    // ตัวอย่าง default:
     return 'application';
   }
 
-  // เพิ่มคอมเมนต์ใหม่ (root)
   onSubmitNewComment() {
     const text = (this.commentCtrl.value || '').trim();
     if (!text || !this.applicantId) return;
@@ -898,18 +800,16 @@ export class ApplicationFormComponent {
       .getCurrentStageByCandidateId(this.applicantId)
       .pipe(
         takeUntil(this.destroy$),
-        // ดึง typeName จาก response; ถ้าไม่มีให้ fallback เป็น 'Application'
         map((res: any) => (res?.data?.typeName ? String(res.data.typeName).trim() : 'Application')),
         catchError((e) => {
           console.error('[ApplicationForm] current stage error:', e);
           return of('Application');
         }),
-        // เอา typeName ที่ได้ไปโพสต์คอมเมนต์
         switchMap((typeName: string) => {
           const body = {
             candidateId: this.applicantId,
             commentText: text,
-            commentType: typeName,        // <<<< ใช้ typeName จาก API
+            commentType: typeName,
             parentCommentId: null
           };
           return this.applicationService.addCommentByCandidateId(body);
@@ -924,13 +824,11 @@ export class ApplicationFormComponent {
       });
   }
 
-  // toggle reply box (เฉพาะ depth=0 ที่ template เปิดปุ่มให้)
   toggleReply(c: ViewComment) {
     c.ui.isReplying = !c.ui.isReplying;
     if (c.ui.isReplying) c.ui.replyText = '';
   }
 
-  // ส่งรีพลาย (ผูก parentCommentId เป็น id ของคอมเมนต์หลัก)
   onSubmitReply(parent: ViewComment) {
     const text = (parent.ui.replyText || '').trim();
     if (!text || !this.applicantId) return;
@@ -954,14 +852,12 @@ export class ApplicationFormComponent {
       });
   }
 
-  // เริ่มแก้ไข
   startEdit(c: ViewComment) {
     if (!c.isEdited) return;
     c.ui.isEditing = true;
     c.ui.editText = c.text;
   }
 
-  // บันทึกแก้ไข
   onSaveEdit(c: ViewComment) {
     const text = (c.ui.editText || '').trim();
     if (!text) return;
@@ -976,29 +872,25 @@ export class ApplicationFormComponent {
       });
   }
 
-  // helper เปิด dialog
   private openAlert(data: AlertDialogData) {
     return this.dialog
       .open(AlertDialogComponent, {
         data,
         width: '480px',
-        disableClose: true, // บังคับให้กดปุ่ม Cancel/Confirm เท่านั้น
-        panelClass: ['pp-rounded-dialog'], // ใส่คลาสเพิ่มได้ตามต้องการ
+        disableClose: true,
+        panelClass: ['pp-rounded-dialog'],
       })
       .afterClosed();
   }
 
-  // ลบคอมเมนต์
   onDeleteComment(c: ViewComment) {
     if (!c.canDelete) return;
 
     this.openAlert({
       title: 'Delete this comment?',
       message: 'Do you want to delete this comment?',
-      confirm: true, // แสดงปุ่ม Cancel/Confirm
+      confirm: true,
     }).subscribe((res) => {
-      // AlertDialogComponent จะส่ง false เมื่อกด Cancel
-      // และส่งค่าที่เป็น truthy เมื่อกด Confirm (อาจเป็น true หรือ object ก็ได้)
       if (!res) return;
 
       this.applicationService.deleteCommentById(c.id)
@@ -1010,16 +902,13 @@ export class ApplicationFormComponent {
     });
   }
 
-  // trackBy
   trackByCommentId = (_: number, c: ViewComment) => c.id;
 
-  // ปรับให้ปุ่มการ์ด "Comment" ทางขวาเลื่อนมาที่ section นี้
   onCommentClick() {
     const el = document.getElementById('comments-section');
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  // รวมจำนวนคอมเมนต์ทั้งหมด (รวมรีพลาย)
   get totalComments(): number {
     return this.countAllComments(this.commentsTree);
   }
@@ -1036,7 +925,6 @@ export class ApplicationFormComponent {
     return sum;
   }
 
-  // ทำ string ให้เป็นรูปแบบ id ได้
   slugify(str: string): string {
     return (str || '')
       .toLowerCase()
@@ -1045,7 +933,6 @@ export class ApplicationFormComponent {
       .replace(/[^a-z0-9\-]/g, '');
   }
 
-  /** หา scroll container ที่แท้จริงของ element (ถ้าไม่เจอให้ใช้ window) */
   private getScrollParent(el: HTMLElement | null): HTMLElement | Window {
     let p = el?.parentElement;
     while (p) {
@@ -1057,15 +944,12 @@ export class ApplicationFormComponent {
     return window;
   }
 
-  /** หา id ของ section อันแรกของ stage (ใช้ slug เท่านั้น) */
   private firstStageId(stageSlug: string): string | null {
-    const idx = this.stageSections.findIndex(s => this.slugify(s.stageNameNormalized) === stageSlug);
+    const idx = this.stageSections.findIndex(s => this.slugify(s.stageNameNormalized) === stageSlug && s.isSummary !== false);
     return idx >= 0 ? `section-${stageSlug}-${idx}` : null;
   }
 
-  /** เลื่อนไปยัง element ตาม id (รองรับทั้ง window และ scroll container) */
   private scrollToId(id: string) {
-    // เผื่อให้ DOM/render เสร็จก่อน
     setTimeout(() => {
       const el = document.getElementById(id);
       if (!el) return;
@@ -1117,10 +1001,10 @@ export class ApplicationFormComponent {
     if (targetId) this.scrollToId(targetId);
   }
 
-  // เทียบ ISO datetime โดยสนใจแค่ถึงระดับวินาที (YYYY-MM-DDTHH:mm:ss)
+  // ===== ISO-second equality =====
   private sameIsoSecond(a?: string, b?: string): boolean {
-    if (!a || !b) return true; // ถ้าขาดค่าใดค่าหนึ่ง ถือว่า "ไม่แก้ไข"
-    const A = String(a).trim().slice(0, 19); // "2025-09-29T10:52:52"
+    if (!a || !b) return true;
+    const A = String(a).trim().slice(0, 19);
     const B = String(b).trim().slice(0, 19);
     return A === B;
   }
@@ -1135,7 +1019,7 @@ export class ApplicationFormComponent {
     if (s === 'accept') return 'Accept';
     if (s === 'decline') return 'Decline';
     if (s === 'on hold' || s === 'hold') return 'On Hold';
-    return null; // ไม่รู้จัก -> แสดง "—"
+    return null;
   }
 
   private categoryToBg(cat?: string): string {
@@ -1144,6 +1028,80 @@ export class ApplicationFormComponent {
     if (s === 'decline') return '#930000';
     if (s === 'on hold' || s === 'hold') return '#FFAA00';
     return '#6C757D';
+  }
+
+  // ===== Slick helpers =====
+  onCarouselInit(e: any, idx: number) {
+    this.totalSlides[idx] = e?.slick?.slideCount ?? 0;
+    this.currentSlide[idx] = 0;
+    this.updateArrowState(idx);
+    this.cdr.detectChanges();
+  }
+
+  onSlideChanged(e: any, idx: number) {
+    this.currentSlide[idx] = e?.currentSlide ?? 0;
+    this.updateArrowState(idx);
+  }
+
+  updateArrowState(idx: number) {
+    const visible = this.getVisibleSlides();
+    const maxStart = (this.totalSlides[idx] || 0) - visible;
+    this.canGoPrev[idx] = (this.currentSlide[idx] || 0) > 0;
+    this.canGoNext[idx] = (this.currentSlide[idx] || 0) < (maxStart || 0);
+  }
+
+  getVisibleSlides(): number {
+    const w = window.innerWidth;
+    return w < 768 ? 1 : 2;
+  }
+
+  // ===== Expand / Overflow check =====
+  toggleExpandNonSummary(which: 'i1'|'i2', index: number, field: 'strength'|'concern') {
+    const list = which === 'i1' ? this.interview1NonSummary : this.interview2NonSummary;
+    const row = list[index];
+    if (!row) return;
+    row.expandState[field] = !row.expandState[field];
+    setTimeout(() => this.checkOverflowNonSummary(which, index, field), 0);
+  }
+
+  checkOverflowNonSummary(which: 'i1'|'i2', index: number, field: 'strength'|'concern') {
+    const els = which === 'i1'
+      ? (field === 'strength' ? this.i1StrengthTexts : this.i1ConcernTexts)
+      : (field === 'strength' ? this.i2StrengthTexts : this.i2ConcernTexts);
+    const el = els?.toArray?.()[index]?.nativeElement as HTMLElement | undefined;
+    const list = which === 'i1' ? this.interview1NonSummary : this.interview2NonSummary;
+    if (!el || !list[index]) return;
+    list[index].overflowState[field] = el.scrollHeight > el.clientHeight;
+  }
+
+  checkAllOverflowNonSummary() {
+    this.interview1NonSummary.forEach((_, i) => {
+      this.checkOverflowNonSummary('i1', i, 'strength');
+      this.checkOverflowNonSummary('i1', i, 'concern');
+    });
+    this.interview2NonSummary.forEach((_, i) => {
+      this.checkOverflowNonSummary('i2', i, 'strength');
+      this.checkOverflowNonSummary('i2', i, 'concern');
+    });
+  }
+
+  getCategoryBtnClass(c: CategoryOption, selectedId?: number) {
+    const isActive = c.categoryId === selectedId;
+
+    // โทนสีโดยชื่อ category (แก้เพิ่มได้ตามระบบจริง)
+    const name = (c.categoryName || '').toLowerCase();
+    const tone =
+      name.includes('accept') ? 'tw-bg-green-500 tw-text-white tw-border-green-600' :
+      name.includes('decline') ? 'tw-bg-red-500 tw-text-white tw-border-red-600' :
+      name.includes('application decline') ? 'tw-bg-red-500 tw-text-white tw-border-red-600' :
+      name.includes('no-show') ? 'tw-bg-gray-200 tw-text-gray-800 tw-border-gray-300' :
+      name.includes('on hold') ? 'tw-bg-amber-500 tw-text-white tw-border-amber-600' :
+      'tw-bg-white tw-text-gray-700 tw-border-gray-300';
+
+    const inactive = 'hover:tw-brightness-105';
+    const activeRing = 'tw-ring-2 tw-ring-white/40';
+
+    return isActive ? `${tone} ${activeRing}` : `tw-bg-white tw-text-gray-700 tw-border-gray-300 ${inactive}`;
   }
 }
 
@@ -1210,7 +1168,7 @@ function statusToVariant(
     return 'blue';
   if (/(pending|awaiting|waiting)/.test(s)) return 'gray';
   if (
-    /(accept|accepted|pass|passed|hired|hire|applied|submitted|screened|offer|offered)/.test(
+    /(accept|accepted|pass|passed|hired|hire|applied|submitted|screened|offer|offered|onboarded|onboard)/.test(
       s
     )
   )

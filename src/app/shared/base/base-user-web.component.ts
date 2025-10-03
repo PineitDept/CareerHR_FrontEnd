@@ -239,11 +239,11 @@ export abstract class BaseUserWebComponent implements OnInit, OnDestroy {
       .subscribe();
   }
 
- 
+
   protected setupScrollStream(): void {
     this.scrollSubject.pipe(
       debounceTime(100),
-      exhaustMap((event) => this.handleInfiniteScroll(event)), 
+      exhaustMap((event) => this.handleInfiniteScroll(event)),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe();
   }
@@ -268,10 +268,10 @@ export abstract class BaseUserWebComponent implements OnInit, OnDestroy {
       const updatedFilter = { ...currentFilter, page: currentFilter.page + 1 };
       return this.fetchData(updatedFilter, true);
     }
-    
+
     return EMPTY;
   }
-  
+
   // Protected Data Fetching
   protected fetchData(
     filter: IUserFilterRequest,
@@ -286,7 +286,7 @@ export abstract class BaseUserWebComponent implements OnInit, OnDestroy {
       ...filter,
       search: this.searchForm.searchValue || undefined
     };
-    
+
     return this.userwebService.getUserWeb(fullFilter).pipe(
       tap((response) => this.handleApiResponse(response, append)),
       tap(() => this.persistFilterState()),
@@ -320,7 +320,7 @@ export abstract class BaseUserWebComponent implements OnInit, OnDestroy {
 
   protected clearPersistedSearchForm(): void {
     const storageKeys = this.getStorageKeys();
-    localStorage.removeItem(storageKeys.FILTER_SETTINGS + '_SEARCH_FORM');
+    sessionStorage.removeItem(storageKeys.FILTER_SETTINGS + '_SEARCH_FORM');
   }
 
   protected loadInitialData(): void {
@@ -383,7 +383,7 @@ export abstract class BaseUserWebComponent implements OnInit, OnDestroy {
 
   protected updateFilterForSort(column: string): IUserFilterRequest {
     const currentFilter = this.filterRequest();
-    
+
     return {
       ...currentFilter,
       page: 1,
@@ -395,7 +395,7 @@ export abstract class BaseUserWebComponent implements OnInit, OnDestroy {
   protected safeGetStatusCount(statusGroupCount: any, key: string): number {
     return statusGroupCount?.[key] ?? 0;
   }
-  
+
   protected isValidSearchOption(searchBy: string): searchBy is SearchOption {
     return SEARCH_OPTIONS.includes(searchBy as SearchOption);
   }
@@ -482,18 +482,18 @@ export abstract class BaseUserWebComponent implements OnInit, OnDestroy {
 
   protected saveToStorage<T>(key: string, data: T): void {
     try {
-      localStorage.setItem(key, JSON.stringify(data));
+      sessionStorage.setItem(key, JSON.stringify(data));
     } catch (error) {
-      console.warn(`Failed to save ${key} to localStorage:`, error);
+      console.warn(`Failed to save ${key} to sessionStorage:`, error);
     }
   }
 
   protected loadFromStorage<T>(key: string): T | null {
     try {
-      const item = localStorage.getItem(key);
+      const item = sessionStorage.getItem(key);
       return item ? JSON.parse(item) : null;
     } catch (error) {
-      console.warn(`Failed to load ${key} from localStorage:`, error);
+      console.warn(`Failed to load ${key} from sessionStorage:`, error);
       return null;
     }
   }
