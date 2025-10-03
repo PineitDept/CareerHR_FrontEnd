@@ -132,4 +132,27 @@ export class ApplicationService {
       withAuth: true,
     });
   }
+
+  getInterestByCandidateId(id: number): Observable<any> {
+    return this.apiService.get<any>(`Interest/${id}`, {
+      loading: true,
+      withAuth: true,
+    });
+  }
+
+  addInterest(body: any): Observable<any> {
+    return this.apiService.post<any>(`Interest`, body, {
+      loading: true,
+      withAuth: true,
+    });
+  }
+
+  deleteInterest(body: any): Observable<any> {
+    const options = {
+      body: body,
+      loading: true,
+      withAuth: true
+    };
+    return this.apiService.delete<any>(`Interest`, options);
+  }
 }

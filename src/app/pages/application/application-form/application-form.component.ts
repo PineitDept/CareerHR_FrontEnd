@@ -278,6 +278,12 @@ export class ApplicationFormComponent {
   trackByFileName = (_: number, f: Attachment) => f?.name || f?.file;
   trackByHistory  = (_: number, h: HistoryLog) => `${h.date}-${h.action}`;
 
+  likeState = {
+    count: 0,
+    liked: false,
+    loading: false
+  };
+
   constructor(
     private route: ActivatedRoute,
     private applicationService: ApplicationService,
@@ -459,6 +465,9 @@ export class ApplicationFormComponent {
 
     // Comments
     this.loadComments(Number(this.applicant.id || 0));
+
+    // Interest
+    this.fetchInterest(Number(this.applicant.id || 0));
   }
 
   // ===================== Assessment Columns =====================
@@ -1160,6 +1169,55 @@ export class ApplicationFormComponent {
       window.open(att.file, '_blank');
     }
   }
+
+  private fetchInterest(id: number) {
+    if (!id) return;
+    this.applicationService.getInterestByCandidateId(id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.likeState.count = Number(res?.countLike ?? 0);
+          this.likeState.liked = !!res?.isLikedByCurrentEmployee;
+        },
+        error: (e) => {
+          console.error('[ApplicationForm] fetchInterest error:', e);
+          // fallback เงียบ ๆ: ไม่เปลี่ยน state
+        }
+      });
+  }
+
+  onToggleLike() {
+    if (!this.applicantId || this.likeState.loading) return;
+
+    const wantLike = !this.likeState.liked;
+    const body = { candidateId: this.applicantId };
+
+    // optimistic update
+    const prev = { ...this.likeState };
+    this.likeState.loading = true;
+    this.likeState.liked = wantLike;
+    this.likeState.count = Math.max(0, this.likeState.count + (wantLike ? 1 : -1));
+
+    const req$ = wantLike
+      ? this.applicationService.addInterest(body)
+      : this.applicationService.deleteInterest(body);
+
+    req$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          // สำเร็จ — อาจ refresh จาก server อีกครั้งเพื่อความชัวร์:
+          this.fetchInterest(this.applicantId);
+          this.likeState.loading = false;
+        },
+        error: (e) => {
+          console.error('[ApplicationForm] toggle like error:', e);
+          // rollback
+          this.likeState = prev;
+        }
+      });
+  }
+
 }
 
 // ====== Helpers ======
