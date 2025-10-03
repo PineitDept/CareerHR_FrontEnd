@@ -810,6 +810,93 @@
         </div>
       </div>
     </button>
+
+    <!-- Card: Transcript -->
+    <section id="transcript-section" class="tw-w-full">
+      <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+        <div class="tw-flex tw-items-center tw-justify-between">
+          <label class="tw-text-lg tw-font-bold">Transcript</label>
+        </div>
+
+        <hr class="tw--mx-6 tw-mt-4" />
+
+        <div class="tw-py-6">
+          <ng-container *ngIf="(transcripts?.length || 0) > 0; else noTranscripts">
+            <ul class="tw-space-y-3">
+              <li *ngFor="let t of transcripts; trackBy: trackByFileName" class="tw-text-[14px]">
+                <button type="button"
+                  class="tw-text-inherit hover:tw-underline tw-text-left"
+                  (click)="openAttachment(t)">
+                  {{ t.name }}
+                </button>
+              </li>
+            </ul>
+          </ng-container>
+          <ng-template #noTranscripts>
+            <div class="tw-text-[14px] tw-text-gray-500">—</div>
+          </ng-template>
+        </div>
+      </div>
+    </section>
+
+    <!-- Card: Certifications -->
+    <section id="certifications-section" class="tw-w-full">
+      <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+        <div class="tw-flex tw-items-center tw-justify-between">
+          <label class="tw-text-lg tw-font-bold">Certifications</label>
+        </div>
+
+        <hr class="tw--mx-6 tw-mt-4" />
+
+        <div class="tw-py-6">
+          <ng-container *ngIf="(certifications?.length || 0) > 0; else noCerts">
+            <ul class="tw-space-y-3">
+              <li *ngFor="let c of certifications; trackBy: trackByFileName" class="tw-text-[14px]">
+                <button type="button"
+                  class="tw-text-inherit hover:tw-underline tw-text-left"
+                  (click)="openAttachment(c)">
+                  {{ c.name }}
+                </button>
+              </li>
+            </ul>
+          </ng-container>
+          <ng-template #noCerts>
+            <div class="tw-text-[14px] tw-text-gray-500">—</div>
+          </ng-template>
+        </div>
+      </div>
+    </section>
+
+    <!-- Card: History Log -->
+    <section id="history-log-section" class="tw-w-full">
+      <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+        <div class="tw-flex tw-items-center tw-justify-between">
+          <label class="tw-text-lg tw-font-bold">History Log</label>
+        </div>
+
+        <hr class="tw--mx-6 tw-mt-4" />
+
+        <div class="tw-py-6">
+          <ng-container *ngIf="(historyLogs?.length || 0) > 0; else noHistory">
+            <ul class="tw-space-y-3">
+              <li *ngFor="let h of historyLogs; trackBy: trackByHistory"
+                  class="tw-text-[14px] tw-grid tw-grid-cols-[132px_1fr] tw-gap-x-2">
+                <span class="tw-text-gray-600">
+                  {{ h.date | date:'dd/MM/yyyy  HH:mm' }}
+                </span>
+                <span class="tw-text-gray-800">
+                  {{ h.action }}
+                </span>
+              </li>
+            </ul>
+          </ng-container>
+          <ng-template #noHistory>
+            <div class="tw-text-[14px] tw-text-gray-500">—</div>
+          </ng-template>
+        </div>
+      </div>
+    </section>
+
   </aside>
 </div>
 

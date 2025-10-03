@@ -275,6 +275,9 @@ export class ApplicationFormComponent {
   canGoPrev: boolean[] = [];
   canGoNext: boolean[] = [];
 
+  trackByFileName = (_: number, f: Attachment) => f?.name || f?.file;
+  trackByHistory  = (_: number, h: HistoryLog) => `${h.date}-${h.action}`;
+
   constructor(
     private route: ActivatedRoute,
     private applicationService: ApplicationService,
@@ -286,6 +289,15 @@ export class ApplicationFormComponent {
 
   // ===================== Lifecycle =====================
   ngOnInit() {
+    this.transcripts = [
+      { name: 'Official_Digital_Transcript_IE.pdf', file: '/files/transcript1.pdf' },
+      { name: 'Official_IE.pdf',                      file: '/files/transcript2.pdf' },
+    ];
+    this.certifications = [
+      { name: 'Official_Digital_Transcript_IE.pdf', file: '/files/cert1.pdf' },
+      { name: 'Official_IE.pdf',                    file: '/files/cert2.pdf' },
+    ];
+
     this.formDetails = this.fb.group({});
     this.commentCtrl = this.fb.control<string>('', { nonNullable: true });
 
@@ -725,6 +737,15 @@ export class ApplicationFormComponent {
               this.screeningCardBg         = bg;
             }
           }
+
+          // ===== Build History Log =====
+          this.historyLogs = (histories || [])
+            .map(h => ({
+              date: h.stageDate,
+              action: `${h.stageName} ${h.categoryName} by ${h.hrUserName}`
+            }))
+            // เรียงเก่าสุดอยู่บน: เปลี่ยนเครื่องหมายเป็น (b - a) หากอยากใหม่ก่อน
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
         },
         error: (e) => console.error('[ApplicationForm] stage history error:', e)
       });
@@ -1133,6 +1154,12 @@ export class ApplicationFormComponent {
     }
   }
 
+  openAttachment(att: Attachment) {
+    // ถ้า backend คืนเป็น URL ให้เปิดแท็บใหม่
+    if (att?.file) {
+      window.open(att.file, '_blank');
+    }
+  }
 }
 
 // ====== Helpers ======

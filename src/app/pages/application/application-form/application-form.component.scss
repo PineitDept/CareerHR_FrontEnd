@@ -37,3 +37,27 @@
   overflow: hidden;
   position: relative;
 }
+
+/* รายการไฟล์และประวัติให้มีระยะห่างเท่าตามภาพ */
+#transcript-section li,
+#certifications-section li,
+#history-log-section li {
+  line-height: 1.25rem; /* ~20px */
+}
+
+/* ป้องกันข้อความล้นกรอบ */
+#transcript-section li,
+#certifications-section li {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* มือถือให้สลับเป็น 1 คอลัมน์เหมือนเดิม */
+@media (max-width: 480px) {
+  #history-log-section li {
+    display: grid;
+    grid-template-columns: 1fr;
+    row-gap: 2px;
+  }
+}
