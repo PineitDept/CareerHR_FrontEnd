@@ -295,14 +295,6 @@ export class ApplicationFormComponent {
 
   // ===================== Lifecycle =====================
   ngOnInit() {
-    this.transcripts = [
-      { name: 'Official_Digital_Transcript_IE.pdf', file: '/files/transcript1.pdf' },
-      { name: 'Official_IE.pdf',                      file: '/files/transcript2.pdf' },
-    ];
-    this.certifications = [
-      { name: 'Official_Digital_Transcript_IE.pdf', file: '/files/cert1.pdf' },
-      { name: 'Official_IE.pdf',                    file: '/files/cert2.pdf' },
-    ];
 
     this.formDetails = this.fb.group({});
     this.commentCtrl = this.fb.control<string>('', { nonNullable: true });
@@ -468,6 +460,9 @@ export class ApplicationFormComponent {
 
     // Interest
     this.fetchInterest(Number(this.applicant.id || 0));
+
+    // Attachments
+    this.fetchFiles(Number(this.applicant.id || 0));
   }
 
   // ===================== Assessment Columns =====================
@@ -1214,6 +1209,35 @@ export class ApplicationFormComponent {
           console.error('[ApplicationForm] toggle like error:', e);
           // rollback
           this.likeState = prev;
+        }
+      });
+  }
+
+  private fetchFiles(id: number) {
+    if (!id) return;
+    this.applicationService.getFileByCandidateId(id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res: any[]) => {
+          const files = Array.isArray(res) ? res : [];
+
+          // 1) Avatar จาก fileType = 'Profile'
+          const profile = files.find(f => String(f?.fileType).toLowerCase() === 'profile');
+          this.applicant.avatarUrl = profile?.filePath || '';
+
+          // 2) Transcripts จาก fileType = 'Transcript'
+          this.transcripts = files
+            .filter(f => String(f?.fileType).toLowerCase() === 'transcript')
+            .map(f => ({ name: f.fileName, file: f.filePath } as Attachment));
+
+          // 3) Certifications จาก fileType = 'Certification'
+          this.certifications = files
+            .filter(f => String(f?.fileType).toLowerCase() === 'certification')
+            .map(f => ({ name: f.fileName, file: f.filePath } as Attachment));
+        },
+        error: (e) => {
+          console.error('[ApplicationForm] getFileByCandidateId error:', e);
+          // ไม่เปลี่ยน state ถ้า error
         }
       });
   }

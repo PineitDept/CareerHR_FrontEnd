@@ -155,4 +155,11 @@ export class ApplicationService {
     };
     return this.apiService.delete<any>(`Interest`, options);
   }
+
+  getFileByCandidateId(id: number): Observable<any> {
+    return this.apiService.get<any>(`ApplicantDetail/${id}/uploadfile`, {
+      loading: true,
+      withAuth: true,
+    });
+  }
 }
