@@ -14,6 +14,7 @@ import {
   ICandidateFilterRequest,
   ICandidateWithPositionsDto,
   IPositionDto,
+  SearchForm,
   TabMenu,
 } from '../../../interfaces/Application/application.interface';
 import { Columns } from '../../../shared/interfaces/tables/column.interface';
@@ -26,6 +27,7 @@ const ALL_APPLICATION_CONFIG = {
     FILTER_SETTINGS: 'candidateFilterSettings',
     CLICKED_ROWS: 'candidateclickedRowIndexes',
     SORT_CONFIG: 'candidateSortConfig',
+    HEADER_SEARCH_FORM: 'allAppHeaderSearchForm',
   },
   DEFAULT_STATUS: 'pending',
 } as const;
@@ -208,6 +210,29 @@ export class AllApplicationComponent extends BaseApplicationComponent {
     ];
   }
 
+  override onSearch(form: SearchForm): void {
+    // clone เพื่อกัน reference เดิมจาก ngModel
+    const payload: SearchForm = {
+      searchBy: form.searchBy,
+      searchValue: form.searchValue,
+    };
+
+    // persist UI header
+    const { HEADER_SEARCH_FORM } = this.getStorageKeys();
+    this.saveToStorage(HEADER_SEARCH_FORM, payload);
+
+    // ส่งเข้า Base → Base จะเติม __nonce ให้เอง (กดซ้ำก็รีเฟรช)
+    super.onSearch(payload);
+  }
+
+  override onClearSearch(): void {
+    this.searchForm = { searchBy: '', searchValue: '' };
+    const { HEADER_SEARCH_FORM } = this.getStorageKeys();
+    this.saveToStorage(HEADER_SEARCH_FORM, { searchBy: '', searchValue: '' });
+
+    super.onClearSearch();
+  }
+
   protected transformApiDataToRows(
     items: readonly ICandidateWithPositionsDto[]
   ): ApplicationRow[] {
@@ -238,6 +263,25 @@ export class AllApplicationComponent extends BaseApplicationComponent {
       totalBonus: summary.totalBonus,
       submitStatusLabel: createStatusBadge(summary.submitStatusLabel),
     };
+  }
+
+  protected override loadPersistedState(): void {
+    super.loadPersistedState();
+
+    const { HEADER_SEARCH_FORM } = this.getStorageKeys();
+    const headerForm = this.loadFromStorage<{ searchBy: string; searchValue: string }>(HEADER_SEARCH_FORM);
+    if (headerForm) {
+      this.searchForm = { ...headerForm };
+    } else {
+      // ถ้าไม่มี headerForm แต่ filter เคยมี search ให้เดาง่าย ๆ ว่าค้นหาด้วย option แรก
+      const f = this.filterRequest();
+      if (f.search) {
+        this.searchForm = {
+          searchBy: this.searchByOptions?.[0] || 'Application ID',
+          searchValue: f.search,
+        };
+      }
+    }
   }
 
   override ngOnDestroy(): void {
