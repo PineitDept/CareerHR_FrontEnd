@@ -180,7 +180,7 @@
                     'tw-text-gray-800': !isDisabledForm
                   }"
                 >
-                  <ng-container [ngSwitch]="getCellType(row, column)">
+                  <ng-container [ngSwitch]="column.typeFn ? column.typeFn(row) : (column.type || 'text')">
 
                     <!-- Text Content -->
                     <span *ngSwitchCase="'text'">
@@ -415,7 +415,7 @@
 
           <ng-container *ngFor="let column of columns; trackBy: trackByColumn">
             <td class="tw-px-2 tw-py-2 tw-align-middle" [style.width]="getColumnWidth(column)">
-              <ng-container [ngSwitch]="column.type || 'text'">
+              <ng-container [ngSwitch]="column.typeFn ? column.typeFn(footerRow) : column.type || 'text'">
                 <!-- __index -->
                 <ng-container  *ngIf="column.field === '__index'" >
                   <div class="tw-text-center">

@@ -76,7 +76,7 @@ export class FilterComponent {
       this.emitDateRange();
     }
 
-    const storedGradeIndex = localStorage.getItem('benefitsFiterSettings_Grade');
+    const storedGradeIndex = sessionStorage.getItem('benefitsFiterSettings_Grade');
     const value = this.allGrade[Number(storedGradeIndex)]
     this.selectedGrade = value;
 
