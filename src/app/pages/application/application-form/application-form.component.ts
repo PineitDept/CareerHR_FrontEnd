@@ -1103,6 +1103,36 @@ export class ApplicationFormComponent {
 
     return isActive ? `${tone} ${activeRing}` : `tw-bg-white tw-text-gray-700 tw-border-gray-300 ${inactive}`;
   }
+
+  private stageLabel(which: 'i1'|'i2'): string {
+    return which === 'i1' ? 'interview 1' : 'interview 2';
+  }
+
+  hasStageSummary(which: 'i1'|'i2'): boolean {
+    const label = this.stageLabel(which);
+    return this.stageSections.some(s => s.stageNameNormalized === label && s.isSummary !== false);
+  }
+
+  firstIndexOfStage(which: 'i1'|'i2'): number {
+    const label = this.stageLabel(which);
+    return this.stageSections.findIndex(s => s.stageNameNormalized === label);
+  }
+
+  /** ควรแทรกคารูเซลของ i1/i2 ที่ตำแหน่งของ s,idx นี้หรือไม่ */
+  shouldInsertNonSummary(which: 'i1'|'i2', s: StageSection, idx: number): boolean {
+    const label = this.stageLabel(which);
+    if (s.stageNameNormalized !== label) return false;
+
+    const hasSummary = this.hasStageSummary(which);
+    if (hasSummary) {
+      // ถ้ามี summary ให้แทรก "ก่อนการ์ดสรุป" → แปลว่า s ต้องเป็น summary
+      return s.isSummary !== false;
+    } else {
+      // ถ้าไม่มี summary เลย ให้แทรกก่อน occurrence แรกของ stage นี้
+      return idx === this.firstIndexOfStage(which);
+    }
+  }
+
 }
 
 // ====== Helpers ======
