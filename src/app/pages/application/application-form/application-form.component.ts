@@ -15,6 +15,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { AlertDialogData } from '../../../shared/interfaces/dialog/dialog.interface';
 import { AlertDialogComponent } from '../../../shared/components/dialogs/alert-dialog/alert-dialog.component';
 import { SlickCarouselComponent, SlickItemDirective } from 'ngx-slick-carousel';
+import { NotificationService } from '../../../shared/services/notification/notification.service';
 
 dayjs.extend(utc);
 
@@ -291,6 +292,7 @@ export class ApplicationFormComponent {
     private reasonService: ReasonService,
     private dialog: MatDialog,
     private cdr: ChangeDetectorRef,
+    private notify: NotificationService,
   ) {}
 
   // ===================== Lifecycle =====================
@@ -761,8 +763,35 @@ export class ApplicationFormComponent {
     if (key === 'print') this.onPrintClicked();
   }
 
+  private buildPrintUrl(userId: number, round = 1): string {
+    const base = 'https://career.pinepacific.com/WebFormApply/WebFormApply.aspx';
+    const qs = new URLSearchParams({
+      UserID: String(userId),
+      Round: String(round),
+    });
+    return `${base}?${qs.toString()}`;
+  }
+
   onPrintClicked() {
-    console.log('Print clicked');
+    // กันเคสไม่มี applicantId
+    if (!this.applicantId || isNaN(this.applicantId)) {
+      this.notify?.error?.('Missing applicant ID. Cannot open the printable application form.');
+      return;
+    }
+
+    // ถ้าระบบมี round จาก API สามารถเปลี่ยนจาก 1 เป็นค่าจริงได้
+    const round = 1;
+    const url = this.buildPrintUrl(this.applicantId, round);
+
+    // เปิดแท็บใหม่แบบเชื่อถือได้กว่าการใช้ window.open
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener'; // ปลอดภัย และไม่พาแท็บเดิมไปยุ่งกับหน้าใหม่
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
   }
 
   onScreeningCardClick() {
