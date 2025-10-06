@@ -1,5 +1,5 @@
 import { ChangeDetectorRef, Component, ElementRef, QueryList, ViewChildren } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, forkJoin, map, of, Subject, switchMap, takeUntil } from 'rxjs';
 import { ApplicationService } from '../../../services/application/application.service';
 import { CandidatePagedResult } from '../../../interfaces/Application/application.interface';
@@ -293,6 +293,7 @@ export class ApplicationFormComponent {
     private dialog: MatDialog,
     private cdr: ChangeDetectorRef,
     private notify: NotificationService,
+    private router: Router,
   ) {}
 
   // ===================== Lifecycle =====================
@@ -800,6 +801,12 @@ export class ApplicationFormComponent {
 
   onViewDetailClick() {
     console.log('View detail clicked');
+    const id = this.applicantId;
+    if (!id) return;
+    const queryParams = {
+      id: id,
+    }
+    this.router.navigate(['/applications/screening/application-form/details'], { queryParams });
   }
 
   // Comments
