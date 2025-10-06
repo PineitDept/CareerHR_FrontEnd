@@ -131,12 +131,46 @@ interface StepperItem {
   variant?: Variant;
 }
 
+interface ApiComment {
+  id: number;
+  parentCommentId: number | null;
+  candidateId: number;
+  commentByUserId: number;
+  commentByUserName: string;
+  commentText: string;
+  commentType: string;
+  isEdited: boolean;
+  createdAt: string;
+  updatedAt: string;
+  canDelete: boolean;
+  replies: ApiComment[];
+}
+
+interface ViewComment {
+  id: number;
+  parentId: number | null;
+  author: string;
+  text: string;
+  createdAt: string;
+  updatedAt: string;
+  commentType?: string;
+  isEdited: boolean;
+  canDelete: boolean;
+  replies: ViewComment[];
+  ui: {
+    isReplying: boolean;
+    replyText: string;
+    isEditing: boolean;
+    editText: string;
+  };
+}
+
 @Component({
-  selector: 'app-interview-review',
-  templateUrl: './interview-review.component.html',
-  styleUrl: './interview-review.component.scss'
+  selector: 'app-interview-details',
+  templateUrl: './interview-details.component.html',
+  styleUrl: './interview-details.component.scss'
 })
-export class InterviewReviewComponent {
+export class InterviewDetailsComponent {
   // ====== Filter ======
   filterButtons: { label: string; key: string; color: string }[] = [];
   disabledKeys: string[] = [];
@@ -227,6 +261,11 @@ export class InterviewReviewComponent {
   private destroy$ = new Subject<void>();
   qrCodeImageUrl: string | undefined;
 
+  // ===== Comments state =====
+  commentsLoading = false;
+  commentsTree: ViewComment[] = [];
+  commentCtrl!: FormControl<string>;
+
   foundisSummary: any;
 
   constructor(
@@ -299,6 +338,7 @@ export class InterviewReviewComponent {
 
     this.today = `${year}-${month}-${day}`;
     this.nowDate = this.today;
+    this.commentCtrl = this.fb.control<string>('', { nonNullable: true });
 
     this.filterButtons = [{ label: 'Print', key: 'print', color: '#0055FF' }];
     this.route.queryParams
@@ -310,6 +350,10 @@ export class InterviewReviewComponent {
 
         this.fetchCandidateTracking();
         this.fetchRecruitmentStagesWithReasons(Number(params['interview']) + 1)
+        this.fetchFormById(this.stageId)
+
+        // ----- โหลด Comments -----
+        this.loadComments(this.applicantId);
       });
 
     // ตาราง Warning
@@ -741,10 +785,6 @@ export class InterviewReviewComponent {
     this.nextTick(() => this.setActionButtons('edit'));
   }
 
-  satisfactionClick() {
-    console.log(111111)
-  }
-
   private setActionButtons(mode: 'view' | 'edit') {
     if (mode === 'view') {
       this.filterButtons = [{ label: 'Edit', key: 'edit', color: '#000000' }];
@@ -919,6 +959,59 @@ export class InterviewReviewComponent {
     this.router.navigate(['/applications/screening/application-form'], { queryParams });
   }
 
+  onInterviewDetailClick() {
+    const queryParams = {
+      id: this.applicantId,
+      interview: this.stageId,
+    }
+    this.router.navigate(['/interview-scheduling/interview-form/details'], { queryParams });
+  }
+
+  onReviewClick(idEmployee?: number) {
+
+    if (!idEmployee) {
+      const userDataString = sessionStorage.getItem('user');
+      if (userDataString !== null) {
+        const userData = JSON.parse(userDataString);
+        idEmployee = userData.idEmployee;
+      }
+    }
+
+    const queryParams = {
+      id: this.applicantId,
+      interview: this.stageId,
+      idEmployee: idEmployee
+    }
+
+    this.router.navigate(['/interview-scheduling/interview-form/review'], { queryParams });
+  }
+
+  genQRReviewPage() {
+    let idEmployee
+    const userDataString = sessionStorage.getItem('user');
+    if (userDataString !== null) {
+      const userData = JSON.parse(userDataString);
+      idEmployee = userData.idEmployee;
+    }
+
+    const queryParams = {
+      id: this.applicantId,
+      interview: this.stageId,
+      idEmployee: idEmployee
+    };
+
+    const urlTree = this.router.createUrlTree(
+      ['/interview-scheduling/interview-form/review'],
+      { queryParams }
+    );
+
+    const relativeUrl = this.router.serializeUrl(urlTree);
+    const fullUrl = window.location.origin + relativeUrl;
+
+    this.generateQRCode(fullUrl)
+
+  }
+
   onSaveClicked() {
     // if (!this.hasFormChanged()) return;
 
@@ -1088,6 +1181,303 @@ export class InterviewReviewComponent {
       return 3;
     }
     return 4;
+  }
+
+
+
+
+  // โหลดคอมเมนต์ทั้งหมดของผู้สมัคร
+  loadComments(applicantId: number) {
+    if (!applicantId) return;
+    this.commentsLoading = true;
+    this.applicationService.getCommentsById(applicantId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          const items: ApiComment[] = Array.isArray(res?.items) ? res.items : [];
+          this.commentsTree = items.map(c => this.toViewComment(c));
+          this.commentsLoading = false;
+        },
+        error: (e) => {
+          console.error('[ApplicationForm] loadComments error:', e);
+          this.commentsLoading = false;
+        }
+      });
+  }
+
+  // map API -> view + เตรียม state UI
+  private toViewComment(c: ApiComment): ViewComment {
+    return {
+      id: c.id,
+      parentId: c.parentCommentId,
+      author: c.commentByUserName || '—',
+      text: c.commentText || '',
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+      commentType: (c.commentType || '').trim(),
+      isEdited: !!c.isEdited,
+      canDelete: !!c.canDelete,
+      replies: (c.replies || []).map(rc => this.toViewComment(rc)),
+      ui: {
+        isReplying: false,
+        replyText: '',
+        isEditing: false,
+        editText: c.commentText || '',
+      }
+    };
+  }
+
+  // helper: ตัดสินใจชนิดคอมเมนต์
+  private resolveCommentType(parent?: ViewComment): string {
+    // ถ้าเป็นรีพลาย ให้ใช้ชนิดเดียวกับคอมเมนต์แม่
+    if (parent?.commentType) return parent.commentType;
+
+    // ถ้าเป็นคอมเมนต์หลัก คุณเลือกได้: จาก UI / จาก step ปัจจุบัน / หรือ default
+    // ตัวอย่าง default:
+    return 'application';
+  }
+
+  // เพิ่มคอมเมนต์ใหม่ (root)
+  onSubmitNewComment() {
+    const text = (this.commentCtrl.value || '').trim();
+    if (!text || !this.applicantId) return;
+
+    this.applicationService
+      .getCurrentStageByCandidateId(this.applicantId)
+      .pipe(
+        takeUntil(this.destroy$),
+        // ดึง typeName จาก response; ถ้าไม่มีให้ fallback เป็น 'Application'
+        map((res: any) => (res?.data?.typeName ? String(res.data.typeName).trim() : 'Application')),
+        catchError((e) => {
+          console.error('[ApplicationForm] current stage error:', e);
+          return of('Application');
+        }),
+        // เอา typeName ที่ได้ไปโพสต์คอมเมนต์
+        switchMap((typeName: string) => {
+          const body = {
+            candidateId: this.applicantId,
+            commentText: text,
+            commentType: typeName,        // <<<< ใช้ typeName จาก API
+            parentCommentId: null
+          };
+          return this.applicationService.addCommentByCandidateId(body);
+        })
+      )
+      .subscribe({
+        next: () => {
+          this.commentCtrl.setValue('');
+          this.loadComments(this.applicantId);
+        },
+        error: (e) => console.error('[ApplicationForm] add comment error:', e),
+      });
+  }
+
+  // toggle reply box (เฉพาะ depth=0 ที่ template เปิดปุ่มให้)
+  toggleReply(c: ViewComment) {
+    c.ui.isReplying = !c.ui.isReplying;
+    if (c.ui.isReplying) c.ui.replyText = '';
+  }
+
+  // ส่งรีพลาย (ผูก parentCommentId เป็น id ของคอมเมนต์หลัก)
+  onSubmitReply(parent: ViewComment) {
+    const text = (parent.ui.replyText || '').trim();
+    if (!text || !this.applicantId) return;
+
+    const body = {
+      candidateId: this.applicantId,
+      commentText: text,
+      commentType: this.resolveCommentType(parent),
+      parentCommentId: parent.id
+    };
+
+    this.applicationService.addCommentByCandidateId(body)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          parent.ui.isReplying = false;
+          parent.ui.replyText = '';
+          this.loadComments(this.applicantId);
+        },
+        error: (e) => console.error('[ApplicationForm] reply error:', e)
+      });
+  }
+
+  // เริ่มแก้ไข
+  startEdit(c: ViewComment) {
+    if (!c.isEdited) return;
+    c.ui.isEditing = true;
+    c.ui.editText = c.text;
+  }
+
+  // บันทึกแก้ไข
+  onSaveEdit(c: ViewComment) {
+    const text = (c.ui.editText || '').trim();
+    if (!text) return;
+    this.applicationService.editCommentById(c.id, { commentText: text })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          c.ui.isEditing = false;
+          this.loadComments(this.applicantId);
+        },
+        error: (e) => console.error('[ApplicationForm] edit comment error:', e)
+      });
+  }
+
+  // helper เปิด dialog
+  private openAlert(data: AlertDialogData) {
+    return this.dialog
+      .open(AlertDialogComponent, {
+        data,
+        width: '480px',
+        disableClose: true, // บังคับให้กดปุ่ม Cancel/Confirm เท่านั้น
+        panelClass: ['pp-rounded-dialog'], // ใส่คลาสเพิ่มได้ตามต้องการ
+      })
+      .afterClosed();
+  }
+
+  // ลบคอมเมนต์
+  onDeleteComment(c: ViewComment) {
+    if (!c.canDelete) return;
+
+    this.openAlert({
+      title: 'Delete this comment?',
+      message: 'Do you want to delete this comment?',
+      confirm: true, // แสดงปุ่ม Cancel/Confirm
+    }).subscribe((res) => {
+      // AlertDialogComponent จะส่ง false เมื่อกด Cancel
+      // และส่งค่าที่เป็น truthy เมื่อกด Confirm (อาจเป็น true หรือ object ก็ได้)
+      if (!res) return;
+
+      this.applicationService.deleteCommentById(c.id)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => this.loadComments(this.applicantId),
+          error: (e) => console.error('[ApplicationForm] delete comment error:', e)
+        });
+    });
+  }
+
+  // trackBy
+  trackByCommentId = (_: number, c: ViewComment) => c.id;
+
+  // ปรับให้ปุ่มการ์ด "Comment" ทางขวาเลื่อนมาที่ section นี้
+  onCommentClick() {
+    const el = document.getElementById('comments-section');
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // รวมจำนวนคอมเมนต์ทั้งหมด (รวมรีพลาย)
+  get totalComments(): number {
+    return this.countAllComments(this.commentsTree);
+  }
+
+  private countAllComments(list: ViewComment[] | undefined | null): number {
+    if (!Array.isArray(list) || !list.length) return 0;
+    let sum = 0;
+    for (const c of list) {
+      sum += 1;
+      if (Array.isArray(c.replies) && c.replies.length) {
+        sum += this.countAllComments(c.replies);
+      }
+    }
+    return sum;
+  }
+
+  // เทียบ ISO datetime โดยสนใจแค่ถึงระดับวินาที (YYYY-MM-DDTHH:mm:ss)
+  private sameIsoSecond(a?: string, b?: string): boolean {
+    if (!a || !b) return true; // ถ้าขาดค่าใดค่าหนึ่ง ถือว่า "ไม่แก้ไข"
+    const A = String(a).trim().slice(0, 19); // "2025-09-29T10:52:52"
+    const B = String(b).trim().slice(0, 19);
+    return A === B;
+  }
+
+  isEditedAtSecond(createdAt?: string, updatedAt?: string): boolean {
+    if (!updatedAt) return false;
+    return !this.sameIsoSecond(createdAt, updatedAt);
+  }
+
+
+
+  // Form Interview Detail
+  // fetchFormById(stageId: number) {
+  //   this.interviewDetailsFormService.getFormById(stageId).subscribe({
+  //     next: (response) => {
+  //       const resp = response as any; // cast ให้รู้จัก fields
+  //       resp.fields.forEach((item: any, idx: number) => {
+  //         this.warningRows.push({
+  //           no: idx + 1,
+  //           warning: item.questionName,
+  //           result1: '',
+  //           result2: ''
+  //         })
+  //       });
+
+  //       this.warningRows.push({
+  //         no: '',
+  //         warning: '',
+  //         result1: '',
+  //         result2: ''
+  //       });
+  //     },
+  //     error: (error) => {
+  //       console.error('Error fetching Recruitment Stages with reasons:', error);
+  //     },
+  //   });
+  // }
+
+  result1Type = '';
+  result2Type = '';
+  fetchFormById(stageId: number) {
+    this.interviewDetailsFormService.getFormById(stageId).subscribe({
+      next: (response: any) => {
+        // สมมติ response.fields[0] สำหรับ Interview 1
+        // และ response.fields[1] สำหรับ Interview 2 (ถ้ามี)
+        if (response.fields.length > 0) {
+          this.result1Type = this.mapFieldType(response.fields[0].fieldType); // map fieldType ของ API ไปเป็น type ของ column
+        }
+        if (response.fields.length > 1) {
+          this.result2Type = this.mapFieldType(response.fields[1].fieldType);
+        }
+
+        // สร้าง columns โดยใช้ type จากข้างบน
+        this.warningColumns = [
+          { header: 'No', field: 'no', type: 'text', align: 'center', width: '56px', minWidth: '56px' },
+          { header: 'Question', field: 'warning', type: 'text', minWidth: '220px', wrapText: true },
+          { header: 'Interview 1', field: 'result1', type: 'dynamic', minWidth: '160px' },
+          { header: 'Interview 2', field: 'result2', type: 'dynamic', minWidth: '160px' }
+        ];
+
+        // map ข้อมูล rows ตามเดิม
+        this.warningRows = response.fields.map((item: any, idx: number) => ({
+          no: idx + 1,
+          warning: item.questionName,
+          result1: '',
+          result1Type: this.mapFieldType(item.fieldType),
+          result2: '',
+          result2Type: 'input'
+        }));
+
+        // console.log(this.warningColumns, this.warningRows);
+        console.log(response.fields.map((f: any) => f.fieldType));
+      },
+      error: (error) => {
+        console.error(error);
+      }
+    });
+  }
+
+  mapFieldType(apiType: string): string {
+    switch (apiType) {
+      case 'checkbox':
+        return 'multiselect';
+      case 'dropdown':
+        return 'select';
+      case 'text':
+        return 'input';
+      default:
+        return 'text';
+    }
   }
 }
 

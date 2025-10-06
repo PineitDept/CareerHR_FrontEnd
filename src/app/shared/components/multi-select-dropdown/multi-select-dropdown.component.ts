@@ -19,6 +19,7 @@ export class MultiSelectDropdownComponent implements ControlValueAccessor {
   @Input() disabled: boolean = false;
   @Input() defaultSelected: string[] = [];
   @Input() isHistory: boolean = false;
+  @Input() inTable:  boolean = false;
 
   @Output() selectionChange = new EventEmitter<SelectOption[]>();
 

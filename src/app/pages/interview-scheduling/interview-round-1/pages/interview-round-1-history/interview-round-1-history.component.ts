@@ -614,7 +614,14 @@ export class InterviewRound1HistoryComponent {
       id: item.profile.userId,
       interview: 1
     }
-    this.router.navigate(['/interview-scheduling/interview-form/details'], { queryParams });
+    this.router.navigate(['/interview-scheduling/interview-form/result'], { queryParams });
+  }
+
+  onInterviewDetailsClicked(item: any) {
+    const queryParams = {
+      id: item.profile.userId
+    }
+    this.router.navigate(['/applications/screening/application-form'], { queryParams });
   }
 
   // ---------- Tab counts (preserve comments) ----------

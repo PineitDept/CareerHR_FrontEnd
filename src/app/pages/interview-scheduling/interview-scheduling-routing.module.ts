@@ -8,6 +8,8 @@ import { InterviewRound1HistoryComponent } from './interview-round-1/pages/inter
 import { InterviewRound2HistoryComponent } from './interview-round-2/pages/interview-round-2-history/interview-round-2-history.component';
 import { InterviewFormComponent } from './interview-form/interview-form.component';
 import { InterviewFormDetailsComponent } from './interview-form/pages/interview-form-details/interview-form-details.component';
+import { InterviewReviewComponent } from './interview-form/pages/interview-review/interview-review.component';
+import { InterviewDetailsComponent } from './interview-form/pages/interview-details/interview-details.component';
 
 const routes: Routes = [
   {
@@ -39,8 +41,16 @@ const routes: Routes = [
         component: InterviewFormComponent,
       },
       {
-        path: 'interview-form/details',
+        path: 'interview-form/result',
         component: InterviewFormDetailsComponent,
+      },
+      {
+        path: 'interview-form/review',
+        component: InterviewReviewComponent,
+      },
+      {
+        path: 'interview-form/details',
+        component: InterviewDetailsComponent,
       },
     ]
   }

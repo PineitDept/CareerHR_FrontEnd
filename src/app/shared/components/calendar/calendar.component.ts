@@ -150,7 +150,7 @@ export class CalendarComponent implements AfterViewInit {
       id: eventUserID,
       interview: eventInterviewType
     }
-    this.router.navigate(['/interview-scheduling/interview-form/details'], { queryParams });
+    this.router.navigate(['/interview-scheduling/interview-form/result'], { queryParams });
   }
 
   gotoDate(dateStr: string) {

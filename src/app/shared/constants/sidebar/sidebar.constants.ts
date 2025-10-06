@@ -27,7 +27,7 @@ export const SUB_MENUS: Partial<Record<string, MenuItem[]>> = {
         { label: 'Appointment Calendar', icon: 'calendar-days', path: 'interview-scheduling/appointment-calendar' },
         { label: 'Interview Round 1', icon: 'pen-to-square', path: 'interview-scheduling/interview-round-1' },
         { label: 'Interview Round 2', icon: 'pen-to-square', path: 'interview-scheduling/interview-round-2' },
-        { label: 'Interview Form', icon: 'pen-to-square', path: 'interview-scheduling/interview-form' },
+        { label: 'Interview Tracking', icon: 'pen-to-square', path: 'interview-scheduling/interview-form' },
     ],
     'Admin Setting': [
         {
