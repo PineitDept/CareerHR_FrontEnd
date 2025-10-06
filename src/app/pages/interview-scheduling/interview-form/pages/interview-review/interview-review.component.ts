@@ -411,6 +411,9 @@ export class InterviewReviewComponent {
 
           this.mapTrackingToView(exact);
           this.isLoading = false;
+          
+          // Attachments
+          this.fetchFiles(Number(this.applicantId || 0));
         },
         error: (err) => {
           console.error(
@@ -566,6 +569,27 @@ export class InterviewReviewComponent {
         console.error('Error fetching Recruitment Stages with reasons:', error);
       },
     });
+  }
+
+  private fetchFiles(id: number) {
+    if (!id) return;
+    this.applicationService.getFileByCandidateId(id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res: any[]) => {
+          const files = Array.isArray(res) ? res : [];
+
+          // 1) Avatar จาก fileType = 'Profile'
+          const profile = files.find(f => String(f?.fileType).toLowerCase() === 'profile');
+
+          this.applicant.avatarUrl = profile?.filePath || '';
+
+        },
+        error: (e) => {
+          console.error('[ApplicationForm] getFileByCandidateId error:', e);
+          // ไม่เปลี่ยน state ถ้า error
+        }
+      });
   }
 
   // ===================== Mapping =====================

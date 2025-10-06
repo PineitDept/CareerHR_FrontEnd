@@ -445,6 +445,9 @@ export class InterviewFormDetailsComponent {
           this.mapTrackingToView(exact);
           this.isLoading = false;
           this.setInitialEditState();
+
+          // Attachments
+          this.fetchFiles(Number(this.applicantId || 0));
         },
         error: (err) => {
           console.error(
@@ -520,10 +523,6 @@ export class InterviewFormDetailsComponent {
         // 4) ตั้ง category จาก server และคำนวณ group ที่ต้อง active
         this.selectedCategoryId = this.foundisSummary?.categoryId ?? null;
         this.selectedGroupKey = this.resolveGroupByCategoryId(this.selectedCategoryId);
-
-        // 5) (ออปชัน) ถ้าต้องการ refresh ปุ่ม/สภาพฟอร์มต่อ
-        // this.updateSaveButtonState?.();
-        // this.takeSnapshotFromUI?.();
       },
       error: (error) => {
         console.error('Error fetching applicant review:', error);
@@ -1650,8 +1649,6 @@ export class InterviewFormDetailsComponent {
     return !this.sameIsoSecond(createdAt, updatedAt);
   }
 
-
-
   // Form Interview Detail
   result1Type = '';
   result2Type = '';
@@ -1692,6 +1689,27 @@ export class InterviewFormDetailsComponent {
         console.error(error);
       }
     });
+  }
+
+  private fetchFiles(id: number) {
+    if (!id) return;
+    this.applicationService.getFileByCandidateId(id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res: any[]) => {
+          const files = Array.isArray(res) ? res : [];
+
+          // 1) Avatar จาก fileType = 'Profile'
+          const profile = files.find(f => String(f?.fileType).toLowerCase() === 'profile');
+
+          this.applicant.avatarUrl = profile?.filePath || '';
+
+        },
+        error: (e) => {
+          console.error('[ApplicationForm] getFileByCandidateId error:', e);
+          // ไม่เปลี่ยน state ถ้า error
+        }
+      });
   }
 
   mapFieldType(apiType: string): string {
