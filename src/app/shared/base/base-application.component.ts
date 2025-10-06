@@ -57,6 +57,9 @@ export const SEARCH_OPTIONS: string[] = [
 
 export type SearchOption = (typeof SEARCH_OPTIONS)[number];
 
+type SearchFormEvent = SearchForm & { __nonce?: number; __marker?: number };
+type DateRangeEvent  = DateRange  & { __nonce?: number };
+
 @Directive()
 export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
   // Dependency Injection
@@ -100,13 +103,13 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
   readonly resetCounter = signal<number>(0);
 
   // Subjects for reactive streams
-  protected readonly searchSubject = new BehaviorSubject<SearchForm>({
+  protected readonly searchSubject = new BehaviorSubject<SearchFormEvent>({
     searchBy: '',
-    searchValue: '',
+    searchValue: ''
   });
-  protected readonly dateRangeSubject = new BehaviorSubject<DateRange>({
+  protected readonly dateRangeSubject = new BehaviorSubject<DateRangeEvent>({
     month: '',
-    year: '',
+    year: ''
   });
   protected readonly tabChangeSubject = new BehaviorSubject<string>('');
   protected readonly columnSortSubject = new BehaviorSubject<string>('');
@@ -128,15 +131,16 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
 
   // Public Event Handlers
   onSearch(form: SearchForm): void {
-    this.searchSubject.next(form);
+    const payload: SearchFormEvent = { ...form, __nonce: this.nextNonce() };
+    this.searchSubject.next(payload);
   }
 
   onClearSearch(): void {
     this.searchForm = { searchBy: '', searchValue: '' };
-    // this.searchSubject.next(this.searchForm);
-    const forceTriggerSearch = {
+    const forceTriggerSearch: SearchFormEvent = {
       ...(this.searchForm as any),
-      __marker: Date.now()
+      __marker: Date.now(),
+      __nonce: this.nextNonce()
     };
     this.searchSubject.next(forceTriggerSearch);
   }
@@ -147,7 +151,8 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
   }): Promise<void> {
     const dateRange = this.extractDateRange(event);
     this.filterDateRange = dateRange;
-    this.dateRangeSubject.next(dateRange);
+    const payload: DateRangeEvent = { ...dateRange, __nonce: this.nextNonce() };
+    this.dateRangeSubject.next(payload);
   }
 
   onTabChanged(tab: string): void {
@@ -209,7 +214,8 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
         distinctUntilChanged(
           (prev, curr) =>
             prev.searchBy === curr.searchBy &&
-            prev.searchValue === curr.searchValue
+            prev.searchValue === curr.searchValue &&
+            (prev.__nonce ?? 0) === (curr.__nonce ?? -1)
         ),
         tap(() => this.resetPagination()),
         switchMap((searchForm) => this.handleSearch(searchForm)),
@@ -223,7 +229,7 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
       .pipe(
         skip(1),
         distinctUntilChanged(
-          (prev, curr) => prev.month === curr.month && prev.year === curr.year
+          (prev, curr) => prev.month === curr.month && prev.year === curr.year && (prev.__nonce ?? 0) === (curr.__nonce ?? -1)
         ),
         tap(() => this.resetPagination()),
         switchMap((dateRange) => this.handleDateRangeChange(dateRange)),
@@ -514,5 +520,9 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
       console.warn(`Failed to load ${key} from sessionStorage:`, error);
       return null;
     }
+  }
+
+  private nextNonce(): number {
+    return Date.now() ^ Math.floor(Math.random() * 1e9);
   }
 }

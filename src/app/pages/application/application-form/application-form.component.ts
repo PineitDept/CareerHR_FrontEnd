@@ -275,6 +275,15 @@ export class ApplicationFormComponent {
   canGoPrev: boolean[] = [];
   canGoNext: boolean[] = [];
 
+  trackByFileName = (_: number, f: Attachment) => f?.name || f?.file;
+  trackByHistory  = (_: number, h: HistoryLog) => `${h.date}-${h.action}`;
+
+  likeState = {
+    count: 0,
+    liked: false,
+    loading: false
+  };
+
   constructor(
     private route: ActivatedRoute,
     private applicationService: ApplicationService,
@@ -286,6 +295,7 @@ export class ApplicationFormComponent {
 
   // ===================== Lifecycle =====================
   ngOnInit() {
+
     this.formDetails = this.fb.group({});
     this.commentCtrl = this.fb.control<string>('', { nonNullable: true });
 
@@ -447,6 +457,12 @@ export class ApplicationFormComponent {
 
     // Comments
     this.loadComments(Number(this.applicant.id || 0));
+
+    // Interest
+    this.fetchInterest(Number(this.applicant.id || 0));
+
+    // Attachments
+    this.fetchFiles(Number(this.applicant.id || 0));
   }
 
   // ===================== Assessment Columns =====================
@@ -726,6 +742,15 @@ export class ApplicationFormComponent {
               this.screeningCardBg         = bg;
             }
           }
+
+          // ===== Build History Log =====
+          this.historyLogs = (histories || [])
+            .map(h => ({
+              date: h.stageDate,
+              action: `${h.stageName} ${h.categoryName} by ${h.hrUserName}`
+            }))
+            // เรียงเก่าสุดอยู่บน: เปลี่ยนเครื่องหมายเป็น (b - a) หากอยากใหม่ก่อน
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
         },
         error: (e) => console.error('[ApplicationForm] stage history error:', e)
       });
@@ -1104,6 +1129,120 @@ export class ApplicationFormComponent {
 
     return isActive ? `${tone} ${activeRing}` : `tw-bg-white tw-text-gray-700 tw-border-gray-300 ${inactive}`;
   }
+
+  private stageLabel(which: 'i1'|'i2'): string {
+    return which === 'i1' ? 'interview 1' : 'interview 2';
+  }
+
+  hasStageSummary(which: 'i1'|'i2'): boolean {
+    const label = this.stageLabel(which);
+    return this.stageSections.some(s => s.stageNameNormalized === label && s.isSummary !== false);
+  }
+
+  firstIndexOfStage(which: 'i1'|'i2'): number {
+    const label = this.stageLabel(which);
+    return this.stageSections.findIndex(s => s.stageNameNormalized === label);
+  }
+
+  /** ควรแทรกคารูเซลของ i1/i2 ที่ตำแหน่งของ s,idx นี้หรือไม่ */
+  shouldInsertNonSummary(which: 'i1'|'i2', s: StageSection, idx: number): boolean {
+    const label = this.stageLabel(which);
+    if (s.stageNameNormalized !== label) return false;
+
+    const hasSummary = this.hasStageSummary(which);
+    if (hasSummary) {
+      // ถ้ามี summary ให้แทรก "ก่อนการ์ดสรุป" → แปลว่า s ต้องเป็น summary
+      return s.isSummary !== false;
+    } else {
+      // ถ้าไม่มี summary เลย ให้แทรกก่อน occurrence แรกของ stage นี้
+      return idx === this.firstIndexOfStage(which);
+    }
+  }
+
+  openAttachment(att: Attachment) {
+    // ถ้า backend คืนเป็น URL ให้เปิดแท็บใหม่
+    if (att?.file) {
+      window.open(att.file, '_blank');
+    }
+  }
+
+  private fetchInterest(id: number) {
+    if (!id) return;
+    this.applicationService.getInterestByCandidateId(id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.likeState.count = Number(res?.countLike ?? 0);
+          this.likeState.liked = !!res?.isLikedByCurrentEmployee;
+        },
+        error: (e) => {
+          console.error('[ApplicationForm] fetchInterest error:', e);
+          // fallback เงียบ ๆ: ไม่เปลี่ยน state
+        }
+      });
+  }
+
+  onToggleLike() {
+    if (!this.applicantId || this.likeState.loading) return;
+
+    const wantLike = !this.likeState.liked;
+    const body = { candidateId: this.applicantId };
+
+    // optimistic update
+    const prev = { ...this.likeState };
+    this.likeState.loading = true;
+    this.likeState.liked = wantLike;
+    this.likeState.count = Math.max(0, this.likeState.count + (wantLike ? 1 : -1));
+
+    const req$ = wantLike
+      ? this.applicationService.addInterest(body)
+      : this.applicationService.deleteInterest(body);
+
+    req$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          // สำเร็จ — อาจ refresh จาก server อีกครั้งเพื่อความชัวร์:
+          this.fetchInterest(this.applicantId);
+          this.likeState.loading = false;
+        },
+        error: (e) => {
+          console.error('[ApplicationForm] toggle like error:', e);
+          // rollback
+          this.likeState = prev;
+        }
+      });
+  }
+
+  private fetchFiles(id: number) {
+    if (!id) return;
+    this.applicationService.getFileByCandidateId(id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res: any[]) => {
+          const files = Array.isArray(res) ? res : [];
+
+          // 1) Avatar จาก fileType = 'Profile'
+          const profile = files.find(f => String(f?.fileType).toLowerCase() === 'profile');
+          this.applicant.avatarUrl = profile?.filePath || '';
+
+          // 2) Transcripts จาก fileType = 'Transcript'
+          this.transcripts = files
+            .filter(f => String(f?.fileType).toLowerCase() === 'transcript')
+            .map(f => ({ name: f.fileName, file: f.filePath } as Attachment));
+
+          // 3) Certifications จาก fileType = 'Certification'
+          this.certifications = files
+            .filter(f => String(f?.fileType).toLowerCase() === 'certification')
+            .map(f => ({ name: f.fileName, file: f.filePath } as Attachment));
+        },
+        error: (e) => {
+          console.error('[ApplicationForm] getFileByCandidateId error:', e);
+          // ไม่เปลี่ยน state ถ้า error
+        }
+      });
+  }
+
 }
 
 // ====== Helpers ======

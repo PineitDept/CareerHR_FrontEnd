@@ -18,6 +18,7 @@ import {
   IPositionDto,
   TabMenu,
   ICandidateTrackingFilterRequest,
+  SearchForm,
 } from '../../../interfaces/Application/application.interface';
 import { Columns } from '../../../shared/interfaces/tables/column.interface';
 import {
@@ -32,6 +33,7 @@ const TRACKING_CONFIG = {
     FILTER_SETTINGS: 'trackingFiterSettings',
     CLICKED_ROWS: 'trackingClickedRowIndexes',
     SORT_CONFIG: 'trackingSortConfig',
+    HEADER_SEARCH_FORM: 'trackingHeaderSearchForm',
   },
 } as const;
 
@@ -63,7 +65,7 @@ export class TrackingComponent
 {
   // Additional ViewChild for tracking-specific functionality
   @ViewChild('filter', { static: false }) filterRef!: ElementRef;
-  
+
   @ViewChild('scrollArea') scrollArea!: ElementRef<HTMLDivElement>;
   hasOverflowY = false;
   private ro?: ResizeObserver;
@@ -270,6 +272,30 @@ export class TrackingComponent
     ];
   }
 
+  override onSearch(form: SearchForm): void {
+    // clone เพื่อกัน reference เดิม
+    const payload: SearchForm = {
+      searchBy: form.searchBy,
+      searchValue: form.searchValue,
+    };
+
+    // persist UI
+    const { HEADER_SEARCH_FORM } = this.getStorageKeys();
+    this.saveToStorage(HEADER_SEARCH_FORM, payload);
+
+    // ส่งต่อให้ Base (ซึ่งจะเติม __nonce ให้เองและรีเฟรชทุกครั้ง)
+    super.onSearch(payload);
+  }
+
+  override onClearSearch(): void {
+    this.searchForm = { searchBy: '', searchValue: '' };
+
+    const { HEADER_SEARCH_FORM } = this.getStorageKeys();
+    this.saveToStorage(HEADER_SEARCH_FORM, { searchBy: '', searchValue: '' });
+
+    super.onClearSearch();
+  }
+
   protected transformApiDataToRows(
     items: readonly ICandidateWithPositionsDto[]
   ): TrackingRow[] {
@@ -299,6 +325,12 @@ export class TrackingComponent
       tap(() => this.loadingState.set(false)),
       map(() => void 0)
     );
+  }
+
+  protected override persistFilterState(): void {
+    const storageKeys = this.getStorageKeys();
+    const normalized = this.normalizeTrackingFilter(this.filterRequest());
+    this.saveToStorage(storageKeys.FILTER_SETTINGS, normalized);
   }
 
   // Lifecycle hooks
@@ -425,7 +457,28 @@ export class TrackingComponent
   protected override loadPersistedState(): void {
     super.loadPersistedState();
 
-    // Set default month if not already set
+    // 1) normalize filterRequest ที่ Base เพิ่งเซ็ตขึ้นมา
+    const normalized = this.normalizeTrackingFilter(this.filterRequest());
+    this.filterRequest.set({ ...this.createInitialFilter(), ...normalized });
+    this.filterDateRange = {
+      month: normalized.month || '',
+      year: normalized.year || '',
+    };
+
+    // 2) restore Header search UI
+    const { HEADER_SEARCH_FORM } = this.getStorageKeys();
+    const headerForm = this.loadFromStorage<{ searchBy: string; searchValue: string }>(HEADER_SEARCH_FORM);
+    if (headerForm) {
+      this.searchForm = { ...headerForm };
+    } else if (normalized.search) {
+      // fallback: ถ้ามี search แต่ยังไม่เคยเก็บ UI
+      this.searchForm = {
+        searchBy: this.searchByOptions?.[0] || 'Application ID',
+        searchValue: normalized.search,
+      };
+    }
+
+    // 3) set default month '7' ถ้ายังไม่มี (พฤติกรรมเดิม)
     const currentFilter = this.filterRequest();
     if (!currentFilter.month) {
       this.filterDateRange.month = '7';
@@ -451,4 +504,32 @@ export class TrackingComponent
       map(() => void 0)
     );
   }
+
+  override onRowClick(row: any): void {
+    const id = (row as any)?.id;
+    if (!id) return;
+
+    const queryParams = { id };
+    this.router.navigate(['/applications/tracking/application-form'], { queryParams });
+  }
+
+  private normalizeTrackingFilter(f: ICandidateFilterRequest | null | undefined): ICandidateFilterRequest {
+    const src: any = f || {};
+    const status = src.status ?? src.statusGroup ?? undefined;
+
+    const cleaned: any = {
+      page: src.page ?? 1,
+      pageSize: src.pageSize ?? 30,
+      status,
+      search: src.search ?? undefined,
+      month: src.month ?? undefined,
+      year: src.year ?? undefined,
+      sortFields: src.sortFields ?? undefined,
+      hasNextPage: src.hasNextPage ?? undefined,
+    };
+
+    Object.keys(cleaned).forEach((k) => cleaned[k] === undefined && delete cleaned[k]);
+    return cleaned as ICandidateFilterRequest;
+  }
+
 }

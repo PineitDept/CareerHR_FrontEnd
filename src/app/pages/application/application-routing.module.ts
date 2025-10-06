@@ -26,7 +26,11 @@ const routes: Routes = [
       {
         path: 'tracking',
          component: TrackingComponent,
-      }
+      },
+      {
+        path: 'tracking/application-form',
+        component: ApplicationFormComponent
+      },
     ]
   }
 ];

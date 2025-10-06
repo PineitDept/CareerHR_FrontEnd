@@ -105,10 +105,23 @@
           <div class="tw-text-gray-500 tw-font-medium">
             Applicant Grade {{ applicant.grade }}
           </div>
-          <div class="tw-flex tw-items-center tw-gap-2">
-            <app-icon name="thumbs-up" [size]="18"></app-icon>
-            {{ applicant.views }}
-          </div>
+          
+          <!-- Like / Unlike -->
+          <button
+            type="button"
+            class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-md tw-px-2 tw-py-1 hover:tw-bg-gray-100 disabled:tw-opacity-60 disabled:tw-cursor-not-allowed"
+            [disabled]="likeState.loading || !applicantId"
+            (click)="onToggleLike()"
+            [attr.aria-pressed]="likeState.liked"
+            [title]="likeState.liked ? 'Unlike' : 'Like'"
+          >
+            <app-icon
+              [name]="likeState.liked ? 'thumbs-up-solid' : 'thumbs-up'"
+              [size]="18"
+              [ngClass]="likeState.liked ? 'tw-text-[#0A57C3]' : 'tw-text-inherit'"
+            ></app-icon>
+            <span>{{ likeState.count }}</span>
+          </button>
         </div>
       </div>
     </section>
@@ -231,12 +244,8 @@
     >
 
       <!-- ===== Insert Interview 1 non-summary carousel BEFORE its summary card ===== -->
-      <ng-container *ngIf="
-          (s.stageNameNormalized === 'interview 1') &&
-          (s.isSummary !== false) &&
-          (interview1NonSummary?.length)
-        ">
-        <section class="tw-relative group">
+      <ng-container *ngIf="shouldInsertNonSummary('i1', s, k) && (interview1NonSummary?.length)">
+        <section class="tw-relative group" [ngClass]="{ 'tw-mb-6': hasStageSummary('i1') }">
 
           <ngx-slick-carousel
             #i1Carousel
@@ -247,7 +256,7 @@
           >
             <div ngxSlickItem *ngFor="let review of interview1NonSummary; let i = index">
               <div
-                class="tw-col-span-2 tw-row-span-2 tw-space-y-4 tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.1)]"
+                class="tw-col-span-2 tw-row-span-2 tw-space-y-4 tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]"
                 style="height:-webkit-fill-available;"
               >
                 <div class="header-slide">
@@ -341,15 +350,8 @@
       </ng-container>
 
       <!-- ===== Insert Interview 2 non-summary carousel BEFORE its summary card ===== -->
-      <ng-container *ngIf="
-          (s.stageNameNormalized === 'interview 2') &&
-          (s.isSummary !== false) &&
-          (interview2NonSummary?.length)
-        ">
-        <section class="tw-relative group">
-          <div class="tw-flex tw-items-center tw-justify-between tw-mb-3">
-            <label class="tw-text-lg tw-font-bold">Interview 2 — Reviews</label>
-          </div>
+      <ng-container *ngIf="shouldInsertNonSummary('i2', s, k) && (interview2NonSummary?.length)">
+        <section class="tw-relative group" [ngClass]="{ 'tw-mb-6': hasStageSummary('i2') }">
 
           <ngx-slick-carousel
             #i2Carousel
@@ -360,7 +362,7 @@
           >
             <div ngxSlickItem *ngFor="let review of interview2NonSummary; let i = index">
               <div
-                class="tw-col-span-2 tw-row-span-2 tw-space-y-4 tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.1)]"
+                class="tw-col-span-2 tw-row-span-2 tw-space-y-4 tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]"
                 style="height:-webkit-fill-available;"
               >
                 <div class="header-slide">
@@ -497,6 +499,34 @@
                           disabled>
                     {{ c.categoryName }}
                   </button>
+                </div>
+              </div>
+
+              <!-- Reason -->
+              <div class="tw-mb-4">
+                <div class="tw-text-[13px] tw-font-medium">Reason</div>
+                <div class="tw-grid md:tw-grid-cols-2 tw-gap-y-3 tw-gap-x-4 tw-mt-2">
+                  <div class="tw-flex tw-items-start tw-gap-2" *ngFor="let r of s.reasons">
+                    <!-- กล่องสี่เหลี่ยม (แสดงผลแทน checkbox) -->
+                    <span
+                      role="checkbox"
+                      [attr.aria-checked]="r.checked"
+                      class="tw-inline-flex tw-items-center tw-justify-center tw-rounded-[4px] tw-border tw-align-middle tw-mt-0.5"
+                      [ngClass]="[
+                        r.checked ? 'tw-border-green-500 tw-bg-green-50' : 'tw-border-gray-300 tw-bg-white'
+                      ]"
+                      style="width:18px;height:18px;min-width:18px;min-height:18px"
+                    >
+                      <app-icon
+                        *ngIf="r.checked"
+                        name="check"
+                        [size]="14"
+                        class="tw-text-green-600"
+                      ></app-icon>
+                    </span>
+
+                    <span class="tw-text-[14px]">{{ r.reasonText }}</span>
+                  </div>
                 </div>
               </div>
 
@@ -793,6 +823,93 @@
         </div>
       </div>
     </button>
+
+    <!-- Card: Transcript -->
+    <section id="transcript-section" class="tw-w-full">
+      <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+        <div class="tw-flex tw-items-center tw-justify-between">
+          <label class="tw-text-lg tw-font-bold">Transcript</label>
+        </div>
+
+        <hr class="tw--mx-6 tw-mt-4" />
+
+        <div class="tw-py-6">
+          <ng-container *ngIf="(transcripts?.length || 0) > 0; else noTranscripts">
+            <ul class="tw-space-y-3">
+              <li *ngFor="let t of transcripts; trackBy: trackByFileName" class="tw-text-[14px]">
+                <button type="button"
+                  class="tw-text-inherit hover:tw-underline tw-text-left"
+                  (click)="openAttachment(t)">
+                  {{ t.name }}
+                </button>
+              </li>
+            </ul>
+          </ng-container>
+          <ng-template #noTranscripts>
+            <div class="tw-text-[14px] tw-text-gray-500">—</div>
+          </ng-template>
+        </div>
+      </div>
+    </section>
+
+    <!-- Card: Certifications -->
+    <section id="certifications-section" class="tw-w-full">
+      <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+        <div class="tw-flex tw-items-center tw-justify-between">
+          <label class="tw-text-lg tw-font-bold">Certifications</label>
+        </div>
+
+        <hr class="tw--mx-6 tw-mt-4" />
+
+        <div class="tw-py-6">
+          <ng-container *ngIf="(certifications?.length || 0) > 0; else noCerts">
+            <ul class="tw-space-y-3">
+              <li *ngFor="let c of certifications; trackBy: trackByFileName" class="tw-text-[14px]">
+                <button type="button"
+                  class="tw-text-inherit hover:tw-underline tw-text-left"
+                  (click)="openAttachment(c)">
+                  {{ c.name }}
+                </button>
+              </li>
+            </ul>
+          </ng-container>
+          <ng-template #noCerts>
+            <div class="tw-text-[14px] tw-text-gray-500">—</div>
+          </ng-template>
+        </div>
+      </div>
+    </section>
+
+    <!-- Card: History Log -->
+    <section id="history-log-section" class="tw-w-full">
+      <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+        <div class="tw-flex tw-items-center tw-justify-between">
+          <label class="tw-text-lg tw-font-bold">History Log</label>
+        </div>
+
+        <hr class="tw--mx-6 tw-mt-4" />
+
+        <div class="tw-py-6">
+          <ng-container *ngIf="(historyLogs?.length || 0) > 0; else noHistory">
+            <ul class="tw-space-y-3">
+              <li *ngFor="let h of historyLogs; trackBy: trackByHistory"
+                  class="tw-text-[14px] tw-grid tw-grid-cols-[132px_1fr] tw-gap-x-2">
+                <span class="tw-text-gray-600">
+                  {{ h.date | date:'dd/MM/yyyy  HH:mm' }}
+                </span>
+                <span class="tw-text-gray-800">
+                  {{ h.action }}
+                </span>
+              </li>
+            </ul>
+          </ng-container>
+          <ng-template #noHistory>
+            <div class="tw-text-[14px] tw-text-gray-500">—</div>
+          </ng-template>
+        </div>
+      </div>
+    </section>
+
   </aside>
 </div>
 
