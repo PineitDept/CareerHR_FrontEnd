@@ -752,7 +752,7 @@ export class InterviewDetailsComponent {
       categoryId: checkedCategoryIds[0],
       isSummary: true,
       stageDate: isoDate,
-      appointmentId: appointmentId,
+      appointmentId: appointmentId.trim(),
       satisfaction: null,
       notes: payload.noteInterviewReview,
       strength: "",
@@ -1431,10 +1431,8 @@ export class InterviewDetailsComponent {
   fetchFormById(stageId: number) {
     this.interviewDetailsFormService.getFormById(stageId).subscribe({
       next: (response: any) => {
-        // สมมติ response.fields[0] สำหรับ Interview 1
-        // และ response.fields[1] สำหรับ Interview 2 (ถ้ามี)
         if (response.fields.length > 0) {
-          this.result1Type = this.mapFieldType(response.fields[0].fieldType); // map fieldType ของ API ไปเป็น type ของ column
+          this.result1Type = this.mapFieldType(response.fields[0].fieldType);
         }
         if (response.fields.length > 1) {
           this.result2Type = this.mapFieldType(response.fields[1].fieldType);
@@ -1444,8 +1442,8 @@ export class InterviewDetailsComponent {
         this.warningColumns = [
           { header: 'No', field: 'no', type: 'text', align: 'center', width: '56px', minWidth: '56px' },
           { header: 'Question', field: 'warning', type: 'text', minWidth: '220px', wrapText: true },
-          { header: 'Interview 1', field: 'result1', type: 'dynamic', minWidth: '160px' },
-          { header: 'Interview 2', field: 'result2', type: 'dynamic', minWidth: '160px' }
+          { header: 'Interview 1', field: 'result1', type: 'text', minWidth: '160px' },
+          { header: 'Interview 2', field: 'result2', type: 'text', minWidth: '160px' }
         ];
 
         // map ข้อมูล rows ตามเดิม

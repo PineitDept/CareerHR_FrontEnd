@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from '../../../shared/services/api/api.service';
-import { IAppointmentFilterRequest, SendEmailRequest, SendReviewInterview } from '../../../interfaces/interview-scheduling/interview.interface';
+import { IAppointmentFilterRequest, SendEmailRequest, SendReviewInterview, UpdateCandidateStageHistoryPayload } from '../../../interfaces/interview-scheduling/interview.interface';
 
 @Injectable({
   providedIn: 'root'
@@ -72,6 +72,13 @@ export class InterviewFormService {
     return this.api.patch<any>('AppointmentInterviews/interview-end-time', body, {
       withAuth: true,
       loading: false,
+    });
+  }
+  
+  updateCandidateStageHistory(historyId: number, body: UpdateCandidateStageHistoryPayload): Observable<any> {
+    return this.api.put<any>(`${this.baseCandidate}/${historyId}`, body, {
+      withAuth: true,
+      loading: true,
     });
   }
 }

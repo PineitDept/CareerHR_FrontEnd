@@ -64,3 +64,12 @@ export interface SendReviewInterview {
   concern: string,
   selectedReasonIds: any[]
 }
+
+export interface UpdateCandidateStageHistoryPayload {
+  categoryId: number;
+  stageDate: string;
+  notes?: string;
+  strength?: string;
+  concern?: string;
+  selectedReasonIds: number[];
+}
