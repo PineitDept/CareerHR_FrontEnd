@@ -1056,7 +1056,7 @@ export class ApplicationFormComponent {
         break;
       case 'hired':
         // ตาม requirement ให้ไป Offered อันแรก
-        targetId = this.firstStageId('offered');
+        targetId = this.firstStageId('hired');
         break;
     }
 
