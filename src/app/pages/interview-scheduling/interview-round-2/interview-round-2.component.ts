@@ -147,7 +147,7 @@ export class InterviewRound2Component {
   ngOnInit() {
     this.appointmentsService.setAppointmentsType(2);
 
-    const savedSearch = sessionStorage.getItem('interviewSearchForm');
+    const savedSearch = sessionStorage.getItem('interviewSearchForm2');
     if (savedSearch) {
       this.searchForm = JSON.parse(savedSearch);
       this.currentFilterParams = {
@@ -402,7 +402,7 @@ export class InterviewRound2Component {
 
   // ---------- Search / filter actions ----------
   onSearch() {
-    sessionStorage.setItem('interviewSearchForm', JSON.stringify(this.searchForm));
+    sessionStorage.setItem('interviewSearchForm2', JSON.stringify(this.searchForm));
 
     this.currentFilterParams = {
       ...this.currentFilterParams,
@@ -418,7 +418,7 @@ export class InterviewRound2Component {
 
   onClearSearch() {
     this.searchForm = { searchBy: '', searchValue: '' };
-    sessionStorage.removeItem('interviewSearchForm');
+    sessionStorage.removeItem('interviewSearchForm2');
 
     this.currentFilterParams = {
       page: 1,

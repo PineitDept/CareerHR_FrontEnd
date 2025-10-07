@@ -156,7 +156,7 @@ export class InterviewRound1Component {
 
     this.appointmentsService.setAppointmentsType(1);
 
-    const savedSearch = sessionStorage.getItem('interviewSearchForm');
+    const savedSearch = sessionStorage.getItem('interviewSearchForm1');
     if (savedSearch) {
       this.searchForm = JSON.parse(savedSearch);
       this.currentFilterParams = {
@@ -409,7 +409,7 @@ export class InterviewRound1Component {
 
   // ---------- Search / filter actions ----------
   onSearch() {
-    sessionStorage.setItem('interviewSearchForm', JSON.stringify(this.searchForm));
+    sessionStorage.setItem('interviewSearchForm1', JSON.stringify(this.searchForm));
 
     this.currentFilterParams = {
       ...this.currentFilterParams,
@@ -425,7 +425,7 @@ export class InterviewRound1Component {
 
   onClearSearch() {
     this.searchForm = { searchBy: '', searchValue: '' };
-    sessionStorage.removeItem('interviewSearchForm');
+    sessionStorage.removeItem('interviewSearchForm1');
 
     this.currentFilterParams = {
       page: 1,
