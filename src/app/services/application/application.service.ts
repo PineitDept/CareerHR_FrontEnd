@@ -162,4 +162,11 @@ export class ApplicationService {
       withAuth: true,
     });
   }
+
+  getApplicantDetailById(id: number): Observable<any> {
+    return this.apiService.get<any>(`ApplicantDetail/${id}`, {
+      loading: true,
+      withAuth: true,
+    });
+  } 
 }
