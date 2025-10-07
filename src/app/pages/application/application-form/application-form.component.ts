@@ -1149,22 +1149,29 @@ export class ApplicationFormComponent {
 
   getCategoryBtnClass(c: CategoryOption, selectedId?: number) {
     const isActive = c.categoryId === selectedId;
-
-    // โทนสีโดยชื่อ category (แก้เพิ่มได้ตามระบบจริง)
     const name = (c.categoryName || '').toLowerCase();
+
     const tone =
-      name.includes('accept') ? 'tw-bg-green-500 tw-text-white tw-border-green-600' :
-      name.includes('decline') ? 'tw-bg-red-500 tw-text-white tw-border-red-600' :
-      name.includes('application decline') ? 'tw-bg-red-500 tw-text-white tw-border-red-600' :
-      name.includes('no-show') ? 'tw-bg-gray-200 tw-text-gray-800 tw-border-gray-300' :
-      name.includes('on hold') ? 'tw-bg-amber-500 tw-text-white tw-border-amber-600' :
-      'tw-bg-white tw-text-gray-700 tw-border-gray-300';
+      // เขียว: accept / offer / offered / onboarded / onboard / hired / hire
+      /(accept|offer|offered|onboarded|onboard|hired|hire)/.test(name)
+        ? 'tw-bg-green-500 tw-text-white tw-border-green-600' :
+      // แดง: decline / application decline
+      (name.includes('decline') || name.includes('application decline'))
+        ? 'tw-bg-red-500 tw-text-white tw-border-red-600' :
+      // เทา: no-show
+      name.includes('no-show')
+        ? 'tw-bg-gray-200 tw-text-gray-800 tw-border-gray-300' :
+      // เหลือง: on hold / hold
+      (name.includes('on hold') || name.includes('hold'))
+        ? 'tw-bg-amber-500 tw-text-white tw-border-amber-600' :
+      // default
+        'tw-bg-white tw-text-gray-700 tw-border-gray-300';
 
     const inactive = 'hover:tw-brightness-105';
     const activeRing = 'tw-ring-2 tw-ring-white/40';
-
     return isActive ? `${tone} ${activeRing}` : `tw-bg-white tw-text-gray-700 tw-border-gray-300 ${inactive}`;
   }
+
 
   private stageLabel(which: 'i1'|'i2'): string {
     return which === 'i1' ? 'interview 1' : 'interview 2';
