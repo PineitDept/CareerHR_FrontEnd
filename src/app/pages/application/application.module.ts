@@ -8,12 +8,14 @@ import { AllApplicationComponent } from './all-application/all-application.compo
 import { TrackingComponent } from './tracking/tracking.component';
 import { ApplicationFormComponent } from './application-form/application-form.component';
 import { SlickCarouselModule } from 'ngx-slick-carousel';
+import { ApplicationFormDetailsComponent } from './application-form-details/application-form-details.component';
 @NgModule({
   declarations: [
     ScreeningComponent,
     AllApplicationComponent,
     TrackingComponent,
-    ApplicationFormComponent
+    ApplicationFormComponent,
+    ApplicationFormDetailsComponent
   ],
   imports: [
     CommonModule,
