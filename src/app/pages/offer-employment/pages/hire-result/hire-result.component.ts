@@ -383,7 +383,14 @@ export class HireResultComponent {
 
     this.formDetails.valueChanges
       .pipe(takeUntil(this.destroy$))
-      .subscribe(() => { this.saveCache(); this.updateSaveButtonState(); });
+      .subscribe(() => {
+        this.saveCache();
+        this.updateSaveButtonState();
+      });
+
+    this.formDetails.get('noteInterviewReview')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.saveCache());
 
   }
 
@@ -401,7 +408,7 @@ export class HireResultComponent {
     this.formDetails = this.fb.group({
       userInterviewReview: [this.foundisSummary?.hrUserName || this.usernameLogin],
       dateInterviewReview: [this.formatDateForInput(this.foundisSummary?.stageDate) || this.nowDate],
-      noteInterviewReview: [this.foundisSummary?.note || ''],
+      noteInterviewReview: [this.foundisSummary?.notes || '-'],
     }, { updateOn: 'change' }); // สำคัญ
   }
 
@@ -458,7 +465,7 @@ export class HireResultComponent {
 
     this.interviewFormService.getApplicantTracking(this.applicantId).subscribe({
       next: (res) => {
-        const appointmentIdKey = `interview${this.stageId}AppointmentId`;
+        const appointmentIdKey = `interview2AppointmentId`;
         const appointmentIdValue = res[appointmentIdKey];
 
         (this as any)[appointmentIdKey] = appointmentIdValue;
@@ -483,29 +490,6 @@ export class HireResultComponent {
           overflowState: { strength: false, concern: false }
         }));
 
-        const countIsSummaryFalse = this.reviewHistory.filter(i => i.isSummary === false).length;
-
-        setTimeout(() => {
-          this.slideConfig = {
-            ...this.slideConfig,
-            dots: countIsSummaryFalse > 2,
-            slidesToShow: countIsSummaryFalse === 1 ? 1 : 2,
-            responsive: [
-              {
-                breakpoint: 768,
-                settings: { slidesToShow: 1, dots: countIsSummaryFalse > 1 }
-              }
-            ]
-          };
-
-          setTimeout(() => {
-            this.carousels?.forEach((carousel) => {
-              try { carousel.unslick(); } catch { }
-              carousel.initSlick();
-            });
-          }, 0);
-        }, 0);
-
         setTimeout(() => this.checkAllOverflow(), 0);
 
         // 1) เลือก summary record ที่เหมาะสม
@@ -521,6 +505,12 @@ export class HireResultComponent {
 
         // 2) สร้างฟอร์มเบื้องต้น (ใช้ข้อมูลจาก foundisSummary หรือ fallback ปัจจุบัน)
         this.initializeForm();
+
+        if (!this.foundisSummary) {
+          this.isEditing = true;
+          this.editReview = true;
+          this.allowEditButton = false;
+        }
 
         // 3) ลองอ่าน cache (ถ้ามี)
         let rawObj: any = null;
@@ -548,11 +538,13 @@ export class HireResultComponent {
         // 6) ถ้ามี cache → อัปเดตฟอร์มจาก cache (และเข้าโหมดแก้ไข)
         if (rawObj) {
           this.isEditing = true;
+          this.editReview = true;
+          this.allowEditButton = false;
+
           this.nextTick(() => this.setActionButtons('edit'));
           this.formDetails.patchValue({
             dateInterviewReview: this.formatDateForInput(rawObj?.stageDate),
-            strengthInterviewReview: rawObj?.strength ?? '',
-            concernInterviewReview: rawObj?.concern ?? ''
+            noteInterviewReview: rawObj?.notes ?? '',
           }, { emitEvent: false });
 
           // baseline = ของ server (อย่าเอาค่า UI ทับ)
@@ -564,7 +556,6 @@ export class HireResultComponent {
 
         // อัปเดตปุ่มหลังตั้ง baseline เสร็จ
         this.updateSaveButtonState();
-
 
         // 7) ตั้ง snapshot baseline จาก UI ปัจจุบัน
         this.takeSnapshotFromUI();
@@ -707,7 +698,7 @@ export class HireResultComponent {
       .filter((c: any) => (c.rejectionReasons || []).some((r: any) => r.checked))
       .map((c: any) => c.categoryId);
 
-    const appointmentIdKey = `interview${this.stageId}AppointmentId`;
+    const appointmentIdKey = `interview2AppointmentId`;
     const appointmentId = (this as any)[appointmentIdKey];
 
     return {
@@ -718,9 +709,9 @@ export class HireResultComponent {
       stageDate: isoDate || '',
       appointmentId: (appointmentId ?? '').trim(),
       satisfaction: 0,
-      notes: '',
-      strength: payload?.strengthInterviewReview ?? '',
-      concern: payload?.concernInterviewReview ?? '',
+      notes: payload?.noteInterviewReview ?? '',
+      strength: '',
+      concern: '',
       selectedReasonIds,
     };
   }
@@ -730,7 +721,7 @@ export class HireResultComponent {
     const s = this.foundisSummary || {};
     const iso = s.stageDate ? new Date(s.stageDate).toISOString() : '';
 
-    const appointmentIdKey = `interview${this.stageId}AppointmentId`;
+    const appointmentIdKey = `interview2AppointmentId`;
     const appointmentId = (this as any)[appointmentIdKey];
 
     return {
@@ -741,9 +732,9 @@ export class HireResultComponent {
       stageDate: iso,
       appointmentId: (appointmentId ?? '').trim(),
       satisfaction: 0,
-      notes: '',
-      strength: s.strength ?? '',
-      concern: s.concern ?? '',
+      notes: s.notes ?? '',
+      strength: '',
+      concern: '',
       selectedReasonIds: Array.isArray(s.selectedReasonIds) ? s.selectedReasonIds : []
     };
   }
@@ -764,19 +755,19 @@ export class HireResultComponent {
   }
 
   // ===================== UI Events =====================
-  onFilterButtonClick(key: string) {
-    switch (key) {
-      case 'edit':
-        // this.setActionButtons('edit');
-        this.onEditClicked();
-        // this.isEditing = true
-        // this.formDetails.enable();
-        break;
-      case 'save':
-        this.onComfirmReview()
-        break;
-    }
-  }
+  // onFilterButtonClick(key: string) {
+  //   switch (key) {
+  //     case 'edit':
+  //       // this.setActionButtons('edit');
+  //       this.onEditClicked();
+  //       // this.isEditing = true
+  //       // this.formDetails.enable();
+  //       break;
+  //     case 'save':
+  //       this.onComfirmReview()
+  //       break;
+  //   }
+  // }
 
   formatDateForInput(dateString: string | null | undefined): string {
     if (!dateString) return '';
@@ -914,7 +905,7 @@ export class HireResultComponent {
       .filter(category => category.rejectionReasons.some((reason: { checked: boolean; }) => reason.checked === true))
       .map(category => category.categoryId);
 
-    const appointmentIdKey = `interview${this.stageId}AppointmentId`;
+    const appointmentIdKey = `interview2AppointmentId`;
     const appointmentId = (this as any)[appointmentIdKey];
 
     Promise.resolve().then(() => {
@@ -969,7 +960,7 @@ export class HireResultComponent {
             applicationId: this.applicantId,
             stageId: this.stageId + 1,
             categoryId: checkedCategoryIds[0],
-            isSummary: false,
+            isSummary: true,
             stageDate: isoDate,
             appointmentId: (appointmentId ?? '').trim(),
             satisfaction: 0,
@@ -1037,7 +1028,8 @@ export class HireResultComponent {
 
 
   onEditReview() {
-    this.initializeForm()
+    this.initializeForm();
+    this.formDetails.enable();
     this.editReview = true;
     this.allowEditButton = false;
 
@@ -1098,7 +1090,8 @@ export class HireResultComponent {
   }
 
   public hasFormChanged(): boolean {
-    if (!this.isEditing) return false;
+    // if (!this.isEditing) return false;
+    if (!this.editReview) return false;
     if (!this.snapshotInputForm) return false;
 
     const current = this.buildCurrentPayload();
@@ -1164,7 +1157,7 @@ export class HireResultComponent {
     const dateValue = this.formatDateForInput(this.getInterviewDateByStage());
     const dataPatch = `${dateValue}T${newTimeValue}`;
 
-    const appointmentIdKey = `interview${this.stageId}AppointmentId`;
+    const appointmentIdKey = `interview2AppointmentId`;
     const appointmentId = (this as any)[appointmentIdKey];
 
     const payload = {
@@ -1194,7 +1187,7 @@ export class HireResultComponent {
     const dateValue = this.formatDateForInput(this.getInterviewDateByStage());
     const dataPatch = `${dateValue}T${newTimeValue}`;
 
-    const appointmentIdKey = `interview${this.stageId}AppointmentId`;
+    const appointmentIdKey = `interview2AppointmentId`;
     const appointmentId = (this as any)[appointmentIdKey];
 
     const payload = {
@@ -1275,7 +1268,7 @@ export class HireResultComponent {
       name.includes('decline offer') ? tones.decline :
         name.includes('onboarded') ? tones.accept :
           name.includes('no-show') || name.includes('no show') ? tones.noshow :
-              tones.default;
+            tones.default;
 
     const base = 'tw-text-sm tw-rounded-lg tw-px-3 tw-py-1.5 tw-border tw-transition';
     const ring = isActive ? ' tw-ring-2 tw-ring-white/40' : '';

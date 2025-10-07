@@ -2,7 +2,7 @@
     <app-header-content [headerName]="'Hire Result'" [headerType]="''"></app-header-content>
 </div>
 
-<app-filter [filterDynamicButton]="true" (buttonClicked)="onFilterButtonClick($event)"></app-filter>
+<app-filter [filterDynamicButton]="true"></app-filter>
 
 <app-loading></app-loading>
 
@@ -112,7 +112,8 @@
                                     <input
                                         [ngClass]="[!editReview ? 'tw-pointer-events-none tw-text-[#8b8b8b] tw-bg-gray-100':'']"
                                         class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2"
-                                        type="date" [min]="today" formControlName="dateInterviewReview" />
+                                        type="date" [min]="today" formControlName="dateInterviewReview"
+                                        (input)="onDateInput()" (change)="onDateChange()">
                                 </div>
                             </div>
 
@@ -158,7 +159,8 @@
                                             <textarea
                                                 [ngClass]="[!editReview ? 'tw-pointer-events-none tw-text-[#8b8b8b] tw-bg-gray-100':'']"
                                                 class="tw-w-full tw-text-[14px] tw-h-32 tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2"
-                                                [value]="" formControlName="noteInterviewReview"></textarea>
+                                                formControlName="noteInterviewReview" (input)="saveCache()"
+                                                (compositionend)="saveCache()"></textarea>
                                         </div>
                                     </ng-container>
                                 </ng-container>
