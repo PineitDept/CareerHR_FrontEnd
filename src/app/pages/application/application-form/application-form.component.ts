@@ -800,13 +800,13 @@ export class ApplicationFormComponent {
   }
 
   onViewDetailClick() {
-    console.log('View detail clicked');
     const id = this.applicantId;
     if (!id) return;
-    const queryParams = {
-      id: id,
-    }
-    this.router.navigate(['/applications/screening/application-form/details'], { queryParams });
+
+    const flow = this.resolveCurrentFlow();
+    const queryParams = { id };
+
+    this.router.navigate([`/applications/${flow}/application-form/details`], { queryParams });
   }
 
   // Comments
@@ -1279,6 +1279,16 @@ export class ApplicationFormComponent {
       });
   }
 
+  private resolveCurrentFlow():
+    'all-applications' | 'screening' | 'tracking' {
+    const url = this.router.url || '';
+    if (url.includes('/all-applications/')) return 'all-applications';
+    if (url.includes('/screening/'))        return 'screening';
+    if (url.includes('/tracking/'))         return 'tracking';
+
+    // เผื่อกรณี URL แปลก ๆ ล้มกลับไปที่ screening
+    return 'screening';
+  }
 }
 
 // ====== Helpers ======
