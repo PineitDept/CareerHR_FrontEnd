@@ -1,6 +1,6 @@
 import { ChangeDetectorRef, Component, computed, ElementRef, QueryList, signal, ViewChild, ViewChildren } from '@angular/core';
 import { InterviewerService } from '../../services/admin-setting/interviewer/interviewer.service';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { DateRange, SearchForm } from '../../interfaces/interview-scheduling/interview.interface';
 import { ICandidateFilterRequest, IPositionDto, TabMenu } from '../../interfaces/Application/application.interface';
 import { FormBuilder, FormGroup } from '@angular/forms';
@@ -13,7 +13,7 @@ import { SlickCarouselComponent } from 'ngx-slick-carousel';
 import { MailDialogComponent } from '../../shared/components/dialogs/mail-dialog/mail-dialog.component';
 import { AppointmentsService } from '../../services/interview-scheduling/appointment-interview/appointments.service';
 import { AlertDialogComponent } from '../../shared/components/dialogs/alert-dialog/alert-dialog.component';
-import { catchError, finalize, forkJoin, map, Observable, of, tap } from 'rxjs';
+import { catchError, distinctUntilChanged, filter, finalize, forkJoin, map, Observable, of, startWith, tap } from 'rxjs';
 import { NotificationService } from '../../shared/services/notification/notification.service';
 import { Columns } from '../../shared/interfaces/tables/column.interface';
 import { InterviewFormService } from '../../services/interview-scheduling/interview-form/interview-form.service';
@@ -43,6 +43,8 @@ export class OfferEmploymentComponent {
     page: 1,
     pageSize: 20,
   };
+
+  childActive = false;
 
   // ---------- Signals & reactive states ----------
   tabMenus = signal<TabMenu[]>(this.createInitialTabs());
@@ -149,7 +151,7 @@ export class OfferEmploymentComponent {
     },
     {
       header: 'Offer Result',
-      field: 'interview1FormResult',
+      field: 'OfferResult',
       type: 'textlink-custom',
       align: 'center',
       width: '10%',
@@ -158,7 +160,7 @@ export class OfferEmploymentComponent {
     },
     {
       header: 'Hire Result',
-      field: 'interview2FormResult',
+      field: 'HireResult',
       type: 'textlink-custom',
       align: 'center',
       width: '10%',
@@ -167,7 +169,7 @@ export class OfferEmploymentComponent {
     },
     {
       header: 'Status',
-      field: 'interview1ResultText',
+      field: 'statusDate',
       type: 'badge',
       align: 'center',
       width: '10%',
@@ -188,6 +190,7 @@ export class OfferEmploymentComponent {
     private appointmentsService: AppointmentsService,
     private notificationService: NotificationService,
     private interviewFormService: InterviewFormService,
+    private route: ActivatedRoute
   ) { }
 
   // ---------- Lifecycle ----------
@@ -241,16 +244,14 @@ export class OfferEmploymentComponent {
       search: this.currentFilterParams.search,
     };
 
-    const obs$ = this.appointmentsService.getAppointmentsHistory<any>(updatedParams).pipe(
+    const obs$ = this.appointmentsService.getInterviewOffer<any>(updatedParams).pipe(
       tap((res) => {
 
         this.hasMoreData = res.hasNextPage;
 
-        console.log(res.items, '==>res.items')
-
         this.rows = (res.items ?? []).map((item: any) => {
-          const interview1Text = item.result.interviewResultText;
-          const interview2Text = item.interview2ResultText;
+          const interview1Text = item.result.offerResult;
+          const interview2Text = item.result.statusResult.statusText;
 
           const interview1Hidden = !interview1Text;
           const interview2Hidden = !interview2Text;
@@ -262,24 +263,22 @@ export class OfferEmploymentComponent {
             interview1ResultText: {
               label: interview1Text,
               class: [
-                ...(item.result.interviewResult === 41
-                  ? ['tw-bg-green-50', 'tw-ring-green-300', 'tw-text-green-700']
-                  : ['tw-bg-red-50', 'tw-ring-red-300', 'tw-text-red-700']),
+                ...(item.result.offerResult.toLowerCase().trim() === 'offer'
+                  ? ['tw-bg-green-500', 'tw-text-white', 'tw-ring-green-500/10']
+                  : ['tw-bg-red-500', 'tw-text-white', 'tw-ring-red-500/10']),
                 ...(interview1Hidden ? ['tw-hidden'] : []),
               ],
             },
-            // interview2ResultText: {
-            //   label: interview2Text,
-            //   class: [
-            //     ...(item.interview2Result === 21
-            //       ? ['tw-bg-green-50', 'tw-ring-green-300', 'tw-text-green-700']
-            //       : ['tw-bg-red-50', 'tw-ring-red-300', 'tw-text-red-700']),
-            //     ...(interview2Hidden ? ['tw-hidden'] : []),
-            //   ],
-            // },
+            statusDate: {
+              label: interview2Text,
+              class: [
+                ...(this.getStatusClasses(interview2Text)),
+                ...(interview2Hidden ? ['tw-hidden'] : []),
+              ],
+            },
             gradeCandidate: this.formatCreateDateTimeDMY(item.interview.date).formattedDate,
-            interview1FormResult: item.interview1FormResult ? item.interview1FormResult : undefined,
-            interview2FormResult: item.interview2FormResult ? item.interview2FormResult : undefined,
+            OfferResult: item.result.offerResult ? item.result.offerResult : undefined,
+            HireResult: item.result.hireResult ? item.result.hireResult : undefined,
             position: item.jobPosition.jobList?.map((pos: { jobId?: number; jobName: string; }) => pos.jobName) || [],
           };
         });
@@ -303,6 +302,19 @@ export class OfferEmploymentComponent {
     }
 
     return obs$;
+  }
+
+  getStatusClasses(status: string): string[] {
+    switch (status) {
+      case 'overweek':
+        return ['tw-bg-red-900', 'tw-text-white', 'tw-ring-red-900/10'];
+      case 'overmonth':
+        return ['tw-bg-red-900', 'tw-text-white', 'tw-ring-red-900/10'];
+      case 'over3day':
+        return ['tw-bg-yellow-400', 'tw-text-black', 'tw-ring-yellow-500/10'];
+      default:
+        return ['tw-bg-green-500', 'tw-text-white', 'tw-ring-green-500/10'];
+    }
   }
 
   // ---------- Search / filter actions ----------
@@ -353,6 +365,22 @@ export class OfferEmploymentComponent {
 
     this.appointments = [];
     this.loadInitialAppointments(false);
+
+    if (tabKey === 'base') {
+      this.router.navigate(['./'], { relativeTo: this.route });
+    } else if (tabKey === 'hire') {
+      this.router.navigate(['hire-result'], { relativeTo: this.route });
+    } else if (tabKey === 'offer') {
+      this.router.navigate(['offer-result'], { relativeTo: this.route });
+    }
+  }
+
+  onChildActivate() {
+    Promise.resolve().then(() => this.childActive = true);
+  }
+
+  onChildDeactivate() {
+    Promise.resolve().then(() => this.childActive = false);
   }
 
   // ---------- Date range ----------
@@ -548,72 +576,59 @@ export class OfferEmploymentComponent {
       search: this.currentFilterParams.search,
     };
 
-    // this.interviewFormService.getTrackingForm<any>(updatedParams).subscribe({
-    //   next: (res) => {
-    //     const newItems = res.items || [];
+    this.appointmentsService.getInterviewOffer<any>(updatedParams).subscribe({
+      next: (res) => {
+        const newItems = res.items || [];
 
-    //     const mappedItems = newItems.map((item: any) => {
-    //       const interview1Text = item.interview1ResultText;
-    //       const interview2Text = item.interview2ResultText;
+        const mappedItems = newItems.map((item: any) => {
+          const interview1Text = item.result.offerResult;
+          const interview2Text = item.result.statusResult.statusText;
 
-    //       const interview1Hidden = !interview1Text;
-    //       const interview2Hidden = !interview2Text;
+          const interview1Hidden = !interview1Text;
+          const interview2Hidden = !interview2Text;
 
-    //       return {
-    //         ...item,
-    //         interview1ResultText: {
-    //           label: interview1Text,
-    //           class: [
-    //             ...(item.interview1Result === 21
-    //               ? ['tw-bg-green-50', 'tw-ring-green-300', 'tw-text-green-700']
-    //               : ['tw-bg-red-50', 'tw-ring-red-300', 'tw-text-red-700']),
-    //             ...(interview1Hidden ? ['tw-hidden'] : []),
-    //           ],
-    //         },
-    //         interview2ResultText: {
-    //           label: interview2Text,
-    //           class: [
-    //             ...(item.interview2Result === 21
-    //               ? ['tw-bg-green-50', 'tw-ring-green-300', 'tw-text-green-700']
-    //               : ['tw-bg-red-50', 'tw-ring-red-300', 'tw-text-red-700']),
-    //             ...(interview2Hidden ? ['tw-hidden'] : []),
-    //           ],
-    //         },
-    //         interview1TimeSubmit: item.interview1TimeSubmit
-    //           ? this.formatCreateDateTimeDMY(item.interview1TimeSubmit).formattedDate
-    //           : undefined,
-    //         interview2TimeSubmit: item.interview2TimeSubmit
-    //           ? this.formatCreateDateTimeDMY(item.interview2TimeSubmit).formattedDate
-    //           : undefined,
-    //         interview1FormResult: item.interview1FormResult || undefined,
-    //         interview2FormResult: item.interview2FormResult || undefined,
-    //         position: item.positions?.map((pos: IPositionDto) => pos.namePosition) || [],
-    //       };
-    //     });
+          return {
+            ...item,
+            userID: item.profile.userId,
+            fullName: item.profile.fullName,
+            interview1ResultText: {
+              label: interview1Text,
+              class: [
+                ...(item.result.offerResult.toLowerCase().trim() === 'offer'
+                  ? ['tw-bg-green-500', 'tw-text-white', 'tw-ring-green-500/10']
+                  : ['tw-bg-red-500', 'tw-text-white', 'tw-ring-red-500/10']),
+                ...(interview1Hidden ? ['tw-hidden'] : []),
+              ],
+            },
+            statusDate: {
+              label: interview2Text,
+              class: [
+                ...(this.getStatusClasses(interview2Text)),
+                ...(interview2Hidden ? ['tw-hidden'] : []),
+              ],
+            },
+            gradeCandidate: this.formatCreateDateTimeDMY(item.interview.date).formattedDate,
+            OfferResult: item.result.offerResult ? item.result.offerResult : undefined,
+            HireResult: item.result.hireResult ? item.result.hireResult : undefined,
+            position: item.jobPosition.jobList?.map((pos: { jobId?: number; jobName: string; }) => pos.jobName) || [],
+          };
+        });
 
-    //     // ✅ ต่อข้อมูลใหม่เข้า rows เดิม
-    //     this.rows = [...this.rows, ...mappedItems];
+        // ✅ ต่อข้อมูลใหม่เข้า rows เดิม
+        this.rows = [...this.rows, ...mappedItems];
 
-    //     // ✅ เช็คว่าไม่มีข้อมูลเพิ่มแล้ว
-    //     if (newItems.length < Number(this.currentFilterParams.pageSize)) {
-    //       this.hasMoreData = false;
-    //     }
+        // ✅ เช็คว่าไม่มีข้อมูลเพิ่มแล้ว
+        if (newItems.length < Number(this.currentFilterParams.pageSize)) {
+          this.hasMoreData = false;
+        }
 
-    //     this.loading = false;
-    //   },
-    //   error: (err) => {
-    //     console.error('Load more failed:', err);
-    //     this.loading = false;
-    //   }
-    // });
-  }
-
-  onFilterButtonClick(key: string) {
-    switch (key) {
-      case 'history':
-        this.router.navigate(['/interview-scheduling/interview-round-1/history']);
-        break;
-    }
+        this.loading = false;
+      },
+      error: (err) => {
+        console.error('Load more failed:', err);
+        this.loading = false;
+      }
+    });
   }
 
   // table
@@ -625,19 +640,19 @@ export class OfferEmploymentComponent {
   }
 
   onViewRowClicked(row: any) {
-    let interview = 0
+    if (this.ColumnClicked === 'OfferResult') {
+      const queryParams = {
+        id: row.userID
+      };
 
-    if (this.ColumnClicked === 'interview1FormResult') {
-      interview = 1
-    } else if (this.ColumnClicked === 'interview2FormResult') {
-      interview = 2
+      this.router.navigate(['/offer-employment/offer-result'], { queryParams });
+    } else if (this.ColumnClicked === 'HireResult') {
+      const queryParams = {
+        id: row.userID
+      };
+
+      this.router.navigate(['/offer-employment/hire-result'], { queryParams });
     }
-    const queryParams = {
-      id: row.userID,
-      interview: interview
-    };
-
-    this.router.navigate(['/interview-scheduling/interview-form/result'], { queryParams });
   }
 
 }

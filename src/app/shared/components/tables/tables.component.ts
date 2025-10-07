@@ -56,8 +56,7 @@ interface DropdownOverlay {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TablesComponent
-  implements OnInit, OnChanges, AfterViewInit, AfterViewChecked, OnDestroy
-{
+  implements OnInit, OnChanges, AfterViewInit, AfterViewChecked, OnDestroy {
   rows = input<any[]>([]);
   resetKey = input<number>(0);
   preClickedRowIds = input<string[]>([]);
@@ -143,7 +142,7 @@ export class TablesComponent
 
   overlayPositions: ConnectedPosition[] = [
     { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 4 },
-    { originX: 'start', originY: 'top',    overlayX: 'start', overlayY: 'bottom', offsetY: -4 },
+    { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -4 },
   ];
 
   constructor(
@@ -495,7 +494,7 @@ export class TablesComponent
   onOutsideClick(event: MouseEvent) {
     const target = event.target as HTMLElement;
     if (!target.closest('.dropdown-button') &&
-        !target.closest('.dropdown-overlay')) {
+      !target.closest('.dropdown-overlay')) {
       this.dropdownOverlay = null;
       this.closeOverlay();
       this.cdr.detectChanges();
@@ -512,17 +511,26 @@ export class TablesComponent
     return field.split('.').reduce((obj, key) => obj?.[key], row);
   }
 
-  dynamicClassBtn(value: string): string[] {
-    if (value.toLocaleLowerCase().trim() === 'pending') {
-      return ['tw-text-[#FFAA00]', 'hover:tw-text-[#D5920A]'];
-    } else if (value.toLocaleLowerCase().trim() === 'inprocess') {
-      return ['tw-text-[#5500FF]', 'hover:tw-text-[#5f31bb]'];
-    } else if (value.toLocaleLowerCase().trim() === 'complete') {
-      return ['tw-text-[#00AA00]', 'hover:tw-text-[#068506]'];
-    } else {
-      return ['tw-text-[#919191]', 'hover:tw-text-[#656161]'];
+  dynamicClassBtn(value: string): string {
+    const val = value?.toLowerCase().trim();
+
+    switch (val) {
+      case 'pending':
+        return 'tw-text-[#FFAA00] hover:tw-text-[#D5920A]';
+      case 'inprocess':
+        return 'tw-text-[#5500FF] hover:tw-text-[#5f31bb]';
+      case 'complete':
+      case 'offer':
+      case 'onboarded':
+        return 'tw-text-[#00AA00] hover:tw-text-[#068506]';
+      case 'not offer job':
+      case 'decline offer':
+        return 'tw-text-[#FF0000] hover:tw-text-[#cb0b0b]';
+      default:
+        return 'tw-text-[#919191] hover:tw-text-[#656161]';
     }
   }
+
 
 
   getVisibleColumnCount(): number {
