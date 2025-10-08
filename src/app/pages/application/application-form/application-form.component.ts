@@ -85,7 +85,7 @@ interface HistoryLog {
   action: string;
 }
 
-type Variant = 'green' | 'blue' | 'gray' | 'red' | 'white';
+type Variant = 'green' | 'blue' | 'gray' | 'red' | 'white' | 'purple';
 interface StepperItem {
   label: string;
   sub?: string;
@@ -1371,22 +1371,12 @@ const COLOR = {
 };
 
 // สถานะ -> โทนสี
-function statusToVariant(
-  raw?: string | null
-): 'green' | 'blue' | 'gray' | 'red' | 'white' {
+function statusToVariant(raw?: string|null): 'green'|'blue'|'gray'|'red'|'white'|'purple' {
   const s = String(raw || '').trim().toLowerCase();
-
-  if (!s) return 'white';
-  if (/(decline|declined|reject|rejected|fail|failed|decline offer)/.test(s))
-    return 'red';
-  if (/(inprocess|in process|scheduled|schedule|in schedule|inprogress)/.test(s))
-    return 'blue';
+  if (/(didn?['’]?t|did\s*not)\s*interview.*\(pine\)/.test(s)) return 'purple';
+  if (/(decline|rejected?|fail|failed|decline offer)/.test(s)) return 'red';
+  if (/(inprocess|in process|scheduled|schedule|in schedule|inprogress)/.test(s)) return 'blue';
   if (/(pending|awaiting|waiting)/.test(s)) return 'gray';
-  if (
-    /(accept|accepted|pass|passed|hired|hire|applied|submitted|screened|offer|offered|onboarded|onboard)/.test(
-      s
-    )
-  )
-    return 'green';
+  if (/(accept|accepted|pass|passed|hired?|hire|applied|submitted|screened|offer|offered|onboarded?)/.test(s)) return 'green';
   return 'white';
 }
