@@ -16,7 +16,7 @@
 
 <div #filter>
   <app-filter-check-box
-    [items]="filterItems"
+    [items]="filterItems()"
     [config]="filterConfig"
     (selected)="onFiltersSelected($event)"
   >
