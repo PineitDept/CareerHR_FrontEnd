@@ -1033,23 +1033,26 @@ export class ApplicationFormComponent {
 
   onStepperChanged(index: number) {
 
-    const label = (this.stepperItems?.[index]?.label || '').trim();
-    const key = this.slugify(label); // applied, screened, interview-1, interview-2, offered, hired
+    const item  = this.stepperItems?.[index];
+    const label = (item?.label || '').trim();
+    const key   = this.slugify(label); // applied, screened, interview-1, interview-2, offered, hired
 
-    // กรณี Interview 1/2 -> นำทางไปหน้า result พร้อม query params
+    // เฉพาะ Interview 1/2: นำทางเมื่อผลเป็น Pass/Fail เท่านั้น
     if (key === 'interview-1' || key === 'interview-2') {
+      const sub = String(item?.sub || '').toLowerCase();
+      const isFinal = /(pass|passed|fail|failed)/.test(sub);
+
       if (!this.applicantId) return;
+      if (!isFinal) return; // ยังไม่ Final → ไม่ต้อง navigate
 
       const interview = key === 'interview-1' ? 1 : 2;
 
-      // ไม่เปลี่ยน activeIndex ทิ้งไว้ (กันอาการ stepper "ค้าง" และคลิกรอบถัดไปไม่ยิง)
-      // เพียงแค่นำทางออกจากหน้านี้
+      // ไม่เปลี่ยน activeIndex (คงพฤติกรรมเดิม)
       this.router.navigate(
         ['/interview-scheduling/interview-form/result'],
         { queryParams: { id: this.applicantId, interview } }
       );
-
-      return; // ออกจากฟังก์ชัน ไม่ต้องไป scroll ภายในหน้านี้
+      return;
     }
 
     // สเต็ปอื่น ๆ = พฤติกรรมเดิม (scroll ไป section)
