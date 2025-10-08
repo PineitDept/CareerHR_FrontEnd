@@ -472,8 +472,8 @@ export class ApplicationFormComponent {
   private initAssessmentColumns() {
     this.assessmentColumns = [
       { header: 'No', field: 'no', type: 'text', align: 'center', width: '56px', minWidth: '56px' },
-      { header: 'Application Review', field: 'review', type: 'text', minWidth: '220px' },
-      { header: 'Result', field: 'result', type: 'text', minWidth: '140px' },
+      { header: 'Application Review', field: 'review', type: 'text', minWidth: '220px', wrapText: true },
+      { header: 'Result', field: 'result', type: 'text', minWidth: '140px', wrapText: true },
       { header: 'Score', field: 'score', type: 'number', align: 'center', width: '90px', minWidth: '90px', maxWidth: '100px' },
       { header: 'Visibility', field: 'visibility', type: 'icon', align: 'center', width: '110px', minWidth: '110px' },
       {
@@ -482,6 +482,7 @@ export class ApplicationFormComponent {
         type: 'text',
         minWidth: '220px',
         typeFn: (row: AssessmentItem) => row?.isTotalRow ? 'badge' : 'text',
+        wrapText: true
       },
     ];
   }
@@ -489,11 +490,11 @@ export class ApplicationFormComponent {
   private initWarningColumns() {
     this.warningColumns = [
       { header: 'No', field: 'no', type: 'text', align: 'center', width: '56px', minWidth: '56px' },
-      { header: 'Warning', field: 'warning', type: 'text', minWidth: '220px' },
-      { header: 'Result', field: 'result', type: 'text', minWidth: '140px' },
+      { header: 'Warning', field: 'warning', type: 'text', minWidth: '220px', wrapText: true },
+      { header: 'Result', field: 'result', type: 'text', minWidth: '140px', wrapText: true },
       { header: 'Risk', field: 'risk', type: 'badge', align: 'center', width: '110px', minWidth: '110px' },
       { header: 'Visibility', field: 'visibility', type: 'icon', align: 'center', width: '110px', minWidth: '110px' },
-      { header: 'Detail', field: 'detail', type: 'text', minWidth: '220px' },
+      { header: 'Detail', field: 'detail', type: 'text', minWidth: '220px', wrapText: true },
     ];
   }
 
