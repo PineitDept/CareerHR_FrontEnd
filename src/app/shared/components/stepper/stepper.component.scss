@@ -66,3 +66,9 @@
 .tw-triangle-right:not(:first-child) > .step-index {
   margin-left: clamp(10px, 1.6vw, 16px);
 }
+
+/* กันวงกลมเลขบี้/ยืดบน flex */
+.step-index {
+  flex-shrink: 0;       /* ไม่ให้โดนบีบ */
+  aspect-ratio: 1 / 1;  /* คงสัดส่วนเป็นจัตุรัส => rounded-full = วงกลมเป๊ะ */
+}
