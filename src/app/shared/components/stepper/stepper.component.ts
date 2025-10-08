@@ -66,6 +66,9 @@ export class StepperComponent {
     return (this.steps || []).map(label => ({ label, variant: 'white' as Variant }));
   }
 
+  /** ใช้ลด DOM re-render หลัง back */
+  trackByLabel = (_: number, it: StepItem) => it?.label ?? _;
+
   /** ชื่อ (label) ทั้งหมด ใช้ตรวจ disable */
   get labelList(): string[] {
     return this.viewItems.map(v => v.label);

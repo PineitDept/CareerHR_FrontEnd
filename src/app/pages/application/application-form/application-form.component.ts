@@ -1032,10 +1032,29 @@ export class ApplicationFormComponent {
   }
 
   onStepperChanged(index: number) {
-    this.activeStepIndex = index;
 
     const label = (this.stepperItems?.[index]?.label || '').trim();
     const key = this.slugify(label); // applied, screened, interview-1, interview-2, offered, hired
+
+    // กรณี Interview 1/2 -> นำทางไปหน้า result พร้อม query params
+    if (key === 'interview-1' || key === 'interview-2') {
+      if (!this.applicantId) return;
+
+      const interview = key === 'interview-1' ? 1 : 2;
+
+      // ไม่เปลี่ยน activeIndex ทิ้งไว้ (กันอาการ stepper "ค้าง" และคลิกรอบถัดไปไม่ยิง)
+      // เพียงแค่นำทางออกจากหน้านี้
+      this.router.navigate(
+        ['/interview-scheduling/interview-form/result'],
+        { queryParams: { id: this.applicantId, interview } }
+      );
+
+      return; // ออกจากฟังก์ชัน ไม่ต้องไป scroll ภายในหน้านี้
+    }
+
+    // สเต็ปอื่น ๆ = พฤติกรรมเดิม (scroll ไป section)
+    this.activeStepIndex = index;
+
     let targetId: string | null = null;
 
     switch (key) {
@@ -1045,12 +1064,12 @@ export class ApplicationFormComponent {
       case 'screened':
         targetId = this.firstStageId('screened');
         break;
-      case 'interview-1':
-        targetId = this.firstStageId('interview-1');
-        break;
-      case 'interview-2':
-        targetId = this.firstStageId('interview-2');
-        break;
+      // case 'interview-1':
+      //   targetId = this.firstStageId('interview-1');
+      //   break;
+      // case 'interview-2':
+      //   targetId = this.firstStageId('interview-2');
+      //   break;
       case 'offered':
         targetId = this.firstStageId('offered');
         break;

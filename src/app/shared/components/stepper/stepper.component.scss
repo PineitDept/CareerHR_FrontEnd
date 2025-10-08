@@ -6,6 +6,7 @@
 .tw-triangle-right {
   position: relative;
   will-change: transform;
+  isolation: isolate;
 }
 
 /* หัวสามเหลี่ยม (พื้น) */
