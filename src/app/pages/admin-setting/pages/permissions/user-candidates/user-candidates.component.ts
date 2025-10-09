@@ -1,0 +1,232 @@
+import { Component, ElementRef, HostListener, ViewChild } from '@angular/core';
+import { createStatusIcon, defaultColumns, defaultFilterButtons, defaultSearchByOptions, defaultSearchForm } from '../../../../../constants/admin-setting/user-candidates.constants';
+import { UserCandidatesUtils } from '../../../../../utils/admin-setting/user-candidates-utils';
+import { UserCandidatesService } from '../../../../../services/admin-setting/user-candidates/user-candidates.service';
+import { LoadingService } from '../../../../../shared/services/loading/loading.service';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+dayjs.extend(utc);
+
+@Component({
+  selector: 'app-user-candidates',
+  templateUrl: './user-candidates.component.html',
+  styleUrl: './user-candidates.component.scss'
+})
+export class UserCandidatesComponent {
+  searchForm = defaultSearchForm();
+  searchByOptions = defaultSearchByOptions();
+
+  filterButtons = defaultFilterButtons();
+  startDate = '';
+  endDate = '';
+  dateRangeInitialized = false;
+
+  rows: any[] = [];
+  columns = defaultColumns();
+
+  currentPage = 1;
+  hasMoreData = true;
+
+  queryParams: any = {};
+  sortFields: string[] = [];
+  tableResetKey = 0;
+
+  suppressNextSortFetch = false;
+
+  private isPageUnloading = false;
+
+  @ViewChild('scrollArea') scrollArea!: ElementRef<HTMLDivElement>;
+  hasOverflowY = false;
+  private ro?: ResizeObserver;
+
+  constructor(
+    private userCandidatesService: UserCandidatesService,
+    private loadingService: LoadingService,
+  ) {}
+
+  ngOnInit() {
+    const saved = UserCandidatesUtils.getSavedSearchForm();
+    if (saved) {
+      this.searchForm = saved;
+      this.queryParams = { [saved.searchBy]: saved.searchValue };
+    } else {
+      this.searchForm = defaultSearchForm();
+    }
+  }
+
+  ngAfterViewInit(): void {
+    // วัดครั้งแรก
+    this.measureOverflow();
+
+    // เฝ้าดูการเปลี่ยนขนาดของคอนเทนเนอร์ (เช่น resize หน้าต่าง)
+    this.ro = new ResizeObserver(() => this.measureOverflow());
+    this.ro.observe(this.scrollArea.nativeElement);
+  }
+
+  measureOverflow(): void {
+    const el = this.scrollArea.nativeElement;
+    this.hasOverflowY = el.scrollHeight > el.clientHeight;
+  }
+
+  onSearch(form: { searchBy: string; searchValue: string }) {
+    console.log('called from onSearch', { form });
+    console.log('searchForm onSearch', this.searchForm);
+    UserCandidatesUtils.onSearch(
+      form,
+      (append, queryParams) =>
+        this.fetchUserCandidates(this.startDate, this.endDate, queryParams, append),
+      () => this.scrollTableToTop(),
+      this.clearSort,
+      (qp) => (this.queryParams = qp)
+    );
+  }
+
+  onClearSearch() {
+    console.log('called from onClearSearch');
+    console.log('searchForm onClearSearch', this.searchForm);
+    UserCandidatesUtils.onClearSearch(
+      (append, queryParams) =>
+        this.fetchUserCandidates(this.startDate, this.endDate, queryParams, append),
+      () => this.scrollTableToTop(),
+      this.clearSort,
+      (qp) => (this.queryParams = qp),
+      () => (this.searchForm = { searchBy: '', searchValue: '' })
+    );
+  }
+
+  onDateRangeSelected(range: { startDate: string; endDate: string }) {
+    console.log('called from onDateRangeSelected', { range })
+    console.log('searchForm onDateRangeSelected', this.searchForm);
+
+    this.startDate = range.startDate;
+    this.endDate = range.endDate;
+
+    const saved = UserCandidatesUtils.getSavedSearchForm();
+    const isFirstFire = !this.dateRangeInitialized;
+    this.dateRangeInitialized = true;
+
+    const shouldClearForm = !(isFirstFire && !!saved);
+
+    const clearFn = () => {
+      if (shouldClearForm) {
+        this.searchForm = { searchBy: '', searchValue: '' };
+        this.queryParams = {};
+        try { sessionStorage.removeItem('searchForm'); } catch {}
+      }
+    };
+
+    UserCandidatesUtils.onDateRangeSelected(
+      (_start, _end) => {},
+      () => this.fetchUserCandidates(this.startDate, this.endDate, this.queryParams),
+      clearFn,
+      () => this.scrollTableToTop(),
+      this.clearSort
+    );
+  }
+
+  onColumnClicked(payload: { state: { [f: string]: 'asc'|'desc'|null }, order: string[] }) {
+    if (this.suppressNextSortFetch) {
+      const hasActiveSort = payload.order.some(f => payload.state[f] === 'asc' || payload.state[f] === 'desc');
+      this.suppressNextSortFetch = false; // consume the flag every time
+      if (!hasActiveSort) return; // fake event from reset → do not fetch
+       // if there is a real sort, continue (user clicked)
+    }
+
+    UserCandidatesUtils.onColumnClicked(
+      payload.state,
+      payload.order,                                           // <<— send the order
+      (sf) => this.sortFields = sf,
+      () => this.fetchUserCandidates(this.startDate, this.endDate, this.queryParams, false),
+      () => this.scrollTableToTop()
+    );
+  }
+
+  private clearSort = () => {
+    this.sortFields = [];
+    this.tableResetKey++;
+    this.suppressNextSortFetch = true;
+  };
+
+  fetchUserCandidates(startDate: string, endDate: string, queryParams: any, append = false) {
+    console.log('Fetching user candidates with params:', { startDate, endDate, queryParams, append });
+    const keys = Object.keys(queryParams || {});
+    const search = keys.length ? queryParams[keys[0]] : undefined;
+    // Implement the logic to fetch user candidates here
+    this.userCandidatesService.getUserCandidates({
+      startDate,
+      endDate,
+      page: append ? this.currentPage + 1 : 1,
+      limit: 20,
+      search,
+      sortFields: this.sortFields,
+    })
+    .subscribe({
+      next: (res) => {
+        const mapped = (res?.items ?? []).map((r: any) => ({
+          ...r,
+          userName: `${r.engFirstname} ${r.engLastName}`,
+          informationCompleted: createStatusIcon(r.informationCompleted),
+          quizCompleted: createStatusIcon(r.quizCompleted),
+          sendFormCompleted: createStatusIcon(r.sendFormCompleted),
+        }));
+        this.rows = append ? [...this.rows, ...mapped] : mapped;
+        this.currentPage = append ? this.currentPage + 1 : 1;
+        this.hasMoreData = mapped.length === 20;
+
+        queueMicrotask(() => this.measureOverflow());
+      },
+      error: (err) => {
+        console.error('Error fetching user candidates:', err);
+      },
+    });
+  }
+
+  onScroll(event: any) {
+    console.log('called from onScroll', { event });
+    UserCandidatesUtils.onScroll(event, () => this.onLoadMore());
+  }
+
+  onLoadMore() {
+    const isLoading = this.loadingService['loadingCount'] > 0;
+    if (!this.hasMoreData || isLoading) return;
+
+    this.fetchUserCandidates(
+      this.startDate,
+      this.endDate,
+      this.queryParams,
+      true
+    );
+  }
+
+  scrollTableToTop() {
+    UserCandidatesUtils.scrollTableToTop();
+  }
+
+  onFilterButtonClick(key: string) {
+    switch (key) {
+      case 'export':
+        this.onExportClicked();
+        break;
+    }
+  }
+
+  onExportClicked() {
+    console.log('Button clicked: Export Excel');
+    const filename = `User-Candidates_${dayjs(this.startDate).format('YYYY-MM-DD')}_to_${dayjs(this.endDate).format('YYYY-MM-DD')}.xlsx`;
+    UserCandidatesUtils.onExportClicked(this.columns, this.rows, filename);
+  }
+
+  @HostListener('window:beforeunload')
+  onBeforeUnload() {
+    // Case for reload/closing tab (SPA navigation will not trigger this)
+    this.isPageUnloading = true;
+  }
+
+  ngOnDestroy(): void {
+    // If not a reload (i.e., navigating within the app), clear the search form
+    if (!this.isPageUnloading) {
+      sessionStorage.removeItem(UserCandidatesUtils.STORAGE_KEY);
+    }
+    this.ro?.disconnect?.();
+  }
+}

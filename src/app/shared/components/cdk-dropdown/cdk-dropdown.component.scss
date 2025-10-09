@@ -1,0 +1,102 @@
+.dd-trigger {
+    width: 100%;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    border: 1px solid #d1d5db;
+    /* gray-300 */
+    border-radius: 8px;
+    background: #fff;
+    font-size: 13px;
+    line-height: 1;
+    color: #111827;
+    /* gray-900 */
+    cursor: pointer;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.dd-trigger:hover {
+    border-color: #9ca3af;
+}
+
+/* gray-400 */
+.dd-trigger:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, .35);
+}
+
+/* ring */
+.dd-trigger.dd-disabled {
+    opacity: 0.6;
+    background: #E9ECEF;
+    pointer-events: none;
+}
+
+.dd-caret {
+    margin-left: 8px;
+    opacity: .8;
+}
+
+/* ให้เนื้อหาใน overlay กว้างเท่า overlay */
+.cdk-dropdown-panel .dd-panel {
+  width: 100%;
+  box-sizing: border-box;  /* ✅ สำคัญ */
+}
+
+/* (ถ้ามี padding/ขอบ ให้แน่ใจว่าไม่ทำให้ล้น) */
+.cdk-dropdown-panel .dd-menu {
+    max-height: 240px;
+    /* หรือใช้ [style.max-height.px]="panelMaxHeight" อยู่แล้วก็ได้ */
+    overflow: auto;
+}
+
+::ng-deep .cdk-dropdown-panel {
+    z-index: 1000;
+}
+
+/* เผื่อซ้อน UI อื่น */
+
+.dd-panel {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .16);
+    overflow: hidden;
+}
+
+.dd-menu {
+    margin: 0;
+    padding: 6px;
+    list-style: none;
+    max-height: inherit;
+    overflow: auto;
+}
+
+.dd-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    user-select: none;
+    font-size: 13px;
+    color: #111827;
+}
+
+.dd-item:hover,
+.dd-item[data-active="true"] {
+    background: #f3f4f6;
+    /* gray-100 */
+}
+
+.dd-item.dd-selected {
+    background: #eef6ff;
+    /* อ่อนๆ ฟ้า */
+}
+
+.dd-check {
+    opacity: .9;
+}

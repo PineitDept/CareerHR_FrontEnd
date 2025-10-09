@@ -1,0 +1,26 @@
+<div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
+  <app-header-content
+    [headerName]="'Job Position List'"
+    [headerType]="''"
+  ></app-header-content>
+</div>
+<app-loading></app-loading>
+
+<app-filter
+  [filterDate]="false"
+  [actionButtons]="filterButtons"
+  (buttonClicked)="onFilterButtonClick($event)"
+></app-filter>
+
+<div class="tw-h-[calc(100vh-300px)] tw-overflow-y-auto tw-mt-6" #scrollArea>
+  <app-tables
+    [columns]="columns"
+    [rows]="rows"
+    [showCheckbox]="false"
+    [enableRowClick]="true"
+    (rowClicked)="onViewRowClicked($event)"
+    (viewRowClicked)="onViewRowClicked($event)"
+    [hasOverflowY]="hasOverflowY"
+    (toggleChange)="onUserToggleRequested($event)"
+  ></app-tables>
+</div>

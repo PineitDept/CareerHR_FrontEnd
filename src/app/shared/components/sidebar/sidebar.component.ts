@@ -8,6 +8,7 @@ import { NotificationService } from '../../services/notification/notification.se
 import { NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs';
 import { SidebarService } from '../../services/sidebar/sidebar.service';
+import { BOTTOM_MENU, MAIN_MENU, SUB_MENUS } from '../../constants/sidebar/sidebar.constants';
 
 @Component({
   selector: 'app-sidebar',
@@ -25,6 +26,18 @@ export class SidebarComponent {
   activeMainMenu = '';
   expandedNestedMenus: Set<string> = new Set();
 
+  adminSettingSubMenu: string = '';
+  dataSettingSubMenu: string = '';
+
+  menuStack: string[] = [];
+  saveStack: string[] = [];
+  selectedByDepth: string[] = [];
+
+  // Menu data
+  mainMenu = MAIN_MENU;
+  bottomMenu = BOTTOM_MENU;
+  subMenus = SUB_MENUS;
+
   constructor(
     public router: Router,
     private loginService: LoginService,
@@ -37,10 +50,7 @@ export class SidebarComponent {
   @HostListener('window:resize')
   onResize() {
     const wasMobile = this.isMobile;
-    const width = window.innerWidth;
-
-    this.isMobile = width < 768;
-
+    this.isMobile = window.innerWidth < 768;
     if (this.isMobile && !wasMobile) {
       this.isAutoCollapsed = true;
       this.isMobileSidebarVisible = false;
@@ -52,90 +62,168 @@ export class SidebarComponent {
   ngOnInit() {
     this.onResize();
 
-    this.setActiveMenuFromUrl(this.router.url);
-    this.expandMenuIfChildActive();
-
-    this.router.events.pipe(
-      filter(event => event instanceof NavigationEnd)
-    ).subscribe((event: NavigationEnd) => {
-      this.setActiveMenuFromUrl(event.urlAfterRedirects);
-      this.expandMenuIfChildActive();
-    });
-  }
-
- setActiveMenuFromUrl(url: string) {
-  for (const main of this.mainMenu) {
-    const subMenu = this.subMenus[main.label];
-    if (!subMenu) continue;
-
-    for (const item of subMenu) {
-      // ตรวจ path หลัก
-      if (item.path && url.startsWith('/' + item.path)) {
-        this.activeMainMenu = main.label;
-        return;
-      }
-
-      // ตรวจ nested path
-      if (item.children) {
-        for (const child of item.children) {
-          if (child.path && url.startsWith('/' + child.path)) {
-            this.activeMainMenu = main.label;
-            return;
-          }
-        }
-      }
-    }
-  }
-
-  // ถ้าไม่ match อะไรเลย
-  this.activeMainMenu = '';
-}
-  isRouteActive(path: string): boolean {
-    return this.router.url.startsWith(`/${path}`);
-  }
-
-  onMainMenuClick(label: string) {
-    this.activeMainMenu = label;
-    this.expandMenuIfChildActive()
-  }
-
-  expandMenuIfChildActive() {
-    const subMenu = this.subMenus[this.activeMainMenu];
-    if (!subMenu) return;
-
-    for (const item of subMenu) {
-      if (item.children) {
-        for (const child of item.children) {
-          if (child.path && this.isRouteActive(child.path)) {
-            this.expandedNestedMenus.add(item.label);
-          }
-        }
-      }
-    }
-  }
-
-  navigateToSubPagePath(fullPath: string) {
-    const pathSegments = fullPath.split('/');
-    this.router.navigate(pathSegments);
-  }
-
-  toggleSidebar() {
-    if (this.isMobile) {
-      this.isMobileSidebarVisible = !this.isMobileSidebarVisible;
+    if (this.router.url === '/index' || this.router.url.startsWith('/index?')) {
+      this.menuStack = [];
+      this.selectedByDepth = [];
     } else {
-      this.isUserCollapsed = !this.isUserCollapsed;
+      this.syncFromUrl(this.router.url);
     }
+
+    this.router.events
+      .pipe(filter(e => e instanceof NavigationEnd))
+      .subscribe((e: NavigationEnd) => this.syncFromUrl(e.urlAfterRedirects));
+  }
+
+  // --------------------- Drill-down computed ---------------------
+  get rootMenus(): MenuItem[] {
+    return this.mainMenu;
+  }
+
+  get currentNodes(): MenuItem[] {
+    if (this.menuStack.length === 0) return this.rootMenus;
+
+    let nodes: MenuItem[] | undefined = this.subMenus[this.menuStack[0]];
+
+    for (let i = 1; i < this.menuStack.length; i++) {
+      if (!nodes) break;
+      const lbl = this.menuStack[i];
+      const found = nodes.find((n: MenuItem) => n.label === lbl) as MenuItem | undefined;
+      nodes = found?.children;
+    }
+    return nodes ?? [];
+  }
+
+  get isUnderAdmin(): boolean {
+    return this.menuStack[0] === 'Admin Setting';
+  }
+
+  // --------------------- Click handlers ---------------------
+  onRootClick(item: MenuItem, e?: MouseEvent) {
+    e?.stopPropagation();
+    if (item.label === 'Logout') return this.logout();
+
+    const sub = this.subMenus[item.label];
+    if (sub?.length) {
+      this.selectedByDepth[0] = item.label;
+      this.menuStack = [item.label];
+      return;
+    }
+    if (item.path) {
+      this.selectedByDepth[0] = item.label;
+      this.navigateToSubPagePath(item.path);
+      this.saveStack = [];
+      this.saveStack = this.selectedByDepth;
+    }
+  }
+
+  // node click (ระดับใดๆ)
+  onNodeClick(node: MenuItem, e?: MouseEvent) {
+    e?.stopPropagation();
+    const depth = this.menuStack.length;
+    if (node.children?.length) {
+      this.selectedByDepth[depth] = node.label;
+      this.menuStack.push(node.label);
+      return;
+    }
+    if (node.path) {
+      this.selectedByDepth[depth] = node.label;
+      this.navigateToSubPagePath(node.path);
+      this.saveStack = [];
+      this.saveStack = this.selectedByDepth;
+    }
+  }
+
+  backOneLevel() {
+    if (this.menuStack.length > 0) this.menuStack.pop();
   }
 
   backToMainMenu() {
-    this.activeMainMenu = '';
-    this.expandedNestedMenus.clear();
+    this.menuStack = [];
   }
 
-  toggleNested(menu: string) {
-    this.expandedNestedMenus.has(menu)
-      ? this.expandedNestedMenus.delete(menu)
-      : this.expandedNestedMenus.add(menu);
+  navigateToSubPagePath(fullPath: string) {
+    if (!fullPath) return;
+    const segments = fullPath.split('/').filter(Boolean);
+    this.router.navigate(segments);
+  }
+
+  // --------------------- helpers ---------------------
+  isNodeActive(label: string): boolean {
+    return this.menuStack.includes(label);
+  }
+
+  isLeafActive(path?: string): boolean {
+    return !!path && this.router.url.startsWith('/' + path);
+  }
+
+  isRouteActive(path?: string): boolean {
+    return !!path && this.router.url.startsWith('/' + path);
+  }
+
+  isNodeActiveAtDepth(depth: number, label: string): boolean {
+    return this.saveStack[depth] === label;
+  }
+
+  isActiveForCurrentLevel(n: MenuItem): boolean {
+    const depth = this.menuStack.length;
+    return n.children?.length
+      ? this.isNodeActiveAtDepth(depth, n.label)
+      : this.isLeafActive(n.path);
+  }
+
+  hasRootChildren(label: string): boolean {
+    return !!this.subMenus[label]?.length;
+  }
+
+  // --------------------- URL -> stack sync ---------------------
+  private syncFromUrl(url: string) {
+    if (url === '/index' || url.startsWith('/index?')) {
+      this.menuStack = [];
+      this.selectedByDepth = [];
+      this.saveStack = [];
+      return;
+    }
+
+    const chain = this.findFullLabelChainByUrl(url);
+    if (chain) {
+      this.menuStack = chain.slice(0, -1);
+      this.saveStack = [];
+      for (let i = 0; i < chain.length; i++) {
+        this.saveStack[i] = chain[i];
+      }
+    }
+  }
+
+  private findFullLabelChainByUrl(url: string): string[] | null {
+    const dfs = (nodes: MenuItem[], chain: string[]): string[] | null => {
+      for (const n of nodes) {
+        const chainPlus = [...chain, n.label];
+        if (n.path && url.startsWith('/' + n.path)) {
+          return chainPlus;
+        }
+        if (n.children?.length) {
+          const hit = dfs(n.children, chainPlus);
+          if (hit) return hit;
+        }
+      }
+      return null;
+    };
+
+    const roots = [...this.mainMenu, ...this.bottomMenu];
+    for (const r of roots) {
+      const sub = this.subMenus[r.label];
+      if (!sub?.length) continue;
+      const hit = dfs(sub, [r.label]);
+      if (hit) return hit;
+    }
+    return null;
+  }
+
+
+  // --------------------- UI misc ---------------------
+  toggleSidebar() {
+    if (this.isMobile) this.isMobileSidebarVisible = !this.isMobileSidebarVisible;
+    else this.isUserCollapsed = !this.isUserCollapsed;
   }
 
   get isCollapsed(): boolean {
@@ -147,25 +235,9 @@ export class SidebarComponent {
   }
 
   get sidebarWidth(): string {
-    let width: string;
-
-    if (!this.isExpanded) {
-      width = '60px';
-    } else {
-      const screenWidth = window.innerWidth;
-      if (screenWidth >= 1280) {
-        width = '240px';
-      } else {
-        width = '190px';
-      }
-    }
-
+    const width = this.isExpanded ? '240px' : '60px';
     this.sidebarService.setSidebarWidth(width);
     return width;
-  }
-
-  get showLabel(): boolean {
-    return this.isExpanded;
   }
 
   get menuLabelClass(): string {
@@ -176,21 +248,21 @@ export class SidebarComponent {
       'tw-ease-in-out',
       'tw-whitespace-nowrap',
       'tw-min-w-0',
-      this.showLabel
+      this.isExpanded
         ? 'tw-opacity-100 tw-scale-100 tw-flex-1'
         : 'tw-opacity-0 tw-scale-95 tw-w-0 tw-overflow-hidden tw-pointer-events-none'
     ].join(' ');
   }
 
+  // --------------------- Logout ---------------------
   logout(): void {
     Promise.resolve().then(() => {
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.add('dimmed-overlay');
+      document.querySelector('.cdk-overlay-container')?.classList.add('dimmed-overlay');
     });
 
     const dialogRef = this.dialog.open(AlertDialogComponent, {
       width: '400px',
-      panelClass: 'custom-dialog-container',
+      panelClass: ['custom-dialog-container', 'pp-rounded-dialog'],
       autoFocus: false,
       disableClose: true,
       data: {
@@ -201,54 +273,13 @@ export class SidebarComponent {
     });
 
     dialogRef.afterClosed().subscribe((confirmed: boolean) => {
-
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.remove('dimmed-overlay');
-
+      document.querySelector('.cdk-overlay-container')?.classList.remove('dimmed-overlay');
       if (!confirmed) return;
 
-      const refreshToken = this.authService.getRefreshToken();
-      if (!refreshToken) return;
-
-      this.loginService.logout({ refreshToken }).subscribe({
-        next: () => {
-          // already navigated to /login
-        },
-        error: err => {
-          // console.error('Logout failed:', err);
-          switch (err?.type) {
-            default:
-              this.notificationService.error('Logout failed, please try again');
-              break;
-          }
-        }
+      this.loginService.logout().subscribe({
+        next: () => { },
+        error: () => this.notificationService.error('Logout failed, please try again')
       });
     });
-
   }
-
-  // Menu Data
-  mainMenu: MenuItem[] = [
-    { label: 'Manpower', icon: 'user' },
-    { label: 'Applications Form', icon: 'dollar-circle' },
-    // { label: 'Tools', icon: 'box-archive' },
-  ];
-
-  bottomMenu: MenuItem[] = [
-    // { label: 'Admin Setting', icon: 'gear' },
-    { label: 'Logout', icon: 'exit' },
-  ];
-
-  subMenus: { [key: string]: MenuItem[] } = {
-    'Manpower': [
-      { label: 'Position Request', icon: 'pen-to-square', path: 'manpower/position-request' },
-      { label: 'Manpower Planning', icon: 'ruler-pen', path: 'manpower/manpower-planning' },
-      { label: 'Status Overview', icon: 'trend-up', path: 'manpower/status-overview' },
-    ],
-    'Applications Form': [
-      { label: 'All Applications', icon: 'notebook', path: 'applications/all-applications' },
-      { label: 'Application Screening', icon: 'search-plus', path: 'applications/screening' },
-      { label: 'Application Tracking', icon: 'route', path: 'applications/tracking' },
-    ],
-  };
 }

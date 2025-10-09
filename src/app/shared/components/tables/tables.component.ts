@@ -13,13 +13,35 @@ import {
   OnInit,
   AfterViewInit,
   AfterViewChecked,
-  ChangeDetectionStrategy
+  OnChanges,
+  ChangeDetectionStrategy,
+  Signal,
+  effect,
+  DestroyRef,
+  inject,
+  OnDestroy,
+  signal,
+  input,
+  ViewContainerRef,
+  TemplateRef,
 } from '@angular/core';
 import { Column } from '../../interfaces/tables/column.interface';
+import { MatDialog } from '@angular/material/dialog';
+import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
+import { Overlay, OverlayRef, FlexibleConnectedPositionStrategy, ConnectedPosition, ScrollStrategyOptions, CdkOverlayOrigin } from '@angular/cdk/overlay';
+import { TemplatePortal } from '@angular/cdk/portal';
+import { AlertDialogComponent } from '../dialogs/alert-dialog/alert-dialog.component';
+import { FormDialogComponent } from '../dialogs/form-dialog/form-dialog.component';
+import { ApplicationService } from '../../../services/application/application.service';
+import { FormDialogData } from '../../interfaces/dialog/dialog.interface';
+
+export type SortState = {
+  [field: string]: 'asc' | 'desc' | null;
+};
 
 interface DropdownOverlay {
   visible: boolean;
-  rowIndex: number;
+  rowIndex: number | null; // null = footer
   field: string;
   x: number;
   y: number;
@@ -31,39 +53,130 @@ interface DropdownOverlay {
   selector: 'app-tables',
   templateUrl: './tables.component.html',
   styleUrls: ['./tables.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class TablesComponent implements OnInit, AfterViewInit, AfterViewChecked {
-  @Input() columns: Column[] = [];
-  @Input() rows: any[] = [];
+export class TablesComponent
+  implements OnInit, OnChanges, AfterViewInit, AfterViewChecked, OnDestroy
+{
+  rows = input<any[]>([]);
+  resetKey = input<number>(0);
+  preClickedRowIds = input<string[]>([]);
+  sortStates = input<SortState>({});
+
   @Input() showCheckbox: boolean = true;
-  @Input() resetKey: number = 0;
   @Input() splitRows: boolean = true;
-  @Input() preClickedRowIds: string[] = [];
+  @Input() columns: Column[] = [];
+  @Input() enableRowClick: boolean = true;
+  @Input() isAddMode: boolean = false;
+  @Input() fieldErrors: boolean = false;
+  @Input() highlightRowIndex: number | null = null;
+  @Input() hasOverflowY = false;
+  @Input() withinCard: boolean = false;
+  @Input() isToggleAlert: boolean = false;
+  @Input() isDisabledForm: boolean = false;
+  @Input() isZeroOneStatus: boolean = false;
+  @Input() isOnlineStatus: boolean = false;
+  @Input() allowViewWhenDisabled: boolean = false;
+  @Input() requiredFooterFields: string[] = [];
+  @Input() draggableRows: boolean = false;
+  @Input() isConfirmDialogToggleRequired: boolean = true;
+  @Input() isConfirmDialogSaveRequired: boolean = true;
+  @Input() tableFixed: boolean = true;
+  @Input() isReasonSave: boolean = false;
+  @Input() lockedPrefixConfig: { field: string; prefix: string } | null = null;
+  @Input() mergeByFields: string[] = [];
+  @Input() inlineFieldErrors: Record<string, boolean> = {};
+  @Input() useExternalInlineSaveFlow: boolean = false;
+  @Input() scoreMax: number = 1;
 
   @Output() selectionChanged = new EventEmitter<any[]>();
   @Output() rowClicked = new EventEmitter<any>();
   @Output() listClickedRows = new EventEmitter<Set<string>>();
+  @Output() columnClicked = new EventEmitter<{ state: SortState; order: string[] }>();
+  // @Output() toggleChange = new EventEmitter<{ row: any, checked: boolean, confirm: boolean  }>();
+  @Output() toggleChange = new EventEmitter<{ row: any; checked: boolean; checkbox: HTMLInputElement }>();
+  @Output() editClicked = new EventEmitter<any>();
+  @Output() editCardClicked = new EventEmitter<any>();
+  @Output() viewRowClicked = new EventEmitter<any>();
+  @Output() columnRowClicked = new EventEmitter<{ column: Column; row: any }>();
+  @Output() createInlineSave = new EventEmitter<any>();
+  @Output() createInlineCancel = new EventEmitter<void>();
+  @Output() deleteRowClicked = new EventEmitter<any>();
+  @Output() selectChanged = new EventEmitter<{ rowIndex: number; field: string; value: string }>();
+  @Output() rowsReordered = new EventEmitter<{ previousIndex: number; currentIndex: number }>();
+  @Output() inlineSaveAttempt = new EventEmitter<{ draft: any; original: any }>();
+  @Output() inlineCancel = new EventEmitter<any>();
+  @Output() inlineFieldCommit = new EventEmitter<{ rowIndex: number; field: string; value: any }>();
 
-  @Output() columnClicked = new EventEmitter<string>();
-
+  sortedColumns: string[] = [];
   clickedRows: Set<string> = new Set();
   selectedRows: Set<number> = new Set();
   allSelected: boolean = false;
   expandedMainColumns = new Set<string>();
   dropdownOverlay: DropdownOverlay | null = null;
+  activeStatus: boolean = false;
+  colField: string = '';
+  editingRowId: string | number | null = null;
+  editedValue: string = '';
+  editRow: boolean = false;
+  rowValidationErrors: { [rowId: string]: boolean } = {};
+  ishighlightRow: boolean = false;
+  editingBuffer: any | null = null;
 
-  @ViewChild('selectAllCheckbox') selectAllCheckbox!: ElementRef<HTMLInputElement>;
-  @ViewChild('tableWrapper', { static: true }) tableWrapperRef!: ElementRef<HTMLDivElement>;
+  @ViewChild('selectAllCheckbox')
+  selectAllCheckbox!: ElementRef<HTMLInputElement>;
+  @ViewChild('tableWrapper', { static: true })
+  tableWrapperRef!: ElementRef<HTMLDivElement>;
 
-  constructor(private cdr: ChangeDetectorRef) { }
+  @Input() createDefaults: any = {};
+  footerRow: any = {};
+  indexAdd: number = 0;
 
-  sortStates: { [field: string]: 'asc' | 'desc' | null } = {};
-  sortedColumns: string[] = [];
+  footerErrors: Record<string, boolean> = {};
 
+  private destroyRef = inject(DestroyRef);
+
+  @ViewChild('dropdownOverlayTpl', { static: true }) dropdownOverlayTpl!: TemplateRef<any>;
+
+  private overlayRef: OverlayRef | null = null;
+  private positionStrategy!: FlexibleConnectedPositionStrategy;
+
+  overlayPositions: ConnectedPosition[] = [
+    { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 4 },
+    { originX: 'start', originY: 'top',    overlayX: 'start', overlayY: 'bottom', offsetY: -4 },
+  ];
+
+  constructor(
+    private cdr: ChangeDetectorRef,
+    private dialog: MatDialog,
+    private overlay: Overlay,
+    private vcr: ViewContainerRef,
+    private sso: ScrollStrategyOptions,
+  ) {
+    // ใช้ effect เพื่อ watch การเปลี่ยนแปลงของ rows signal
+    effect(() => {
+      const currentRows = this.rows();
+
+      // อัพเดต selection state เมื่อ rows เปลี่ยน
+      this.updateAllSelectedState();
+
+      // ถ้า selectedRows มีค่าที่เกินจำนวน rows ปัจจุบัน ให้ลบออก
+      if (currentRows && currentRows.length > 0) {
+        const validIndices = new Set<number>();
+        this.selectedRows.forEach((index) => {
+          if (index < currentRows.length) {
+            validIndices.add(index);
+          }
+        });
+        this.selectedRows = validIndices;
+      }
+
+      this.cdr.detectChanges();
+    });
+  }
 
   ngOnInit() {
-    this.preClickedRowIds.forEach(id => this.clickedRows.add(id));
+    this.preClickedRowIds().forEach((id) => this.clickedRows.add(id));
     this.updateAllSelectedState();
   }
 
@@ -81,8 +194,51 @@ export class TablesComponent implements OnInit, AfterViewInit, AfterViewChecked 
       this.allSelected = false;
       this.updateIndeterminateState();
       this.emitSelection();
+
+      this.sortedColumns = [];
+      const s = this.sortStateValue;
+      Object.keys(s).forEach(k => (s[k] = null));
+      this.columnClicked.emit({ state: s, order: [] });
+
       this.cdr.detectChanges();
     }
+
+    if (changes['isAddMode']) {
+      if (this.isAddMode) {
+        this.footerRow = {
+          ...this.createDefaults,
+          activeStatus: this.createDefaults.activeStatus ?? false,
+          status: this.createDefaults.status ?? 2,
+        };
+        this.indexAdd = this.rowsValue.length + 1
+        this.footerErrors = {};
+      } else {
+        this.footerRow = {};
+        this.footerErrors = {};
+      }
+      this.cdr.detectChanges();
+    }
+
+    if (changes['highlightRowIndex'] && !changes['highlightRowIndex'].firstChange) {
+      this.ishighlightRow = true
+    }
+
+    if (changes['rows']) {
+      this.indexAdd = this.rowsValue.length + 1
+    }
+  }
+
+  ngOnDestroy() {
+    // cleanup จะถูกจัดการโดย DestroyRef อัตโนมัติ
+  }
+
+  // Helper method สำหรับเข้าถึง rows signal
+  get rowsValue(): any[] {
+    return this.rows();
+  }
+
+  get sortStateValue(): SortState {
+    return this.sortStates();
   }
 
   // FIXED: Column Management with Proper Width Calculation
@@ -100,11 +256,13 @@ export class TablesComponent implements OnInit, AfterViewInit, AfterViewChecked 
   }
 
   isSubColumnVisible(column: Column): boolean {
-    return column.subColumn ? this.expandedMainColumns.has(column.subColumn) : true;
+    return column.subColumn
+      ? this.expandedMainColumns.has(column.subColumn)
+      : true;
   }
 
   hasSubColumns(mainColumn: string): boolean {
-    return this.columns.some(col => col.subColumn === mainColumn);
+    return this.columns.some((col) => col.subColumn === mainColumn);
   }
 
   // FIXED: Improved Column Width Calculation
@@ -131,12 +289,14 @@ export class TablesComponent implements OnInit, AfterViewInit, AfterViewChecked 
 
   // Selection Management
   private updateAllSelectedState(): void {
-    this.allSelected = this.rows.length > 0 && this.selectedRows.size === this.rows.length;
+    const currentRows = this.rowsValue;
+    this.allSelected =
+      currentRows.length > 0 && this.selectedRows.size === currentRows.length;
   }
 
   onHeaderCheckboxClick(event: MouseEvent) {
     const checkbox = this.selectAllCheckbox.nativeElement;
-    const total = this.rows.length;
+    const total = this.rowsValue.length;
     const selected = this.selectedRows.size;
 
     if (checkbox.indeterminate || selected < total) {
@@ -153,7 +313,7 @@ export class TablesComponent implements OnInit, AfterViewInit, AfterViewChecked 
     this.selectedRows.clear();
 
     if (select) {
-      this.rows.forEach((_, i) => this.selectedRows.add(i));
+      this.rowsValue.forEach((_, i) => this.selectedRows.add(i));
     }
 
     this.emitSelection();
@@ -167,52 +327,55 @@ export class TablesComponent implements OnInit, AfterViewInit, AfterViewChecked 
       this.selectedRows.add(index);
     }
 
-    this.allSelected = this.selectedRows.size === this.rows.length;
+    this.allSelected = this.selectedRows.size === this.rowsValue.length;
     this.emitSelection();
     this.cdr.detectChanges();
   }
 
   emitSelection() {
-    const selected = Array.from(this.selectedRows).map((i) => this.rows[i]);
+    const currentRows = this.rowsValue;
+    const selected = Array.from(this.selectedRows).map((i) => currentRows[i]);
     this.selectionChanged.emit(selected);
   }
 
   updateIndeterminateState() {
     if (this.selectAllCheckbox) {
       const checkbox = this.selectAllCheckbox.nativeElement;
-      const total = this.rows.length;
+      const total = this.rowsValue.length;
       const selected = this.selectedRows.size;
 
       checkbox.indeterminate = selected > 0 && selected < total;
     }
   }
+
   onColumnClick(column: any): void {
     if (!column.sortable) return;
 
     const field = column.field;
-    const current = this.sortStates[field];
+    const current = this.sortStateValue[field];
 
     // วนค่าจาก null -> asc -> desc -> null
-    const next: 'asc' | 'desc' | null = current === 'asc' ? 'desc' : current === 'desc' ? null : 'asc';
-    this.sortStates[field] = next;
+    const next: 'asc' | 'desc' | null =
+      current === 'asc' ? 'desc' : current === 'desc' ? null : 'asc';
+    this.sortStateValue[field] = next;
 
     if (next === null) {
       // ลบ field ออกจากลำดับการ sort
-      this.sortedColumns = this.sortedColumns.filter(f => f !== field);
+      this.sortedColumns = this.sortedColumns.filter((f) => f !== field);
     } else {
       if (!this.sortedColumns.includes(field)) {
         this.sortedColumns.push(field);
       }
     }
-    // แปลงเป็น string เพื่อส่งไป API
-    const sortFields = this.sortedColumns.map(c => `${c}:${this.sortStates[c]}`).join(',');
 
-    this.columnClicked.emit(sortFields);
+    console.log('Sort state updated:', { state: this.sortStateValue, order: [...this.sortedColumns] });
+    this.columnClicked.emit({ state: this.sortStateValue, order: [...this.sortedColumns] });
   }
-
 
   // Event Handlers
   onRowClick(row: any, event: MouseEvent) {
+    if (!this.enableRowClick) return;
+
     const target = event.target as HTMLElement;
     const tagName = target.tagName.toLowerCase();
 
@@ -226,13 +389,14 @@ export class TablesComponent implements OnInit, AfterViewInit, AfterViewChecked 
     }
 
     if (row?.id) {
-    this.clickedRows.add(String(row.id)); // ป้องกันไว้เป็น string
-    this.listClickedRows.emit(this.clickedRows);
-  }
+      this.clickedRows.add(String(row.id)); // ป้องกันไว้เป็น string
+      this.listClickedRows.emit(this.clickedRows);
+    }
 
     this.rowClicked.emit(row);
     this.cdr.detectChanges();
   }
+
   onButtonClick(column: Column, row: any, event: Event): void {
     event.stopPropagation();
     if (column.onClick) {
@@ -241,87 +405,754 @@ export class TablesComponent implements OnInit, AfterViewInit, AfterViewChecked 
   }
 
   // FIXED: Dropdown Management
-  toggleDropdown(rowIndex: number, field: string, event?: Event) {
+  toggleDropdown(rowIndex: number, field: string, origin: CdkOverlayOrigin, event?: Event) {
     event?.stopPropagation();
-
-    if (this.isDropdownOpen(rowIndex, field)) {
-      this.dropdownOverlay = null;
-      return;
-    }
-
-    const buttonEl = document.getElementById(`dropdown-button-${rowIndex}-${field}`);
-    const wrapperEl = this.tableWrapperRef?.nativeElement;
-
-    if (!buttonEl || !wrapperEl) return;
-
-    const buttonRect = buttonEl.getBoundingClientRect();
-    const wrapperRect = wrapperEl.getBoundingClientRect();
-
-    const column = this.columns.find((c) => c.field === field);
+    const column = this.columns.find(c => c.field === field);
     if (!column?.options) return;
 
-    this.dropdownOverlay = {
-      visible: true,
-      rowIndex,
-      field,
-      x: buttonRect.left - wrapperRect.left,
-      y: buttonRect.bottom - wrapperRect.top + 4,
-      width: buttonRect.width,
-      options: column.options,
-    };
+    this.openOverlay(origin, { rowIndex, field, options: column.options });
+  }
 
-    this.cdr.detectChanges();
+  private openOverlay(
+    origin: CdkOverlayOrigin,
+    ctx: { rowIndex: number | null; field: string; options: string[] }
+  ) {
+    const width = origin.elementRef.nativeElement.offsetWidth ?? 180;
+
+    if (!this.overlayRef) {
+      this.positionStrategy = this.overlay.position()
+        .flexibleConnectedTo(origin.elementRef)
+        .withPositions(this.overlayPositions)
+        .withFlexibleDimensions(false)
+        .withPush(true)
+        .withViewportMargin(8);
+
+      this.overlayRef = this.overlay.create({
+        positionStrategy: this.positionStrategy,
+        hasBackdrop: true,
+        backdropClass: 'cdk-overlay-transparent-backdrop',
+        scrollStrategy: this.sso.reposition(),
+        panelClass: 'tw-z-[9999]',
+      });
+
+      this.overlayRef.backdropClick().subscribe(() => this.closeOverlay());
+      this.overlayRef.detachments().subscribe(() => this.closeOverlay());
+    } else {
+
+      this.positionStrategy.setOrigin(origin.elementRef);
+      this.overlayRef.updatePosition();
+    }
+
+    const portal = new TemplatePortal(this.dropdownOverlayTpl, this.vcr, { $implicit: null, ctx, width } as any);
+    if (this.overlayRef.hasAttached()) this.overlayRef.detach();
+    this.overlayRef.attach(portal);
   }
 
   isDropdownOpen(rowIndex: number, field: string): boolean {
-    return this.dropdownOverlay?.rowIndex === rowIndex &&
-      this.dropdownOverlay?.field === field;
+    return (
+      this.dropdownOverlay?.rowIndex === rowIndex &&
+      this.dropdownOverlay?.field === field
+    );
   }
 
   selectDropdownOption(rowIndex: number, field: string, value: string) {
-    this.rows[rowIndex][field] = value;
+    const currentRows = this.rowsValue;
+    if (currentRows[rowIndex]) {
+      currentRows[rowIndex][field] = value;
+    }
+
+    this.selectChanged.emit({ rowIndex, field, value });
+
     this.dropdownOverlay = null;
     this.cdr.detectChanges();
+  }
+
+  toggleFooterDropdown(field: string, origin: CdkOverlayOrigin, event?: Event) {
+    event?.stopPropagation();
+    const column = this.columns.find(c => c.field === field);
+    if (!column?.options) return;
+
+    this.openOverlay(origin, { rowIndex: null, field, options: column.options });
+  }
+
+  isFooterDropdownOpen(field: string): boolean {
+    return this.dropdownOverlay?.rowIndex === null && this.dropdownOverlay?.field === field;
+  }
+
+  selectFooterDropdownOption(field: string, value: string) {
+    this.footerRow[field] = value;
+    // re-validate ถ้าฟิลด์นี้เป็น required
+    if (this.isRequired(field)) this.validateFooterField(field);
+    this.dropdownOverlay = null;
+    this.cdr.detectChanges();
+  }
+
+  private closeOverlay() {
+    if (this.overlayRef?.hasAttached()) this.overlayRef.detach();
   }
 
   @HostListener('document:click', ['$event'])
   onOutsideClick(event: MouseEvent) {
     const target = event.target as HTMLElement;
-    if (
-      !target.closest('.dropdown-button') &&
-      !target.closest('.dropdown-overlay')
-    ) {
+    if (!target.closest('.dropdown-button') &&
+        !target.closest('.dropdown-overlay')) {
       this.dropdownOverlay = null;
+      this.closeOverlay();
       this.cdr.detectChanges();
     }
   }
 
   // Utility Methods
   getCellValue(row: any, field: string): any {
+    if (field === '__index') {
+      const index = this.rowsValue.findIndex(r => r === row);
+      return index >= 0 ? index + 1 : '';
+    }
+
     return field.split('.').reduce((obj, key) => obj?.[key], row);
   }
 
+  dynamicClassBtn(value: string): string[] {
+    if (value.toLocaleLowerCase().trim() === 'pending') {
+      return ['tw-text-[#FFAA00]', 'hover:tw-text-[#D5920A]'];
+    } else if (value.toLocaleLowerCase().trim() === 'inprocess') {
+      return ['tw-text-[#5500FF]', 'hover:tw-text-[#5f31bb]'];
+    } else if (value.toLocaleLowerCase().trim() === 'complete') {
+      return ['tw-text-[#00AA00]', 'hover:tw-text-[#068506]'];
+    } else {
+      return ['tw-text-[#919191]', 'hover:tw-text-[#656161]'];
+    }
+  }
+
+
   getVisibleColumnCount(): number {
-    let count = this.columns.filter(col =>
-      !col.subColumn || this.isSubColumnVisible(col)
+    let count = this.columns.filter(
+      (col) => !col.subColumn || this.isSubColumnVisible(col)
     ).length;
 
     if (this.showCheckbox) count += 1;
     return count;
+
+    // return this.columns.length;
   }
 
-  getIconPath(iconName: string): string {
-    const icons: Record<string, string> = {
-      'check': 'M20,6 9,17 4,12',
-      'close': 'M18,6 6,18 M6,6 18,18',
-      'edit': 'M11,4 h6a2,2 0 0,1 2,2 v14a2,2 0 0,1 -2,2 H7a2,2 0 0,1 -2,-2 V6a2,2 0 0,1 2,-2 h4',
-      'delete': 'M3,6 h18 M8,6 V4a2,2 0 0,1 2,-2 h4a2,2 0 0,1 2,2 v2'
+  getBackgroundClass(fill?: string): string {
+    const classMap: Record<string, string> = {
+      red: 'tw-bg-red-500/10',
+      green: 'tw-bg-green-500/10',
+      orange: 'tw-bg-orange-500/10',
+      purple: 'tw-bg-purple-500/10',
+      lime: 'tw-bg-lime-500/10',
+      skyblue: 'tw-bg-sky-500/10',
+      pink: 'tw-bg-pink-500/10',
     };
-    return icons[iconName] || icons['check'];
+
+    return classMap[fill?.toLowerCase() ?? ''] || 'tw-bg-[#e5e7eb66]';
+  }
+
+  onToggleChange(event: Event, row: any): void {
+    event.stopPropagation();
+
+    const checkbox = event.target as HTMLInputElement;
+    const targetStatus = checkbox.checked;
+
+    checkbox.checked = !targetStatus;
+
+    if (!row._isNew && !this.isToggleAlert && this.isConfirmDialogToggleRequired) {
+      Promise.resolve().then(() => {
+        const container = document.querySelector('.cdk-overlay-container');
+        container?.classList.add('dimmed-overlay');
+      });
+
+      const dialogRef = this.dialog.open(AlertDialogComponent, {
+        width: '496px',
+        panelClass: 'custom-dialog-container',
+        autoFocus: false,
+        disableClose: true,
+        data: {
+          title: 'Confirmation',
+          message: 'Are you sure you want to change the status of this item?',
+          confirm: true
+        }
+      });
+
+      dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+        const container = document.querySelector('.cdk-overlay-container');
+        container?.classList.remove('dimmed-overlay');
+
+        if (confirmed) {
+          this.toggleChange.emit({ row, checked: targetStatus, checkbox });
+        }
+      });
+    } else {
+      if (this.isToggleAlert) {
+        Promise.resolve().then(() => {
+          const container = document.querySelector('.cdk-overlay-container');
+          container?.classList.add('dimmed-overlay');
+        });
+
+        const dialogRef = this.dialog.open(AlertDialogComponent, {
+          width: '640px',
+          panelClass: 'custom-dialog-container',
+          autoFocus: false,
+          disableClose: true,
+          data: {
+            title: 'Please contact the Information Technology Department',
+            message: `For change the status of this item, please contact our Information Technology Department for assistance.`,
+            confirm: false
+          }
+        });
+
+        dialogRef.afterClosed().subscribe(() => {
+          const container = document.querySelector('.cdk-overlay-container');
+          container?.classList.remove('dimmed-overlay');
+        });
+      } else {
+        this.toggleChange.emit({ row, checked: targetStatus, checkbox });
+      }
+      console.log('Toggle change', { row, checked: targetStatus, checkbox });
+    }
+  }
+
+  getCellType(row: any, column: any): string {
+    const rowType = row?.[`${column.field}Type`];
+    if (rowType) return rowType;
+    return column.type || 'text';
+  }
+
+  // textlin on click
+  onClickView(event: Event, row: any, column?: any): void {
+    event.stopPropagation();
+    console.log('View', row);
+    this.viewRowClicked.emit(row);
+    this.columnRowClicked.emit({ column, row });
+  }
+
+  onClickEditDialog(event: Event, row: any): void {
+    event.stopPropagation();
+    this.editClicked.emit(row);
+  }
+
+  onClickEditCard(event: Event, row: any): void {
+    event.stopPropagation();
+    this.editCardClicked.emit(row);
+  }
+
+  onClickEdit(event: Event, row: any, index: number): void {
+    event.stopPropagation();
+    this.editingRowId = index;
+    this.editRow = true;
+
+    this.editingBuffer = typeof structuredClone === 'function'
+      ? structuredClone(row)
+      : JSON.parse(JSON.stringify(row));
+
+    if (this.highlightRowIndex && this.ishighlightRow) {
+      this.ishighlightRow = false
+      this.fieldErrors = false
+    }
+
+    this.cdr.detectChanges();
+  }
+
+  onClickSave(event: Event, row: any): void {
+    event.stopPropagation();
+
+    const doEmitAttempt = () => {
+      // รวมร่าง draft = row ปัจจุบัน + editingBuffer (ค่าที่ผู้ใช้แก้)
+      const draft = this.editingBuffer ? { ...row, ...this.editingBuffer } : { ...row };
+      this.inlineSaveAttempt.emit({ draft, original: row });
+      // ❗ ไม่ปิดโหมดแก้ไข ปล่อยให้ parent ตัดสินใจ
+    };
+
+    if (this.useExternalInlineSaveFlow) {
+      doEmitAttempt();
+      return;
+    }
+
+    if (this.isConfirmDialogSaveRequired) {
+      Promise.resolve().then(() => {
+        const container = document.querySelector('.cdk-overlay-container');
+        container?.classList.add('dimmed-overlay');
+      });
+
+      const dialogRef = this.dialog.open(AlertDialogComponent, {
+        width: '496px',
+        panelClass: 'custom-dialog-container',
+        autoFocus: false,
+        disableClose: true,
+        data: {
+          title: 'Confirmation',
+          message: 'Are you sure you want to save this data?',
+          confirm: true
+        }
+      });
+
+      dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+        const container = document.querySelector('.cdk-overlay-container');
+        container?.classList.remove('dimmed-overlay');
+
+        if (confirmed) {
+          if (this.editingBuffer) Object.assign(row, this.editingBuffer);
+
+          this.editingRowId = null;
+          this.editRow = false;
+          this.editingBuffer = null;
+          this.cdr.detectChanges();
+
+          this.editClicked.emit(row);
+        }
+      });
+    } else {
+      if (this.editingBuffer) Object.assign(row, this.editingBuffer);
+
+      this.editingRowId = null;
+      this.editRow = false;
+      this.editingBuffer = null;
+      this.cdr.detectChanges();
+
+      this.editClicked.emit(row);
+      console.log('SaveInline', row);
+    }
+  }
+
+  onClickCancel(event: Event, row: any): void {
+    event.stopPropagation();
+    this.editingRowId = null;
+    // this.editedValue = '';
+    this.editRow = false;
+    this.editingBuffer = null;
+    this.inlineCancel.emit(row);
+    console.log('Cancelled edit');
+  }
+
+  onClickDelete(event: Event, row: any): void {
+    event.stopPropagation();
+    console.log('Delete', row);
+    this.deleteRowClicked.emit(row);
   }
 
   // TrackBy Functions for Performance
   trackByColumn: TrackByFunction<Column> = (index, column) => column.field;
-  trackByRow: TrackByFunction<any> = (index, row) => row.id || index;
+  trackByRow: TrackByFunction<any> = (index, row) => row._tempId ?? row.id ?? index;
   trackByOption: TrackByFunction<string> = (index, option) => option;
+
+  startInlineCreate(defaults: any = {}, position: 'top' | 'bottom' = 'top') {
+    const newRow = { _tempId: `__new__${Date.now()}`, _isNew: true, ...defaults };
+    const snapshot = this.rowsValue as any[];
+
+    // if (position === 'bottom') {
+    //   snapshot.push(newRow);
+    //   requestAnimationFrame(() => {
+    //     this.tableWrapperRef?.nativeElement?.scrollTo({
+    //       top: this.tableWrapperRef.nativeElement.scrollHeight,
+    //       behavior: 'smooth'
+    //     });
+    //   });
+    // } else {
+    //   snapshot.unshift(newRow);
+    // }
+
+    this.editingRowId = newRow._tempId;
+    this.editRow = true;
+    this.cdr.detectChanges();
+  }
+
+  saveInlineCreate(row: any) {
+    if (!this.validateFooter()) {
+      this.cdr.detectChanges();
+      return; // ไม่ emit ออกไป
+    }
+
+    let payload: any;
+
+    if (this.isReasonSave) {
+      const reason = (row?.reasonText ?? '').trim();
+      payload = {
+        reasonText: reason,
+        isActive: true,
+      };
+    } else {
+      payload = { ...row };
+      if (!this.isZeroOneStatus) {
+        payload.status = payload.activeStatus ? 1 : 2;
+      } else {
+        payload.status = payload.activeStatus ? 1 : 0;
+      }
+    }
+
+    delete payload._tempId;
+    delete payload._isNew;
+    this.createInlineSave.emit(payload);
+  }
+
+  cancelInlineCreate(row?: any) {
+    if (row?._isNew) {
+      const idx = this.rowsValue.findIndex(r => r === row);
+      if (idx >= 0) {
+        this.rowsValue.splice(idx, 1);
+      }
+    }
+    this.editingRowId = null;
+    this.editRow = false;
+    this.createInlineCancel.emit();
+    this.footerErrors = {};
+    this.cdr.detectChanges();
+
+    if (this.highlightRowIndex && this.ishighlightRow) {
+      this.ishighlightRow = false
+    }
+  }
+
+  onNumberKeydown(e: KeyboardEvent, field: string) {
+    if (field !== 'sort' && field !== 'scoringMethod') return;
+    const blocked = ['e', 'E', '+', '-', '.'];
+    if (blocked.includes(e.key)) e.preventDefault();
+  }
+
+  onNumberTyping(e: Event, field: string) {
+    if (field !== 'sort' && field !== 'scoringMethod') return;
+    const el = e.target as HTMLInputElement;
+    const onlyDigits = el.value.replace(/[^\d]/g, '');
+    if (onlyDigits !== el.value) el.value = onlyDigits;
+    this.footerRow[field] = onlyDigits === '' ? undefined : Number(onlyDigits);
+  }
+
+  onNumberBlur(e: Event, field: string) {
+    if (field !== 'sort' && field !== 'scoringMethod') return;
+    const el = e.target as HTMLInputElement;
+    const n = Number(el.value || 0);
+    if (!Number.isFinite(n) || n < 1) {
+      el.value = '1';
+      this.footerRow[field] = 1;
+    }
+  }
+
+  onFooterInputChange() {
+    if (Object.keys(this.footerErrors).length) {
+      this.validateFooter(); // re-validate
+      this.cdr.detectChanges();
+    }
+  }
+
+  private validateFooter(): boolean {
+    const err: Record<string, boolean> = {};
+    for (const f of this.requiredFooterFields || []) {
+      const v = this.footerRow?.[f];
+
+      if (this.hasLockedPrefix(f)) {
+        const suffix = this.extractLockedSuffix(String(v ?? ''));
+        if (suffix === '') err[f] = true;
+        continue;
+      }
+
+      if (f === 'score') {
+        const n = Number(v);
+        if (!Number.isFinite(n) || n < 0 || n > this.scoreMax) err[f] = true;
+        continue;
+      }
+
+      if (f === 'sort' || f === 'scoringMethod') {
+        const n = Number(v);
+        if (!Number.isFinite(n) || n < 1) err[f] = true;
+      } else if (typeof v === 'string') {
+        if (!v || v.trim() === '') err[f] = true;
+      } else if (v === undefined || v === null) {
+        err[f] = true;
+      }
+    }
+    this.footerErrors = err;
+    return Object.keys(err).length === 0;
+  }
+
+  onFooterInput(field: string, e: Event) {
+    if (field === 'sort' || field === 'scoringMethod') {
+      this.onNumberTyping(e, field);
+    } else if (field === 'score') {
+      const el = e.target as HTMLInputElement;
+      const sanitized = this.sanitizeDecimalNonNegative(el.value);
+      if (sanitized !== el.value) el.value = sanitized;
+
+      let n = sanitized === '' ? undefined : Number(sanitized);
+      if (n !== undefined) {
+        if (n < 0) { n = 0; el.value = '0'; }
+        if (n > this.scoreMax) { n = this.scoreMax; el.value = String(this.scoreMax); }
+      }
+      this.footerRow[field] = n;
+    }
+    if (this.isRequired(field)) this.validateFooterField(field);
+    this.cdr.detectChanges();
+  }
+
+  onFooterKeydown(field: string, e: KeyboardEvent) {
+    if (field === 'sort' || field === 'scoringMethod') {
+      const blocked = ['e', 'E', '+', '-', '.'];
+      if (blocked.includes(e.key)) e.preventDefault();
+    } else if (field === 'score') {
+      const blocked = ['e', 'E', '+', '-']; // อนุญาต '.'
+      if (blocked.includes(e.key)) e.preventDefault();
+    }
+  }
+
+  onFooterBlur(field: string, e: Event) {
+    if (field === 'sort' || field === 'scoringMethod') {
+      this.onNumberBlur(e, field);
+    } else if (field === 'score') {
+      const el = e.target as HTMLInputElement;
+      let n = Number(el.value);
+      if (!Number.isFinite(n)) n = 0;
+      if (n < 0) n = 0;
+      if (n > this.scoreMax) n = this.scoreMax;
+      el.value = String(n);
+      this.footerRow[field] = n;
+    }
+    if (this.isRequired(field)) this.validateFooterField(field);
+    this.cdr.detectChanges();
+  }
+
+  private isRequired(field: string): boolean {
+    return (this.requiredFooterFields || []).includes(field);
+  }
+
+  private validateFooterField(field: string): void {
+    const v = this.footerRow?.[field];
+    const next = { ...this.footerErrors };
+    delete next[field];
+
+    if (this.hasLockedPrefix(field)) {
+      const suffix = this.extractLockedSuffix(String(v ?? ''));
+      if (suffix === '') next[field] = true;
+    } else if (field === 'score') {
+      const n = Number(v);
+      if (!Number.isFinite(n) || n < 0 || n > this.scoreMax) next[field] = true;
+    } else if (field === 'sort' || field === 'scoringMethod') {
+      const n = Number(v);
+      if (!Number.isFinite(n) || n < 1) next[field] = true;
+    } else {
+      if (typeof v === 'string') {
+        if (!v || v.trim() === '') next[field] = true;
+      } else if (v === undefined || v === null) {
+        next[field] = true;
+      }
+    }
+    this.footerErrors = next;
+  }
+
+  onDrop(event: CdkDragDrop<any[]>) {
+    if (!this.draggableRows || this.isDisabledForm) return;
+
+    // 1) rearrange อาร์เรย์ที่โชว์ในตาราง
+    moveItemInArray(this.rowsValue, event.previousIndex, event.currentIndex);
+
+    // 2) อัปเดตฟิลด์ sort ให้ทุกแถวเท่ากับตำแหน่งใหม่ (i+1)
+    this.rowsValue.forEach((r, i) => (r.sort = i + 1));
+
+    // 3) แจ้ง parent เพื่อ sync แหล่งข้อมูลจริง (FormArray)
+    this.rowsReordered.emit({
+      previousIndex: event.previousIndex,
+      currentIndex: event.currentIndex,
+    });
+
+    this.cdr.detectChanges();
+  }
+
+  onInlineNumberKeydown(field: string, e: KeyboardEvent) {
+    if (field === 'sort' || field === 'scoringMethod') {
+      const blocked = ['e', 'E', '+', '-', '.'];
+      if (blocked.includes(e.key)) e.preventDefault();
+    } else if (field === 'score') {
+      const blocked = ['e', 'E', '+', '-']; // อนุญาต '.'
+      if (blocked.includes(e.key)) e.preventDefault();
+
+      if (e.key === 'Enter') {
+        // อ่านค่าปัจจุบันจาก input แล้ว emit commit
+        const el = e.target as HTMLInputElement;
+        const sanitized = this.sanitizeDecimalNonNegative(el.value);
+        const n = sanitized === '' ? undefined : Number(sanitized);
+        const rowIndex = this.getEditingRowIndex();
+        if (rowIndex >= 0) {
+          this.inlineFieldCommit.emit({ rowIndex, field, value: n });
+        }
+        // กัน Enter ไป trigger อื่น
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }
+  }
+
+  onInlineNumberInput(field: string, e: Event) {
+    if (field === 'sort' || field === 'scoringMethod') {
+      const el = e.target as HTMLInputElement;
+      const onlyDigits = el.value.replace(/[^\d]/g, '');
+      if (onlyDigits !== el.value) el.value = onlyDigits;
+      if (this.editingBuffer) {
+        this.editingBuffer[field] = onlyDigits === '' ? undefined : Number(onlyDigits);
+      }
+    } else if (field === 'score') {
+      const el = e.target as HTMLInputElement;
+      const sanitized = this.sanitizeDecimalNonNegative(el.value);
+      if (sanitized !== el.value) el.value = sanitized;
+
+      let n = sanitized === '' ? undefined : Number(sanitized);
+      if (n !== undefined) {
+        if (n < 0) n = 0;
+        if (n > this.scoreMax) { n = this.scoreMax; el.value = String(this.scoreMax); }
+      }
+      if (this.editingBuffer) this.editingBuffer[field] = n;
+    }
+  }
+
+  onInlineNumberBlur(field: string, e: Event) {
+    if (field === 'sort' || field === 'scoringMethod') {
+      const el = e.target as HTMLInputElement;
+      let n = Number(el.value || 0);
+      if (!Number.isFinite(n) || n < 1) n = 1;
+      el.value = String(n);
+      if (this.editingBuffer) this.editingBuffer[field] = n;
+    } else if (field === 'score') {
+      const el = e.target as HTMLInputElement;
+      let n = Number(el.value);
+      if (!Number.isFinite(n)) n = 0;
+      if (n < 0) n = 0;
+      if (n > this.scoreMax) n = this.scoreMax;
+      el.value = String(n);
+      if (this.editingBuffer) this.editingBuffer[field] = n;
+
+      // แจ้ง parent ว่ามีการ commit ค่านี้แล้ว (ให้ parent ไปแมพ dropdown ต่อ)
+      const rowIndex = this.getEditingRowIndex();
+      if (rowIndex >= 0) {
+        this.inlineFieldCommit.emit({ rowIndex, field, value: n });
+      }
+    }
+  }
+
+  // onInlineKeydown(e: KeyboardEvent, row: any) {
+  //   if (e.key === 'Enter') { e.preventDefault(); this.saveInlineCreate(row); }
+  //   if (e.key === 'Escape') { e.preventDefault(); this.cancelInlineCreate(row); }
+  // }
+
+  getRowTextlinkActions(column: Column, row: any): string[] {
+    // เคารพ row override เสมอ แม้จะเป็น []
+    if (column?.useRowTextlinkActions) {
+      return Array.isArray(row?.textlinkActions) ? row.textlinkActions : [];
+    }
+    // ถ้าไม่ได้ใช้ row override ค่อย fallback ไปที่คอลัมน์
+    return Array.isArray(column?.textlinkActions) ? column.textlinkActions! : [];
+  }
+
+  private sanitizeDecimalNonNegative(value: string): string {
+    // เอาเฉพาะตัวเลขและจุดทศนิยม
+    let s = value.replace(/[^0-9.]/g, '');
+    // ให้มีจุดได้แค่ 1 จุด
+    const parts = s.split('.');
+    if (parts.length > 2) s = parts[0] + '.' + parts.slice(1).join('');
+    return s;
+  }
+
+  private hasLockedPrefix(field: string): boolean {
+    return !!this.lockedPrefixConfig && this.lockedPrefixConfig.field === field;
+  }
+
+  extractLockedSuffix(value: string): string {
+    const prefix = this.lockedPrefixConfig?.prefix ?? '';
+    if (typeof value !== 'string') return '';
+    const s = value.startsWith(prefix) ? value.slice(prefix.length) : value;
+    return s.trim();
+  }
+
+  onLockedPrefixEditingInput(field: string, e: Event) {
+    const el = e.target as HTMLInputElement;
+    const sanitized = this.sanitizeDecimalNonNegative(el.value);
+    if (sanitized !== el.value) el.value = sanitized;
+    const prefix = this.lockedPrefixConfig?.prefix ?? '';
+    if (this.editingBuffer) this.editingBuffer[field] = prefix + sanitized;
+  }
+
+  onLockedPrefixFooterInput(field: string, e: Event) {
+    const el = e.target as HTMLInputElement;
+    const sanitized = this.sanitizeDecimalNonNegative(el.value);
+    if (sanitized !== el.value) el.value = sanitized;
+    const prefix = this.lockedPrefixConfig?.prefix ?? '';
+    this.footerRow[field] = prefix + sanitized;
+  }
+
+  // ---------- Helpers: merge row ----------
+  isMergeField(field: string): boolean {
+    return Array.isArray(this.mergeByFields) && this.mergeByFields.includes(field);
+  }
+
+  /** เรนเดอร์เซลล์เฉพาะ "หัวกลุ่ม" (แถวแรกของค่าซ้ำ) */
+  shouldRenderMergedCell(rowIndex: number, field: string): boolean {
+    if (!this.isMergeField(field)) return true;
+    if (rowIndex === 0) return true;
+    const curr = this.getCellValue(this.rowsValue[rowIndex], field);
+    const prev = this.getCellValue(this.rowsValue[rowIndex - 1], field);
+    return curr !== prev;
+  }
+
+  /** คำนวณ rowspan ของหัวกลุ่ม */
+  getRowspan(rowIndex: number, field: string): number {
+    if (!this.isMergeField(field)) return 1;
+    const rows = this.rowsValue;
+    if (rowIndex >= rows.length) return 1;
+    const val = this.getCellValue(rows[rowIndex], field);
+    let span = 1;
+    for (let i = rowIndex + 1; i < rows.length; i++) {
+      if (this.getCellValue(rows[i], field) === val) span++;
+      else break;
+    }
+    return span;
+  }
+
+  public commitInlineSave() {
+    // เอา buffer -> ผสานเข้า row แล้วปิดโหมดแก้ไข เหมือนเดิม
+    if (this.editingBuffer && this.editingRowId != null) {
+      const index = typeof this.editingRowId === 'number'
+        ? this.editingRowId - 1
+        : this.rowsValue.findIndex(r => r._tempId === this.editingRowId);
+
+      const row = index >= 0 ? this.rowsValue[index] : null;
+      if (row) Object.assign(row, this.editingBuffer);
+    }
+    this.editingRowId = null;
+    this.editRow = false;
+    const committed = this.editingBuffer;
+    this.editingBuffer = null;
+    this.cdr.detectChanges();
+
+    // คงปล่อยอีเวนต์เดิมไว้เพื่อความเข้ากันได้
+    if (committed) this.editClicked.emit(committed);
+  }
+
+  public openInlineEditAt(rowIndex: number): void {
+    if (rowIndex == null || rowIndex < 0 || rowIndex >= this.rowsValue.length) return;
+
+    const row = this.rowsValue[rowIndex];
+
+    // สำหรับแถวปกติ component ใช้ index+1 เป็น editingRowId
+    this.editingRowId = (row?._tempId ?? (rowIndex + 1));
+    this.editRow = true;
+
+    // clone ค่าปัจจุบันเข้าบัฟเฟอร์แก้ไข
+    this.editingBuffer = typeof structuredClone === 'function'
+      ? structuredClone(row)
+      : JSON.parse(JSON.stringify(row));
+
+    this.cdr.detectChanges();
+  }
+
+  /** true เมื่อเซลล์ merge (เริ่มที่ rowIndex) ครอบคลุมจนถึงแถวสุดท้ายของตาราง */
+  isEndOfMergedGroup(rowIndex: number, field: string): boolean {
+    const span = this.getRowspan(rowIndex, field);
+    return rowIndex + span >= this.rowsValue.length;
+  }
+
+  // --- helper หาตำแหน่งแถวที่กำลังแก้ไขอยู่ ---
+  private getEditingRowIndex(): number {
+    // ถ้า editingRowId เป็นหมายเลข index จะเป็นลำดับแถว (เริ่ม 1) -> ต้องลบ 1
+    if (typeof this.editingRowId === 'number') return this.editingRowId - 1;
+    // ถ้าเป็น tempId: หา index จาก _tempId
+    const idx = this.rowsValue.findIndex(r => r._tempId === this.editingRowId);
+    return idx >= 0 ? idx : -1;
+  }
 }

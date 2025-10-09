@@ -1,0 +1,76 @@
+.dot {
+    height: 16px;
+    width: 17px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+}
+
+.line {
+    height: 2px;
+    width: 16px;
+    display: block;
+    background: #333;
+    margin-right: 8px;
+}
+
+.dash::after {
+    content: "";
+    position: relative;
+    left: 0;
+    right: 0;
+    top: 50%;
+    border-bottom: 1px dashed black;
+    transform: translateY(-50%);
+    pointer-events: none;
+    width: 16px;
+    display: block;
+    background: transparent;
+    margin-right: 8px;
+}
+
+.dot-blue {
+    background-color: #0085FF;
+}
+
+.dot-orange {
+    background-color: #FF9F2D;
+}
+
+.dot-green {
+    background-color: #00AA00;
+}
+
+.dot-red {
+    background-color: #9e4e4f;
+}
+
+.dash::after {
+    content: "";
+    position: relative;
+    left: 0;
+    right: 0;
+    top: 50%;
+    border-bottom: 1px dashed black;
+    transform: translateY(-50%);
+    pointer-events: none;
+    width: 16px;
+    display: block;
+    margin-right: 8px;
+}
+
+.dash-blue::after {
+    border-color: #0085FF;
+}
+
+.dash-orange::after {
+    border-color: #FF9F2D;
+}
+
+.dash-green::after {
+    border-color: #00AA00;
+}
+
+.dash-red::after {
+    border-color: #9e4e4f;
+}

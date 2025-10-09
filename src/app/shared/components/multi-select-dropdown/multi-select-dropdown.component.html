@@ -1,91 +1,63 @@
- <div class="relative w-full">
-      <!-- Label -->
-      <label *ngIf="label" class="block text-sm font-medium text-gray-700 mb-1">
-        {{ label }}
-        <span *ngIf="required" class="text-red-500 ml-1">*</span>
-      </label>
-      
-      <!-- Main Input Container -->
-      <div 
-        class="relative min-h-[42px] w-full border border-gray-300 rounded-lg bg-white focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200"
-        [class.ring-2]="isOpen"
-        [class.ring-blue-500]="isOpen"
-        [class.border-blue-500]="isOpen"
-      >
-        <!-- Selected Tags and Search Input -->
-        <div class="flex flex-wrap items-center gap-1 p-2">
-          <!-- Selected Option Tags -->
-          <div 
-            *ngFor="let option of selectedOptions; trackBy: trackByValue"
-            class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200"
-          >
-            <span>{{ option.label }}</span>
-            <button
-              type="button"
-              (click)="removeOption(option); $event.stopPropagation()"
-              class="ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full hover:bg-blue-200 focus:outline-none focus:bg-blue-200 transition-colors"
-              [attr.aria-label]="'Remove ' + option.label"
-            >
-               <app-icon name="xmark" [size]="14"></app-icon>
-            </button>
-          </div>
-          
-          <!-- Search Input -->
-          <input
-            #searchInput
-            [(ngModel)]="searchTerm"
-            (input)="onSearchChange()"
-            (focus)="openDropdown()"
-            (keydown)="onKeyDown($event)"
-            type="text"
-            class="flex-1 min-w-[120px] border-none outline-none bg-transparent text-sm placeholder-gray-400"
-            [placeholder]="getPlaceholder()"
-            autocomplete="off"
-          />
-        </div>
-        
-        <!-- Dropdown Arrow -->
-        <button
-          type="button"
-          (click)="toggleDropdown()"
-          class="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 focus:outline-none"
-        >
-           <app-icon [name]="isOpen ? 'chevron-left' : 'chevron-down'" [size]="14"></app-icon>
+<div class="tw-relative tw-w-full">
+  <!-- Label -->
+  <label *ngIf="label" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
+    <strong>{{ label }}</strong>
+    <span *ngIf="required" class="tw-text-red-500 tw-ml-1">*</span>
+  </label>
+
+  <!-- Main Input Container -->
+  <div #triggerEl
+    [ngClass]="inTable ? 'tw-py-1 tw-px-3 tw-rounded-md':'tw-py-2 tw-px-4 tw-min-h-[42px] tw-rounded-lg'"
+    class="tw-flex tw-justify-between tw-items-center tw-relative tw-w-full tw-border tw-border-gray-300 tw-bg-white tw-focus-within:tw-ring-2 tw-focus-within:tw-ring-[#D97706] tw-focus-within:tw-border-[#D97706] tw-transition-all tw-duration-200"
+    [class.tw-ring-2]="isOpen" [class.tw-ring-[#D97706]]="isOpen" [class.tw-border-[#D97706]]="isOpen">
+    <!-- Selected Tags and Search Input -->
+    <div class="tw-flex tw-flex-wrap tw-items-center tw-gap-1" style="width: inherit;">
+
+      <!-- Selected Option Tags -->
+      <div *ngFor="let option of selectedOptions; trackBy: trackByValue"
+        class="tw-inline-flex tw-items-center tw-px-2 tw-py-1 tw-rounded-md tw-text-sm tw-font-medium tw-bg-[#FFFBF3] tw-text-[#D97706] tw-border tw-border-[#FDECCE]">
+        <span>{{ option.label }}</span>
+        <button *ngIf="!isHistory" type="button" (click)="removeOption(option); $event.stopPropagation()"
+          class="tw-ml-1 tw-inline-flex tw-items-center tw-justify-center tw-w-4 tw-h-4 tw-rounded-full hover:tw-bg-[#FFFBF3] focus:tw-outline-none focus:tw-bg-[#FFFBF3] tw-transition-colors"
+          [attr.aria-label]="'Remove ' + option.label">
+          <app-icon name="xmark" [size]="14"></app-icon>
         </button>
       </div>
-      
-      <!-- Dropdown Options -->
-      <div 
-        *ngIf="isOpen"
-        class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto"
-        role="listbox"
-        [attr.aria-multiselectable]="true"
-      >
-        <!-- No Results Message -->
-        <div 
-          *ngIf="filteredOptions.length === 0" 
-          class="px-3 py-2 text-sm text-gray-500 text-center"
-        >
-          {{ searchTerm ? 'No options found' : 'No options available' }}
-        </div>
-        
-        <!-- Options List -->
-        <div 
-          *ngFor="let option of filteredOptions; let i = index; trackBy: trackByValue"
-          (click)="toggleOption(option)"
-          class="flex items-center px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 transition-colors duration-150"
-          [class.bg-blue-50]="isSelected(option)"
-          [class.bg-gray-100]="highlightedIndex === i"
-          role="option"
-          [attr.aria-selected]="isSelected(option)"
-        >
-          <!-- Checkbox -->
-          <div class="flex items-center justify-center w-4 h-4 mr-3 border border-gray-300 rounded">
-              <app-icon [name]="isSelected(option) ? 'check' : 'heart'" [size]="14"></app-icon>
-          </div>
-          
-          <!-- Option Label -->
-          <span [innerHTML]="highlightSearchTerm(option.label)"></span>
-        </div>
-      </div>
+
+      <!-- Search Input -->
+      <input *ngIf="!isHistory" #searchInput [(ngModel)]="searchTerm" (input)="onSearchChange()" (focus)="openDropdown()"
+        (keydown)="onKeyDown($event)" type="text"
+        [ngClass]="inTable? 'placeholder:tw-text-[#9ca3af]':''"
+        class="tw-flex-1 tw-min-w-[120px] tw-border-none tw-outline-none tw-bg-transparent tw-text-sm tw-placeholder-black"
+        [placeholder]="getPlaceholder()" autocomplete="off" />
     </div>
+
+    <!-- Dropdown Arrow -->
+    <button type="button" (click)="toggleDropdown()" class="tw-text-black">
+      <app-icon [name]="'chevron-down'" [size]="14"></app-icon>
+    </button>
+  </div>
+
+  <!-- Dropdown Options -->
+  <div *ngIf="isOpen"
+    class="tw-fixed tw-z-100 tw-bg-white tw-border tw-border-gray-300 tw-rounded-lg tw-shadow-lg tw-max-h-60 tw-overflow-auto tw-z-10"
+    [ngStyle]="dropdownStyles" role="listbox" [attr.aria-multiselectable]="true">
+    <!-- No Results Message -->
+    <div *ngIf="filteredOptions.length === 0" class="tw-px-3 tw-py-2 tw-text-sm tw-text-gray-500 tw-text-center">
+      {{ searchTerm ? 'No options found' : 'No options available' }}
+    </div>
+
+    <!-- Options List -->
+    <ng-container *ngFor="let option of filteredOptions; let i = index; trackBy: trackByValue">
+      <div *ngIf="!isSelected(option)" (click)="toggleOption(option)"
+        class="tw-flex tw-items-center tw-px-3 tw-py-2 tw-text-sm tw-cursor-pointer hover:tw-bg-gray-100 tw-transition-colors tw-duration-150"
+        [class.tw-bg-[#ebd7c1]]="isSelected(option)" [class.tw-bg-gray-100]="highlightedIndex === i" role="option"
+        [class.tw-pointer-events-none]="isHistory"
+        [attr.aria-selected]="isSelected(option)">
+
+        <!-- Option Label -->
+        <span [innerHTML]="highlightSearchTerm(option.label)"></span>
+      </div>
+    </ng-container>
+  </div>
+</div>

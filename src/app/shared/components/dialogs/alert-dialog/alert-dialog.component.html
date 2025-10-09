@@ -4,7 +4,7 @@
     {{ data.title || 'Alert' }}
   </div>
 
-  <div class="tw-border-t tw-border-gray-300"></div>
+  <div class="tw-border-t tw-border-[#E3E3E3]"></div>
 
   <ng-container *ngIf="data.selectedRows?.length">
 
@@ -58,7 +58,7 @@
     <p>{{ data.message }}</p>
     <ng-container *ngIf="!data.confirm">
       <p class="tw-mt-2"><span class="tw-font-semibold">Tel:</span> 02-705-5900</p>
-      <p><span class="tw-font-semibold">Email:</span> account&#64;pinepacific.com</p>
+      <p><span class="tw-font-semibold">Email:</span> it&#64;pinepacific.com</p>
     </ng-container>
   </div>
 
@@ -67,14 +67,15 @@
   <div class="tw-text-right tw-px-6 tw-pt-3 tw-pb-3">
     <button
       *ngIf="data.confirm"
-      class="tw-bg-gray-200 hover:tw-bg-gray-300 tw-text-black tw-font-medium tw-py-1.5 tw-px-5 tw-rounded tw-mr-2"
+      class="tw-bg-gray-200 hover:tw-bg-gray-300 tw-text-black tw-font-medium tw-py-1.5 tw-px-5 tw-rounded-lg tw-mr-2"
       (click)="onCancel()"
     >
       Cancel
     </button>
     <button
-      class="tw-bg-[#930000] hover:tw-bg-[#7a0000] tw-text-white tw-font-medium tw-py-1.5 tw-px-6 tw-rounded"
+      class="tw-text-white tw-font-medium tw-py-1.5 tw-px-6 tw-rounded-lg"
       (click)="onConfirm()"
+      [ngClass]="data.confirm ? 'tw-bg-[#00AA55] hover:tw-bg-[#02934a]' : 'tw-bg-[#930000] hover:tw-bg-[#7a0000]'"
     >
       {{ data.confirm ? 'Confirm' : 'OK' }}
     </button>

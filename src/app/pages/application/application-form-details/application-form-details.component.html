@@ -1,0 +1,1101 @@
+<!-- sentinel สำหรับ back-to-top -->
+<div
+  id="page-top-sentinel"
+  class="tw-h-px tw-w-px tw-opacity-0"
+  aria-hidden="true"
+></div>
+
+<div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
+  <app-header-content
+    [headerName]="'Job Application Form Details'"
+    [headerType]="''"
+  ></app-header-content>
+</div>
+
+<app-filter
+  [actionButtons]="filterButtons"
+  [disabledKeys]="disabledKeys"
+  [filterDynamicButton]="true"
+  (buttonClicked)="onFilterButtonClick($event)"
+></app-filter>
+
+<app-loading></app-loading>
+
+<!-- ================= MAIN GRID ================= -->
+<div class="tw-grid tw-grid-cols-4 tw-gap-6 tw-px-6 tw-py-6 tw-bg-white">
+  <!-- =============== LEFT (3 cols) =============== -->
+  <div class="tw-col-span-3 tw-space-y-6">
+    <!-- ===== Personal ===== -->
+    <section
+      class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]"
+    >
+      <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer"
+        (click)="isPersonalOpen = !isPersonalOpen"
+      >
+        <label class="tw-text-lg tw-font-bold">Personal</label>
+        <app-icon name="chevron-down" [size]="14"
+          [extraClass]="isPersonalOpen ? 'tw-rotate-180 tw-transition-transform' : 'tw-transition-transform'"></app-icon>
+      </div>
+
+      <hr
+        class="tw--mx-6 tw-mt-4 tw-border-t tw-border-gray-200 tw-transition-opacity tw-duration-150"
+        [class.tw-border-transparent]="!isPersonalOpen"
+        [class.tw-opacity-0]="!isPersonalOpen"
+      />
+
+      <ng-container *ngIf="isPersonalOpen">
+        <div class="tw-grid md:tw-grid-cols-2 tw-gap-4 tw-my-4 tw-pb-6">
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">Full Name (English)</div>
+            <input
+              class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+              [value]="vm.fullNameEn"
+              disabled
+            />
+          </div>
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">Full Name (Thai)</div>
+            <input
+              class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+              [value]="vm.fullNameTh"
+              disabled
+            />
+          </div>
+
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">Email</div>
+            <input
+              class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+              [value]="vm.email"
+              disabled
+            />
+          </div>
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">Phone Number</div>
+            <input
+              class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+              [value]="vm.phone"
+              disabled
+            />
+          </div>
+
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">
+              Date of Birth (Day/Month/Year)
+            </div>
+            <input
+              class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+              [value]="vm.birthDate"
+              disabled
+            />
+          </div>
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">Age</div>
+            <input
+              class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+              [value]="vm.ageText"
+              disabled
+            />
+          </div>
+
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">Citizen ID Card</div>
+            <input
+              class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+              [value]="vm.citizenId"
+              disabled
+            />
+          </div>
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">Nationality</div>
+            <input
+              class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+              [value]="vm.nationality"
+              disabled
+            />
+          </div>
+
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">Ethnicity</div>
+            <input
+              class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+              [value]="vm.ethnicity"
+              disabled
+            />
+          </div>
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">Religion</div>
+            <input
+              class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+              [value]="vm.religion"
+              disabled
+            />
+          </div>
+
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">Weight</div>
+            <input
+              class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+              [value]="vm.weightText"
+              disabled
+            />
+          </div>
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">Height</div>
+            <input
+              class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+              [value]="vm.heightText"
+              disabled
+            />
+          </div>
+
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">Blood Group</div>
+            <input
+              class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+              [value]="vm.bloodGroup"
+              disabled
+            />
+          </div>
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">BMI</div>
+            <input
+              class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+              [value]="vm.bmiText"
+              disabled
+            />
+          </div>
+
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">Marital Status</div>
+            <input
+              class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+              [value]="vm.maritalStatus"
+              disabled
+            />
+          </div>
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">Children</div>
+            <input
+              class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+              [value]="vm.childrenText"
+              disabled
+            />
+          </div>
+        </div>
+      </ng-container>
+    </section>
+
+    <!-- ===== Social ===== -->
+    <section
+      class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]"
+    >
+      <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer"
+        (click)="isSocialOpen = !isSocialOpen"
+      >
+        <label class="tw-text-lg tw-font-bold">Social</label>
+        <app-icon name="chevron-down" [size]="14"
+          [extraClass]="isSocialOpen ? 'tw-rotate-180 tw-transition-transform' : 'tw-transition-transform'"></app-icon>
+      </div>
+
+      <hr
+        class="tw--mx-6 tw-mt-4 tw-border-t tw-border-gray-200 tw-transition-opacity tw-duration-150"
+        [class.tw-border-transparent]="!isSocialOpen"
+        [class.tw-opacity-0]="!isSocialOpen"
+      />
+
+      <ng-container *ngIf="isSocialOpen">
+        <div class="tw-grid md:tw-grid-cols-2 tw-gap-4 tw-my-4 tw-pb-6">
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">Facebook</div>
+            <input
+              class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+              [value]="vm.facebook"
+              disabled
+            />
+          </div>
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">LinkedIn</div>
+            <input
+              class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+              [value]="vm.linkedin"
+              disabled
+            />
+          </div>
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">Instagram</div>
+            <input
+              class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+              [value]="vm.instagram"
+              disabled
+            />
+          </div>
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">x / Twitter</div>
+            <input
+              class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+              [value]="vm.twitter"
+              disabled
+            />
+          </div>
+        </div>
+      </ng-container>
+
+
+    </section>
+
+    <!-- ===== Address ===== -->
+    <section
+      class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]"
+    >
+      <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer"
+        (click)="isAddressOpen = !isAddressOpen"
+      >
+        <label class="tw-text-lg tw-font-bold">Address</label>
+        <app-icon name="chevron-down" [size]="14"
+          [extraClass]="isAddressOpen ? 'tw-rotate-180 tw-transition-transform' : 'tw-transition-transform'"></app-icon>
+      </div>
+
+      <hr
+        class="tw--mx-6 tw-mt-4 tw-border-t tw-border-gray-200 tw-transition-opacity tw-duration-150"
+        [class.tw-border-transparent]="!isAddressOpen"
+        [class.tw-opacity-0]="!isAddressOpen"
+      />
+
+      <ng-container *ngIf="isAddressOpen">
+        <div class="tw-space-y-4 tw-my-4 tw-pb-6">
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">Current Address</div>
+            <textarea
+              class="tw-w-full tw-text-[14px] tw-h-24 tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+              [value]="vm.currentAddress"
+              disabled
+            ></textarea>
+          </div>
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">Permanent Address</div>
+            <textarea
+              class="tw-w-full tw-text-[14px] tw-h-24 tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+              [value]="vm.permanentAddress"
+              disabled
+            ></textarea>
+          </div>
+        </div>
+      </ng-container>
+
+
+    </section>
+
+    <!-- ===== Family Relationship (Table) ===== -->
+    <section
+      class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]"
+    >
+      <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer"
+        (click)="isFamilyOpen = !isFamilyOpen"
+      >
+        <label class="tw-text-lg tw-font-bold">Family Relationship</label>
+        <app-icon name="chevron-down" [size]="14"
+          [extraClass]="isFamilyOpen ? 'tw-rotate-180 tw-transition-transform' : 'tw-transition-transform'"></app-icon>
+      </div>
+
+      <hr
+        class="tw--mx-6 tw-mt-4 tw-border-t tw-border-gray-200 tw-transition-opacity tw-duration-150"
+        [class.tw-border-transparent]="!isFamilyOpen"
+        [class.tw-opacity-0]="!isFamilyOpen"
+      />
+
+      <ng-container *ngIf="isFamilyOpen">
+        <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
+          <app-tables
+            [rows]="familyRows"
+            [columns]="familyColumns"
+            [sortStates]="familySort"
+            [withinCard]="true"
+            [splitRows]="true"
+            [showCheckbox]="false"
+            [enableRowClick]="false"
+            [isAddMode]="false"
+            [tableFixed]="true"
+          >
+          </app-tables>
+        </div>
+      </ng-container>
+
+
+    </section>
+
+    <!-- ===== Education (Table) ===== -->
+    <section
+      class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]"
+    >
+      <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer"
+        (click)="isEducationOpen = !isEducationOpen"
+      >
+        <label class="tw-text-lg tw-font-bold">Education</label>
+        <app-icon name="chevron-down" [size]="14"
+          [extraClass]="isEducationOpen ? 'tw-rotate-180 tw-transition-transform' : 'tw-transition-transform'"></app-icon>
+      </div>
+
+      <hr
+        class="tw--mx-6 tw-mt-4 tw-border-t tw-border-gray-200 tw-transition-opacity tw-duration-150"
+        [class.tw-border-transparent]="!isEducationOpen"
+        [class.tw-opacity-0]="!isEducationOpen"
+      />
+
+      <ng-container *ngIf="isEducationOpen">
+        <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
+          <app-tables
+            [rows]="educationRows"
+            [columns]="educationColumns"
+            [sortStates]="educationSort"
+            [withinCard]="true"
+            [splitRows]="true"
+            [showCheckbox]="false"
+            [enableRowClick]="false"
+            [isAddMode]="false"
+            [tableFixed]="true"
+          >
+          </app-tables>
+        </div>
+      </ng-container>
+
+
+    </section>
+
+    <!-- ===== GPA Analysis ===== -->
+    <section class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+      <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer" (click)="isGpaOpen = !isGpaOpen">
+        <label class="tw-text-lg tw-font-bold">GPA Analysis</label>
+        <div class="tw-flex tw-items-center tw-gap-3">
+          <button
+            type="button"
+            class="tw-text-[13px] tw-px-3 tw-py-1.5 tw-rounded-md
+                  tw-bg-[#55AAFF] tw-text-white tw-shadow-sm
+                  tw-transition tw-duration-150 tw-ease-in-out
+                  hover:tw-bg-[#3C9DFF] active:tw-bg-[#2F89F6]
+                  focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-offset-2
+                  focus:tw-ring-[#A6D2FF] focus:tw-ring-offset-white
+                  disabled:tw-opacity-60 disabled:tw-cursor-not-allowed"
+            (click)="$event.stopPropagation(); onGpaEvaluate()"
+          >
+            Evaluation
+          </button>
+          <app-icon name="chevron-down" [size]="14"
+            [extraClass]="isGpaOpen ? 'tw-rotate-180 tw-transition-transform' : 'tw-transition-transform'"></app-icon>
+        </div>
+      </div>
+
+      <hr
+        class="tw--mx-6 tw-mt-4 tw-border-t tw-border-gray-200 tw-transition-opacity tw-duration-150"
+        [class.tw-border-transparent]="!isGpaOpen"
+        [class.tw-opacity-0]="!isGpaOpen"
+      />
+
+      <ng-container *ngIf="isGpaOpen">
+        <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
+          <app-tables
+            [rows]="gpaRows"
+            [columns]="gpaColumns"
+            [withinCard]="true"
+            [splitRows]="false"
+            [showCheckbox]="false"
+            [enableRowClick]="false"
+            [tableFixed]="true">
+          </app-tables>
+        </div>
+      </ng-container>
+    </section>
+
+    <!-- ===== Work History ===== -->
+    <section class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+      <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer" (click)="isWorkOpen = !isWorkOpen">
+        <label class="tw-text-lg tw-font-bold">
+          Work History <span class="tw-text-sm tw-font-normal">(Number of Work History : {{workRows.length}})</span>
+        </label>
+        <app-icon name="chevron-down" [size]="14"
+          [extraClass]="isWorkOpen ? 'tw-rotate-180 tw-transition-transform' : 'tw-transition-transform'"></app-icon>
+      </div>
+
+      <hr
+        class="tw--mx-6 tw-mt-4 tw-border-t tw-border-gray-200 tw-transition-opacity tw-duration-150"
+        [class.tw-border-transparent]="!isWorkOpen"
+        [class.tw-opacity-0]="!isWorkOpen"
+      />
+
+      <ng-container *ngIf="isWorkOpen">
+        <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
+          <app-tables
+            [rows]="workRows"
+            [columns]="workColumns"
+            [sortStates]="workSort"
+            [withinCard]="true"
+            [splitRows]="true"
+            [showCheckbox]="false"
+            [enableRowClick]="false"
+            [tableFixed]="true">
+          </app-tables>
+        </div>
+      </ng-container>
+    </section>
+
+    <!-- ===== Language Skills ===== -->
+    <section class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+      <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer" (click)="isLangOpen = !isLangOpen">
+        <label class="tw-text-lg tw-font-bold">Language Skills</label>
+        <app-icon name="chevron-down" [size]="14"
+          [extraClass]="isLangOpen ? 'tw-rotate-180 tw-transition-transform' : 'tw-transition-transform'"></app-icon>
+      </div>
+
+      <hr
+        class="tw--mx-6 tw-mt-4 tw-border-t tw-border-gray-200 tw-transition-opacity tw-duration-150"
+        [class.tw-border-transparent]="!isLangOpen"
+        [class.tw-opacity-0]="!isLangOpen"
+      />
+
+      <ng-container *ngIf="isLangOpen">
+        <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
+          <app-tables
+            [rows]="langRows"
+            [columns]="langColumns"
+            [withinCard]="true"
+            [splitRows]="true"
+            [showCheckbox]="false"
+            [enableRowClick]="false"
+            [tableFixed]="true">
+          </app-tables>
+        </div>
+      </ng-container>
+    </section>
+
+    <!-- ===== Computer Skills ===== -->
+    <section class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+      <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer" (click)="isCompOpen = !isCompOpen">
+        <label class="tw-text-lg tw-font-bold">Computer Skills</label>
+        <app-icon name="chevron-down" [size]="14"
+          [extraClass]="isCompOpen ? 'tw-rotate-180 tw-transition-transform' : 'tw-transition-transform'"></app-icon>
+      </div>
+
+      <hr
+        class="tw--mx-6 tw-mt-4 tw-border-t tw-border-gray-200 tw-transition-opacity tw-duration-150"
+        [class.tw-border-transparent]="!isCompOpen"
+        [class.tw-opacity-0]="!isCompOpen"
+      />
+
+      <ng-container *ngIf="isCompOpen">
+        <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
+          <app-tables
+            [rows]="compRows"
+            [columns]="compColumns"
+            [withinCard]="true"
+            [splitRows]="true"
+            [showCheckbox]="false"
+            [enableRowClick]="false"
+            [tableFixed]="true">
+          </app-tables>
+        </div>
+      </ng-container>
+    </section>
+
+    <!-- ===== Bonus Skills ===== -->
+    <section class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+      <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer" (click)="isBonusOpen = !isBonusOpen">
+        <label class="tw-text-lg tw-font-bold">Bonus Skills</label>
+        <app-icon name="chevron-down" [size]="14"
+          [extraClass]="isBonusOpen ? 'tw-rotate-180 tw-transition-transform' : 'tw-transition-transform'"></app-icon>
+      </div>
+
+      <hr
+        class="tw--mx-6 tw-mt-4 tw-border-t tw-border-gray-200 tw-transition-opacity tw-duration-150"
+        [class.tw-border-transparent]="!isBonusOpen"
+        [class.tw-opacity-0]="!isBonusOpen"
+      />
+
+      <ng-container *ngIf="isBonusOpen">
+        <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
+          <app-tables
+            [rows]="bonusRows"
+            [columns]="compColumns"
+            [withinCard]="true"
+            [splitRows]="true"
+            [showCheckbox]="false"
+            [enableRowClick]="false"
+            [tableFixed]="true">
+          </app-tables>
+        </div>
+      </ng-container>
+    </section>
+
+    <!-- ===== Special Skills ===== -->
+    <section class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+      <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer" (click)="isSpecialOpen = !isSpecialOpen">
+        <label class="tw-text-lg tw-font-bold">Special Skills</label>
+        <app-icon name="chevron-down" [size]="14"
+          [extraClass]="isSpecialOpen ? 'tw-rotate-180 tw-transition-transform' : 'tw-transition-transform'"></app-icon>
+      </div>
+
+      <hr
+        class="tw--mx-6 tw-mt-4 tw-border-t tw-border-gray-200 tw-transition-opacity tw-duration-150"
+        [class.tw-border-transparent]="!isSpecialOpen"
+        [class.tw-opacity-0]="!isSpecialOpen"
+      />
+
+      <ng-container *ngIf="isSpecialOpen">
+        <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
+          <app-tables
+            [rows]="specialRows"
+            [columns]="compColumns"
+            [withinCard]="true"
+            [splitRows]="true"
+            [showCheckbox]="false"
+            [enableRowClick]="false"
+            [tableFixed]="true">
+          </app-tables>
+        </div>
+      </ng-container>
+    </section>
+
+    <!-- ===== Training and Certificate ===== -->
+    <section class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+      <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer" (click)="isTrainOpen = !isTrainOpen">
+        <label class="tw-text-lg tw-font-bold">Training and Certificate</label>
+        <app-icon name="chevron-down" [size]="14"
+          [extraClass]="isTrainOpen ? 'tw-rotate-180 tw-transition-transform' : 'tw-transition-transform'"></app-icon>
+      </div>
+
+      <hr
+        class="tw--mx-6 tw-mt-4 tw-border-t tw-border-gray-200 tw-transition-opacity tw-duration-150"
+        [class.tw-border-transparent]="!isTrainOpen"
+        [class.tw-opacity-0]="!isTrainOpen"
+      />
+
+      <ng-container *ngIf="isTrainOpen">
+        <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
+          <app-tables
+            [rows]="trainRows"
+            [columns]="trainColumns"
+            [withinCard]="true"
+            [splitRows]="true"
+            [showCheckbox]="false"
+            [enableRowClick]="false"
+            [tableFixed]="true">
+          </app-tables>
+        </div>
+      </ng-container>
+    </section>
+
+    <!-- ===== Driving Skill ===== -->
+    <section class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+      <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer"
+        (click)="isDrivingOpen = !isDrivingOpen"
+      >
+        <label class="tw-text-lg tw-font-bold">Driving Skill</label>
+        <app-icon name="chevron-down" [size]="14"
+          [extraClass]="isDrivingOpen ? 'tw-rotate-180 tw-transition-transform' : 'tw-transition-transform'"></app-icon>
+      </div>
+
+      <hr
+        class="tw--mx-6 tw-mt-4 tw-border-t tw-border-gray-200 tw-transition-opacity tw-duration-150"
+        [class.tw-border-transparent]="!isDrivingOpen"
+        [class.tw-opacity-0]="!isDrivingOpen"
+      />
+
+      <ng-container *ngIf="isDrivingOpen">
+        <div class="tw-grid md:tw-grid-cols-2 tw-gap-4 tw-my-4 tw-pb-6">
+          <!-- Car Skill -->
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">Car Skill</div>
+            <div class="tw-relative">
+              <input class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+                    [value]="driving.carSkill" disabled />
+              <app-icon
+                [name]="toBool(driving.carSkill) ? 'check-circle' : 'xmark-circle'"
+                [size]="18"
+                class="tw-absolute tw-right-2 tw-top-[50%] -tw-translate-y-1/2"
+                [ngClass]="toBool(driving.carSkill) ? 'tw-text-green-600' : 'tw-text-red-600'">
+              </app-icon>
+            </div>
+          </div>
+
+          <!-- Car License -->
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">Car License</div>
+            <div class="tw-relative">
+              <input class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+                    [value]="driving.carLicense" disabled />
+              <app-icon
+                [name]="toBool(driving.carLicense) ? 'check-circle' : 'xmark-circle'"
+                [size]="18"
+                class="tw-absolute tw-right-2 tw-top-[50%] -tw-translate-y-1/2"
+                [ngClass]="toBool(driving.carLicense) ? 'tw-text-green-600' : 'tw-text-red-600'">
+              </app-icon>
+            </div>
+          </div>
+
+          <!-- Motorcycle Skill -->
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">Motorcycle Skill</div>
+            <div class="tw-relative">
+              <input class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+                    [value]="driving.motorcycleSkill" disabled />
+              <app-icon
+                [name]="toBool(driving.motorcycleSkill) ? 'check-circle' : 'xmark-circle'"
+                [size]="18"
+                class="tw-absolute tw-right-2 tw-top-[50%] -tw-translate-y-1/2"
+                [ngClass]="toBool(driving.motorcycleSkill) ? 'tw-text-green-600' : 'tw-text-red-600'">
+              </app-icon>
+            </div>
+          </div>
+
+          <!-- Motorcycle License -->
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">Motorcycle License</div>
+            <div class="tw-relative">
+              <input class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+                    [value]="driving.motorcycleLicense" disabled />
+              <app-icon
+                [name]="toBool(driving.motorcycleLicense) ? 'check-circle' : 'xmark-circle'"
+                [size]="18"
+                class="tw-absolute tw-right-2 tw-top-[50%] -tw-translate-y-1/2"
+                [ngClass]="toBool(driving.motorcycleLicense) ? 'tw-text-green-600' : 'tw-text-red-600'">
+              </app-icon>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+    </section>
+
+    <!-- ===== General Information ===== -->
+    <section class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+      <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer"
+          (click)="isGeneralOpen = !isGeneralOpen">
+        <label class="tw-text-lg tw-font-bold">General Information</label>
+        <app-icon name="chevron-down" [size]="14"
+          [extraClass]="isGeneralOpen ? 'tw-rotate-180 tw-transition-transform' : 'tw-transition-transform'"></app-icon>
+      </div>
+
+      <hr class="tw--mx-6 tw-mt-4 tw-border-t tw-border-gray-200 tw-transition-opacity tw-duration-150"
+          [class.tw-border-transparent]="!isGeneralOpen"
+          [class.tw-opacity-0]="!isGeneralOpen" />
+
+      <ng-container *ngIf="isGeneralOpen">
+        <div class="tw-grid md:tw-grid-cols-2 tw-gap-4 tw-my-4 tw-pb-6">
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">Working in another province (regular basis)</div>
+            <input class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+                  [value]="general.workRegular" disabled />
+          </div>
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">Working in another province (occasionally)</div>
+            <input class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+                  [value]="general.workOccasional" disabled />
+          </div>
+
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">Smoking habits</div>
+            <input class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+                  [value]="general.smoking" disabled />
+          </div>
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">Alcohol Consumption</div>
+            <input class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+                  [value]="general.alcohol" disabled />
+          </div>
+
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">Do you have any chronic diseases?</div>
+            <input class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+                  [value]="general.disease" disabled />
+          </div>
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">Have you ever been sued or convicted?</div>
+            <input class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+                  [value]="general.legalCase" disabled />
+          </div>
+        </div>
+      </ng-container>
+    </section>
+
+    <!-- ===== Feedback on Myself ===== -->
+    <section class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+      <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer"
+          (click)="isFeedbackOpen = !isFeedbackOpen">
+        <label class="tw-text-lg tw-font-bold">Feedback on Myself</label>
+        <app-icon name="chevron-down" [size]="14"
+          [extraClass]="isFeedbackOpen ? 'tw-rotate-180 tw-transition-transform' : 'tw-transition-transform'"></app-icon>
+      </div>
+
+      <hr class="tw--mx-6 tw-mt-4 tw-border-t tw-border-gray-200 tw-transition-opacity tw-duration-150"
+          [class.tw-border-transparent]="!isFeedbackOpen"
+          [class.tw-opacity-0]="!isFeedbackOpen" />
+
+      <ng-container *ngIf="isFeedbackOpen">
+        <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
+          <app-tables
+            [rows]="feedbackRows"
+            [columns]="feedbackColumns"
+            [withinCard]="true"
+            [splitRows]="true"
+            [showCheckbox]="false"
+            [enableRowClick]="false"
+            [tableFixed]="true">
+          </app-tables>
+        </div>
+      </ng-container>
+    </section>
+
+    <!-- ===== Work Motivation ===== -->
+    <section class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+      <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer"
+          (click)="isMotivationOpen = !isMotivationOpen">
+        <label class="tw-text-lg tw-font-bold">Work Motivation</label>
+        <app-icon name="chevron-down" [size]="14"
+          [extraClass]="isMotivationOpen ? 'tw-rotate-180 tw-transition-transform' : 'tw-transition-transform'"></app-icon>
+      </div>
+
+      <hr class="tw--mx-6 tw-mt-4 tw-border-t tw-border-gray-200 tw-transition-opacity tw-duration-150"
+          [class.tw-border-transparent]="!isMotivationOpen"
+          [class.tw-opacity-0]="!isMotivationOpen" />
+
+      <ng-container *ngIf="isMotivationOpen">
+        <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
+          <app-tables
+            [rows]="motivationRows"
+            [columns]="motivationColumns"
+            [withinCard]="true"
+            [splitRows]="true"
+            [showCheckbox]="false"
+            [enableRowClick]="false"
+            [tableFixed]="true">
+          </app-tables>
+        </div>
+
+        <!-- summary cards -->
+        <div class="tw-grid md:tw-grid-cols-2 tw-gap-6 tw-mt-6 tw-mb-6 tw-pb-6">
+          <div class="tw-rounded-xl tw-border tw-border-gray-200 tw-p-5 tw-shadow-sm">
+            <div class="tw-text-[13px] tw-mb-1 tw-font-medium">
+              Intrinsic Motivation
+            </div>
+            <div class="tw-text-[28px] tw-font-bold">{{ motivationStat.intrinsic | number:'1.2-2' }}%</div>
+          </div>
+          <div class="tw-rounded-xl tw-border tw-border-gray-200 tw-p-5 tw-shadow-sm">
+            <div class="tw-text-[13px] tw-mb-1 tw-font-medium">
+              Extrinsic Motivation
+            </div>
+            <div class="tw-text-[28px] tw-font-bold">{{ motivationStat.extrinsic | number:'1.2-2' }}%</div>
+          </div>
+        </div>
+      </ng-container>
+    </section>
+
+    <!-- ===== Comments ===== -->
+    <section id="comments-section" class="tw-w-full">
+      <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+        <div class="tw-flex tw-items-center tw-justify-between">
+          <label class="tw-text-lg tw-font-bold">Comments</label>
+        </div>
+
+        <hr class="tw--mx-6 tw-mt-4" />
+
+        <!-- Loading -->
+        <div *ngIf="commentsLoading" class="tw-text-sm tw-text-gray-500 tw-py-4">Loading comments...</div>
+
+        <!-- List -->
+        <div class="tw-space-y-6 tw-py-4" *ngIf="!commentsLoading && totalComments > 0">
+          <ng-container
+            *ngTemplateOutlet="renderCommentList; context: { $implicit: commentsTree, depth: 0 }">
+          </ng-container>
+
+          <ng-template #renderCommentList let-list let-depth="depth">
+            <ng-container *ngFor="let c of list; trackBy: trackByCommentId">
+              <div class="tw-flex tw-gap-3"
+                   [ngClass]="depth > 0 ? 'tw-border-l-2 tw-border-blue-100 tw-pl-3' : ''">
+                <div class="tw-pt-1">
+                  <app-icon name="comment-text" [size]="22"
+                            [ngClass]="depth > 0 ? 'tw-text-gray-400' : 'tw-text-indigo-400'"></app-icon>
+                </div>
+
+                <div class="tw-flex-1">
+                  <!-- Header -->
+                  <div class="tw-text-[14px] tw-font-semibold"
+                       [ngClass]="depth > 0 ? 'tw-text-[#0A57C3]' : 'tw-text-indigo-700'">
+                    {{ c.author }}
+                  </div>
+                  <div class="tw-text-[12px] tw-text-gray-500 tw-flex tw-items-center tw-gap-2">
+                    <span>{{ c.createdAt | date:'d MMMM yyyy h:mm a' }}</span>
+                    <span *ngIf="c.commentType"
+                          class="tw-inline-flex tw-items-center tw-px-2 tw-py-[2px] tw-rounded-md tw-text-[11px] tw-font-medium"
+                          [ngClass]="depth > 0 ? 'tw-bg-gray-100 tw-text-gray-700' : 'tw-bg-indigo-50 tw-text-indigo-700'">
+                      {{ c.commentType }}
+                    </span>
+                    <span *ngIf="isEditedAtSecond(c.createdAt, c.updatedAt)">· edited</span>
+                  </div>
+
+                  <!-- Content / Edit Mode -->
+                  <div *ngIf="!c.ui.isEditing; else editBox" class="tw-mt-2">
+                    <div class="tw-rounded-xl tw-px-4 tw-py-3 tw-text-[14px]"
+                         [ngClass]="depth > 0 ? 'tw-bg-gray-100' : 'tw-bg-indigo-50 tw-border tw-border-indigo-100'">
+                      {{ c.text }}
+                    </div>
+                  </div>
+
+                  <ng-template #editBox>
+                    <div class="tw-mt-2">
+                      <textarea
+                        class="tw-w-full tw-text-[14px] tw-min-h-[88px] tw-rounded-lg tw-border tw-border-gray-300 tw-px-3 tw-py-2 focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-blue-300"
+                        [value]="c.ui.editText"
+                        (input)="c.ui.editText = $any($event.target).value"
+                      ></textarea>
+                      <div class="tw-flex tw-items-center tw-gap-3 tw-mt-2">
+                        <button type="button"
+                                class="tw-bg-[#0A57C3] tw-text-white tw-text-[14px] tw-px-3 tw-py-1 tw-rounded-lg hover:tw-brightness-110"
+                                (click)="onSaveEdit(c)">
+                          Save
+                        </button>
+                        <button type="button"
+                                class="tw-text-gray-600 tw-text-[14px] hover:tw-text-gray-800"
+                                (click)="c.ui.isEditing = false">
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </ng-template>
+
+                  <!-- Actions -->
+                  <div class="tw-flex tw-items-center tw-gap-3 tw-pt-2">
+                    <!-- Reply (only depth 0) -->
+                    <button type="button"
+                            class="tw-text-[13px] tw-inline-flex tw-items-center tw-gap-1 tw-rounded-md tw-border tw-border-indigo-200 tw-bg-indigo-50 tw-text-indigo-700 hover:tw-bg-indigo-100 hover:tw-border-indigo-300 focus:tw-ring-2 focus:tw-ring-indigo-200 focus:tw-outline-none tw-px-2 tw-py-0.5"
+                            *ngIf="depth === 0"
+                            (click)="toggleReply(c)">
+                      Reply
+                    </button>
+
+                    <!-- Edit -->
+                    <button type="button"
+                            class="tw-text-[13px] tw-text-[#D97706] hover:tw-text-[#a7671e] tw-inline-flex tw-items-center tw-gap-1"
+                            *ngIf="c.isEdited"
+                            (click)="startEdit(c)">
+                      <app-icon name="pen-to-square" [size]="20"></app-icon><span>Edit</span>
+                    </button>
+
+                    <!-- Delete -->
+                    <button type="button"
+                            class="tw-text-[13px] tw-text-[#F00] hover:tw-text-[#AA0000] tw-inline-flex tw-items-center tw-gap-1"
+                            *ngIf="c.canDelete"
+                            (click)="onDeleteComment(c)">
+                      <app-icon name="trash" [size]="20"></app-icon><span>Delete</span>
+                    </button>
+                  </div>
+
+                  <!-- Reply Box -->
+                  <div *ngIf="c.ui.isReplying" class="tw-mt-3">
+                    <textarea
+                      class="tw-w-full tw-text-[14px] tw-min-h-[88px] tw-rounded-lg tw-border tw-border-gray-300 tw-px-3 tw-py-2 focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-blue-300"
+                      placeholder="Write a reply..."
+                      [value]="c.ui.replyText"
+                      (input)="c.ui.replyText = $any($event.target).value"
+                    ></textarea>
+                    <div class="tw-flex tw-items-center tw-gap-3 tw-mt-2">
+                      <button type="button"
+                              class="tw-bg-indigo-600 tw-text-white tw-text-[14px] tw-px-3 tw-py-1 tw-rounded-lg hover:tw-bg-indigo-700 focus:tw-ring-2 focus:tw-ring-indigo-200"
+                              (click)="onSubmitReply(c)">
+                        Reply
+                      </button>
+                      <button type="button"
+                              class="tw-text-gray-600 tw-text-[14px] hover:tw-text-gray-800"
+                              (click)="c.ui.isReplying = false">
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Children -->
+                  <div class="tw-ml-10 tw-mt-4" *ngIf="c.replies?.length">
+                    <ng-container
+                      *ngTemplateOutlet="renderCommentList; context: { $implicit: c.replies, depth: depth + 1 }">
+                    </ng-container>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+          </ng-template>
+        </div>
+
+        <hr class="tw--mx-6" *ngIf="totalComments > 0" />
+
+        <!-- Composer -->
+        <div class="tw-py-4">
+          <div class="tw-text-[14px] tw-font-semibold tw-text-[#0A57C3]">
+            {{ currentUserName || 'You' }}
+          </div>
+          <div class="tw-mt-2">
+            <textarea
+              class="tw-w-full tw-text-[14px] tw-min-h-[96px] tw-rounded-lg tw-border tw-border-gray-300 tw-px-3 tw-py-2 focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-blue-300"
+              placeholder="Write a comment..."
+              [formControl]="commentCtrl"
+            ></textarea>
+          </div>
+          <div class="tw-flex tw-items-center tw-justify-end tw-gap-4 tw-mt-3">
+            <button type="button"
+                    class="tw-text-[15px] tw-text-gray-600 hover:tw-text-gray-800"
+                    (click)="commentCtrl.setValue('')">
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="tw-inline-flex tw-items-center tw-gap-2 tw-bg-[#0A57C3] tw-text-white tw-text-[15px] tw-px-4 tw-py-2 tw-rounded-lg hover:tw-brightness-110"
+              (click)="onSubmitNewComment()"
+            >
+              <app-icon name="comment-text" [size]="18" class="tw-shrink-0"></app-icon>
+              <span class="tw-leading-none">Comment</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- =============== RIGHT (1 col) =============== -->
+  <aside class="tw-col-span-1 tw-space-y-6">
+    <!-- Card: Application Screening -->
+    <button
+      type="button"
+      [disabled]="true"
+      class="tw-w-full tw-rounded-2xl tw-text-white tw-px-6 tw-py-6 tw-text-left tw-shadow-[0_8px_16px_rgba(0,0,0,0.25)] tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-brightness-110 hover:tw-shadow-[0_12px_20px_rgba(0,0,0,0.35)] focus:tw-ring-2 focus:tw-ring-white/30 tw-cursor-default tw-pointer-events-none"
+      [style.backgroundColor]="screeningCardBg"
+      (click)="onScreeningCardClick()"
+    >
+      <div class="tw-flex tw-items-center tw-gap-6">
+        <app-icon name="user" [size]="48" class="tw-opacity-90"></app-icon>
+        <div class="tw-flex-1">
+          <div class="tw-text-[14px] tw-opacity-90">
+            Application Screening<br />
+            by {{ screening.screenedBy || "—" }} on
+            {{ screening.screeningDate ? (screening.screeningDate | date:'dd MMMM yyyy') : "—" }}
+          </div>
+          <div class="tw-text-[24px] tw-font-bold leading-none">
+            {{ screening.status || "—" }}
+          </div>
+        </div>
+      </div>
+    </button>
+
+    <!-- Card: Test - EQ -->
+    <button
+      type="button"
+      class="tw-w-full tw-rounded-2xl tw-bg-[#55AAFF] tw-text-white tw-px-6 tw-py-6 tw-text-left
+            tw-shadow-[0_8px_16px_rgba(0,0,0,0.25)] tw-transition-all tw-duration-200 tw-ease-in-out
+            hover:tw-brightness-110 hover:tw-shadow-[0_12px_20px_rgba(0,0,0,0.35)]
+            focus:tw-ring-2 focus:tw-ring-white/30"
+      (click)="onEqTestClick()"
+    >
+      <div class="tw-flex tw-items-center tw-gap-6">
+        <app-icon name="clipboard" [size]="48" class="tw-opacity-90"></app-icon>
+        <div class="tw-flex-1">
+          <div class="tw-text-[24px] tw-font-bold leading-none">EQ Test</div>
+        </div>
+      </div>
+    </button>
+
+    <!-- Card: Test - Ethics -->
+    <button
+      type="button"
+      class="tw-w-full tw-rounded-2xl tw-bg-[#55AAFF] tw-text-white tw-px-6 tw-py-6 tw-text-left
+            tw-shadow-[0_8px_16px_rgba(0,0,0,0.25)] tw-transition-all tw-duration-200 tw-ease-in-out
+            hover:tw-brightness-110 hover:tw-shadow-[0_12px_20px_rgba(0,0,0,0.35)]
+            focus:tw-ring-2 focus:tw-ring-white/30"
+      (click)="onEthicsTestClick()"
+    >
+      <div class="tw-flex tw-items-center tw-gap-6">
+        <app-icon name="clipboard" [size]="48" class="tw-opacity-90"></app-icon>
+        <div class="tw-flex-1">
+          <div class="tw-text-[24px] tw-font-bold leading-none">Ethics Test</div>
+        </div>
+      </div>
+    </button>
+
+    <!-- Card: Emergency Contact Information -->
+    <section
+      class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-2xl
+            tw-shadow-[0_8px_16px_rgba(0,0,0,0.25)]"
+    >
+      <label class="tw-text-lg tw-font-bold">
+        Emergency Contact Information
+      </label>
+
+      <hr class="tw--mx-6 tw-mt-4 tw-border-t tw-border-gray-200" />
+
+      <div class="tw-space-y-4 tw-my-4 tw-pb-6">
+        <div>
+          <div class="tw-text-[13px] tw-font-medium">Contact Name</div>
+          <input
+            class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+            [value]="emergency.name"
+            disabled
+          />
+        </div>
+
+        <div>
+          <div class="tw-text-[13px] tw-font-medium">Relationship to Applicant</div>
+          <input
+            class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+            [value]="emergency.relationship"
+            disabled
+          />
+        </div>
+
+        <div>
+          <div class="tw-text-[13px] tw-font-medium">Phone</div>
+          <input
+            class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+            [value]="emergency.phone"
+            disabled
+          />
+        </div>
+
+        <div>
+          <div class="tw-text-[13px] tw-font-medium">Address</div>
+          <textarea
+            class="tw-w-full tw-text-[14px] tw-h-24 tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+            [value]="emergency.address"
+            disabled
+          ></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- Card: Comment (Purple) -->
+    <button
+      type="button"
+      class="tw-w-full tw-rounded-2xl tw-bg-[#5500FF] tw-text-white tw-px-6 tw-py-6 tw-text-left tw-shadow-[0_8px_16px_rgba(0,0,0,0.25)] tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-brightness-110 hover:tw-shadow-[0_12px_20px_rgba(0,0,0,0.35)] focus:tw-ring-2 focus:tw-ring-white/30"
+      (click)="onCommentClick()"
+    >
+      <div class="tw-flex tw-items-center tw-gap-6">
+        <app-icon
+          name="comment-text"
+          [size]="48"
+          class="tw-opacity-90"
+        ></app-icon>
+        <div class="tw-flex-1">
+          <div class="tw-text-[14px] tw-opacity-95">
+            {{ totalComments }}
+            {{ totalComments === 1 ? "comment" : "comments" }}
+          </div>
+          <div class="tw-text-[24px] tw-font-bold leading-none">
+            Comment
+          </div>
+        </div>
+      </div>
+    </button>
+
+  </aside>
+</div>
+
+<!-- Floating Back-to-Top -->
+<app-back-to-top
+  [sentinelSelector]="'#page-top-sentinel'"
+  [buttonClass]="'tw-fixed tw-bottom-6 tw-right-6 tw-rounded-full tw-h-14 tw-w-14 tw-flex tw-items-center tw-justify-center tw-shadow-xl bg-red-blood hover:bg-maroon-1 tw-text-white tw-z-[60]'"
+  [iconName]="'arrow-upward'"
+  [iconSize]="26">
+</app-back-to-top>

@@ -1,0 +1,62 @@
+<!-- captcha-dialog.component.html -->
+<div class="tw-text-black">
+  <!-- Header -->
+  <div class="tw-text-lg tw-font-semibold tw-px-6 tw-pt-4 tw-pb-3">
+    {{ data.title || 'Delete' }}
+  </div>
+  <div class="tw-border-t tw-border-[#E3E3E3]"></div>
+
+  <!-- Body -->
+  <div class="tw-text-base tw-text-gray-700 tw-px-6 tw-py-6 tw-space-y-4">
+    <p>{{ data.message || 'Are you sure you want to delete this item?' }}</p>
+
+    <div class="tw-flex tw-items-center tw-justify-center tw-gap-3">
+      <img [src]="imgSrc" alt="captcha"
+           class="tw-rounded-md tw-border tw-border-gray-200 tw-w-[240px] tw-h-[68px] tw-object-cover tw-bg-white" />
+
+      <!-- ปุ่มรีเฟรช -->
+      <button type="button"
+              class="tw-inline-flex tw-items-center tw-justify-center tw-rounded-md tw-w-9 tw-h-9 tw-bg-gray-100 hover:tw-bg-gray-200 tw-border tw-border-gray-300"
+              (click)="regenerate()" aria-label="Refresh captcha">
+        <app-icon name="refresh-circle-clockwise" [size]="18" extraClass="tw-text-[#4B5563]"></app-icon>
+        <!-- ถ้าไม่มีไอคอนชื่อ autorenew ให้เปลี่ยนเป็นชื่อที่มี เช่น arrows-rotate -->
+      </button>
+    </div>
+
+    <!-- แจ้งผู้ใช้ -->
+    <div class="tw-text-xs tw-text-gray-500">Matching is case-sensitive.</div>
+
+    <!-- ช่องกรอก -->
+    <div>
+      <input type="text"
+            class="tw-bg-gray-light-4 tw-border tw-border-[#ADB5BD] tw-rounded-[8px] tw-w-full tw-px-4 tw-py-2 tw-text-sm tw-text-[#495057] placeholder:tw-text-[#ADB5BD] focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-[#ADB5BD]"
+            placeholder="Type the word above"
+            [(ngModel)]="input"
+            autocomplete="off"
+            autocapitalize="off"
+            autocorrect="off"
+            spellcheck="false"
+            inputmode="text"
+            [attr.maxlength]="length"
+            (keyup.enter)="matched && confirm()"/>
+
+      <div *ngIf="input && !matched" class="tw-text-red-600 tw-text-sm tw-mt-1">
+        The code doesn’t match. Try again.
+      </div>
+    </div>
+  </div>
+
+  <div class="tw-border-t tw-border-gray-300"></div>
+
+  <!-- Footer -->
+  <div class="tw-text-right tw-px-6 tw-pt-3 tw-pb-3 tw-space-x-2">
+    <button class="tw-bg-gray-200 hover:tw-bg-gray-300 tw-text-black tw-font-medium tw-py-1.5 tw-px-5 tw-rounded-lg"
+            (click)="cancel()">Cancel</button>
+
+    <button class="tw-font-medium tw-py-1.5 tw-px-6 tw-rounded-lg tw-text-white
+                   disabled:tw-bg-[#E5E7EB] disabled:tw-text-gray-400
+                   tw-bg-[#930000] hover:tw-bg-[#7a0000]"
+            [disabled]="!matched"
+            (click)="confirm()">Delete</button>
+  </div>
+</div>

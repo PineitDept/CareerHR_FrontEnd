@@ -1,0 +1,225 @@
+import {
+  Component, Input, Output, EventEmitter, ChangeDetectionStrategy, ChangeDetectorRef,
+  ViewChild, TemplateRef, ViewContainerRef, forwardRef,
+  HostListener
+} from '@angular/core';
+import { Overlay, OverlayRef, FlexibleConnectedPositionStrategy, ConnectedPosition, ScrollStrategyOptions } from '@angular/cdk/overlay';
+import { TemplatePortal } from '@angular/cdk/portal';
+import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+
+export type DropdownOption = string | { label: string; value: any; disabledSelected?: boolean };
+type Opt = string | { label: string; value: any };
+
+@Component({
+  selector: 'app-cdk-dropdown',
+  templateUrl: './cdk-dropdown.component.html',
+  styleUrls: ['./cdk-dropdown.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [{
+    provide: NG_VALUE_ACCESSOR,
+    useExisting: forwardRef(() => CdkDropdownComponent),
+    multi: true,
+  }],
+})
+export class CdkDropdownComponent implements ControlValueAccessor {
+  @Input() value: any;  
+  @Input() options: Opt[] = [];
+  @Input() placeholder = 'Select';
+  @Input() panelMaxHeight = 240;
+  @Input() label: string = '';
+  @Input() require: boolean = false;
+
+  // value: any = null;
+  @Input() disabledSelected = false;
+
+  @Output() valueChange = new EventEmitter<any>();
+
+  @ViewChild('panel', { static: true }) panelTpl!: TemplateRef<any>;
+
+  isOpen = false;
+  activeIndex = -1;
+
+  private overlayRef?: OverlayRef;
+  private positionStrategy!: FlexibleConnectedPositionStrategy;
+  private onChange: (_: any) => void = () => { };
+  private onTouched: () => void = () => { };
+
+  private readonly positions: ConnectedPosition[] = [
+    { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 6 },
+    { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -6 },
+  ];
+
+  private ro?: ResizeObserver;
+  private _triggerEl?: HTMLElement;
+  private _overlayEl?: HTMLElement;
+
+  @HostListener('window:resize')
+  onWindowResize() {
+    if (this.isOpen && this.overlayRef && this._triggerEl) {
+      const w = this._triggerEl.getBoundingClientRect().width;
+      this.overlayRef.updateSize({ width: w });
+      this.overlayRef.updatePosition();
+    }
+  }
+
+  // ✅ Detect outside click
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+    const isInsideTrigger = this._triggerEl?.contains(target);
+    const isInsideOverlay = this._overlayEl?.contains(target);
+    if (!isInsideTrigger && !isInsideOverlay) {
+      this.close();
+    }
+  }
+
+  constructor(
+    private overlay: Overlay,
+    private vcr: ViewContainerRef,
+    private cdr: ChangeDetectorRef,
+    private sso: ScrollStrategyOptions,
+  ) { }
+
+  // ------------ CVA methods ------------
+  writeValue(obj: any): void {
+    this.value = obj;
+    this.cdr.markForCheck();
+  }
+
+  registerOnChange(fn: any): void {
+    this.onChange = fn;
+  }
+
+  registerOnTouched(fn: any): void {
+    this.onTouched = fn;
+  }
+
+  setDisabledState(isDisabled: boolean): void {
+    this.disabledSelected = isDisabled;
+    this.cdr.markForCheck();
+  }
+  // -------------------------------------
+
+  get items() {
+    return (this.options ?? []).map(o => typeof o === 'string' ? { label: o, value: o } : o);
+  }
+
+  get display(): string {
+    const f = this.items.find(i => this.isEqual(i.value, this.value));
+    return f ? String(f.label) : this.placeholder;
+  }
+
+  open(triggerEl: HTMLElement) {
+    if (this.disabledSelected || this.isOpen) return;
+
+    const w = triggerEl.getBoundingClientRect().width;
+    this.positionStrategy = this.overlay.position()
+      .flexibleConnectedTo(triggerEl)
+      .withPositions(this.positions)
+      .withFlexibleDimensions(false)
+      .withPush(true)
+      .withViewportMargin(8);
+
+    this.overlayRef = this.overlay.create({
+      positionStrategy: this.positionStrategy,
+      hasBackdrop: false, // ❌ อย่าใช้ backdrop ถ้าอยู่ใน dialog เดี๋ยวซ้อนกัน
+      scrollStrategy: this.sso.reposition(),
+      panelClass: 'tw-block',
+    });
+
+    const portal = new TemplatePortal(this.panelTpl, this.vcr);
+    this.overlayRef.attach(portal);
+
+    const sync = () => {
+      const width = triggerEl.getBoundingClientRect().width;
+      this.overlayRef!.updateSize({ width });
+      this.overlayRef!.updatePosition();
+    };
+    sync();
+    Promise.resolve().then(sync);
+
+    this.ro = new ResizeObserver(sync);
+    this.ro.observe(triggerEl);
+
+    this.activeIndex = Math.max(0, this.items.findIndex(i => this.isEqual(i.value, this.value)));
+    this.isOpen = true;
+
+    // ✅ เก็บ element references สำหรับตรวจ outside click
+    this._triggerEl = triggerEl;
+    this._overlayEl = this.overlayRef.overlayElement;
+
+    this.cdr.markForCheck();
+  }
+
+  close() {
+    if (!this.isOpen) return;
+
+    this.ro?.disconnect();
+    this.ro = undefined;
+    this.overlayRef?.detach();
+    this.isOpen = false;
+    this.activeIndex = -1;
+    this._triggerEl = undefined;
+    this._overlayEl = undefined;
+
+    this.onTouched();
+    this.cdr.markForCheck();
+  }
+
+  selectAt(idx: number) {
+    const it = this.items[idx];
+    if (!it) return;
+
+    this.value = it.value;
+    this.onChange(this.value);
+    this.valueChange.emit(this.value);
+
+    this.close();
+  }
+
+  onTriggerKeydown(e: KeyboardEvent, triggerEl: HTMLElement) {
+    if (this.disabledSelected) return;
+
+    switch (e.key) {
+      case 'Enter':
+      case ' ':
+      case 'ArrowDown':
+        e.preventDefault();
+        this.open(triggerEl);
+        break;
+    }
+  }
+
+  onPanelKeydown(e: KeyboardEvent) {
+    if (!this.isOpen) return;
+    const max = this.items.length - 1;
+
+    if (e.key === 'Escape') { this.close(); return; }
+    if (e.key === 'Enter') { this.selectAt(this.activeIndex); return; }
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      this.activeIndex = Math.min(max, this.activeIndex + 1);
+      this.scrollActiveIntoView();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      this.activeIndex = Math.max(0, this.activeIndex - 1);
+      this.scrollActiveIntoView();
+    }
+  }
+
+  private scrollActiveIntoView() {
+    const panel = document.querySelector('.cdk-dropdown-panel .dd-menu') as HTMLElement | null;
+    const active = panel?.querySelector<HTMLElement>('[data-active="true"]');
+    if (panel && active) {
+      const aTop = active.offsetTop;
+      const aBot = aTop + active.offsetHeight;
+      if (aTop < panel.scrollTop) panel.scrollTop = aTop;
+      else if (aBot > panel.scrollTop + panel.clientHeight) panel.scrollTop = aBot - panel.clientHeight;
+    }
+  }
+
+  isEqual(a: any, b: any) {
+    return String(a) === String(b);
+  }
+}

@@ -49,12 +49,12 @@ export class LoginComponent {
 
     const dialogRef = this.dialog.open(AlertDialogComponent, {
       width: '640px',
-      panelClass: 'custom-dialog-container',
+      panelClass: ['custom-dialog-container', 'pp-rounded-dialog'],
       autoFocus: false,
       disableClose: true,
       data: {
-        title: 'Please contact the Accounting Department',
-        message: `For new registration or password reset, please contact our Accounting Department for assistance.`,
+        title: 'Please contact the Human Resources Department',
+        message: `For new registration or password reset, please contact our Human Resources Department for assistance.`,
         confirm: false
       }
     });
@@ -74,38 +74,39 @@ export class LoginComponent {
     const { employeeId, password, rememberMe } = this.loginForm.value;
 
     const payload: ILoginRequest = {
-      emp_id: employeeId,
-      password: password
+      username: employeeId,
+      password: password,
+      rememberMe: rememberMe
     };
-    this.router.navigate(['index']);
+    // this.router.navigate(['index']);
 
-    // this.loginService.login(payload).subscribe({
-    //   next: (res) => {
-    //     // console.log('Login success', res);
-    //     if (rememberMe) {
-    //       sessionStorage.setItem('remember_employee_id', employeeId);
-    //     } else {
-    //       sessionStorage.removeItem('remember_employee_id');
-    //     }
-    //     this.router.navigate(['index']);
-    //   },
-    //   error: (err) => {
-    //     // console.error('Login failed', err);
-    //     switch (err?.type) {
-    //       case 'Unauthorized':
-    //         this.notificationService.error('Employee ID or Password is invalid');
-    //         break;
+    this.loginService.login(payload).subscribe({
+      next: (res) => {
+        // console.log('Login success', res);
+        if (rememberMe) {
+          sessionStorage.setItem('remember_employee_id', employeeId);
+        } else {
+          sessionStorage.removeItem('remember_employee_id');
+        }
+        this.router.navigate(['index']);
+      },
+      error: (err) => {
+        // console.error('Login failed', err);
+        switch (err?.type) {
+          // case 'Unauthorized':
+          //   this.notificationService.error('Employee ID or Password is invalid');
+          //   break;
 
-    //       case 'NotFound':
-    //         this.notificationService.error('User not found, please sign up');
-    //         break;
+          // case 'NotFound':
+          //   this.notificationService.error('User not found, please sign up');
+          //   break;
 
-    //       default:
-    //         this.notificationService.error('Login failed, please try again');
-    //         break;
-    //     }
-    //   }
-    // });
+          default:
+            this.notificationService.error('Login failed, please try again');
+            break;
+        }
+      }
+    });
 
   }
 }

@@ -1,5 +1,5 @@
 <div #wrapperRef class="tw-flex tw-gap-4 tw-px-6 tw-py-6 tw-bg-white">
-  <ng-container *ngFor="let tab of tabs">
+  <ng-container *ngFor="let tab of tabsValue">
     <button
       (click)="selectTab(tab.key)"
       [ngClass]="[
@@ -16,11 +16,10 @@
         'transform-origin': 'top',
         'transition': 'all 250ms ease'
       }"
-      class="tw-flex tw-items-center tw-gap-2 tw-rounded-[8px] tw-border tw-border-[#DEE2E6] tw-text-lg"
+      class="tw-flex tw-flex-1 tw-items-center tw-gap-2 tw-rounded-[8px] tw-border tw-border-[#DEE2E6] tw-text-lg"
     >
       <app-icon name="star-fat" [size]="16" />
       {{ tab.label }} ({{ tab.count }})
     </button>
   </ng-container>
 </div>
-

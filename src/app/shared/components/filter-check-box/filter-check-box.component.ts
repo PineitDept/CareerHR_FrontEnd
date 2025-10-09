@@ -18,6 +18,8 @@ export interface FilterConfig {
   styleUrl: './filter-check-box.component.scss'
 })
 export class FilterCheckBoxComponent implements OnInit {
+  @Input() directCol: boolean = false
+  @Input() canScroll: boolean = false
   @Input() items: GroupedCheckboxOption[] = [];
   @Input() config: FilterConfig = {};
   @Output() selected = new EventEmitter<Record<string, string[]>>();
@@ -41,11 +43,22 @@ export class FilterCheckBoxComponent implements OnInit {
     }
   }
 
-  toggleGroup(groupKey: string) {
-    this.expandedGroups.has(groupKey)
-      ? this.expandedGroups.delete(groupKey)
-      : this.expandedGroups.add(groupKey);
+// toggleGroup(groupKey: string) {
+//   const shouldExpand = !this.expandedGroups.has(groupKey);
+
+//   this.expandedGroups.clear(); // ยุบทั้งหมดก่อน
+//   if (shouldExpand) {
+//     // ขยายทั้งหมด
+//     this.items.forEach(item => this.expandedGroups.add(item.groupKey));
+//   }
+// }
+toggleGroup(groupKey: string) {
+  if (this.expandedGroups.has(groupKey)) {
+    this.expandedGroups.delete(groupKey); // ถ้าเปิดอยู่ให้หุบ
+  } else {
+    this.expandedGroups.add(groupKey); // ถ้ายังไม่เปิดให้เปิด
   }
+}
 
   isExpanded(groupKey: string): boolean {
     return this.expandedGroups.has(groupKey);

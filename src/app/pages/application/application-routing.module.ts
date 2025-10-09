@@ -4,24 +4,42 @@ import { ApplicationComponent } from './application.component';
 import { ScreeningComponent } from './screening/screening.component';
 import { AllApplicationComponent } from './all-application/all-application.component';
 import { TrackingComponent } from './tracking/tracking.component';
+import { ApplicationFormComponent } from './application-form/application-form.component';
+import { ApplicationFormDetailsComponent } from './application-form-details/application-form-details.component';
 
 const routes: Routes = [
   {
     path: '',
     component: ApplicationComponent,
     children: [
-         {
+      {
         path: 'all-applications',
         component: AllApplicationComponent,
+      },
+      {
+        path: 'all-applications/application-form',
+        component: ApplicationFormComponent,
       },
       {
         path: 'screening',
        component: ScreeningComponent,
       },
       {
+        path: 'screening/application-form',
+        component: ApplicationFormComponent
+      },
+      {
+        path: 'screening/application-form/details',
+        component: ApplicationFormDetailsComponent
+      },
+      {
         path: 'tracking',
          component: TrackingComponent,
-      }
+      },
+      {
+        path: 'tracking/application-form',
+        component: ApplicationFormComponent
+      },
     ]
   }
 ];

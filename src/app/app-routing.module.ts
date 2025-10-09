@@ -21,22 +21,34 @@ const routes: Routes = [
       {
         path: 'login',
         component: LoginComponent,
-        // canActivate: [LoginGuard]
+        canActivate: [LoginGuard]
       },
     ]
   },
   {
     path: '',
     component: MainLayoutComponent,
-    // canActivate: [AuthGuard],
+    canActivate: [AuthGuard],
     children: [
       {
         path: 'index',
         component: IndexComponent
       },
-        {
+      {
         path: 'applications',
         loadChildren: () => import('./pages/application/application.module').then(m => m.ApplicationModule)
+      },
+      {
+        path: 'interview-scheduling',
+        loadChildren: () => import('./pages/interview-scheduling/interview-scheduling.module').then(m => m.InterviewSchedulingModule)
+      },
+      {
+        path: 'offer-employment',
+        loadChildren: () => import('./pages/offer-employment/offer-employment.module').then(m => m.OfferEmploymentModule)
+      },
+      {
+        path: 'admin-setting',
+        loadChildren: () => import('./pages/admin-setting/admin-setting.module').then(m => m.AdminSettingModule)
       },
     ]
   },

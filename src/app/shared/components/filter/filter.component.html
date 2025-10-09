@@ -1,27 +1,27 @@
-<div class="tw-flex tw-flex-wrap tw-justify-between tw-items-center tw-gap-4 tw-px-6 tw-py-6 tw-bg-white">
+<div class="tw-flex tw-flex-wrap tw-items-center tw-gap-4 tw-px-6 tw-py-6 tw-bg-white" [ngClass]="!filterDate ? ' tw-justify-end' : 'tw-justify-between'">
 
   <!-- Left Section -->
-  <div class="tw-flex tw-gap-4">
+  <div class="tw-flex tw-gap-4" [ngClass]="filterDate ? 'tw-block' : 'tw-hidden'">
 
     <!-- Back Button -->
     <button
-      *ngIf="filterDynamicButton"
+      *ngIf="filterDynamicButton && !GradeSelect"
       (click)="onBackClick()"
-      class="tw-flex tw-items-center tw-gap-2 tw-bg-transparent tw-text-[#212529] tw-rounded tw-px-2 tw-py-1 tw-text-base tw-font-semibold"
+      class="tw-flex tw-items-center tw-gap-2 tw-bg-transparent tw-text-[#212529] tw-rounded-lg tw-px-2 tw-py-1 tw-text-base tw-font-semibold"
     >
       <app-icon name="chevron-left" [size]="16" />
       <span>Back</span>
     </button>
 
     <!-- Year Dropdown -->
-    <div class="tw-relative dropdown" #yearDropdown *ngIf="!filterDynamicButton">
+    <div class="tw-relative dropdown tw-min-w-[135px]" #yearDropdown *ngIf="!filterDynamicButton && !disabledFilterDateRange && !GradeSelect">
       <button (click)="toggleDropdown('year')"
-        class="tw-bg-black tw-text-white tw-rounded tw-px-4 tw-py-2 tw-text-base tw-flex tw-items-center tw-gap-2">
+        class="tw-w-full tw-bg-black tw-text-white tw-rounded-lg tw-px-4 tw-py-2 tw-text-base tw-flex tw-items-center tw-justify-between tw-gap-2">
         {{ selectedYear }}
         <app-icon name="chevron-down" [size]="16" />
       </button>
       <ul *ngIf="isYearOpen"
-        class="tw-absolute tw-bg-white tw-shadow-md tw-rounded tw-mt-1 tw-z-20 tw-w-full tw-min-w-[100px]">
+        class="tw-absolute tw-bg-white tw-shadow-md tw-rounded-lg tw-mt-1 tw-z-20 tw-w-full tw-min-w-[100px]">
         <li *ngFor="let y of years" (click)="selectOption('year', y)"
           class="tw-px-4 tw-py-2 tw-text-base tw-cursor-pointer hover:tw-bg-gray-100">
           {{ y }}
@@ -30,14 +30,14 @@
     </div>
 
     <!-- Month Dropdown -->
-    <div class="tw-relative dropdown" #monthDropdown *ngIf="!filterDynamicButton">
+    <div class="tw-relative dropdow tw-min-w-[135px]" #monthDropdown *ngIf="!filterDynamicButton && !disabledFilterDateRange && !GradeSelect">
       <button (click)="toggleDropdown('month')"
-        class="tw-bg-black tw-text-white tw-rounded tw-px-4 tw-py-2 tw-text-base tw-flex tw-items-center tw-gap-2">
+        class="tw-w-full tw-bg-black tw-text-white tw-rounded-lg tw-px-4 tw-py-2 tw-text-base tw-flex tw-items-center tw-justify-between tw-gap-2">
         {{ selectedMonth }}
         <app-icon name="chevron-down" [size]="16" />
       </button>
       <ul *ngIf="isMonthOpen"
-        class="tw-absolute tw-bg-white tw-shadow-md tw-rounded tw-mt-1 tw-z-20 tw-w-full tw-min-w-[100px]">
+        class="tw-absolute tw-bg-white tw-shadow-md tw-rounded-lg tw-mt-1 tw-z-20 tw-w-full tw-min-w-[100px]">
         <li *ngFor="let m of months" (click)="selectOption('month', m)"
           class="tw-px-4 tw-py-2 tw-text-base tw-cursor-pointer hover:tw-bg-gray-100">
           {{ m }}
@@ -45,13 +45,38 @@
       </ul>
     </div>
 
+    <!-- Grade Dropdown -->
+    <div class="tw-relative dropdow tw-min-w-[135px]" #gradeDropdown *ngIf="!filterDynamicButton && GradeSelect">
+      <button (click)="toggleDropdown('grade')"
+        class="tw-w-full tw-bg-black tw-text-white tw-rounded-lg tw-px-4 tw-py-2 tw-text-base tw-flex tw-items-center tw-justify-between tw-gap-2">
+        {{ selectedGrade }}
+        <app-icon name="chevron-down" [size]="16" />
+      </button>
+      <ul *ngIf="isGradeOpen"
+        class="tw-absolute tw-bg-white tw-shadow-md tw-rounded-lg tw-mt-1 tw-z-20 tw-w-full tw-min-w-[100px]">
+        <li *ngFor="let g of allGrade" (click)="selectOption('grade', g)"
+          class="tw-px-4 tw-py-2 tw-text-base tw-cursor-pointer hover:tw-bg-gray-100">
+          {{ g }}
+        </li>
+      </ul>
+    </div>
+
     <!-- All List Button -->
     <button
-      class="tw-bg-[#660708] tw-text-white tw-rounded tw-px-4 tw-py-2 tw-text-base"
+      class="tw-bg-[#660708] tw-text-white tw-rounded-lg tw-px-4 tw-py-2 tw-text-base tw-min-w-[112px]"
       (click)="onAllListClick()"
-      *ngIf="!filterDynamicButton"
+      *ngIf="!filterDynamicButton && !disabledFilterDateRange && !GradeSelect && !DateCalendar"
     >
       All List
+    </button>
+
+    <!-- All List Button -->
+    <button
+      class="tw-bg-[#660708] tw-text-white tw-rounded-lg tw-px-4 tw-py-2 tw-text-base tw-min-w-[112px]"
+      (click)="onClickToday()"
+      *ngIf="DateCalendar"
+    >
+      Today
     </button>
   </div>
 
@@ -78,7 +103,10 @@
     <ng-container *ngFor="let btn of actionButtons">
       <button
         [ngStyle]="{ 'background-color': btn.color || '#0A84FF' }"
-        class="tw-text-white tw-rounded tw-px-4 tw-py-2 tw-text-base disabled:tw-opacity-50 disabled:tw-cursor-not-allowed"
+        [ngClass]="btn.outlineBtn ? '!tw-bg-transparent tw-border tw-border-black !tw-text-black tw-font-bold hover:!tw-bg-black hover:!tw-text-white' : 'tw-text-white'"
+        class="btn-dynamic tw-rounded-lg tw-px-4 tw-py-2 tw-text-base
+              disabled:tw-opacity-50 disabled:tw-cursor-not-allowed tw-min-w-[120px]"
+        [style.--btn-bg]="btn.color || '#0A84FF'"
         (click)="onActionButtonClick(btn.key)"
         [disabled]="disabledKeys.includes(btn.key) || ((btn.key === 'submit' || btn.key === 'register') && (!(selectedRows.length)))"
       >
