@@ -124,7 +124,7 @@
                                     <div *ngFor="let s of reasonsInterview1">
                                         <button type="button" (click)="selectCategory(s.categoryId)"
                                             class="tw-text-sm tw-rounded-lg tw-px-3 tw-py-1.5 tw-border tw-transition"
-                                            [ngClass]="[getCategoryBtnClass(s, selectedCategoryId), !editReview || foundisSummary ? 'tw-pointer-events-none':'']">
+                                            [ngClass]="[getCategoryBtnClass(s, selectedCategoryId), !editReview ? 'tw-pointer-events-none':'']">
                                             {{ s.categoryName }}
                                         </button>
                                     </div>

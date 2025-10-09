@@ -1,42 +1,25 @@
-import { ChangeDetectorRef, Component, ElementRef, QueryList, ViewChild, ViewChildren } from '@angular/core';
+import { Component } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, map, of, Subject, switchMap, takeUntil } from 'rxjs';
-import { ApplicationService } from '../../../../services/application/application.service';
-import { CandidatePagedResult } from '../../../../interfaces/Application/application.interface';
-import {
-  CandidateTracking,
-  CandidateTrackStatus,
-} from '../../../../interfaces/Application/tracking.interface';
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
-import { AlertDialogComponent } from '../../../../shared/components/dialogs/alert-dialog/alert-dialog.component';
 import { MatDialog } from '@angular/material/dialog';
 import { COMPOSITION_BUFFER_MODE, FormBuilder, FormControl, FormGroup } from '@angular/forms';
-import * as QRCode from 'qrcode';
-import { SlickCarouselComponent, SlickItemDirective } from 'ngx-slick-carousel';
-import { InterviewFormService } from '../../../../services/interview-scheduling/interview-form/interview-form.service';
+
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+
+import { ApplicationService } from '../../../../services/application/application.service';
+import { CandidatePagedResult } from '../../../../interfaces/Application/application.interface';
+import { CandidateTracking } from '../../../../interfaces/Application/tracking.interface';
+import { AlertDialogComponent } from '../../../../shared/components/dialogs/alert-dialog/alert-dialog.component';
 import { ReasonService } from '../../../../services/admin-setting/reason/reason.service';
 import { AlertDialogData } from '../../../../shared/interfaces/dialog/dialog.interface';
-import { NotificationService } from '../../../../shared/services/notification/notification.service';
-import { InterviewDetailsFormService } from '../../../../services/interview-scheduling/interview-details-form/interview-details-form.service';
+import { InterviewFormService } from '../../../../services/interview-scheduling/interview-form/interview-form.service';
 
 dayjs.extend(utc);
 
-// ====== Types สำหรับฝั่ง View ======
-type StepStatus = 'done' | 'pending';
-
-type Risk = 'Normal' | 'Warning';
-
-type ScreeningStatus = 'Accept' | 'Decline' | 'Hold';
-
-// --- เพิ่ม type ด้านบนไฟล์ ---
-type ResultGroupKey = 'accept' | 'decline';
-type ResultGroup = {
-  key: ResultGroupKey;
-  label: string;
-  regex: RegExp;
-  items: any[];
-};
+// ===== Types (view) =====
+type ResultGroupKey = 'accept' | 'decline'; // kept only if needed later (no UI usage now)
+type CategoryOption = { categoryId: number; categoryName: string };
 
 interface Applicant {
   id: string;
@@ -58,86 +41,6 @@ interface Applicant {
   interview2Date?: string;
   interview2Status?: string;
   interview2Result?: number;
-}
-
-// ===== Stage History (view) =====
-type CategoryOption = { categoryId: number; categoryName: string };
-type ReasonOption = { reasonId: number; reasonText: string; checked?: boolean };
-
-interface StageSection {
-  historyId: number;
-  stageId: number;
-  stageName: string;
-  stageNameNormalized: string;  // lower-cased for switch
-  headerTitle: string;
-
-  hrUserName: string;
-  stageDate: string | Date;
-
-  categories: CategoryOption[];
-  selectedCategoryId?: number;
-
-  reasons: ReasonOption[];
-
-  // notes: ใช้กับ Screened/Offered
-  notes?: string | null;
-  // ใช้กับ Interview 1/2 (ถ้า API ยังไม่มี แสดง '—')
-  strength?: string | null;
-  concern?: string | null;
-
-  open: boolean;
-}
-
-interface AssessmentItem {
-  no: number;
-  review: string;
-  result: string;
-  score: number;
-  visibility: boolean;
-  details: string;
-  detailsPositive?: boolean;
-}
-
-interface WarningItem {
-  no: number;
-  warning: string;
-  result: string;
-  risk: Risk;
-  visibility: boolean;
-  detail: string;
-}
-
-interface Screening {
-  screenedBy: string;
-  screeningDate: string | Date;
-  status: ScreeningStatus;
-  reasons: string[]; // list ของ key
-  description: string;
-}
-
-interface CommentItem {
-  id: string;
-  author: string;
-  date: string; // แสดงผลแล้วฟอร์แมตรูปแบบ
-  text: string;
-}
-
-interface Attachment {
-  name: string;
-  file: string;
-}
-
-interface HistoryLog {
-  date: string;
-  action: string;
-}
-
-type Variant = 'green' | 'blue' | 'gray' | 'red' | 'white';
-interface StepperItem {
-  label: string;
-  sub?: string;
-  date?: string;
-  variant?: Variant;
 }
 
 interface ApiComment {
@@ -181,19 +84,13 @@ interface ViewComment {
   providers: [{ provide: COMPOSITION_BUFFER_MODE, useValue: false }],
 })
 export class HireResultComponent {
-  // ====== Filter ======
-  filterButtons: { label: string; key: string; color: string }[] = [];
-  disabledKeys: string[] = [];
-
-  // ====== Routing ======
-  applicantId: number = 0;
-  appointmentId: number = 0;
-  stageId: number = 0;
-  idEmployee: number = 0;
-  interview1AppointmentId: string | undefined;
+  // ===== Routing =====
+  applicantId = 0;
+  stageId = 0;
+  idEmployee = 0;
   interview2AppointmentId: string | undefined;
 
-  // ====== Data Model (View) ======
+  // ===== Applicant (header) =====
   applicant: Applicant = {
     id: '',
     name: '',
@@ -207,143 +104,40 @@ export class HireResultComponent {
     avatarUrl: '',
   };
 
-  steps: { label: string; date?: string; status: StepStatus; sub?: string }[] =
-    [];
-  currentIndex = -1; // ไม่มีขั้นไหนเสร็จ = -1
-
-  assessments: AssessmentItem[] = [];
-  assessmentTotalScore = 0;
-  assessmentMaxScore = 0;
-  assessmentRecommendation = '';
-
-  warnings: WarningItem[] = [];
-
-  screening: Screening = {
-    screenedBy: '—',
-    screeningDate: '',
-    status: 'Accept',
-    reasons: [],
-    description: '',
-  };
-
-  isEditing = false;
-  private initialSnapshot: any = null;
-
+  // ===== Forms & basic state =====
   formDetails!: FormGroup;
-  formInterviewDetails!: FormGroup;
-
-  comments: CommentItem[] = [];
-  currentUserName = '';
-  newCommentText = '';
-
-  transcripts: Attachment[] = [];
-  certifications: Attachment[] = [];
-  historyLogs: HistoryLog[] = [];
+  commentCtrl!: FormControl<string>;
   today: string | undefined;
-  nowDate: string | undefined;
-
-  applicationFormSubmittedDate: string | Date = '';
-
-  // UI: ขนาดรอยบั้งของ chevron (ไม่ใช้แล้ว แต่คงไว้หากต้องกลับไปใช้ pipeline เดิม)
-  chevW = 28;
-
-  // ====== Stepper bindings ======
-  stepperItems: StepperItem[] = [];
-  activeStepIndex = 0;
-  disabledStepLabels: string[] = [];
-
-  stageSections: StageSection[] = [];
   usernameLogin: string | undefined;
 
-  @ViewChildren('textContent') textContents!: QueryList<ElementRef<HTMLElement>>;
-  @ViewChildren('strengthText') strengthTexts!: QueryList<ElementRef>;
-  @ViewChildren('concernText') concernTexts!: QueryList<ElementRef>;
-
-  isExpanded: boolean = false;
-  isOverflow: boolean = false;
-
+  // ===== Hire details state =====
   reasonsInterview1: any[] = [];
-  reasonsInterview2: any[] = [];
-
-  // Loading/State
-  isLoading = false;
-  isNotFound = false;
-
-  private destroy$ = new Subject<void>();
-  qrCodeImageUrl: string | undefined;
-
-  // ===== Comments state =====
-  commentsLoading = false;
-  commentsTree: ViewComment[] = [];
-  commentCtrl!: FormControl<string>;
-
-  foundisSummary: any;
-
-  // ---------- Carousel config ----------
-  @ViewChildren(SlickItemDirective) slickItems!: QueryList<SlickItemDirective>;
-
-  slideConfig: any = {
-    slidesToShow: 2,
-    slidesToScroll: 1,
-    dots: false,
-    arrows: false,
-    infinite: false,
-    responsive: [
-      {
-        breakpoint: 768,
-        settings: {
-          slidesToShow: 1,
-          dots: false
-        }
-      }
-    ]
-  };
-
-  // ---------- Carousel controls ----------
-  currentSlide: number[] = [];
-  totalSlides: number[] = [];
-  canGoPrev: boolean[] = [];
-  canGoNext: boolean[] = [];
-
-  @ViewChildren('slickCarousel') carousels!: QueryList<SlickCarouselComponent>;
-
-  // ====== Candidate Warning UI ======
-  isRevOpen = true; // ปุ่ม chevron พับ/กาง
-  isWarnOpen = true;
-  warningRows: any[] = [];
-  warningColumns: any[] = [];
+  selectedCategoryId: number | null = null;
 
   reviewHistory: any[] = [];
-  selectedCategoryId: number | null = null;
+  foundisSummary: any;
 
   editReview = false;
   allowEditButton = true;
 
-  private initWarningColumns() {
-    this.warningColumns = [
-      { header: 'No', field: 'no', type: 'text', align: 'center', width: '56px', minWidth: '56px' },
-      { header: 'Question', field: 'warning', type: 'text', minWidth: '220px', wrapText: true, },
-      { header: 'Interview 1', field: 'result1', type: 'input', minWidth: '160px' },
-      { header: 'Interview 2', field: 'result2', type: 'select', minWidth: '160px' }
-    ];
-  }
+  // ===== Comments state =====
+  commentsLoading = false;
+  commentsTree: ViewComment[] = [];
+  currentUserName = '';
 
-  selectedTab: string = '';
-
+  // ===== Cache/Snapshot =====
   snapshotInputForm: any;
-  private hasDraftInSession = false;
+  private readonly cacheKeyBase = 'hire-result:';
+  private destroy$ = new Subject<void>();
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private dialog: MatDialog,
-    private cdr: ChangeDetectorRef,
     private fb: FormBuilder,
     private interviewFormService: InterviewFormService,
     private applicationService: ApplicationService,
-    private reasonService: ReasonService,
-    private notificationService: NotificationService,
-    private interviewDetailsFormService: InterviewDetailsFormService
+    private reasonService: ReasonService
   ) { }
 
   // ===================== Lifecycle =====================
@@ -352,25 +146,18 @@ export class HireResultComponent {
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
-
     this.today = `${year}-${month}-${day}`;
-    this.nowDate = this.today;
+
     this.commentCtrl = this.fb.control<string>('', { nonNullable: true });
 
-    this.filterButtons = [{ label: 'Print', key: 'print', color: '#0055FF' }];
-    this.route.queryParams
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((params) => {
-        this.applicantId = Number(params['id'] || 0);
-        this.stageId = 4;
-        this.idEmployee = Number(params['idEmployee']);
+    this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe((params) => {
+      this.applicantId = Number(params['id'] || 0);
+      this.stageId = 4;
+      this.idEmployee = Number(params['idEmployee']);
 
-        this.fetchCandidateTracking();
-        this.fetchRecruitmentStagesWithReasons(5) // state hire
-      });
-
-    // ตาราง Warning
-    this.initWarningColumns();
+      this.fetchCandidateTracking();
+      this.fetchRecruitmentStagesWithReasons(5); // hire state
+    });
 
     const userString = sessionStorage.getItem('user');
     if (userString) {
@@ -378,24 +165,16 @@ export class HireResultComponent {
       this.usernameLogin = user.username;
     }
 
-    this.initializeForm()
-    this.initializeFormInterviewDetail()
+    this.initializeForm();
 
-    this.formDetails.valueChanges
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(() => {
-        this.saveCache();
-        this.updateSaveButtonState();
-      });
+    this.formDetails.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(() => {
+      this.saveCache();
+    });
 
-    this.formDetails.get('noteInterviewReview')?.valueChanges
-      .pipe(takeUntil(this.destroy$))
+    this.formDetails
+      .get('noteInterviewReview')
+      ?.valueChanges.pipe(takeUntil(this.destroy$))
       .subscribe(() => this.saveCache());
-
-  }
-
-  ngAfterViewInit() {
-    this.nextTick(() => this.setActionButtons('view'));
   }
 
   ngOnDestroy() {
@@ -403,63 +182,41 @@ export class HireResultComponent {
     this.destroy$.complete();
   }
 
-  // ===================== Data Fetch =====================
+  // ===================== Init & Fetch =====================
   initializeForm() {
-    this.formDetails = this.fb.group({
-      userInterviewReview: [this.foundisSummary?.hrUserName || this.usernameLogin],
-      dateInterviewReview: [this.formatDateForInput(this.foundisSummary?.stageDate) || this.nowDate],
-      noteInterviewReview: [this.foundisSummary?.notes || '-'],
-    }, { updateOn: 'change' }); // สำคัญ
-  }
-
-  initializeFormInterviewDetail() {
-    this.formInterviewDetails = this.fb.group({
-      question: [''],
-      interview1: [''],
-      interview2: [''],
-    });
+    this.formDetails = this.fb.group(
+      {
+        userInterviewReview: [this.foundisSummary?.hrUserName || this.usernameLogin],
+        dateInterviewReview: [this.formatDateForInput(this.foundisSummary?.stageDate) || this.today],
+        noteInterviewReview: [this.foundisSummary?.notes || ''],
+      },
+      { updateOn: 'change' }
+    );
   }
 
   private fetchCandidateTracking() {
-    if (!this.applicantId) {
-      this.isNotFound = true;
-      return;
-    }
+    if (!this.applicantId) return;
 
-    this.isLoading = true;
-
-    this.applicationService.getTrackingApplications({
-      page: 1,
-      pageSize: 20,
-      search: String(this.applicantId),
-    })
+    this.applicationService
+      .getTrackingApplications({
+        page: 1,
+        pageSize: 20,
+        search: String(this.applicantId),
+      })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (res: CandidatePagedResult<CandidateTracking>) => {
           const items = res?.items || [];
-          if (!items.length) {
-            this.isNotFound = true;
-            this.isLoading = false;
-            return;
-          }
+          if (!items.length) return;
 
-          const exact =
-            items.find((i) => Number(i.userID) === this.applicantId) ||
-            items[0];
-
+          const exact = items.find((i) => Number(i.userID) === this.applicantId) || items[0];
           this.mapTrackingToView(exact);
-          this.isLoading = false;
 
-          // Attachments
+          // Attachments (avatar)
           this.fetchFiles(Number(this.applicantId || 0));
         },
         error: (err) => {
-          console.error(
-            '[ApplicationForm] getTrackingApplications error:',
-            err
-          );
-          this.isNotFound = true;
-          this.isLoading = false;
+          console.error('[ApplicationForm] getTrackingApplications error:', err);
         },
       });
 
@@ -467,156 +224,114 @@ export class HireResultComponent {
       next: (res) => {
         const appointmentIdKey = `interview2AppointmentId`;
         const appointmentIdValue = res[appointmentIdKey];
-
         (this as any)[appointmentIdKey] = appointmentIdValue;
       },
-      error: (err) => {
-        console.error(err);
-      },
-    });
-
-  }
-
-  fetchInterviewer() {
-    this.interviewFormService.getApplicantReview(
-      Number(this.applicantId),
-      Number(this.stageId) + 1
-    ).subscribe({
-      next: (res) => {
-        // 0) เตรียม reviewHistory + carousel config
-        this.reviewHistory = res.map((item: any) => ({
-          ...item,
-          expandState: { strength: false, concern: false },
-          overflowState: { strength: false, concern: false }
-        }));
-
-        setTimeout(() => this.checkAllOverflow(), 0);
-
-        // 1) เลือก summary record ที่เหมาะสม
-        if (this.idEmployee) {
-          // ถ้ามี idEmployee → ดึงรีวิวของคนนี้ก่อน, ถ้าไม่เจอค่อย fallback ไป summary
-          this.foundisSummary =
-            this.reviewHistory.find(u => u.hrUserId === this.idEmployee)
-          // this.reviewHistory.find(u => u.isSummary === true);
-        } else {
-          // ถ้าไม่มี idEmployee → ใช้เฉพาะ summary record เท่านั้น
-          this.foundisSummary = this.reviewHistory.find(u => u.isSummary === true) ?? null;
-        }
-
-        // 2) สร้างฟอร์มเบื้องต้น (ใช้ข้อมูลจาก foundisSummary หรือ fallback ปัจจุบัน)
-        this.initializeForm();
-
-        if (!this.foundisSummary) {
-          this.isEditing = true;
-          this.editReview = true;
-          this.allowEditButton = false;
-        }
-
-        // 3) ลองอ่าน cache (ถ้ามี)
-        let rawObj: any = null;
-        const rawString = sessionStorage.getItem(this.cacheKey());
-        if (rawString) {
-          try { rawObj = JSON.parse(rawString); } catch { rawObj = null; }
-        }
-        this.hasDraftInSession = !!rawObj;
-
-        // 4) Apply เหตุผลที่ติ๊ก (priority: cache > server)
-        this.reasonsInterview1.forEach((category: any) => {
-          (category.rejectionReasons || []).forEach((reason: any) => {
-            const fromCache = rawObj?.selectedReasonIds?.includes(reason.reasonId);
-            const fromServer = this.foundisSummary?.selectedReasonIds?.includes(reason.reasonId);
-            reason.checked = !!(fromCache ?? fromServer);
-          });
-        });
-
-        // 5) เซ็ต category (priority: cache > server)
-        this.selectedCategoryId = rawObj?.categoryId ?? this.foundisSummary?.categoryId ?? null;
-
-        this.selectedGroupKey = rawObj?.selectedGroupKey
-          ?? this.resolveGroupByCategoryId(this.selectedCategoryId);
-
-        // 6) ถ้ามี cache → อัปเดตฟอร์มจาก cache (และเข้าโหมดแก้ไข)
-        if (rawObj) {
-          this.isEditing = true;
-          this.editReview = true;
-          this.allowEditButton = false;
-
-          this.nextTick(() => this.setActionButtons('edit'));
-          this.formDetails.patchValue({
-            dateInterviewReview: this.formatDateForInput(rawObj?.stageDate),
-            noteInterviewReview: rawObj?.notes ?? '',
-          }, { emitEvent: false });
-
-          // baseline = ของ server (อย่าเอาค่า UI ทับ)
-          this.snapshotInputForm = this.buildServerBaselinePayload();
-        } else {
-          // baseline = UI ปัจจุบันจาก server
-          this.takeSnapshotFromUI();
-        }
-
-        // อัปเดตปุ่มหลังตั้ง baseline เสร็จ
-        this.updateSaveButtonState();
-
-        // 7) ตั้ง snapshot baseline จาก UI ปัจจุบัน
-        this.takeSnapshotFromUI();
-      },
-
-      error: (error) => {
-        console.error('Error fetching applicant review:', error);
-      }
+      error: (err) => console.error(err),
     });
   }
 
   fetchRecruitmentStagesWithReasons(interview: number) {
     this.reasonService.getRecruitmentStagesWithReasons(interview).subscribe({
       next: (response) => {
-        this.reasonsInterview1 = response;
-
         this.reasonsInterview1 = response.map((category: any) => ({
           ...category,
           rejectionReasons: category.rejectionReasons.map((reason: any) => ({
             ...reason,
-            checked: false
-          }))
-        }));
-
-        this.resultGroups = this.resultGroups.map(g => ({
-          ...g,
-          items: this.reasonsInterview1.filter((c: any) => g.regex.test((c.categoryName || '').toLowerCase()))
+            checked: false,
+          })),
         }));
 
         this.fetchInterviewer();
       },
-      error: (error) => {
-        console.error('Error fetching Recruitment Stages with reasons:', error);
-      },
+      error: (error) => console.error('Error fetching Recruitment Stages with reasons:', error),
     });
+  }
+
+  fetchInterviewer() {
+    this.interviewFormService
+      .getApplicantReview(Number(this.applicantId), Number(this.stageId) + 1)
+      .subscribe({
+        next: (res) => {
+          // 0) store reviewHistory
+          this.reviewHistory = res;
+
+          // 1) pick summary
+          if (this.idEmployee) {
+            this.foundisSummary = this.reviewHistory.find((u) => u.hrUserId === this.idEmployee);
+          } else {
+            this.foundisSummary = this.reviewHistory.find((u) => u.isSummary === true) ?? null;
+          }
+
+          // 2) init form
+          this.initializeForm();
+
+          if (!this.foundisSummary) {
+            this.editReview = true;
+            this.allowEditButton = false;
+          }
+
+          // 3) read cache
+          let rawObj: any = null;
+          const rawString = sessionStorage.getItem(this.cacheKey());
+          if (rawString) {
+            try {
+              rawObj = JSON.parse(rawString);
+            } catch {
+              rawObj = null;
+            }
+          }
+
+          // 4) apply reasons (cache > server)
+          this.reasonsInterview1.forEach((category: any) => {
+            (category.rejectionReasons || []).forEach((reason: any) => {
+              const fromCache = rawObj?.selectedReasonIds?.includes(reason.reasonId);
+              const fromServer = this.foundisSummary?.selectedReasonIds?.includes(reason.reasonId);
+              reason.checked = !!(fromCache ?? fromServer);
+            });
+          });
+
+          // 5) selected category (cache > server)
+          this.selectedCategoryId = rawObj?.categoryId ?? this.foundisSummary?.categoryId ?? null;
+
+          // 6) if cache exists, patch and set baseline from server
+          if (rawObj) {
+            this.editReview = true;
+            this.allowEditButton = false;
+
+            this.formDetails.patchValue(
+              {
+                dateInterviewReview: this.formatDateForInput(rawObj?.stageDate),
+                noteInterviewReview: rawObj?.notes ?? '',
+              },
+              { emitEvent: false }
+            );
+
+            this.snapshotInputForm = this.buildServerBaselinePayload();
+          } else {
+            this.takeSnapshotFromUI();
+          }
+        },
+        error: (error) => console.error('Error fetching applicant review:', error),
+      });
   }
 
   private fetchFiles(id: number) {
     if (!id) return;
-    this.applicationService.getFileByCandidateId(id)
+    this.applicationService
+      .getFileByCandidateId(id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (res: any[]) => {
           const files = Array.isArray(res) ? res : [];
-
-          // 1) Avatar จาก fileType = 'Profile'
-          const profile = files.find(f => String(f?.fileType).toLowerCase() === 'profile');
-
+          const profile = files.find((f) => String(f?.fileType).toLowerCase() === 'profile');
           this.applicant.avatarUrl = profile?.filePath || '';
-
         },
-        error: (e) => {
-          console.error('[ApplicationForm] getFileByCandidateId error:', e);
-          // ไม่เปลี่ยน state ถ้า error
-        }
+        error: (e) => console.error('[ApplicationForm] getFileByCandidateId error:', e),
       });
   }
 
   // ===================== Mapping =====================
   private mapTrackingToView(ct: CandidateTracking) {
-    // ----- Applicant header -----
     this.applicant = {
       id: String(ct.userID ?? ''),
       name: ct.fullName || ct.fullNameTH || '—',
@@ -625,11 +340,7 @@ export class HireResultComponent {
       appliedDate: ct.submitDate || '',
       email: ct.email || '—',
       positions: Array.from(
-        new Set(
-          (ct.positions ?? [])
-            .map((p) => p?.namePosition)
-            .filter((n): n is string => !!n)
-        )
+        new Set((ct.positions ?? []).map((p) => p?.namePosition).filter((n): n is string => !!n))
       ),
       grade: ct.gradeCandidate || '—',
       views: Number(ct.countLike ?? 0),
@@ -644,54 +355,233 @@ export class HireResultComponent {
       interview2Status: ct.interview2.status,
       interview2Result: ct.interview2.id,
     };
+  }
 
-    this.applicationFormSubmittedDate = ct.submitDate || '';
+  // ===================== UI Helpers =====================
+  formatDateForInput(dateString: string | null | undefined): string {
+    if (!dateString) return '';
+    if (dateString.includes('T')) return dateString.split('T')[0];
 
-    // ----- Warnings (mock) -----
-    this.warnings = [
-      {
-        no: 1,
-        warning: 'Work History',
-        result: '—',
-        risk: 'Normal',
-        visibility: true,
-        detail: '—',
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  getCategoryBtnClass(c: CategoryOption, selectedId?: number | null) {
+    const isActive = c.categoryId === selectedId;
+    const name = (c.categoryName || '').toLowerCase();
+
+    const tones = {
+      accept: { fill: 'tw-bg-green-500 tw-text-white' },
+      decline: { fill: 'tw-bg-red-500 tw-text-white' },
+      noshow: { fill: 'tw-bg-gray-500 tw-text-white' },
+      onhold: { fill: 'tw-bg-amber-500 tw-text-white' },
+      default: { fill: 'tw-bg-white tw-text-gray-700' },
+    };
+
+    const tone =
+      name.includes('decline offer')
+        ? tones.decline
+        : name.includes('onboarded')
+          ? tones.accept
+          : name.includes('no-show') || name.includes('no show')
+            ? tones.noshow
+            : tones.default;
+
+    const base = 'tw-text-sm tw-rounded-lg tw-px-3 tw-py-1.5 tw-border tw-transition';
+    const ring = isActive ? ' tw-ring-2 tw-ring-white/40' : '';
+    return base + ' ' + (isActive ? tone.fill : '') + ring;
+  }
+
+  // ===================== Hire Details Actions =====================
+  toggleReasonCheck(reason: any) {
+    reason.checked = !reason.checked;
+    this.saveCache();
+  }
+
+  getRejectionReasons(categoryId: number) {
+    const category = this.reasonsInterview1.find((item) => item.categoryId === categoryId);
+    return category?.rejectionReasons?.filter((r: { isActive: any }) => r.isActive) || [];
+  }
+
+  selectCategory(categoryId: number) {
+    this.reasonsInterview1 = this.reasonsInterview1.map((category: any) => ({
+      ...category,
+      rejectionReasons: category.rejectionReasons.map((reason: any) => ({
+        ...reason,
+        checked: false,
+      })),
+    }));
+
+    this.selectedCategoryId = this.selectedCategoryId === categoryId ? null : categoryId;
+    this.saveCache();
+  }
+
+  onComfirmReview() {
+    const payload = this.formDetails.value;
+
+    const isoDate = new Date(payload.dateInterviewReview).toISOString();
+    const checkedReasonIds = this.reasonsInterview1.flatMap((category: { rejectionReasons: any[] }) =>
+      category.rejectionReasons.filter((reason) => reason.checked === true).map((reason) => reason.reasonId)
+    );
+
+    const checkedCategoryIds = this.reasonsInterview1
+      .filter((category) => category.rejectionReasons.some((reason: { checked: boolean }) => reason.checked === true))
+      .map((category) => category.categoryId);
+
+    const appointmentIdKey = `interview2AppointmentId`;
+    const appointmentId = (this as any)[appointmentIdKey];
+
+    Promise.resolve().then(() => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.add('dimmed-overlay');
+    });
+
+    const dialogRef = this.dialog.open(AlertDialogComponent, {
+      width: '496px',
+      panelClass: 'custom-dialog-container',
+      autoFocus: false,
+      disableClose: true,
+      data: {
+        title: 'Confirmation',
+        message: 'Are you sure you want to save this data?',
+        confirm: true,
       },
-    ];
+    });
 
-    // ----- Attachments / Comments / Logs -----
-    this.comments = [];
-    this.currentUserName = '';
-    this.transcripts = [];
-    this.certifications = [];
-    this.historyLogs = [];
+    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.remove('dimmed-overlay');
+
+      if (!confirmed) return;
+
+      this.clearDraftsForCurrentType();
+
+      if (this.foundisSummary) {
+        const payloadHistory = {
+          categoryId: checkedCategoryIds[0],
+          stageDate: isoDate,
+          notes: payload.noteInterviewReview,
+          selectedReasonIds: checkedReasonIds,
+        };
+
+        this.interviewFormService.updateCandidateStageHistory(this.foundisSummary.historyId, payloadHistory).subscribe({
+          next: () => {
+            this.fetchInterviewer();
+            this.foundisSummary = this.reviewHistory.find((user) => user.isSummary === true);
+            this.editReview = false;
+            this.allowEditButton = true;
+          },
+          error: (err) => console.error('Error Rescheduled:', err),
+        });
+      } else {
+        const transformedPayload = {
+          applicationId: this.applicantId,
+          stageId: this.stageId + 1,
+          categoryId: checkedCategoryIds[0],
+          isSummary: true,
+          stageDate: isoDate,
+          appointmentId: (appointmentId ?? '').trim(),
+          satisfaction: 0,
+          notes: payload.noteInterviewReview,
+          strength: '',
+          concern: '',
+          selectedReasonIds: checkedReasonIds,
+        };
+
+        this.interviewFormService.postInterviewReview(transformedPayload).subscribe({
+          next: () => {
+            this.fetchInterviewer();
+            this.foundisSummary = this.reviewHistory.find((user) => user.isSummary === true);
+            this.editReview = false;
+            this.allowEditButton = true;
+          },
+          error: (err) => console.error('Error Rescheduled:', err),
+        });
+      }
+    });
   }
 
-  private resolveGroupByCategoryId(catId: number | null): 'accept' | 'decline' | null {
-    if (!catId) return null;
-    const inAccept = this.resultGroups.find(g => g.key === 'accept')?.items.some(c => c.categoryId === catId);
-    const inDecline = this.resultGroups.find(g => g.key === 'decline')?.items.some(c => c.categoryId === catId);
-    return inAccept ? 'accept' : (inDecline ? 'decline' : null);
+  onCancelReview() {
+    const payload = this.formDetails.value;
+    const isoDate = new Date(payload.dateInterviewReview).toISOString();
+
+    const checkedReasonIds = this.reasonsInterview1.flatMap((category: { rejectionReasons: any[] }) =>
+      category.rejectionReasons.filter((reason) => reason.checked === true).map((reason) => reason.reasonId)
+    );
+
+    const checkedCategoryIds = this.reasonsInterview1
+      .filter((category) => category.rejectionReasons.some((reason: { checked: boolean }) => reason.checked === true))
+      .map((category) => category.categoryId);
+
+    const transformedPayload = {
+      categoryId: checkedCategoryIds[0],
+      stageDate: isoDate,
+      notes: payload.noteInterviewReview,
+      selectedReasonIds: checkedReasonIds,
+    };
+
+    if (JSON.stringify(this.snapshotInputForm) !== JSON.stringify(transformedPayload)) {
+      this.fetchInterviewer();
+      this.foundisSummary = this.reviewHistory.find((user) => user.isSummary === true);
+      this.editReview = false;
+      this.allowEditButton = true;
+    }
+
+    const countIsSummaryTrue = this.reviewHistory.filter((item) => item.isSummary === true).length;
+    if (!countIsSummaryTrue) {
+      this.editReview = true;
+      this.allowEditButton = false;
+    } else {
+      this.editReview = false;
+      this.allowEditButton = true;
+    }
+
+    this.clearDraftsForCurrentType();
   }
 
-  private readonly cacheKeyBase = 'hire-result:';
+  onEditReview() {
+    this.initializeForm();
+    this.formDetails.enable();
+    this.editReview = true;
+    this.allowEditButton = false;
+
+    const payload = this.formDetails.value;
+    const isoDate = new Date(payload.dateInterviewReview).toISOString();
+
+    const checkedReasonIds = this.reasonsInterview1.flatMap((category: { rejectionReasons: any[] }) =>
+      category.rejectionReasons.filter((reason) => reason.checked === true).map((reason) => reason.reasonId)
+    );
+
+    const checkedCategoryIds = this.reasonsInterview1
+      .filter((category) => category.rejectionReasons.some((reason: { checked: boolean }) => reason.checked === true))
+      .map((category) => category.categoryId);
+
+    const transformedPayload = {
+      categoryId: checkedCategoryIds[0],
+      stageDate: isoDate,
+      notes: payload.noteInterviewReview,
+      selectedReasonIds: checkedReasonIds,
+    };
+
+    this.snapshotInputForm = transformedPayload;
+  }
+
+  // ===================== Cache =====================
   private cacheKey(): string {
-    // ให้ key ยูนีคตาม employee/applicant/stage
     return `${this.cacheKeyBase}${this.idEmployee || 'emp'}:${this.applicantId || 'app'}:${this.stageId || 'stage'}`;
   }
 
-  /** รวมค่าปัจจุบันจากฟอร์ม + เหตุผลที่ติ๊ก + หมวดที่เลือก เป็น payload เดียว */
   private buildCurrentPayload() {
     const payload = this.formDetails?.value || {};
-
-    const isoDate = payload?.dateInterviewReview
-      ? new Date(payload.dateInterviewReview).toISOString()
-      : '';
+    const isoDate = payload?.dateInterviewReview ? new Date(payload.dateInterviewReview).toISOString() : '';
 
     const selectedReasonIds: number[] = (this.reasonsInterview1 || []).flatMap((category: any) =>
-      (category.rejectionReasons || [])
-        .filter((r: any) => r.checked === true)
-        .map((r: any) => r.reasonId)
+      (category.rejectionReasons || []).filter((r: any) => r.checked === true).map((r: any) => r.reasonId)
     );
 
     const checkedCategoryIds: number[] = (this.reasonsInterview1 || [])
@@ -716,7 +606,6 @@ export class HireResultComponent {
     };
   }
 
-  /** baseline เดิมจาก server (ยังไม่รวม draft ใน session) */
   private buildServerBaselinePayload() {
     const s = this.foundisSummary || {};
     const iso = s.stageDate ? new Date(s.stageDate).toISOString() : '';
@@ -735,723 +624,68 @@ export class HireResultComponent {
       notes: s.notes ?? '',
       strength: '',
       concern: '',
-      selectedReasonIds: Array.isArray(s.selectedReasonIds) ? s.selectedReasonIds : []
+      selectedReasonIds: Array.isArray(s.selectedReasonIds) ? s.selectedReasonIds : [],
     };
   }
 
-  onInputImmediate() { this.saveCache(); this.updateSaveButtonState(); }
-  onCompositionEnd() { this.saveCache(); this.updateSaveButtonState(); }
-  onDateInput() { this.saveCache(); this.updateSaveButtonState(); }
-  onDateChange() { this.saveCache(); this.updateSaveButtonState(); }
+  onDateInput() { this.saveCache(); }
+  onDateChange() { this.saveCache(); }
 
-  /** ตั้ง baseline/snapshot จากสิ่งที่ UI แสดงอยู่ตอนนี้ */
   private takeSnapshotFromUI() {
     this.snapshotInputForm = this.buildCurrentPayload();
   }
 
-  updateSaveButtonState(): void {
-    if (!this.isEditing) return; // ยังไม่อยู่โหมดแก้ ก็ไม่ต้องเช็ค
-    this.nextTick(() => this.setButtonDisabled('save', !this.hasFormChanged()));
-  }
-
-  // ===================== UI Events =====================
-  // onFilterButtonClick(key: string) {
-  //   switch (key) {
-  //     case 'edit':
-  //       // this.setActionButtons('edit');
-  //       this.onEditClicked();
-  //       // this.isEditing = true
-  //       // this.formDetails.enable();
-  //       break;
-  //     case 'save':
-  //       this.onComfirmReview()
-  //       break;
-  //   }
-  // }
-
-  formatDateForInput(dateString: string | null | undefined): string {
-    if (!dateString) return '';
-
-    if (dateString.includes('T')) {
-      return dateString.split('T')[0];
-    }
-
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return '';
-
-    const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-
-    return `${year}-${month}-${day}`;
-  }
-
-  formatTimeForInput(dateString: string | null | undefined): string {
-    if (!dateString) return '';
-
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return '';
-
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-
-    return `${hours}:${minutes}`;
-  }
-
-  formatTimeForInputWithOffset(dateString: string | null | undefined, offsetMinutes = 30): string {
-    if (!dateString) return '';
-
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return '';
-
-    // บวกเวลา offset (เช่น 30 นาที)
-    date.setMinutes(date.getMinutes() + offsetMinutes);
-
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-
-    return `${hours}:${minutes}`;
-  }
-
-  toggleReasonCheck(reason: any) {
-    reason.checked = !reason.checked;
-    this.saveCache();
-    this.updateSaveButtonState();
-  }
-
-  get filteredReviewHistory() {
-    return this.reviewHistory.filter(item => item.isSummary === false);
-  }
-
-  getCurrentDateTimeString(): string {
-    const now = new Date();
-
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0'); // เดือน (0-11) เลยบวก 1
-    const day = String(now.getDate()).padStart(2, '0');
-
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).toString().padStart(2, '0');
-
-    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-  }
-
-  getRejectionReasons(categoryId: number) {
-    const category = this.reasonsInterview1.find(item => item.categoryId === categoryId);
-    return category?.rejectionReasons?.filter((r: { isActive: any; }) => r.isActive) || [];
-  }
-
-  selectCategory(categoryId: number) {
-    this.reasonsInterview1 = this.reasonsInterview1.map((category: any) => ({
-      ...category,
-      rejectionReasons: category.rejectionReasons.map((reason: any) => ({
-        ...reason,
-        checked: false
-      }))
-    }));
-
-    if (this.selectedCategoryId === categoryId) {
-      this.selectedCategoryId = null;
-    } else {
-      this.selectedCategoryId = categoryId;
-    }
-
-    this.saveCache();
-    this.updateSaveButtonState();
-  }
-
-  toggleExpand(index: number, field: 'strength' | 'concern') {
-    this.reviewHistory[index].expandState[field] = !this.reviewHistory[index].expandState[field];
-
-    setTimeout(() => this.checkOverflow(index, field), 0);
-  }
-
-  checkOverflow(index: number, field: 'strength' | 'concern') {
-    const el = field === 'strength'
-      ? this.strengthTexts.toArray()[index].nativeElement
-      : this.concernTexts.toArray()[index].nativeElement;
-
-    this.reviewHistory[index].overflowState[field] = el.scrollHeight > el.clientHeight;
-  }
-
-  checkAllOverflow() {
-    this.reviewHistory.forEach((review, i) => {
-      const strengthEl = this.strengthTexts.toArray()[i]?.nativeElement;
-      const concernEl = this.concernTexts.toArray()[i]?.nativeElement;
-
-      if (strengthEl) {
-        review.overflowState.strength = strengthEl.scrollHeight > strengthEl.clientHeight;
-      }
-
-      if (concernEl) {
-        review.overflowState.concern = concernEl.scrollHeight > concernEl.clientHeight;
-      }
-    });
-  }
-
-  onComfirmReview() {
-    const payload = this.formDetails.value;
-
-    const isoDate = new Date(payload.dateInterviewReview).toISOString();
-    let checkedReasonIds = []
-    checkedReasonIds = this.reasonsInterview1.flatMap((category: { rejectionReasons: any[]; }) =>
-      category.rejectionReasons
-        .filter(reason => reason.checked === true)
-        .map(reason => reason.reasonId)
-    );
-
-    const checkedCategoryIds = this.reasonsInterview1
-      .filter(category => category.rejectionReasons.some((reason: { checked: boolean; }) => reason.checked === true))
-      .map(category => category.categoryId);
-
-    const appointmentIdKey = `interview2AppointmentId`;
-    const appointmentId = (this as any)[appointmentIdKey];
-
-    Promise.resolve().then(() => {
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.add('dimmed-overlay');
-    });
-
-    const dialogRef = this.dialog.open(AlertDialogComponent, {
-      width: '496px',
-      panelClass: 'custom-dialog-container',
-      autoFocus: false,
-      disableClose: true,
-      data: {
-        title: 'Confirmation',
-        message: 'Are you sure you want to save this data?',
-        confirm: true
-      }
-    });
-
-    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.remove('dimmed-overlay');
-
-      if (confirmed) {
-
-        this.isEditing = false;
-        this.nextTick(() => this.setActionButtons('view'));
-        this.clearDraftsForCurrentType()
-
-        if (this.foundisSummary) {
-          const payloadHistory = {
-            categoryId: checkedCategoryIds[0],
-            stageDate: isoDate,
-            notes: payload.noteInterviewReview,
-            selectedReasonIds: checkedReasonIds
-          }
-
-          this.interviewFormService.updateCandidateStageHistory(this.foundisSummary.historyId, payloadHistory).subscribe({
-            next: () => {
-              this.fetchInterviewer()
-              this.foundisSummary = this.reviewHistory.find(user => user.isSummary === true);
-              this.editReview = false;
-              this.allowEditButton = true;
-            },
-            error: (err) => {
-              console.error('Error Rescheduled:', err);
-            }
-          });
-
-        } else {
-          const transformedPayload = {
-            applicationId: this.applicantId,
-            stageId: this.stageId + 1,
-            categoryId: checkedCategoryIds[0],
-            isSummary: true,
-            stageDate: isoDate,
-            appointmentId: (appointmentId ?? '').trim(),
-            satisfaction: 0,
-            notes: payload.noteInterviewReview,
-            strength: '',
-            concern: '',
-            selectedReasonIds: checkedReasonIds
-          }
-
-          this.interviewFormService.postInterviewReview(transformedPayload).subscribe({
-            next: () => {
-              this.fetchInterviewer()
-              this.foundisSummary = this.reviewHistory.find(user => user.isSummary === true);
-              this.editReview = false;
-              this.allowEditButton = true;
-            },
-            error: (err) => {
-              console.error('Error Rescheduled:', err);
-            }
-          });
-        }
-      }
-    });
-  }
-
-  onCancelReview() {
-    const payload = this.formDetails.value;
-
-    const isoDate = new Date(payload.dateInterviewReview).toISOString();
-    let checkedReasonIds = [];
-    checkedReasonIds = this.reasonsInterview1.flatMap((category: { rejectionReasons: any[]; }) =>
-      category.rejectionReasons
-        .filter(reason => reason.checked === true)
-        .map(reason => reason.reasonId)
-    );
-
-    const checkedCategoryIds = this.reasonsInterview1
-      .filter(category => category.rejectionReasons.some((reason: { checked: boolean; }) => reason.checked === true))
-      .map(category => category.categoryId);
-
-    const transformedPayload = {
-      categoryId: checkedCategoryIds[0],
-      stageDate: isoDate,
-      notes: payload.noteInterviewReview,
-      selectedReasonIds: checkedReasonIds
-    }
-
-    if (JSON.stringify(this.snapshotInputForm) !== JSON.stringify(transformedPayload)) {
-      this.fetchInterviewer()
-      this.foundisSummary = this.reviewHistory.find(user => user.isSummary === true);
-      this.editReview = false;
-      this.allowEditButton = true;
-    }
-
-    const countIsSummaryTrue = this.reviewHistory.filter(item => item.isSummary === true).length;
-    if (!countIsSummaryTrue) {
-      this.editReview = true;
-      this.allowEditButton = false;
-    } else {
-      this.editReview = false;
-      this.allowEditButton = true;
-    }
-  }
-
-
-
-  onEditReview() {
-    this.initializeForm();
-    this.formDetails.enable();
-    this.editReview = true;
-    this.allowEditButton = false;
-
-    const payload = this.formDetails.value;
-
-    const isoDate = new Date(payload.dateInterviewReview).toISOString();
-    let checkedReasonIds = [];
-    checkedReasonIds = this.reasonsInterview1.flatMap((category: { rejectionReasons: any[]; }) =>
-      category.rejectionReasons
-        .filter(reason => reason.checked === true)
-        .map(reason => reason.reasonId)
-    );
-
-    const checkedCategoryIds = this.reasonsInterview1
-      .filter(category => category.rejectionReasons.some((reason: { checked: boolean; }) => reason.checked === true))
-      .map(category => category.categoryId);
-
-    const transformedPayload = {
-      categoryId: checkedCategoryIds[0],
-      stageDate: isoDate,
-      notes: payload.noteInterviewReview,
-      selectedReasonIds: checkedReasonIds
-    }
-
-    this.snapshotInputForm = transformedPayload;
-  }
-
-  onEditClicked() {
-    this.isEditing = true;
-    this.formDetails.enable();
-    this.nextTick(() => this.setActionButtons('edit'));
-
-    this.initializeForm();
-    this.editReview = true;
-    this.allowEditButton = false;
-
-    if (!this.snapshotInputForm) this.takeSnapshotFromUI();
-    this.updateSaveButtonState(); // << สำคัญ
-  }
-
   saveCache(): void {
     const current = this.buildCurrentPayload();
-
-    if (!this.snapshotInputForm) {
-      this.snapshotInputForm = this.buildServerBaselinePayload();
-    }
+    if (!this.snapshotInputForm) this.snapshotInputForm = this.buildServerBaselinePayload();
 
     const changed = JSON.stringify(current) !== JSON.stringify(this.snapshotInputForm);
-
     if (changed) {
       sessionStorage.setItem(this.cacheKey(), JSON.stringify(current));
-      this.hasDraftInSession = true;
-      this.updateSaveButtonState();
     } else {
       sessionStorage.removeItem(this.cacheKey());
-      this.hasDraftInSession = false;
     }
-  }
-
-  public hasFormChanged(): boolean {
-    // if (!this.isEditing) return false;
-    if (!this.editReview) return false;
-    if (!this.snapshotInputForm) return false;
-
-    const current = this.buildCurrentPayload();
-    const changed = JSON.stringify(current) !== JSON.stringify(this.snapshotInputForm);
-    return this.hasDraftInSession || changed;
   }
 
   public clearDraftsForCurrentType(): void {
     sessionStorage.removeItem(this.cacheKey());
-    this.updateSaveButtonState();
   }
-  private setActionButtons(mode: 'view' | 'edit') {
-    if (mode === 'view') {
-      this.filterButtons = [{ label: 'Edit', key: 'edit', color: '#000000' }];
-      this.disabledKeys = [];
-    } else {
-      this.filterButtons = [{ label: 'Save', key: 'save', color: '#000055' }];
-      this.disabledKeys = ['save'];
+
+  public hasFormChanged(): boolean {
+    // เช็คเฉพาะตอนอยู่โหมดแก้ไข และต้องมี baseline แล้วเท่านั้น
+    if (!this.editReview || !this.snapshotInputForm) return false;
+
+    try {
+      const current = this.buildCurrentPayload();
+      const changed = JSON.stringify(current) !== JSON.stringify(this.snapshotInputForm);
+      const hasDraft = !!sessionStorage.getItem(this.cacheKey());
+      return hasDraft || changed;
+    } catch {
+      // กันพลาด: ถ้าเทียบไม่ได้ ให้ถือว่ามีการเปลี่ยนแปลง
+      return true;
     }
   }
 
-  private nextTick(fn: () => void) {
-    Promise.resolve().then(fn);
-  }
-
-  addComment() {
-    const text = (this.newCommentText || '').trim();
-    if (!text) return;
-    this.comments.push({
-      id: 'c' + (this.comments.length + 1),
-      author: this.currentUserName || 'Current User',
-      date: new Date().toLocaleString(),
-      text,
-    });
-    this.newCommentText = '';
-  }
-
-  // onInterviewClick(tab: string) {
-  //   this.selectedTab = tab;
-  //   const interviewNumber = tab === 'tab1' ? '1' : '2';
-  //   this.stageId = Number(interviewNumber)
-
-  //   this.router.navigate([], {
-  //     relativeTo: this.route,
-  //     queryParams: { interview: interviewNumber },
-  //     queryParamsHandling: 'merge',
-  //     replaceUrl: true
-  //   });
-  // }
-
-  getInterviewDateByStage(): string {
-    const key = `interview${this.stageId}Date`;
-    return (this.applicant as Record<string, any>)?.[key] ?? '';
-  }
-
-  onTimeStartChange(event: Event) {
-    const inputElement = event.target as HTMLInputElement;
-    const newTimeValue = inputElement.value;
-
-    // เก็บค่าเดิมไว้ก่อนเปลี่ยน (ก่อน user เปลี่ยน)
-    const oldTimeValue = this.formatTimeForInput(this.getInterviewDateByStage());
-
-    const dateValue = this.formatDateForInput(this.getInterviewDateByStage());
-    const dataPatch = `${dateValue}T${newTimeValue}`;
-
-    const appointmentIdKey = `interview2AppointmentId`;
-    const appointmentId = (this as any)[appointmentIdKey];
-
-    const payload = {
-      appointmentId: appointmentId,
-      interviewStartTime: dataPatch
-    };
-
-    setTimeout(() => {
-      this.interviewFormService.updateInterviewDateStart(payload).subscribe({
-        next: () => { },
-        error: (err) => {
-          console.error('Error Rescheduled:', err);
-          this.notificationService.error('Failed to set start interview time');
-
-          inputElement.value = oldTimeValue;
-        }
-      });
-    }, 3000)
-  }
-
-  onTimeEndChange(event: Event) {
-    const inputElement = event.target as HTMLInputElement;
-    const newTimeValue = inputElement.value;
-
-    const oldTimeValue = this.formatTimeForInput(this.getInterviewDateByStage());
-
-    const dateValue = this.formatDateForInput(this.getInterviewDateByStage());
-    const dataPatch = `${dateValue}T${newTimeValue}`;
-
-    const appointmentIdKey = `interview2AppointmentId`;
-    const appointmentId = (this as any)[appointmentIdKey];
-
-    const payload = {
-      appointmentId: appointmentId,
-      interviewEndTime: dataPatch
-    };
-
-    setTimeout(() => {
-      this.interviewFormService.updateInterviewDateEnd(payload).subscribe({
-        next: () => { },
-        error: (err) => {
-          console.error('Error Rescheduled:', err);
-          this.notificationService.error('Failed to set end interview time');
-
-          inputElement.value = oldTimeValue;
-        }
-      });
-    }, 3000)
-  }
-
-  getInterview1StatusClass(): string {
-    switch (this.applicant?.interview1Result) {
-      case 12: return 'tw-bg-yellow-400 tw-text-black';           // Pending
-      case 15: return 'tw-bg-blue-400 tw-text-white';            // Inprocess
-      case 16: return 'tw-bg-indigo-400 tw-text-white';          // Scheduled
-      case 21: return 'tw-bg-[#005500] tw-text-white';           // Pass Interview (สีเขียว)
-      case 22: return 'tw-bg-red-500 tw-text-white';             // Not Pass Interview (สีแดง)
-      case 23: return 'tw-bg-gray-500 tw-text-white';            // No Show
-      case 24: return 'tw-bg-purple-400 tw-text-white';          // Reschedule
-      case 25: return 'tw-bg-pink-400 tw-text-white';            // Candidate Decline
-      case 41: return 'tw-bg-green-700 tw-text-white';           // Hire
-      case 42: return 'tw-bg-red-700 tw-text-white';             // Not Hire
-      case 43: return 'tw-bg-orange-400 tw-text-white';          // Comparison
-      default: return 'tw-bg-gray-300 tw-text-black';            // Default สีเทา
-    }
-  }
-
-  getInterview2StatusClass(): string {
-    switch (this.applicant?.interview2Result) {
-      case 12: return 'tw-bg-yellow-400 tw-text-white';           // Pending
-      case 15: return 'tw-bg-blue-400 tw-text-white';            // Inprocess
-      case 16: return 'tw-bg-indigo-400 tw-text-white';          // Scheduled
-      case 21: return 'tw-bg-[#005500] tw-text-white';           // Pass Interview (สีเขียว)
-      case 22: return 'tw-bg-red-500 tw-text-white';             // Not Pass Interview (สีแดง)
-      case 23: return 'tw-bg-gray-500 tw-text-white';            // No Show
-      case 24: return 'tw-bg-purple-400 tw-text-white';          // Reschedule
-      case 25: return 'tw-bg-pink-400 tw-text-white';            // Candidate Decline
-      case 41: return 'tw-bg-green-700 tw-text-white';           // Hire
-      case 42: return 'tw-bg-red-700 tw-text-white';             // Not Hire
-      case 43: return 'tw-bg-orange-400 tw-text-white';          // Comparison
-      default: return 'tw-bg-gray-300 tw-text-black';            // Default สีเทา
-    }
-  }
-
-  getCategoryBtnClass(c: CategoryOption, selectedId?: number | null) {
-    const isActive = c.categoryId === selectedId;
-    const name = (c.categoryName || '').toLowerCase();
-
-    const tones = {
-      accept: {
-        fill: 'tw-bg-green-500 tw-text-white',
-      },
-      decline: {
-        fill: 'tw-bg-red-500 tw-text-white',
-      },
-      noshow: {
-        fill: 'tw-bg-gray-500 tw-text-white',
-      },
-      onhold: {
-        fill: 'tw-bg-amber-500 tw-text-white',
-      },
-      default: {
-        fill: 'tw-bg-white tw-text-gray-700',
-      },
-    };
-
-    const tone =
-      name.includes('decline offer') ? tones.decline :
-        name.includes('onboarded') ? tones.accept :
-          name.includes('no-show') || name.includes('no show') ? tones.noshow :
-            tones.default;
-
-    const base = 'tw-text-sm tw-rounded-lg tw-px-3 tw-py-1.5 tw-border tw-transition';
-    const ring = isActive ? ' tw-ring-2 tw-ring-white/40' : '';
-
-    return base + ' ' + (isActive ? tone.fill : '') + ring;
-  }
-
-  generateQRCode(text: string): void {
-    QRCode.toDataURL(text, (err: any, url: string) => {
-      if (err) {
-        console.error(err);
-        return;
-      }
-
-      this.qrCodeImageUrl = url;
-    });
-  }
-
-  onViewDetailClick() {
-    const queryParams = {
-      id: this.applicantId
-    }
-    this.router.navigate(['/applications/screening/application-form'], { queryParams });
-  }
-
-  // ===== Helpers เดิม (ยังเก็บไว้เผื่อใช้งานต่อ) =====
-  isDone(i: number) {
-    return i <= this.currentIndex;
-  }
-
-  private stepVariant(i: number): 'green' | 'blue' | 'gray' | 'red' | 'white' {
-    const st = this.steps?.[i];
-    return statusToVariant(st?.sub);
-  }
-
-  private isColored(i: number) {
-    const v = this.stepVariant(i);
-    return v === 'green' || v === 'blue' || v === 'red';
-  }
-
-  stepBgTextClass(i: number) {
-    const v = this.stepVariant(i);
-    switch (v) {
-      case 'green':
-        return ['tw-text-white'].concat([`tw-bg-[${COLOR.green}]`]);
-      case 'blue':
-        return ['tw-text-white'].concat([`tw-bg-[${COLOR.blue}]`]);
-      case 'red':
-        return ['tw-text-white'].concat([`tw-bg-[${COLOR.red}]`]);
-      case 'gray':
-        return ['tw-text-gray-700', `tw-bg-[${COLOR.grayBg}]`];
-      case 'white':
-      default:
-        return ['tw-text-gray-700', 'tw-bg-white'];
-    }
-  }
-
-  circleClass(i: number) {
-    const v = this.stepVariant(i);
-    if (v === 'green' || v === 'blue' || v === 'red') {
-      return ['tw-border-2', 'tw-border-white/80', 'tw-text-white'];
-    }
-    return ['tw-border', 'tw-border-gray-300', 'tw-text-gray-600'];
-  }
-
-  labelClass(i: number) {
-    const v = this.stepVariant(i);
-    if (v === 'green' || v === 'blue' || v === 'red') return ['tw-text-white'];
-    return ['tw-text-gray-700'];
-  }
-
-  chevFill(i: number) {
-    const v = this.stepVariant(i);
-    switch (v) {
-      case 'green':
-        return COLOR.green;
-      case 'blue':
-        return COLOR.blue;
-      case 'red':
-        return COLOR.red;
-      case 'gray':
-        return COLOR.white;
-      case 'white':
-      default:
-        return COLOR.white;
-    }
-  }
-
-  chevStroke(i: number) {
-    const colored = this.isColored(i);
-    return colored ? COLOR.white : COLOR.grayBorder;
-  }
-
-  clipLastGreen(i: number, last: boolean) {
-    if (last) return {};
-    if (!this.isColored(i)) return {};
-    const notch = this.chevW + 2;
-    const poly = `polygon(0 0, calc(100% - ${notch}px) 0, 100% 50%, calc(100% - ${notch}px) 100%, 0 100%)`;
-    return {
-      clipPath: poly,
-      WebkitClipPath: poly,
-      backfaceVisibility: 'hidden',
-      transform: 'translateZ(0)',
-    };
-  }
-
-  variantBg(i: number) {
-    switch (this.stepVariant(i)) {
-      case 'green':
-        return COLOR.green;
-      case 'blue':
-        return COLOR.blue;
-      case 'red':
-        return COLOR.red;
-      case 'gray':
-        return COLOR.grayBg;
-      default:
-        return COLOR.white;
-    }
-  }
-  variantText(i: number) {
-    return this.isColored(i) ? '#FFFFFF' : '#374151';
-  }
-
-  // ---------- Carousel ----------
-  onPrevClick(index: number) {
-    const carousel = this.carousels.get(index);
-    carousel?.slickPrev();
-  }
-
-  onNextClick(index: number) {
-    const carousel = this.carousels.get(index);
-    carousel?.slickNext();
-  }
-
-  onCarouselInit(e: any, index: number) {
-    this.totalSlides[index] = e.slick.slideCount;
-    this.currentSlide[index] = 0;
-    this.updateArrowState(index);
-
-    this.cdr.detectChanges();
-  }
-
-  onSlideChanged(e: any, index: number) {
-    this.currentSlide[index] = e.currentSlide;
-    this.updateArrowState(index);
-  }
-
-  updateArrowState(index: number) {
-    const visibleSlides = this.getVisibleSlides();
-    const maxStartIndex = this.totalSlides[index] - visibleSlides;
-
-    this.canGoPrev[index] = this.currentSlide[index] > 0;
-    this.canGoNext[index] = this.currentSlide[index] < maxStartIndex;
-  }
-
-  getVisibleSlides(): number {
-    const width = window.innerWidth;
-
-    if (width < 1800) {
-      return 3;
-    }
-    return 4;
-  }// โหลดคอมเมนต์ทั้งหมดของผู้สมัคร
+  // ===================== Comments =====================
   loadComments(applicantId: number) {
     if (!applicantId) return;
     this.commentsLoading = true;
-    this.applicationService.getCommentsById(applicantId)
+    this.applicationService
+      .getCommentsById(applicantId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (res) => {
           const items: ApiComment[] = Array.isArray(res?.items) ? res.items : [];
-          this.commentsTree = items.map(c => this.toViewComment(c));
+          this.commentsTree = items.map((c) => this.toViewComment(c));
           this.commentsLoading = false;
         },
         error: (e) => {
           console.error('[ApplicationForm] loadComments error:', e);
           this.commentsLoading = false;
-        }
+        },
       });
   }
 
-  // map API -> view + เตรียม state UI
   private toViewComment(c: ApiComment): ViewComment {
     return {
       id: c.id,
@@ -1463,27 +697,21 @@ export class HireResultComponent {
       commentType: (c.commentType || '').trim(),
       isEdited: !!c.isEdited,
       canDelete: !!c.canDelete,
-      replies: (c.replies || []).map(rc => this.toViewComment(rc)),
+      replies: (c.replies || []).map((rc) => this.toViewComment(rc)),
       ui: {
         isReplying: false,
         replyText: '',
         isEditing: false,
         editText: c.commentText || '',
-      }
+      },
     };
   }
 
-  // helper: ตัดสินใจชนิดคอมเมนต์
   private resolveCommentType(parent?: ViewComment): string {
-    // ถ้าเป็นรีพลาย ให้ใช้ชนิดเดียวกับคอมเมนต์แม่
     if (parent?.commentType) return parent.commentType;
-
-    // ถ้าเป็นคอมเมนต์หลัก คุณเลือกได้: จาก UI / จาก step ปัจจุบัน / หรือ default
-    // ตัวอย่าง default:
     return 'application';
   }
 
-  // เพิ่มคอมเมนต์ใหม่ (root)
   onSubmitNewComment() {
     const text = (this.commentCtrl.value || '').trim();
     if (!text || !this.applicantId) return;
@@ -1492,19 +720,17 @@ export class HireResultComponent {
       .getCurrentStageByCandidateId(this.applicantId)
       .pipe(
         takeUntil(this.destroy$),
-        // ดึง typeName จาก response; ถ้าไม่มีให้ fallback เป็น 'Application'
         map((res: any) => (res?.data?.typeName ? String(res.data.typeName).trim() : 'Application')),
         catchError((e) => {
           console.error('[ApplicationForm] current stage error:', e);
           return of('Application');
         }),
-        // เอา typeName ที่ได้ไปโพสต์คอมเมนต์
         switchMap((typeName: string) => {
           const body = {
             candidateId: this.applicantId,
             commentText: text,
-            commentType: typeName,        // <<<< ใช้ typeName จาก API
-            parentCommentId: null
+            commentType: typeName,
+            parentCommentId: null,
           };
           return this.applicationService.addCommentByCandidateId(body);
         })
@@ -1518,13 +744,11 @@ export class HireResultComponent {
       });
   }
 
-  // toggle reply box (เฉพาะ depth=0 ที่ template เปิดปุ่มให้)
   toggleReply(c: ViewComment) {
     c.ui.isReplying = !c.ui.isReplying;
     if (c.ui.isReplying) c.ui.replyText = '';
   }
 
-  // ส่งรีพลาย (ผูก parentCommentId เป็น id ของคอมเมนต์หลัก)
   onSubmitReply(parent: ViewComment) {
     const text = (parent.ui.replyText || '').trim();
     if (!text || !this.applicantId) return;
@@ -1533,10 +757,11 @@ export class HireResultComponent {
       candidateId: this.applicantId,
       commentText: text,
       commentType: this.resolveCommentType(parent),
-      parentCommentId: parent.id
+      parentCommentId: parent.id,
     };
 
-    this.applicationService.addCommentByCandidateId(body)
+    this.applicationService
+      .addCommentByCandidateId(body)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -1544,76 +769,70 @@ export class HireResultComponent {
           parent.ui.replyText = '';
           this.loadComments(this.applicantId);
         },
-        error: (e) => console.error('[ApplicationForm] reply error:', e)
+        error: (e) => console.error('[ApplicationForm] reply error:', e),
       });
   }
 
-  // เริ่มแก้ไข
   startEdit(c: ViewComment) {
     if (!c.isEdited) return;
     c.ui.isEditing = true;
     c.ui.editText = c.text;
   }
 
-  // บันทึกแก้ไข
   onSaveEdit(c: ViewComment) {
     const text = (c.ui.editText || '').trim();
     if (!text) return;
-    this.applicationService.editCommentById(c.id, { commentText: text })
+
+    this.applicationService
+      .editCommentById(c.id, { commentText: text })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
           c.ui.isEditing = false;
           this.loadComments(this.applicantId);
         },
-        error: (e) => console.error('[ApplicationForm] edit comment error:', e)
+        error: (e) => console.error('[ApplicationForm] edit comment error:', e),
       });
   }
 
-  // helper เปิด dialog
   private openAlert(data: AlertDialogData) {
     return this.dialog
       .open(AlertDialogComponent, {
         data,
         width: '480px',
-        disableClose: true, // บังคับให้กดปุ่ม Cancel/Confirm เท่านั้น
-        panelClass: ['pp-rounded-dialog'], // ใส่คลาสเพิ่มได้ตามต้องการ
+        disableClose: true,
+        panelClass: ['pp-rounded-dialog'],
       })
       .afterClosed();
   }
 
-  // ลบคอมเมนต์
   onDeleteComment(c: ViewComment) {
     if (!c.canDelete) return;
 
     this.openAlert({
       title: 'Delete this comment?',
       message: 'Do you want to delete this comment?',
-      confirm: true, // แสดงปุ่ม Cancel/Confirm
+      confirm: true,
     }).subscribe((res) => {
-      // AlertDialogComponent จะส่ง false เมื่อกด Cancel
-      // และส่งค่าที่เป็น truthy เมื่อกด Confirm (อาจเป็น true หรือ object ก็ได้)
       if (!res) return;
 
-      this.applicationService.deleteCommentById(c.id)
+      this.applicationService
+        .deleteCommentById(c.id)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: () => this.loadComments(this.applicantId),
-          error: (e) => console.error('[ApplicationForm] delete comment error:', e)
+          error: (e) => console.error('[ApplicationForm] delete comment error:', e),
         });
     });
   }
 
-  // trackBy
   trackByCommentId = (_: number, c: ViewComment) => c.id;
 
-  // ปรับให้ปุ่มการ์ด "Comment" ทางขวาเลื่อนมาที่ section นี้
   onCommentClick() {
     const el = document.getElementById('comments-section');
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  // รวมจำนวนคอมเมนต์ทั้งหมด (รวมรีพลาย)
   get totalComments(): number {
     return this.countAllComments(this.commentsTree);
   }
@@ -1630,10 +849,9 @@ export class HireResultComponent {
     return sum;
   }
 
-  // เทียบ ISO datetime โดยสนใจแค่ถึงระดับวินาที (YYYY-MM-DDTHH:mm:ss)
   private sameIsoSecond(a?: string, b?: string): boolean {
-    if (!a || !b) return true; // ถ้าขาดค่าใดค่าหนึ่ง ถือว่า "ไม่แก้ไข"
-    const A = String(a).trim().slice(0, 19); // "2025-09-29T10:52:52"
+    if (!a || !b) return true;
+    const A = String(a).trim().slice(0, 19);
     const B = String(b).trim().slice(0, 19);
     return A === B;
   }
@@ -1642,138 +860,4 @@ export class HireResultComponent {
     if (!updatedAt) return false;
     return !this.sameIsoSecond(createdAt, updatedAt);
   }
-
-  private setButtonDisabled(key: string, disabled: boolean) {
-    const set = new Set(this.disabledKeys);
-    disabled ? set.add(key) : set.delete(key);
-    this.disabledKeys = Array.from(set);
-  }
-
-  // --- เพิ่ม state ใน class ---
-  selectedGroupKey: ResultGroupKey | null = null;
-  resultGroups: ResultGroup[] = [
-    { key: 'accept', label: 'Accept', regex: /(accept|on\s*hold)/i, items: [] },
-    { key: 'decline', label: 'Decline', regex: /(decline|no[\s-]?show)/i, items: [] },
-  ];
-
-  // label บนปุ่ม group: เช่น "Accept (Accept / On Hold)"
-  groupDisplayLabel(g: ResultGroup) {
-    const subs = g.items.map(i => i.categoryName).join(' / ');
-    return subs ? `${g.label}` : g.label;
-  }
-
-  // เรียกตอนกดปุ่ม group
-  selectGroup(key: ResultGroupKey) {
-    this.selectedGroupKey = (this.selectedGroupKey === key) ? null : key;
-
-    // เคลียร์หมวดย่อยที่เคยเลือก
-    this.selectedCategoryId = null;
-
-    // เคลียร์ reason ที่เคยติ๊ก
-    this.reasonsInterview1 = this.reasonsInterview1.map((cat: any) => ({
-      ...cat,
-      rejectionReasons: (cat.rejectionReasons || []).map((r: any) => ({ ...r, checked: false }))
-    }));
-
-    this.saveCache();
-    this.updateSaveButtonState();
-  }
-
-
-  // คืนรายการ category ภายใต้ group ที่เลือก (ไว้ใช้ใน html)
-  getCurrentGroupItems() {
-    if (!this.selectedGroupKey) return this.reasonsInterview1;
-    return (this.resultGroups.find(g => g.key === this.selectedGroupKey)?.items) ?? [];
-  }
-
-  // ปุ่ม group style
-  getGroupBtnClass(g: ResultGroup) {
-    const isActive = this.selectedGroupKey === g.key;
-    const base = 'tw-text-sm tw-rounded-lg tw-px-3 tw-py-1.5 tw-border tw-font-medium tw-transition';
-
-    const tones = {
-      accept: isActive
-        ? 'tw-bg-green-500 tw-text-white'
-        : '',
-      decline: isActive
-        ? 'tw-bg-red-500 tw-text-white'
-        : '',
-    };
-
-    const tone = tones[g.key] || 'tw-text-gray-700 tw-border-gray-300';
-    return `${base} ${tone}`;
-  }
-
-
-}
-
-// ====== Helpers ======
-function has(v: any): boolean {
-  return v !== undefined && v !== null && String(v).trim() !== '';
-}
-
-function formatDay(d?: string): string | undefined {
-  if (!has(d)) return undefined;
-  const m = dayjs.utc(String(d));
-  if (!m.isValid()) return undefined;
-  return m.format('DD MMM YYYY');
-}
-
-function isInProcess(status?: string | null): boolean {
-  if (!status) return false;
-  const s = String(status).trim().toLowerCase();
-  return [
-    'inprocess',
-    'in process',
-    'pending',
-    'scheduled',
-    'schedule',
-    'in schedule',
-    'awaiting',
-    'waiting',
-  ].includes(s);
-}
-
-function stepStatusFrom(
-  s?: CandidateTrackStatus,
-  fallbackDate?: string
-): StepStatus {
-  if (!s) return has(fallbackDate) ? 'done' : 'pending';
-  if (isInProcess(s.status)) return 'pending';
-  return has(s.status) || has(s.date) ? 'done' : 'pending';
-}
-
-function subFrom(s?: CandidateTrackStatus, fallback = ''): string {
-  return (s?.status && String(s.status)) || fallback;
-}
-
-// ===== Palette =====
-const COLOR = {
-  green: '#0AAA2A',
-  blue: '#0A57C3',
-  red: '#DC2626',
-  grayBg: '#F3F4F6',
-  white: '#FFFFFF',
-  grayBorder: '#E5E7EB',
-};
-
-// สถานะ -> โทนสี
-function statusToVariant(
-  raw?: string | null
-): 'green' | 'blue' | 'gray' | 'red' | 'white' {
-  const s = String(raw || '').trim().toLowerCase();
-
-  if (!s) return 'white';
-  if (/(decline|declined|reject|rejected|fail|failed|decline offer)/.test(s))
-    return 'red';
-  if (/(inprocess|in process|scheduled|schedule|in schedule|inprogress)/.test(s))
-    return 'blue';
-  if (/(pending|awaiting|waiting)/.test(s)) return 'gray';
-  if (
-    /(accept|accepted|pass|passed|hired|applied|submitted|screened|offer|offered)/.test(
-      s
-    )
-  )
-    return 'green';
-  return 'white';
 }

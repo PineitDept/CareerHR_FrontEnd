@@ -1,6 +1,6 @@
 export interface DateRange {
-   month: string;
-   year: string;
+  month: string;
+  year: string;
 }
 
 export interface SearchForm {
@@ -73,3 +73,9 @@ export interface UpdateCandidateStageHistoryPayload {
   concern?: string;
   selectedReasonIds: number[];
 }
+
+export interface GetCompanyUserInfoReq { userId: number, companyId: number }
+export interface UpdateDepartmentReq { userId: number, departmentId: number }
+export interface UpdateDivisionReq { userId: number, divisionId: number }
+export interface UpdateLevelReq { userId: number, levelnameEN: string }
+export interface UpdateSelectedPositionReq { userId: number; selectedPositionId: number; }

@@ -228,7 +228,9 @@ export class OfferEmploymentComponent {
   loadInitialAppointments(updateTabCounts = false) {
     this.appointments = [];
     this.currentFilterParams.page = 1;
-    this.fetchAppointments(updateTabCounts);
+    if (this.isAtParentOnly()) {
+      this.fetchAppointments(updateTabCounts);
+    }
   }
 
   fetchAppointments(updateTabCounts = false, autoSubscribe = true): Observable<any> {
@@ -415,9 +417,18 @@ export class OfferEmploymentComponent {
     this.hasMoreData = true;
     this.appointments = [];
 
-    this.fetchAppointments(true);
+    if (this.isAtParentOnly()) {
+      this.fetchAppointments(true);
+    }
 
     this.updateTabCounts(this.appointments);
+  }
+
+  private isAtParentOnly(): boolean {
+    // ถ้ามี child แสดงว่าเราอยู่ /offer-employment/<child> → ไม่ fetch
+    const child = this.route.firstChild ?? this.route.snapshot.firstChild;
+    // กรณีมี child path = '' (หน้า default ของ parent) ยังถือว่าอยู่หน้า parent
+    return !child || child.routeConfig?.path === '';
   }
 
   // onDateChange(event: Event, item: any) {
