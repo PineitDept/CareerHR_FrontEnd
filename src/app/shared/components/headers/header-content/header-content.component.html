@@ -19,7 +19,7 @@
         (click)="toggleDropdown('by')"
         class="
           tw-w-full tw-flex tw-justify-between tw-items-center
-          tw-bg-[#F8F9FA] tw-border tw-border-[#ADB5BD] tw-rounded-[8px]
+          tw-bg-white tw-border tw-border-[#ADB5BD] tw-rounded-[8px]
           tw-px-4 tw-py-2 tw-text-sm tw-text-[#495057] tw-outline-none tw-gap-2
         "
         [ngClass]="{
@@ -53,7 +53,7 @@
           [disabled]="!searchForm.searchBy"
           [ngClass]="{
             'tw-bg-[#DEE2E6] tw-text-[#ADB5BD] tw-cursor-not-allowed': !searchForm.searchBy,
-            'tw-text-[#495057] tw-bg-[#F8F9FA]': searchForm.searchBy
+            'tw-text-[#495057] tw-bg-white': searchForm.searchBy
           }"
           class="tw-w-full tw-rounded-[8px] tw-border tw-border-[#ADB5BD] tw-px-4 tw-py-2 tw-text-sm tw-outline-none placeholder:tw-text-[#ADB5BD] tw-text-[#495057]"
         />
@@ -101,7 +101,7 @@
 
     <!-- Buttons -->
     <button
-      class="tw-rounded-[8px] tw-border tw-border-[#ADB5BD] tw-text-sm tw-px-6 tw-py-2"
+      class="tw-rounded-[8px] tw-border tw-border-[#ADB5BD] tw-text-sm tw-px-6 tw-py-2 tw-bg-white"
       (click)="onClearClick()"
       [disabled]="
         !searchForm.searchBy
@@ -109,7 +109,7 @@
       [ngClass]="{
         'tw-opacity-50 tw-cursor-not-allowed':
           !searchForm.searchBy,
-        'hover:tw-bg-[#DEE2E6]':
+        'hover:tw-bg-[#F1F3F5]':
           searchForm.searchBy
       }"
     >
