@@ -277,9 +277,9 @@ export class ScreeningComponent extends BaseApplicationComponent {
     const summary = item.summary;
 
     return {
-      id: summary.userID.toString(),
+      id: item.userID.toString(),
       submitDate: summary.submitDate || '',
-      userID: summary.userID.toString(),
+      userID: item.userID.toString(),
       fullName: summary.fullName,
       position:
         item.positions?.map((pos: IPositionDto) => pos.namePosition) || [],
