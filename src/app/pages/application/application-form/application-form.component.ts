@@ -1377,10 +1377,25 @@ const COLOR = {
 // สถานะ -> โทนสี
 function statusToVariant(raw?: string|null): 'green'|'blue'|'gray'|'red'|'white'|'purple' {
   const s = String(raw || '').trim().toLowerCase();
+
+  // 1) เคสพิเศษ PINE
   if (/(didn?['’]?t|did\s*not)\s*interview.*\(pine\)/.test(s)) return 'purple';
+
+  // 2) เคส "Not Pass" และคำใกล้เคียง → ต้องมาก่อน rule "pass"
+  if (/\b(not\s*pass(ed)?|did\s*not\s*pass|not\s*selected|unsuccessful)\b/.test(s)) return 'red';
+
+  // 3) เคสลบอื่น ๆ
   if (/(decline|rejected?|fail|failed|decline offer)/.test(s)) return 'red';
+
+  // 4) ระหว่างดำเนินการ
   if (/(inprocess|in process|scheduled|schedule|in schedule|inprogress)/.test(s)) return 'blue';
+
+  // 5) รอผล
   if (/(pending|awaiting|waiting)/.test(s)) return 'gray';
+
+  // 6) เคสบวก
   if (/(accept|accepted|pass|passed|hired?|hire|applied|submitted|screened|offer|offered|onboarded?)/.test(s)) return 'green';
+
   return 'white';
 }
+
