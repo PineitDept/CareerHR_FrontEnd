@@ -19,7 +19,7 @@
         (click)="toggleDropdown('by')"
         class="
           tw-w-full tw-flex tw-justify-between tw-items-center
-          tw-bg-gray-light-4 tw-border tw-border-[#ADB5BD] tw-rounded-[8px]
+          tw-bg-[#F8F9FA] tw-border tw-border-[#ADB5BD] tw-rounded-[8px]
           tw-px-4 tw-py-2 tw-text-sm tw-text-[#495057] tw-outline-none tw-gap-2
         "
         [ngClass]="{
@@ -53,7 +53,7 @@
           [disabled]="!searchForm.searchBy"
           [ngClass]="{
             'tw-bg-[#DEE2E6] tw-text-[#ADB5BD] tw-cursor-not-allowed': !searchForm.searchBy,
-            'tw-text-[#495057]': searchForm.searchBy
+            'tw-text-[#495057] tw-bg-[#F8F9FA]': searchForm.searchBy
           }"
           class="tw-w-full tw-rounded-[8px] tw-border tw-border-[#ADB5BD] tw-px-4 tw-py-2 tw-text-sm tw-outline-none placeholder:tw-text-[#ADB5BD] tw-text-[#495057]"
         />
