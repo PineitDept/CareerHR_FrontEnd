@@ -55,6 +55,7 @@ export interface TrackingRow {
   offer: IconConfig;
   hired: IconConfig;
   lastUpdate?: string;
+  roundID?: number;
 }
 
 export interface ICandidateFilterRequest {

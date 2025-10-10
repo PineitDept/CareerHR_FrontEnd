@@ -412,6 +412,7 @@ export class TrackingComponent
       offer: this.mapStatusIdToIcon(item.offer?.id) || STATUS_ICON_MAP[12],
       hired: this.mapStatusIdToIcon(item.hired?.id) || STATUS_ICON_MAP[12],
       lastUpdate: item.lastUpdate,
+      roundID: item.roundID,
     };
   }
 
@@ -523,8 +524,12 @@ export class TrackingComponent
   override onRowClick(row: any): void {
     const id = (row as any)?.id;
     if (!id) return;
+    console.log('Row clicked:', row);
 
-    const queryParams = { id };
+    const queryParams = {
+      id,
+      round: (row as any)?.roundID
+    };
     this.router.navigate(['/applications/tracking/application-form'], { queryParams });
   }
 
