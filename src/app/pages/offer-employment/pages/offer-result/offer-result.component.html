@@ -1,0 +1,543 @@
+<div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
+    <app-header-content [headerName]="'Offer Result'" [headerType]="''"></app-header-content>
+</div>
+
+<app-filter [filterDynamicButton]="true"></app-filter>
+
+<app-loading></app-loading>
+
+<!-- ================= MAIN GRID ================= -->
+<div class="tw-grid tw-grid-cols-4 tw-gap-6 tw-px-6 tw-py-6 tw-bg-white">
+    <!-- =============== LEFT (2 cols) =============== -->
+    <form [formGroup]="formDetails" class="tw-col-span-3 ">
+        <div class="tw-space-y-6">
+            <!-- ===== Applicant Header Card ===== -->
+            <section
+                class="tw-bg-white tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-flex tw-items-stretch overflow-hidden">
+                <!-- Avatar -->
+                <div
+                    class="tw-w-[20%] tw-shrink-0 tw-overflow-hidden tw-rounded-l-xl tw-flex tw-items-center tw-justify-center tw-bg-gray-100">
+                    <ng-container *ngIf="applicant.avatarUrl; else noAvatar">
+                        <img class="tw-w-full tw-h-full tw-object-cover" [src]="applicant.avatarUrl" alt="avatar" />
+                    </ng-container>
+                    <ng-template #noAvatar>
+                        <app-icon name="user" [size]="81" class="tw-text-gray-400"></app-icon>
+                    </ng-template>
+                </div>
+
+                <!-- Info -->
+                <div class="tw-flex-1 tw-space-y-2 tw-px-6 tw-py-4">
+                    <div class="tw-flex tw-items-center tw-justify-between">
+                        <div>
+                            <div
+                                class="tw-inline-flex tw-items-center tw-gap-2 tw-text-[14px] tw-font-semibold tw-bg-[#DDF7F8] tw-text-[#29C6CF] tw-px-2 tw-py-1 tw-rounded-md">
+                                Applied Date {{ applicant.appliedDate | date : "dd/MM/yyyy" }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tw-text-[22px] tw-font-semibold">{{ applicant.name }}</div>
+
+                    <div class="tw-text-[14px] tw-font-medium">
+                        {{ applicant.university }} {{ applicant.faculty }}
+                        {{ applicant.program }}
+                    </div>
+
+                    <div class="tw-text-[14px] !tw-mt-0">
+                        <ng-container *ngIf="applicant.gpa as gpa">
+                            <span class="tw-font-medium">GPA </span>
+                            <span class="tw-font-medium">{{ gpa }}</span>
+                        </ng-container>
+                    </div>
+
+                    <div class="tw-space-y-2 tw-py-2 !tw-mb-2">
+                        <div class="tw-text-[14px]">
+                            <div class="tw-text-gray-500 tw-font-medium">Applied Position</div>
+                            <div class="tw-whitespace-pre-line">
+                                <ng-container *ngFor="let pos of applicant.positions; let i = index">
+                                    {{ pos
+                                    }}<ng-container
+                                        *ngIf="i < (applicant.positions.length || 0) - 1"><br /></ng-container>
+                                </ng-container>
+                            </div>
+                        </div>
+
+                        <div class="tw-pt-2">
+                            <div class="tw-text-[14px] tw-flex">
+                                <div class="tw-text-gray-500 tw-font-medium">Email :</div>
+                                <div class="tw-ml-1">{{ applicant.email }}</div>
+                            </div>
+                            <div class="tw-text-[14px] tw-flex">
+                                <div class="tw-text-gray-500 tw-font-medium">Phone :</div>
+                                <div class="tw-ml-1">{{ applicant.phone }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="tw--mx-0 !tw-mt-4" />
+
+                    <div class="tw-flex tw-items-center tw-justify-between tw-pt-3 tw-text-[14px] tw-text-gray-500">
+                        <div class="tw-text-gray-500 tw-font-medium">
+                            Applicant Grade {{ applicant.grade }}
+                        </div>
+                        <div class="tw-flex tw-items-center tw-gap-2">
+                            <app-icon name="thumbs-up" [size]="18"></app-icon>
+                            {{ applicant.views }}
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <section class="tw-w-full">
+                <div class="tw-bg-[#FFFFFF]">
+                    <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+                        <!-- Header + Chevron -->
+                        <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer">
+                            <label class="tw-text-lg tw-font-bold">
+                                Offer Details
+                            </label>
+                        </div>
+
+                        <hr class="tw--mx-6 tw-mt-4" />
+
+                        <ng-container>
+                            <div class="tw-grid tw-grid-cols-2 tw-gap-4 tw-my-4">
+                                <div>
+                                    <div class="tw-text-[13px] tw-font-medium">Offer Result By</div>
+                                    <input
+                                        class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100 tw-text-[#8b8b8b]"
+                                        formControlName="userInterviewReview" />
+                                </div>
+                                <div>
+                                    <div class="tw-text-[13px] tw-font-medium">Offer Result Date</div>
+                                    <input
+                                        [ngClass]="[!editReview ? 'tw-pointer-events-none tw-text-[#8b8b8b] tw-bg-gray-100':'']"
+                                        class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2"
+                                        type="date" [min]="today" formControlName="dateInterviewReview"
+                                        (input)="onDateInput()" (change)="onDateChange()">
+                                </div>
+                            </div>
+
+                            <div class="tw-grid tw-grid-cols-2 tw-gap-4 tw-my-4">
+                                <div>
+                                    <div class="tw-text-[13px] tw-font-medium tw-mb-1">Position Offer</div>
+                                    <!-- <input
+                                        class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2"
+                                        formControlName="userOfferPosition" /> -->
+
+                                    <app-cdk-dropdown [options]="positionOptions" [value]="selectedPositionId"
+                                        placeholder="Select Position" [disabledSelected]="!editReview"
+                                        (valueChange)="onPositionChange($event)"></app-cdk-dropdown>
+                                </div>
+                            </div>
+
+                            <!-- Result -->
+                            <div class="tw-mb-4">
+                                <div class="tw-text-[13px] tw-font-medium">Result</div>
+                                <div class="tw-flex tw-flex-wrap tw-gap-2 tw-mt-1">
+                                    <div *ngFor="let s of reasonsInterview1">
+                                        <button type="button" (click)="selectCategory(s.categoryId)"
+                                            class="tw-text-sm tw-rounded-lg tw-px-3 tw-py-1.5 tw-border tw-transition"
+                                            [ngClass]="[getCategoryBtnClass(s, selectedCategoryId), !editReview ? 'tw-pointer-events-none':'']">
+                                            {{ s.categoryName }}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Reason -->
+                            <div class="tw-mb-4" *ngIf="selectedCategoryId">
+                                <div class="tw-text-[13px] tw-font-medium">Reason</div>
+                                <div class="tw-grid md:tw-grid-cols-2 tw-gap-y-3 tw-gap-x-4 tw-mt-2">
+                                    <div class="tw-flex tw-items-start tw-gap-2"
+                                        *ngFor="let r of getRejectionReasons(selectedCategoryId)"
+                                        (click)="toggleReasonCheck(r)"
+                                        [ngClass]="!editReview ? 'tw-pointer-events-none':''">
+                                        <span role="checkbox" [attr.aria-checked]="r.checked"
+                                            class="tw-inline-flex tw-items-center tw-justify-center tw-rounded-[4px] tw-border tw-align-middle tw-mt-0.5"
+                                            [ngClass]="[r.checked ? 'tw-border-green-500 tw-bg-green-50' : 'tw-border-gray-300 tw-bg-white',
+                                                
+                                            ]" style="width:18px;height:18px;min-width:18px;min-height:18px">
+                                            <app-icon *ngIf="r.checked" name="check" [size]="14"
+                                                class="tw-text-green-600"></app-icon>
+                                        </span>
+                                        <span class="tw-text-[14px]">{{ r.reasonText }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="tw-space-y-3 tw-pb-4">
+                                <ng-container>
+                                    <ng-container>
+                                        <div>
+                                            <div class="tw-text-[13px] tw-font-medium">Notes</div>
+                                            <textarea
+                                                [ngClass]="[!editReview ? 'tw-pointer-events-none tw-text-[#8b8b8b] tw-bg-gray-100':'']"
+                                                class="tw-w-full tw-text-[14px] tw-h-32 tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2"
+                                                formControlName="noteInterviewReview" (input)="saveCache()"
+                                                (compositionend)="saveCache()"></textarea>
+                                        </div>
+                                    </ng-container>
+                                </ng-container>
+                            </div>
+
+                            <div class="tw-flex tw-gap-3 tw-justify-end tw-pb-6">
+                                <!-- ปุ่ม Edit: แสดงเมื่อยังไม่เข้าสู่โหมดแก้ -->
+                                <button *ngIf="allowEditButton" type="button" (click)="onEditReview()"
+                                    class="tw-rounded-lg tw-bg-[#00AAFF] tw-text-white tw-py-2 tw-px-4 tw-text-center tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-bg-[#0c95da]">
+                                    Edit
+                                </button>
+
+                                <!-- ปุ่ม Confirm / Cancel: แสดงเมื่อกำลังแก้ -->
+                                <ng-container *ngIf="editReview">
+                                    <button type="button" (click)="onComfirmReview()"
+                                        class="tw-rounded-lg tw-bg-[#D97706] tw-text-white tw-py-2 tw-px-4 tw-text-center tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-bg-[#c46b07]">
+                                        Confirm
+                                    </button>
+                                    <button type="button" (click)="onCancelReview()"
+                                        class="tw-rounded-lg tw-border tw-border-[#E5E5E5] tw-text-black tw-py-2 tw-px-4 tw-text-center tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-bg-[#E5E5E5]">
+                                        Cancel
+                                    </button>
+                                </ng-container>
+                            </div>
+
+                        </ng-container>
+                    </div>
+                </div>
+            </section>
+
+            <section class="tw-w-full">
+                <div class="tw-bg-[#FFFFFF]">
+                    <div class="tw-bg-white tw-px-6 tw-py-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+                        <!-- Header + Chevron -->
+                        <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer">
+                            <label class="tw-text-lg tw-font-bold">
+                                Offer Positions Details
+                            </label>
+                        </div>
+
+                        <hr class="tw--mx-6 tw-mt-4" />
+
+                        <ng-container>
+                            <div class="tw-grid tw-grid-cols-2 tw-gap-4 tw-my-4">
+                                <div>
+                                    <div class="tw-text-[13px] tw-font-medium tw-mb-1">Company</div>
+                                    <app-cdk-dropdown [options]="companyOptions" placeholder="Select Company"
+                                        [value]="selectedCompanyId" (valueChange)="onCompanyChange($event)">
+                                    </app-cdk-dropdown>
+                                </div>
+                                <div>
+                                    <div class="tw-text-[13px] tw-font-medium tw-mb-1">Department</div>
+                                    <app-cdk-dropdown [options]="departmentOptions" placeholder="Select Department"
+                                        [value]="selectedDepartmentId" [disabledSelected]="isActiveDepartment"
+                                        (valueChange)="onDepartmentChange($event)">
+                                    </app-cdk-dropdown>
+                                </div>
+                            </div>
+                            <div class="tw-grid tw-grid-cols-2 tw-gap-4 tw-my-4">
+                                <div>
+                                    <div class="tw-text-[13px] tw-font-medium tw-mb-1">Division</div>
+                                    <app-cdk-dropdown [options]="divisionOptions" placeholder="Select Division"
+                                        [value]="selectedDivisionId" [disabledSelected]="isActiveDivision"
+                                        (valueChange)="onDivisionChange($event)">
+                                    </app-cdk-dropdown>
+                                </div>
+                                <div>
+                                    <div class="tw-text-[13px] tw-font-medium tw-mb-1">Level</div>
+                                    <app-cdk-dropdown [options]="LevelOptions" placeholder="Select Level"
+                                        [value]="selectedLevelId" [disabledSelected]="isActiveLevel"
+                                        (valueChange)="onLevelChange($event)">
+                                    </app-cdk-dropdown>
+                                </div>
+                            </div>
+                            <div class="tw-grid tw-grid-cols-2 tw-gap-4 tw-my-4">
+                                <div>
+                                    <div class="tw-text-[13px] tw-font-medium tw-mb-1">Position</div>
+                                    <app-cdk-dropdown [options]="positionOptions2" placeholder="Select Position"
+                                        [value]="selectedPositionId2" [disabledSelected]="isActivePosition"
+                                        (valueChange)="onPositionChange2($event)">
+                                    </app-cdk-dropdown>
+                                </div>
+                                <div>
+                                    <div class="tw-text-[13px] tw-font-medium tw-mb-1">Manager</div>
+                                    <app-cdk-dropdown [options]="managerOptions" placeholder="Select Manager"
+                                        [value]="selectedManagerId" [disabledSelected]="isActiveManager"
+                                        (valueChange)="onManagerChange($event)">
+                                    </app-cdk-dropdown>
+                                </div>
+                            </div>
+                            <div class="tw-grid tw-grid-cols-2 tw-gap-4 tw-my-4">
+                                <div>
+                                    <div class="tw-text-[13px] tw-font-medium tw-mb-1">Confirmed Start Date</div>
+                                    <input
+                                        class="tw-w-full tw-block tw-bg-gray-light-4 tw-border tw-border-[#d1d5db] tw-rounded-[8px] tw-p-2 tw-text-sm tw-outline-none tw-gap-2 placeholder:tw-text-[#ADB5BD]"
+                                        type="date" formControlName="confirmedStartDate" (input)="onDateInput()"
+                                        (change)="onConfirmedStartDate($event)">
+                                </div>
+                                <div>
+                                    <p class="tw-text-[13px] tw-font-medium tw-mb-1">Contact</p>
+                                    <!-- ...ภายใต้ Offer Positions Details -->
+                                    <div *ngIf="appointmentsItem as appt">
+                                        <div class="tw-flex tw-rounded-lg tw-w-full">
+                                            <button type="button" (click)="onSendMail(appt)"
+                                                class="tw-rounded-tl-lg tw-rounded-bl-lg tw-min-h-[40px] tw-w-full tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5 "
+                                                [ngClass]="[
+                                                            appt?.interview?.isEmailSent ? 'tw-bg-[#0A0] tw-pointer-events-none' : 'tw-bg-[#afafaf] hover:tw-bg-[#858585]',
+                                                            appt?.interview?.isCalled !== 'complete' ? 'tw-cursor-no-drop hover:tw-bg-[#afafaf]' : '',
+                                                        ]">
+                                                <app-icon [name]="'mail'" [size]="18"
+                                                    class="tw-text-white tw-relative tw-bottom-[1px] tw-mr-2"></app-icon>
+                                                <span class="tw-font-semibold">Send</span>
+                                            </button>
+
+                                            <div class="tw-relative tw-min-w-[30%] tw-text-white">
+                                                <button type="button" (click)="onAddCallStatus(appt)"
+                                                    class="tw-rounded-tr-lg tw-rounded-br-lg tw-min-h-[40px] tw-px-3 tw-py-1.5 tw-border-l-[1px] tw-border-white tw-w-full"
+                                                    [ngClass]="[
+                                                                appt?.interview?.isCalled === 'complete' ? 'tw-bg-[#0A0] hover:tw-bg-[#038d03] tw-pointer-events-none' : '',
+                                                                appt?.interview?.isCalled === 'inprocess' ? 'tw-bg-[#FFC107] hover:tw-bg-[#e0a800]' : '',
+                                                                appt?.interview?.isCalled === 'pending' ? 'tw-bg-[#afafaf] hover:tw-bg-[#858585]' : '',
+                                                                appt?.interview?.isEmailSent ? 'tw-pointer-events-none' : '',
+                                                            ]">
+                                                    <app-icon [name]="'phone'" [size]="18"
+                                                        class="tw-relative tw-bottom-[1px] tw-text-white"></app-icon>
+                                                </button>
+
+                                                <span (click)="onShowCallStatus(appt)"
+                                                    *ngIf="appt?.interview?.missCallCount"
+                                                    class="tw-cursor-pointer tw-absolute tw-top-[-8px] tw-right-[-12px] tw-z-10 tw-p-1 tw-w-[24px] tw-h-[24px] tw-text-[12px] tw-font-bold tw-rounded-[100%] tw-bg-[#00aaff] tw-text-white tw-flex tw-justify-center tw-items-center">
+                                                    {{ appt.interview.missCallCount }}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <p class="tw-text-[10px] tw-mt-2" *ngIf="appt?.interview?.missCallCount">
+                                            {{ appt?.interview?.missCallHistory?.[0]?.missCallAt | date:'dd/MM/yyyy
+                                            hh:mm a' }}
+                                            {{ appt?.interview?.missCallHistory?.[0]?.missCallReason }}
+                                        </p>
+
+                                        <p class="tw-text-[10px] tw-mt-2" *ngIf="appt?.interview?.sendAt && appt?.interview?.isEmailSent">
+                                            {{ appt?.interview?.sendAt | date:'dd/MM/yyyy hh:mm a' }} The email has been
+                                            sent.
+                                        </p>
+                                    </div>
+
+                                </div>
+                            </div>
+
+                        </ng-container>
+                    </div>
+                </div>
+            </section>
+            <!-- ===== Comments ===== -->
+            <section id="comments-section" class="tw-w-full">
+                <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+                    <div class="tw-flex tw-items-center tw-justify-between">
+                        <label class="tw-text-lg tw-font-bold">Comments</label>
+                    </div>
+
+                    <hr class="tw--mx-6 tw-mt-4" />
+
+                    <!-- Loading -->
+                    <div *ngIf="commentsLoading" class="tw-text-sm tw-text-gray-500 tw-py-4">Loading comments...</div>
+
+                    <!-- List -->
+                    <div class="tw-space-y-6 tw-py-4" *ngIf="!commentsLoading && totalComments > 0">
+                        <!-- ใช้ template recursive เพื่อเรนเดอร์คอมเมนต์และรีพลาย -->
+                        <ng-container
+                            *ngTemplateOutlet="renderCommentList; context: { $implicit: commentsTree, depth: 0 }">
+                        </ng-container>
+
+                        <ng-template #renderCommentList let-list let-depth="depth">
+                            <ng-container *ngFor="let c of list; trackBy: trackByCommentId">
+                                <!-- 1 คอมเมนต์ -->
+                                <div class="tw-flex tw-gap-3"
+                                    [ngClass]="depth > 0 ? 'tw-border-l-2 tw-border-blue-100 tw-pl-3' : ''">
+                                    <div class="tw-pt-1">
+                                        <app-icon name="comment-text" [size]="22"
+                                            [ngClass]="depth > 0 ? 'tw-text-gray-400' : 'tw-text-indigo-400'"></app-icon>
+                                    </div>
+
+                                    <div class="tw-flex-1">
+                                        <!-- Header -->
+                                        <div class="tw-text-[14px] tw-font-semibold"
+                                            [ngClass]="depth > 0 ? 'tw-text-[#0A57C3]' : 'tw-text-indigo-700'">
+                                            {{ c.author }}
+                                        </div>
+                                        <div class="tw-text-[12px] tw-text-gray-500 tw-flex tw-items-center tw-gap-2">
+                                            <span>{{ c.createdAt | date:'d MMMM yyyy h:mm a' }}</span>
+
+                                            <!-- comment type -->
+                                            <span *ngIf="c.commentType"
+                                                class="tw-inline-flex tw-items-center tw-px-2 tw-py-[2px] tw-rounded-md tw-text-[11px] tw-font-medium"
+                                                [ngClass]="depth > 0 ? 'tw-bg-gray-100 tw-text-gray-700' : 'tw-bg-indigo-50 tw-text-indigo-700'">
+                                                {{ c.commentType }}
+                                            </span>
+
+                                            <span *ngIf="isEditedAtSecond(c.createdAt, c.updatedAt)">· edited</span>
+                                        </div>
+
+                                        <!-- Content / Edit Mode -->
+                                        <div *ngIf="!c.ui.isEditing; else editBox" class="tw-mt-2">
+                                            <div class="tw-rounded-xl tw-px-4 tw-py-3 tw-text-[14px]"
+                                                [ngClass]="depth > 0 ? 'tw-bg-gray-100' : 'tw-bg-indigo-50 tw-border tw-border-indigo-100'">
+                                                {{ c.text }}
+                                            </div>
+                                        </div>
+
+                                        <ng-template #editBox>
+                                            <div class="tw-mt-2">
+                                                <textarea
+                                                    class="tw-w-full tw-text-[14px] tw-min-h-[88px] tw-rounded-lg tw-border tw-border-gray-300 tw-px-3 tw-py-2 focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-blue-300"
+                                                    [value]="c.ui.editText"
+                                                    (input)="c.ui.editText = $any($event.target).value"></textarea>
+                                                <div class="tw-flex tw-items-center tw-gap-3 tw-mt-2">
+                                                    <button type="button"
+                                                        class="tw-bg-[#0A57C3] tw-text-white tw-text-[14px] tw-px-3 tw-py-1 tw-rounded-lg hover:tw-brightness-110"
+                                                        (click)="onSaveEdit(c)">
+                                                        Save
+                                                    </button>
+                                                    <button type="button"
+                                                        class="tw-text-gray-600 tw-text-[14px] hover:tw-text-gray-800"
+                                                        (click)="c.ui.isEditing = false">
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </ng-template>
+
+                                        <!-- Actions -->
+                                        <div class="tw-flex tw-items-center tw-gap-3 tw-pt-2">
+                                            <!-- Reply เฉพาะ depth 0: ปุ่ม indigo outline -->
+                                            <button type="button"
+                                                class="tw-text-[13px] tw-inline-flex tw-items-center tw-gap-1 tw-rounded-md tw-border tw-border-indigo-200 tw-bg-indigo-50 tw-text-indigo-700 hover:tw-bg-indigo-100 hover:tw-border-indigo-300 focus:tw-ring-2 focus:tw-ring-indigo-200 focus:tw-outline-none tw-px-2 tw-py-0.5"
+                                                *ngIf="depth === 0" (click)="toggleReply(c)">
+                                                Reply
+                                            </button>
+
+                                            <!-- Edit -->
+                                            <button type="button"
+                                                class="tw-text-[13px] tw-text-[#D97706] hover:tw-text-[#a7671e] tw-inline-flex tw-items-center tw-gap-1"
+                                                *ngIf="c.isEdited" (click)="startEdit(c)">
+                                                <app-icon name="pen-to-square" [size]="20"></app-icon><span>Edit</span>
+                                            </button>
+
+                                            <!-- Delete -->
+                                            <button type="button"
+                                                class="tw-text-[13px] tw-text-[#F00] hover:tw-text-[#AA0000] tw-inline-flex tw-items-center tw-gap-1"
+                                                *ngIf="c.canDelete" (click)="onDeleteComment(c)">
+                                                <app-icon name="trash" [size]="20"></app-icon><span>Delete</span>
+                                            </button>
+                                        </div>
+
+                                        <!-- Reply Box -->
+                                        <div *ngIf="c.ui.isReplying" class="tw-mt-3">
+                                            <textarea
+                                                class="tw-w-full tw-text-[14px] tw-min-h-[88px] tw-rounded-lg tw-border tw-border-gray-300 tw-px-3 tw-py-2 focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-blue-300"
+                                                placeholder="Write a reply..." [value]="c.ui.replyText"
+                                                (input)="c.ui.replyText = $any($event.target).value"></textarea>
+                                            <div class="tw-flex tw-items-center tw-gap-3 tw-mt-2">
+                                                <!-- ปุ่มส่ง reply = indigo เข้ม -->
+                                                <button type="button"
+                                                    class="tw-bg-indigo-600 tw-text-white tw-text-[14px] tw-px-3 tw-py-1 tw-rounded-lg hover:tw-bg-indigo-700 focus:tw-ring-2 focus:tw-ring-indigo-200"
+                                                    (click)="onSubmitReply(c)">
+                                                    Reply
+                                                </button>
+                                                <button type="button"
+                                                    class="tw-text-gray-600 tw-text-[14px] hover:tw-text-gray-800"
+                                                    (click)="c.ui.isReplying = false">
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Children -->
+                                        <div class="tw-ml-10 tw-mt-4" *ngIf="c.replies?.length">
+                                            <ng-container
+                                                *ngTemplateOutlet="renderCommentList; context: { $implicit: c.replies, depth: depth + 1 }">
+                                            </ng-container>
+                                        </div>
+                                    </div>
+                                </div>
+                            </ng-container>
+                        </ng-template>
+                    </div>
+
+                    <hr class="tw--mx-6" *ngIf="totalComments > 0" />
+
+                    <!-- Composer -->
+                    <div class="tw-py-4">
+                        <div class="tw-text-[14px] tw-font-semibold tw-text-[#0A57C3]">
+                            {{ currentUserName || 'You' }}
+                        </div>
+                        <div class="tw-mt-2">
+                            <textarea
+                                class="tw-w-full tw-text-[14px] tw-min-h-[96px] tw-rounded-lg tw-border tw-border-gray-300 tw-px-3 tw-py-2 focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-blue-300"
+                                placeholder="Write a comment..." [formControl]="commentCtrl"></textarea>
+                        </div>
+                        <div class="tw-flex tw-items-center tw-justify-end tw-gap-4 tw-mt-3">
+                            <button type="button" class="tw-text-[15px] tw-text-gray-600 hover:tw-text-gray-800"
+                                (click)="commentCtrl.setValue('')">
+                                Cancel
+                            </button>
+                            <button type="button"
+                                class="tw-inline-flex tw-items-center tw-gap-2 tw-bg-[#0A57C3] tw-text-white tw-text-[15px] tw-px-4 tw-py-2 tw-rounded-lg hover:tw-brightness-110"
+                                (click)="onSubmitNewComment()">
+                                <app-icon name="comment-text" [size]="18" class="tw-shrink-0"></app-icon>
+                                <span class="tw-leading-none">Comment</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- /Comments -->
+        </div>
+    </form>
+
+    <!-- =============== RIGHT (1 col) =============== -->
+    <aside class="tw-col-span-1 tw-space-y-6">
+        <div
+            class="tw-space-y-4 tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+            <div>
+                <label class="tw-text-lg tw-font-bold">Probation Form</label>
+                <hr class="tw--mx-6 tw-mt-4">
+            </div>
+
+            <div class="tw-flex tw-flex-col">
+                <div class="tw-text-[14px] tw-font-medium tw-mb-1">Evaluation Period</div>
+                <app-cdk-dropdown [options]="probationOptions" placeholder="Select Period" [value]="selectedProbation"
+                    (valueChange)="onProbationChange($event)"></app-cdk-dropdown>
+            </div>
+        </div>
+
+        <button type="button"
+            class="tw-w-full tw-rounded-2xl tw-bg-[#5500FF] tw-text-white tw-px-6 tw-py-6 tw-text-left tw-shadow-[0_8px_16px_rgba(0,0,0,0.25)] tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-brightness-110 hover:tw-shadow-[0_12px_20px_rgba(0,0,0,0.35)] focus:tw-ring-2 focus:tw-ring-white/30"
+            (click)="onCommentClick()">
+            <div class="tw-flex tw-items-center tw-gap-6">
+                <app-icon name="comment-text" [size]="48" class="tw-opacity-90"></app-icon>
+                <div class="tw-flex-1">
+                    <div class="tw-text-[14px] tw-opacity-95">
+                        {{ totalComments }}
+                        {{ totalComments === 1 ? "comment" : "comments" }}
+                    </div>
+                    <div class="tw-text-[24px] tw-font-bold leading-none">
+                        Comment
+                    </div>
+                </div>
+            </div>
+        </button>
+
+        <!-- <div
+            class="tw-space-y-4 tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+            <div>
+                <label class="tw-text-lg tw-font-bold">History Log</label>
+                <hr class="tw--mx-6 tw-mt-4">
+            </div>
+
+            <div class="tw-flex tw-flex-col tw-gap-y-2 tw-text-[12px]">
+                <p>25/03/2024 10:36 Approve by Poschanan</p>
+                <p>31/03/2024 09:36 Edit by Nanthiya</p>
+            </div>
+        </div> -->
+    </aside>
+</div>

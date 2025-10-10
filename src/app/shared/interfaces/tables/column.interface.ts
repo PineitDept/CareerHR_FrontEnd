@@ -1,4 +1,4 @@
-type TableCellType = 'text' | 'badge' | 'number' | 'select' | 'button' | 'date' | 'dateWithTime' | 'list' | 'icon' | 'expandable' | 'toggle' | 'textlink' | 'textlink-custom' | 'input' | 'multipleselect' | 'dynamic'; // Column type
+type TableCellType = 'text' | 'badge' | 'number' | 'select' | 'button' | 'date' | 'dateWithTime' | 'list' | 'icon' | 'expandable' | 'toggle' | 'textlink' | 'textlink-custom' | 'input' | 'textarea' | 'multipleselect' | 'dynamic'; // Column type
 
 export interface Column {
   header: string;           // Displayed column header name
@@ -15,7 +15,7 @@ export interface Column {
   subColumn?: string;
 
   // Type-specific properties
-  options?: string[];       // Options for select type
+  options?: string[] | ((row: any) => any[]) | string;      // Options for select type
   buttonText?: string;      // Button label (if type is button)
   onClick?: (row: any) => void; // Callback when button is clicked
 
@@ -28,7 +28,8 @@ export interface Column {
   useRowTextlinkActions?: boolean;
 
   // textlink-custom
-  iconLink?: string
+  iconLink?: string;
+  optionsKey?: any;
 }
 
 export type Columns = Column[];

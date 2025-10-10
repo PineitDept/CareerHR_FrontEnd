@@ -79,6 +79,26 @@ export class AppointmentsService {
     });
   }
 
+  getInterviewOffer<T>(params: IAppointmentFilterRequest): Observable<T> {
+    const query = this.clean({
+      Search: params.search,
+      PositionId: params.positionId,
+      Month: params.month,
+      Year: params.year,
+      InterviewDate: params.interviewDate,
+      InterviewResult: params.InterviewResult,
+      SortFields: params.sortFields,
+      page: params.page ?? 1,
+      pageSize: params.pageSize ?? 10,
+    });
+
+    return this.api.get<T>(`Appointments/appointments/offer`, {
+      params: query,
+      withAuth: true,
+      loading: true,
+    });
+  }
+
   updateCandidateStatus(
     id: number,
     body: { isPassed: boolean; positionId: number; applyRound: number }
