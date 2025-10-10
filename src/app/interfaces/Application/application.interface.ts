@@ -58,6 +58,7 @@ export interface ApplicationRow {
   readonly ethicsScore: number;
   readonly totalBonus: number;
   readonly submitStatusLabel: BadgeConfig;
+  readonly roundID?: number;
 }
 
 export interface ScreeningRow {
