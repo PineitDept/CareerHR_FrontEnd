@@ -1,10 +1,8 @@
-<!-- sentinel สำหรับ back-to-top -->
-<div id="page-top-sentinel" class="tw-h-px tw-w-px tw-opacity-0" aria-hidden="true"></div>
 <div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
-    <app-header-content [headerName]="'Interview Result'" [headerType]="''"></app-header-content>
+    <app-header-content [headerName]="'Hire Result'" [headerType]="''"></app-header-content>
 </div>
-<app-filter [disabledKeys]="disabledKeys" [filterDynamicButton]="true"
-    (buttonClicked)="onFilterButtonClick($event)"></app-filter>
+
+<app-filter [filterDynamicButton]="true"></app-filter>
 
 <app-loading></app-loading>
 
@@ -88,223 +86,6 @@
             </div>
         </section>
 
-        <section class="tw-flex tw-gap-4">
-            <div class="tw-bg-black tw-w-full tw-rounded-[20px]"
-                [ngClass]="applicant.interview1Date === 'Invalid Date' ? 'tw-pointer-events-none tw-opacity-40':''">
-                <button type="button"
-                    class="tw-h-full tw-w-full tw-rounded-2xl tw-px-6 tw-py-4 tw-text-left tw-shadow-[0_4px_8px_rgba(0,0,0,0.1)] tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-brightness-110 hover:tw-shadow-[0_8px_12px_rgba(0,0,0,0.1)] focus:tw-ring-2 focus:tw-ring-white/30"
-                    (click)="onInterviewClick('tab1')" [class.active]="selectedTab === 'tab1'"
-                    [ngClass]="getInterview1StatusClass()">
-                    <div class="tw-w-full tw-flex tw-items-center tw-justify-between tw-gap-3">
-                        <div>
-                            <div class="tw-mb-2 tw-text-[24px] tw-font-bold leading-none">
-                                Interview 1
-                            </div>
-                            <div class="tw-text-[14px] tw-opacity-80"
-                                *ngIf="applicant.interview1Date !== 'Invalid Date'">
-                                Interview1 Date {{ applicant.interview1Date }}
-                            </div>
-                        </div>
-                        <div class="tw-opacity-80" *ngIf="applicant.interview1Status !== null">
-                            <app-icon name="user-status" [size]="16"
-                                class="tw-mr-2 tw-relative tw-bottom-[2px]"></app-icon>
-                            <span>{{ applicant.interview1Status }}</span>
-                        </div>
-                    </div>
-                </button>
-
-            </div>
-            <div class="tw-bg-black tw-w-full tw-rounded-[20px]"
-                [ngClass]="applicant.interview2Date === 'Invalid Date' ? 'tw-pointer-events-none tw-opacity-40':''">
-                <button type="button"
-                    class="tw-h-full tw-w-full tw-rounded-2xl tw-px-6 tw-py-4 tw-text-left tw-shadow-[0_4px_8px_rgba(0,0,0,0.1)] tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-brightness-110 hover:tw-shadow-[0_8px_12px_rgba(0,0,0,0.1)] focus:tw-ring-2 focus:tw-ring-white/30"
-                    (click)="onInterviewClick('tab2')" [class.active]="selectedTab === 'tab2'"
-                    [ngClass]="getInterview2StatusClass()">
-                    <div class="tw-w-full tw-flex tw-items-center tw-justify-between tw-gap-3">
-                        <div>
-                            <div class="tw-mb-2 tw-text-[24px] tw-font-bold leading-none">
-                                Interview 2
-                            </div>
-                            <div class="tw-text-[14px] tw-opacity-80"
-                                *ngIf="applicant.interview2Date !== 'Invalid Date'">
-                                Interview2 Date {{ applicant.interview2Date }}
-                            </div>
-                        </div>
-                        <div class="tw-opacity-80" *ngIf="applicant.interview2Status !== null">
-                            <app-icon name="user-status" [size]="16"
-                                class="tw-mr-2 tw-relative tw-bottom-[2px]"></app-icon>
-                            <span>{{ applicant.interview2Status }}</span>
-                        </div>
-                        <!-- <div class="tw-opacity-80" #btnno>
-                            <app-icon name="user-status" [size]="16" class="tw-mr-2 tw-relative tw-bottom-[2px]"></app-icon>
-                            <span>Pending</span>
-                        </div> -->
-                    </div>
-                </button>
-            </div>
-        </section>
-
-        <section
-            class="tw-col-span-2 tw-row-span-2 tw-space-y-4 tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.1)]">
-            <div>
-                <label class="tw-text-lg tw-font-bold">Interview Date</label>
-                <hr class="tw--mx-6 tw-mt-4">
-            </div>
-
-            <div class="tw-flex tw-w-full tw-gap-6">
-                <div class="tw-flex-1">
-                    <div class="tw-mb-1.5">
-                        <label class="tw-text-sm tw-font-semibold">Date</label>
-                    </div>
-                    <input
-                        class="tw-w-full tw-block tw-bg-gray-light-4 tw-border tw-border-[#d1d5db] tw-rounded-[8px] tw-p-2 tw-text-sm tw-outline-none tw-gap-2 placeholder:tw-text-[#ADB5BD] tw-bg-gray-100 tw-text-[#8b8b8b]"
-                        type="date" [min]="today" [value]="formatDateForInput(getInterviewDateByStage())" disabled>
-                </div>
-                <div class="tw-flex-1">
-                    <div class="tw-mb-1.5">
-                        <label class="tw-text-sm tw-font-semibold">Start Interview Time <span
-                                class="text-red">*</span></label>
-                    </div>
-                    <input
-                        class="tw-w-full tw-block tw-bg-gray-light-4 tw-border tw-border-[#d1d5db] tw-rounded-[8px] tw-p-2 tw-text-sm tw-outline-none tw-gap-2 placeholder:tw-text-[#ADB5BD]"
-                        type="time" [value]="formatTimeForInput(getInterviewDateByStage())"
-                        [ngClass]="disableInputPass()" (input)="onTimeStartChange($event)">
-                </div>
-                <div class="tw-flex-1">
-                    <div class="tw-mb-1.5">
-                        <label class="tw-text-sm tw-font-semibold">Finish Interview Time <span
-                                class="text-red">*</span></label>
-                    </div>
-                    <input
-                        class="tw-w-full tw-block tw-bg-gray-light-4 tw-border tw-border-[#d1d5db] tw-rounded-[8px] tw-p-2 tw-text-sm tw-outline-none tw-gap-2 placeholder:tw-text-[#ADB5BD]"
-                        type="time" [value]="formatTimeForInputWithOffset(getInterviewDateByStage(), 30)"
-                        [ngClass]="disableInputPass()" (input)="onTimeEndChange($event)">
-                </div>
-            </div>
-        </section>
-
-        <!-- ===== Interview Detail ===== -->
-        <section class="tw-w-full">
-            <form [formGroup]="formInterviewDetails">
-                <div class="tw-bg-[#FFFFFF]">
-                    <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
-                        <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer"
-                            (click)="isWarnOpen = !isWarnOpen">
-                            <label class="tw-text-lg tw-font-bold">Interview Detail</label>
-                            <app-icon name="chevron-down" [size]="14" [extraClass]="isWarnOpen ? 'tw-rotate-180 tw-transition-transform' : 'tw-transition-transform'
-                        "></app-icon>
-                        </div>
-
-                        <hr class="tw--mx-6 tw-mt-4" />
-
-                        <ng-container *ngIf="isWarnOpen">
-                            <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
-                                <app-tables [rows]="warningRows" [columns]="warningColumns" [showCheckbox]="false"
-                                    [splitRows]="false" [hasOverflowY]="false" [enableRowClick]="false"
-                                    [withinCard]="true" [isDisabledForm]="false"></app-tables>
-                            </div>
-                        </ng-container>
-                    </div>
-                </div>
-            </form>
-        </section>
-
-        <section class="tw-relative group" *ngIf="hasSummary()">
-            <ngx-slick-carousel #slickCarousel class="tw-grid grid-cols-auto tw-gap-8" [config]="slideConfig"
-                (init)="onCarouselInit($event, 0)" (afterChange)="onSlideChanged($event, 0)">
-
-                <div ngxSlickItem *ngFor="let review of filteredReviewHistory; let i = index">
-                    <div class="tw-col-span-2 tw-row-span-2 tw-space-y-4 tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.1)]"
-                        style=" height: -webkit-fill-available; ">
-                        <div class="header-slide">
-                            <div class="tw-flex tw-items-center tw-justify-between tw-mb-3">
-                                <div>
-                                    <span class="tw-text-[20px] tw-mr-3 tw-font-bold">{{ review.hrUserName }}</span>
-                                    <button><app-icon name="pen-to-square" [size]="16" class="tw-text-[#D97706]"
-                                            (click)="onReviewClick(review.hrUserId)"></app-icon></button>
-                                </div>
-                                <div class="tw-p-1 tw-px-2 tw-border tw-rounded-lg tw-font-bold" [ngClass]="{
-                                'tw-border-[#D3F3DF] tw-text-[#16A34A] tw-bg-[#d3f3df63]': review.categoryName.includes('Accept'),
-                                'tw-border-[#FCA5A5] tw-text-[#B91C1C] tw-bg-[#fca5a563]': review.categoryName.includes('Decline')
-                            }">
-                                    {{ review.categoryName }}
-                                </div>
-
-                            </div>
-                            <!-- <div class="tw-flex tw-items-end tw-gap-2">
-                                <div>
-                                    <app-icon *ngFor="let star of [1,2,3,4,5]; let i = index" name="star" [size]="16"
-                                        [class.tw-text-[#FFD600]]="i < review.satisfaction"
-                                        [class.tw-text-[#C4C4C4]]="i >= review.satisfaction"></app-icon>
-                                </div>
-                                <p class="tw-text-gray-500 tw-text-xs">{{review.satisfaction}} (5)</p>
-                            </div> -->
-                            <!-- <p class="tw-text-xs tw-mt-3" *ngIf="review.notes">
-                            {{ review.notes || "No notes available." }}
-                        </p> -->
-                            <hr class="tw--mx-0 !tw-mt-5" />
-                        </div>
-
-                        <div class="body-slide">
-                            <div class="tw-mb-4">
-                                <div class="tw-mb-1.5">
-                                    <label class="tw-text-sm tw-font-semibold">Reason</label>
-                                </div>
-                                <div class="list-top">
-                                    <div class="tw-flex tw-flex-col tw-w-full tw-gap-4 !tw-mt-0">
-                                        <label *ngFor="let reason of review.selectedReasonTexts"
-                                            class="tw-flex tw-items-start tw-pointer-events-none">
-                                            <input type="checkbox"
-                                                class="tw-accent-[#D97706] tw-relative tw-top-[3px] tw-text-sm"
-                                                checked />
-                                            <span class="tw-ml-2 tw-text-sm">{{ reason }}</span>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="tw-mb-4">
-                                <div class="tw-mb-1.5">
-                                    <label class="tw-text-sm tw-font-semibold">Strength</label>
-                                </div>
-
-                                <div class="review-card">
-                                    <span #strengthText [ngClass]="{ 'ellipsis-3-lines': !review.expandState.strength }"
-                                        class="tw-text-sm tw-text-gray-800">
-                                        {{ review.strength || '-' }}
-                                    </span>
-
-                                    <a *ngIf="review.overflowState.strength" (click)="toggleExpand(i,'strength')"
-                                        class="tw-text-black tw-font-bold tw-text-sm tw-mt-1 tw-underline tw-bg-transparent tw-border-0 tw-p-0 tw-cursor-pointer">
-                                        {{ review.expandState.strength ? 'ย่อลง' : 'อ่านต่อ' }}
-                                    </a>
-                                </div>
-                            </div>
-
-                            <div>
-                                <div class="tw-mb-1.5">
-                                    <label class="tw-text-sm tw-font-semibold">Concern</label>
-                                </div>
-
-                                <div class="review-card">
-                                    <span #concernText [ngClass]="{ 'ellipsis-3-lines': !review.expandState.concern }"
-                                        class="tw-text-sm tw-text-gray-800">
-                                        {{ review.concern || '-' }}
-                                    </span>
-
-                                    <a *ngIf="review.overflowState.concern" (click)="toggleExpand(i,'concern')"
-                                        class="tw-text-black tw-font-bold tw-text-sm tw-mt-1 tw-underline tw-bg-transparent tw-border-0 tw-p-0 tw-cursor-pointer">
-                                        {{ review.expandState.concern ? 'ย่อลง' : 'อ่านต่อ' }}
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </ngx-slick-carousel>
-
-        </section>
-
         <section class="tw-w-full">
             <form [formGroup]="formDetails">
                 <div class="tw-bg-[#FFFFFF]">
@@ -312,7 +93,7 @@
                         <!-- Header + Chevron -->
                         <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer">
                             <label class="tw-text-lg tw-font-bold">
-                                Application Interview {{stageId}}
+                                Hire Details
                             </label>
                         </div>
 
@@ -329,31 +110,24 @@
                                 <div>
                                     <div class="tw-text-[13px] tw-font-medium">Screening Date</div>
                                     <input
-                                        [ngClass]="[!editReview ? 'tw-pointer-events-none tw-text-[#8b8b8b] tw-bg-gray-100':'', disableInputPass()]"
+                                        [ngClass]="[!editReview ? 'tw-pointer-events-none tw-text-[#8b8b8b] tw-bg-gray-100':'']"
                                         class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2"
-                                        type="date" [min]="today" formControlName="dateInterviewReview" />
+                                        type="date" [min]="today" formControlName="dateInterviewReview"
+                                        (input)="onDateInput()" (change)="onDateChange()">
                                 </div>
                             </div>
 
                             <!-- Result -->
                             <div class="tw-mb-4">
                                 <div class="tw-text-[13px] tw-font-medium">Result</div>
-
                                 <div class="tw-flex tw-flex-wrap tw-gap-2 tw-mt-1">
-                                    <button *ngFor="let g of resultGroups" type="button" (click)="selectGroup(g.key)"
-                                        [ngClass]="[getGroupBtnClass(g), !editReview ? 'tw-pointer-events-none':'']">
-                                        {{ groupDisplayLabel(g) }}
-                                    </button>
-                                </div>
-
-                                <!-- แสดง ‘หมวดย่อย’ ก็ต่อเมื่อเลือก Group แล้ว -->
-                                <div class="tw-flex tw-flex-wrap tw-gap-2 tw-mt-3" *ngIf="selectedGroupKey">
-                                    <button *ngFor="let s of getCurrentGroupItems()" type="button"
-                                        (click)="selectCategory(s.categoryId)"
-                                        class="tw-text-sm tw-rounded-lg tw-px-3 tw-py-1.5 tw-border tw-transition"
-                                        [ngClass]="[getCategoryBtnClass(s, selectedCategoryId), !editReview ? 'tw-pointer-events-none':'']">
-                                        {{ s.categoryName }}
-                                    </button>
+                                    <div *ngFor="let s of reasonsInterview1">
+                                        <button type="button" (click)="selectCategory(s.categoryId)"
+                                            class="tw-text-sm tw-rounded-lg tw-px-3 tw-py-1.5 tw-border tw-transition"
+                                            [ngClass]="[getCategoryBtnClass(s, selectedCategoryId), !editReview ? 'tw-pointer-events-none':'']">
+                                            {{ s.categoryName }}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -367,7 +141,7 @@
                                         <span role="checkbox" [attr.aria-checked]="r.checked"
                                             class="tw-inline-flex tw-items-center tw-justify-center tw-rounded-[4px] tw-border tw-align-middle tw-mt-0.5"
                                             [ngClass]="[r.checked ? 'tw-border-green-500 tw-bg-green-50' : 'tw-border-gray-300 tw-bg-white',
-                                                !editReview ? 'tw-pointer-events-none':'', disableInputPass()
+                                                !editReview ? 'tw-pointer-events-none':''
                                             ]" style="width:18px;height:18px;min-width:18px;min-height:18px">
                                             <app-icon *ngIf="r.checked" name="check" [size]="14"
                                                 class="tw-text-green-600"></app-icon>
@@ -383,9 +157,10 @@
                                         <div>
                                             <div class="tw-text-[13px] tw-font-medium">Notes</div>
                                             <textarea
-                                                [ngClass]="[!editReview ? 'tw-pointer-events-none tw-text-[#8b8b8b] tw-bg-gray-100':'', disableInputPass()]"
+                                                [ngClass]="[!editReview ? 'tw-pointer-events-none tw-text-[#8b8b8b] tw-bg-gray-100':'']"
                                                 class="tw-w-full tw-text-[14px] tw-h-32 tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2"
-                                                [value]="" formControlName="noteInterviewReview"></textarea>
+                                                formControlName="noteInterviewReview" (input)="saveCache()"
+                                                (compositionend)="saveCache()"></textarea>
                                         </div>
                                     </ng-container>
                                 </ng-container>
@@ -416,7 +191,6 @@
                 </div>
             </form>
         </section>
-
 
         <!-- ===== Comments ===== -->
         <section id="comments-section" class="tw-w-full">
@@ -579,66 +353,10 @@
             </div>
         </section>
         <!-- /Comments -->
-
     </div>
 
     <!-- =============== RIGHT (1 col) =============== -->
     <aside class="tw-col-span-1 tw-space-y-6">
-        <div
-            class="tw-space-y-4 tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
-            <div>
-                <label class="tw-text-lg tw-font-bold">QR Code Interview</label>
-                <hr class="tw--mx-6 tw-mt-4">
-            </div>
-
-            <div class="tw-flex tw-flex-col">
-                <button type="button"
-                    class="tw-w-full tw-rounded-lg tw-bg-[#00AAFF] tw-text-white tw-p-2 tw-text-center tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-bg-[#0096e0]"
-                    (click)="genQRReviewPage()">Generate QR Code</button>
-
-                <div *ngIf="qrCodeImageUrl">
-                    <hr class="tw-my-5">
-                    <button type="button"
-                        class="tw-w-full tw-rounded-lg tw-bg-[#00AAFF] tw-text-white tw-p-2 tw-text-center tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-bg-[#0096e0]"
-                        (click)="onReviewClick()">Applicant Review</button>
-                    <img *ngIf="qrCodeImageUrl" [src]="qrCodeImageUrl" class="tw-max-w-[55%] tw-m-auto"
-                        style="image-rendering: pixelated;" alt="QR Code">
-                </div>
-            </div>
-        </div>
-
-        <button type="button"
-            class="tw-w-full tw-rounded-2xl tw-bg-[#005555] tw-text-white tw-px-6 tw-py-6 tw-text-left tw-shadow-[0_8px_16px_rgba(0,0,0,0.25)] tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-brightness-110 hover:tw-shadow-[0_12px_20px_rgba(0,0,0,0.35)] focus:tw-ring-2 focus:tw-ring-white/30"
-            (click)="onViewDetailClick()">
-            <div class="tw-flex tw-items-center tw-gap-6">
-                <app-icon name="notebook" [size]="48" class="tw-opacity-90"></app-icon>
-                <div class="tw-flex-1">
-                    <div class="tw-text-[14px] tw-opacity-95">
-                        Application Form
-                    </div>
-                    <!-- <div class="tw-text-[14px] tw-opacity-90">
-                        on {{ applicationFormSubmittedDate | date : "dd MMMM yyyy" }}
-                    </div> -->
-                    <div class="tw-text-[24px] tw-font-bold leading-none">
-                        View Detail
-                    </div>
-                </div>
-            </div>
-        </button>
-
-        <button type="button"
-            class="tw-w-full tw-rounded-2xl tw-bg-[#AA00FF] tw-text-white tw-px-6 tw-py-6 tw-text-left tw-shadow-[0_8px_16px_rgba(0,0,0,0.25)] tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-brightness-110 hover:tw-shadow-[0_12px_20px_rgba(0,0,0,0.35)] focus:tw-ring-2 focus:tw-ring-white/30"
-            (click)="onInterviewDetailClick()">
-            <div class="tw-flex tw-items-center tw-gap-6">
-                <app-icon name="file-pencil" [size]="48" class="tw-opacity-90"></app-icon>
-                <div class="tw-flex-1">
-                    <div class="tw-text-[24px] tw-font-bold leading-none">
-                        Interview Detail
-                    </div>
-                </div>
-            </div>
-        </button>
-
         <button type="button"
             class="tw-w-full tw-rounded-2xl tw-bg-[#5500FF] tw-text-white tw-px-6 tw-py-6 tw-text-left tw-shadow-[0_8px_16px_rgba(0,0,0,0.25)] tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-brightness-110 hover:tw-shadow-[0_12px_20px_rgba(0,0,0,0.35)] focus:tw-ring-2 focus:tw-ring-white/30"
             (click)="onCommentClick()">

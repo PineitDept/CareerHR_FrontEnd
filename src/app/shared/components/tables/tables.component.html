@@ -1,34 +1,25 @@
 <!-- expandable-table.component.html -->
-<div #tableWrapper class="tw-relative tw-bg-white tw-w-fit tw-min-w-full"
-  [ngClass]="{
+<div #tableWrapper class="tw-relative tw-bg-white tw-w-fit tw-min-w-full" [ngClass]="{
     'tw-pr-2': rowsValue.length > 0 && hasOverflowY,
     'tw-px-0 tw-py-0': withinCard,
     'tw-px-6 tw-py-6 tw-pt-0': !withinCard,
-  }"
->
-  <div class="tw-shadow-sm tw-border tw-border-gray-200"
-    [ngClass]="withinCard ? '' : 'tw-overflow-clip tw-rounded-md'"
-  >
-    <table class="tw-w-full tw-text-sm tw-text-left tw-border-separate tw-border-spacing-0"  [ngClass]="tableFixed ? 'tw-table-fixed' : ''">
+  }">
+  <div class="tw-shadow-sm tw-border tw-border-gray-200" [ngClass]="withinCard ? '' : 'tw-overflow-clip tw-rounded-md'">
+    <table class="tw-w-full tw-text-sm tw-text-left tw-border-separate tw-border-spacing-0"
+      [ngClass]="tableFixed ? 'tw-table-fixed' : ''">
       <thead>
-        <tr class="tw-text-white"
-          [ngClass]="{
+        <tr class="tw-text-white" [ngClass]="{
             'tw-text-white': !withinCard,
             'tw-text-black': withinCard,
             'tw-h-[45px]': withinCard,
-          }"
-        >
+          }">
           <!-- Checkbox Column -->
-          <th
-            class="tw-w-[36px] tw-px-1 tw-py-2  tw-bg-clip-padding"
-            *ngIf="showCheckbox"
-            [ngClass]="{
+          <th class="tw-w-[36px] tw-px-1 tw-py-2  tw-bg-clip-padding" *ngIf="showCheckbox" [ngClass]="{
               'tw-rounded-tl-md': !withinCard,
               'tw-bg-red-900': !withinCard,
               'tw-bg-[#F0F3F5]': withinCard,
               '!tw-rounded-tl-none': withinCard
-            }"
-          >
+            }">
             <div class="tw-flex tw-text-center tw-align-middle">
               <input #selectAllCheckbox type="checkbox" [checked]="allSelected" (click)="$event.preventDefault()"
                 (mousedown)="onHeaderCheckboxClick($event)"
@@ -44,9 +35,7 @@
               [class.wrap-text]="column.wrapText" [class.expanded]="!column.subColumn || isSubColumnVisible(column)"
               [class.collapsed]="column.subColumn && !isSubColumnVisible(column)" [style.width]="getColumnWidth(column)"
               [style.min-width]="getColumnMinWidth(column)" [style.max-width]="getColumnMaxWidth(column)"
-
-              (click)="onColumnClick(column)"
-              [ngClass]="{
+              (click)="onColumnClick(column)" [ngClass]="{
                 '!tw-rounded-tl-[4px]': first && !showCheckbox && !withinCard,
                 '!tw-rounded-tr-[4px]': last && !withinCard,
                 'tw-bg-red-900': !withinCard,
@@ -54,11 +43,9 @@
                 '!tw-rounded-tl-none': withinCard && first && !showCheckbox,
                 '!tw-rounded-tr-none': withinCard && last,
                 'tw-border-b tw-border-gray-200': withinCard,
-              }"
-            >
+              }">
               <div class="header-content tw-flex tw-items-center tw-justify-center tw-gap-2"
-                [style.justify-content]="withinCard ? (column.align || 'left') : ''"
-              >
+                [style.justify-content]="withinCard ? (column.align || 'left') : ''">
                 <!-- Sub-column indicator -->
                 <span *ngIf="column.subColumn" class="tw-text-red-300 tw-font-mono tw-text-xs tw-opacity-75">└</span>
 
@@ -71,9 +58,7 @@
                     : sortStateValue[column.field] === 'desc'
                     ? 'sort-up'
                     : 'sort'
-                  "
-                  [size]="12" fill="currentColor"
-                ></app-icon>
+                  " [size]="12" fill="currentColor"></app-icon>
                 <!-- Toggle button for main columns -->
                 <button *ngIf="column.mainColumn && hasSubColumns(column.mainColumn)"
                   class="toggle-btn tw-ml-1 tw-p-1 tw-rounded tw-transition-all tw-duration-200 hover:tw-bg-red-800 tw-flex-shrink-0"
@@ -91,37 +76,25 @@
       </thead>
 
       <!-- Table Body -->
-      <tbody
-        *ngIf="rowsValue.length > 0; else noData"
-        cdkDropList
-        [cdkDropListData]="rowsValue"
-        [cdkDropListDisabled]="!draggableRows || isDisabledForm"
-        (cdkDropListDropped)="onDrop($event)"
-      >
-        <tr *ngFor="let row of rowsValue; let i = index; trackBy: trackByRow"
-          cdkDrag
-          cdkDragLockAxis="y"
-          class="table-row tw-transition-colors tw-duration-200 tw-cursor-pointer"
-          [ngClass]="{
+      <tbody *ngIf="rowsValue.length > 0; else noData" cdkDropList [cdkDropListData]="rowsValue"
+        [cdkDropListDisabled]="!draggableRows || isDisabledForm" (cdkDropListDropped)="onDrop($event)">
+        <tr *ngFor="let row of rowsValue; let i = index; trackBy: trackByRow" cdkDrag cdkDragLockAxis="y"
+          class="table-row tw-transition-colors tw-duration-200 tw-cursor-pointer" [ngClass]="{
             'tw-cursor-pointer': enableRowClick,
             'tw-cursor-default': !enableRowClick,
             'tw-bg-red-50': rowValidationErrors[row._tempId ?? row.id]
-          }"
-          [class.tw-bg-white]="!splitRows"
-          [class.tw-bg-gray-50]="splitRows && i % 2 === 0" [class.tw-bg-gray-100]="splitRows && i % 2 === 1"
-          [class.hover:tw-bg-gray-200]="true" [class.tw-border-b]="i < rowsValue.length - 1 && !splitRows"
-          [class.selected-row]="selectedRows.has(i)"
+          }" [class.tw-bg-white]="!splitRows" [class.tw-bg-gray-50]="splitRows && i % 2 === 0"
+          [class.tw-bg-gray-100]="splitRows && i % 2 === 1" [class.hover:tw-bg-gray-200]="true"
+          [class.tw-border-b]="i < rowsValue.length - 1 && !splitRows" [class.selected-row]="selectedRows.has(i)"
           [class.tw-bg-yellow-50]="clickedRows.has(row.id?.toString())"
           [class.tw-bg-red-100]="ishighlightRow && highlightRowIndex === i"
           (click)="enableRowClick && onRowClick(row, $event)">
 
           <!-- Checkbox Cell -->
-          <td class="tw-w-[36px] tw-px-1 tw-py-2" *ngIf="showCheckbox"
-            [ngClass]="{
+          <td class="tw-w-[36px] tw-px-1 tw-py-2" *ngIf="showCheckbox" [ngClass]="{
               'tw-rounded-bl-xl': withinCard && i === rowsValue.length - 1,
               'tw-border-b tw-border-gray-200': withinCard && i < rowsValue.length - 1
-            }"
-          >
+            }">
             <div class="tw-flex tw-text-center tw-align-middle">
               <input type="checkbox" [checked]="selectedRows.has(i)" (change)="toggleSelectRow(i)"
                 (click)="$event.stopPropagation()"
@@ -130,18 +103,15 @@
           </td>
 
           <!-- Dynamic Data Cells -->
-          <ng-container *ngFor="let column of columns; let firstCol = first; let lastCol = last; trackBy: trackByColumn">
+          <ng-container
+            *ngFor="let column of columns; let firstCol = first; let lastCol = last; trackBy: trackByColumn">
             <!-- ถ้าเป็นฟิลด์ที่ต้อง merge ให้แสดงแค่หัวกลุ่ม + ใส่ rowspan -->
             <ng-container *ngIf="isMergeField(column.field); else normalCell">
               <td *ngIf="shouldRenderMergedCell(i, column.field)"
-                  class="table-cell tw-px-2 tw-py-2 tw-align-middle tw-border-r tw-border-gray-200"
-                  [attr.rowspan]="getRowspan(i, column.field)"
-                  [class.wrap-text]="column.wrapText"
-                  [style.width]="getColumnWidth(column)"
-                  [style.min-width]="getColumnMinWidth(column)"
-                  [style.max-width]="getColumnMaxWidth(column)"
-                  [style.text-align]="column.align || 'left'"
-                  [ngClass]="[
+                class="table-cell tw-px-2 tw-py-2 tw-align-middle tw-border-r tw-border-gray-200"
+                [attr.rowspan]="getRowspan(i, column.field)" [class.wrap-text]="column.wrapText"
+                [style.width]="getColumnWidth(column)" [style.min-width]="getColumnMinWidth(column)"
+                [style.max-width]="getColumnMaxWidth(column)" [style.text-align]="column.align || 'left'" [ngClass]="[
                     (withinCard && isEndOfMergedGroup(i, column.field) && !showCheckbox && firstCol) ? 'tw-rounded-bl-xl' : '',
                     (withinCard && isEndOfMergedGroup(i, column.field) && lastCol) ? 'tw-rounded-br-xl' : '',
                     (withinCard && !isEndOfMergedGroup(i, column.field)) ? 'tw-border-b tw-border-gray-200' : '',
@@ -149,7 +119,7 @@
                     (isDisabledForm && !(column.type === 'textlink' && allowViewWhenDisabled)) ? 'tw-pointer-events-none' : ''
                   ]">
                 <div class="cell-content tw-min-h-6"
-                    [ngClass]="{ 'tw-text-gray-600': isDisabledForm, 'tw-text-gray-800': !isDisabledForm }">
+                  [ngClass]="{ 'tw-text-gray-600': isDisabledForm, 'tw-text-gray-800': !isDisabledForm }">
 
                   <!-- สำหรับ merge เราเรนเดอร์แบบ view-only เสมอ -->
                   <span>{{ getCellValue(row, column.field) }}</span>
@@ -158,29 +128,28 @@
               </td>
             </ng-container>
             <ng-template #normalCell>
-              <td class="table-cell tw-px-2 tw-py-2 tw-align-middle"
-                [class.main-column]="column.mainColumn" [class.sub-column]="column.subColumn"
-                [class.wrap-text]="column.wrapText" [class.expanded]="!column.subColumn || isSubColumnVisible(column)"
-                [class.collapsed]="column.subColumn && !isSubColumnVisible(column)" [style.width]="getColumnWidth(column)"
-                [style.min-width]="getColumnMinWidth(column)" [style.max-width]="getColumnMaxWidth(column)"
-                [style.text-align]="column.align || 'left'"
-                [ngClass]="[
+              <td class="table-cell tw-px-2 tw-py-2 tw-align-middle" [class.main-column]="column.mainColumn"
+                [class.sub-column]="column.subColumn" [class.wrap-text]="column.wrapText"
+                [class.expanded]="!column.subColumn || isSubColumnVisible(column)"
+                [class.collapsed]="column.subColumn && !isSubColumnVisible(column)"
+                [style.width]="getColumnWidth(column)" [style.min-width]="getColumnMinWidth(column)"
+                [style.max-width]="getColumnMaxWidth(column)" [style.text-align]="column.align || 'left'" [ngClass]="[
                   column.type === 'icon' && !column.sortable ? getBackgroundClass(getCellValue(row, column.field)?.fill) : '',
                   withinCard && i === rowsValue.length - 1 && !showCheckbox && firstCol ? 'tw-rounded-bl-xl' : '',
                   withinCard && i === rowsValue.length - 1 && lastCol ? 'tw-rounded-br-xl' : '',
                   (withinCard && i < rowsValue.length - 1) ? 'tw-border-b tw-border-gray-200' : '',
                   isDisabledForm ? 'tw-bg-[#fafafa]': '',
                   (isDisabledForm && !(column.type === 'textlink' && allowViewWhenDisabled)) ? 'tw-pointer-events-none' : '',
-                ]"
-              >
+                ]">
                 <!-- Cell Content with Type Switching -->
-                <div class="cell-content tw-min-h-6"
-                  [ngClass]="{
+                <div class="cell-content tw-min-h-6" [ngClass]="{
                     'tw-text-gray-600': isDisabledForm,
                     'tw-text-gray-800': !isDisabledForm
-                  }"
-                >
-                  <ng-container [ngSwitch]="column.typeFn ? column.typeFn(row) : (column.type || 'text')">
+                  }">
+                  <ng-container [ngSwitch]="
+                    row?.[column.field + 'Type'] ??
+                    (column.typeFn ? column.typeFn(row) : (column.type || 'text'))
+                  ">
 
                     <!-- Text Content -->
                     <span *ngSwitchCase="'text'">
@@ -193,28 +162,24 @@
                           [(ngModel)]="row[column.field]"
                           (click)="$event.stopPropagation()" />
                       </ng-container> -->
-                      <ng-container *ngIf="editRow && (editingRowId === (row._tempId ?? i+1)) && (column.editing ?? true); else viewMode">
-                        <ng-container *ngIf="lockedPrefixConfig && column.field === lockedPrefixConfig.field; else normalTextEdit">
-                          <div class="input-affix" [class.input-affix--error]="inlineFieldErrors[column.field] || fieldErrors">
+                      <ng-container
+                        *ngIf="editRow && (editingRowId === (row._tempId ?? i+1)) && (column.editing ?? true); else viewMode">
+                        <ng-container
+                          *ngIf="lockedPrefixConfig && column.field === lockedPrefixConfig.field; else normalTextEdit">
+                          <div class="input-affix"
+                            [class.input-affix--error]="inlineFieldErrors[column.field] || fieldErrors">
                             <span class="input-affix__prefix">{{ lockedPrefixConfig.prefix }}</span>
-                            <input
-                              type="text"
-                              class="input-affix__input"
+                            <input type="text" class="input-affix__input"
                               [value]="extractLockedSuffix(editingBuffer[column.field] || '')"
                               (input)="onLockedPrefixEditingInput(column.field, $event)"
-                              (click)="$event.stopPropagation()"
-                            />
+                              (click)="$event.stopPropagation()" />
                           </div>
                         </ng-container>
 
                         <ng-template #normalTextEdit>
-                          <input
-                            type="text"
-                            class="tw-border tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white"
+                          <input type="text" class="tw-border tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white"
                             [ngClass]="(inlineFieldErrors[column.field] || fieldErrors) ? 'tw-border-red-500' : 'tw-border-gray-300'"
-                            [(ngModel)]="editingBuffer[column.field]"
-                            (click)="$event.stopPropagation()"
-                          />
+                            [(ngModel)]="editingBuffer[column.field]" (click)="$event.stopPropagation()" />
                         </ng-template>
                       </ng-container>
                       <ng-template #viewMode>
@@ -236,10 +201,9 @@
 
                     <!-- Number Content -->
                     <span *ngSwitchCase="'number'">
-                      <ng-container *ngIf="editRow && (editingRowId === (row._tempId ?? i+1)) && (column.editing ?? true) && column.field !== '__index'; else numberView">
-                        <input
-                          type="number"
-                          class="tw-border tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white"
+                      <ng-container
+                        *ngIf="editRow && (editingRowId === (row._tempId ?? i+1)) && (column.editing ?? true) && column.field !== '__index'; else numberView">
+                        <input type="number" class="tw-border tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white"
                           [ngClass]="(inlineFieldErrors[column.field] || fieldErrors) ? 'tw-border-red-500' : 'tw-border-gray-300'"
                           [(ngModel)]="editingBuffer[column.field]"
                           [attr.min]="(column.field === 'sort' || column.field === 'scoringMethod') ? 1 : (column.field === 'score' ? 0 : null)"
@@ -248,9 +212,7 @@
                           [attr.inputmode]="(column.field === 'sort' || column.field === 'scoringMethod') ? 'numeric' : null"
                           (keydown)="onInlineNumberKeydown(column.field, $event)"
                           (input)="onInlineNumberInput(column.field, $event)"
-                          (blur)="onInlineNumberBlur(column.field, $event)"
-                          (click)="$event.stopPropagation()"
-                        />
+                          (blur)="onInlineNumberBlur(column.field, $event)" (click)="$event.stopPropagation()" />
                       </ng-container>
                       <ng-template #numberView>
                         {{ getCellValue(row, column.field) }}
@@ -259,20 +221,26 @@
 
                     <!-- input content -->
                     <span *ngSwitchCase="'input'">
-                      <input type="text" class="tw-border tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white tw-border-gray-300" (click)="$event.stopPropagation()" />
+                      <input type="text"
+                        class="tw-border tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white tw-border-gray-300"
+                        [(ngModel)]="row[column.field]" [ngModelOptions]="{ standalone: true }"
+                        (click)="$event.stopPropagation()" />
+                    </span>
+
+                    <span *ngSwitchCase="'textarea'">
+                      <textarea type="text"
+                        class="tw-border tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white tw-border-gray-300"
+                        [(ngModel)]="row[column.field]" [ngModelOptions]="{ standalone: true }"
+                        (click)="$event.stopPropagation()"></textarea>
                     </span>
 
                     <!-- Select Dropdown -->
                     <div *ngSwitchCase="'select'" class="tw-relative">
-                      <button
-                        type="button"
-                        cdkOverlayOrigin
-                        #origin="cdkOverlayOrigin"
+                      <button type="button" cdkOverlayOrigin #origin="cdkOverlayOrigin"
                         class="dropdown-button tw-border tw-border-gray-300 tw-rounded-md tw-px-3 tw-py-1 tw-w-full tw-text-sm tw-flex tw-items-center tw-justify-between tw-truncate tw-transition-all tw-duration-200 hover:tw-border-gray-400"
                         [id]="'dropdown-button-' + i + '-' + column.field"
                         (click)="toggleDropdown(i, column.field, origin, $event)"
-                        [attr.aria-expanded]="isDropdownOpen(i, column.field)"
-                        [ngClass]="[
+                        [attr.aria-expanded]="isDropdownOpen(i, column.field)" [ngClass]="[
                           isDisabledForm ? 'tw-bg-gray-100' : 'tw-bg-white',
                         ]">
                         <span class="tw-text-left tw-w-full tw-truncate"
@@ -286,14 +254,15 @@
                     </div>
 
                     <div *ngSwitchCase="'multiselect'">
-                      <app-multi-select-dropdown [inTable]="true"></app-multi-select-dropdown>
+                      <app-multi-select-dropdown [inTable]="true" [options]="resolveMultiOptions(row, column)"
+                        (selectionChange)="onMultiSelectChange($event)"
+                        [defaultSelected]="['1']"></app-multi-select-dropdown>
                     </div>
 
                     <!-- Button Content -->
                     <button *ngSwitchCase="'button'"
                       class="tw-text-white tw-px-3 tw-py-1 tw-rounded tw-font-medium tw-transition-all tw-duration-200 tw-min-w-[80px] disabled:tw-bg-gray-300 disabled:tw-cursor-not-allowed"
-                      [disabled]="!row.POType" (click)="onButtonClick(column, row, $event)"
-                      [ngClass]="{
+                      [disabled]="!row.POType" (click)="onButtonClick(column, row, $event)" [ngClass]="{
                         'tw-bg-blue-500 hover:tw-bg-blue-600': column.buttonText === 'Submit',
                         'tw-bg-purple-700 hover:tw-bg-purple-800': column.buttonText === 'Register',
                         'tw-bg-gray-500 hover:tw-bg-gray-600': !column.buttonText || (column.buttonText !== 'Submit' && column.buttonText !== 'Register')
@@ -329,18 +298,22 @@
 
                     <!-- toggle Content -->
                     <div *ngSwitchCase="'toggle'">
-                      <label class="tw-inline-flex tw-items-center tw-cursor-pointer" (click)="$event.stopPropagation()">
-                        <input type="checkbox" value="" class="tw-sr-only tw-peer" [checked]="row.activeStatus && row.status!==32  && row.status!==0" (click)="onToggleChange($event, row)">
-                        <div class="tw-relative tw-w-11 tw-h-6 peer-checked:tw-bg-[#00AA00] tw-bg-gray-200 tw-rounded-full tw-peer peer-checked:after:tw-translate-x-full rtl:peer-checked:after:tw--translate-x-full tw-border-white after:tw-content-[''] after:tw-absolute after:tw-top-[2px] after:tw-start-[2px] after:tw-bg-white after:tw-rounded-full after:tw-h-5 after:tw-w-5 after:tw-transition-all"
+                      <label class="tw-inline-flex tw-items-center tw-cursor-pointer"
+                        (click)="$event.stopPropagation()">
+                        <input type="checkbox" value="" class="tw-sr-only tw-peer"
+                          [checked]="row.activeStatus && row.status!==32  && row.status!==0"
+                          (click)="onToggleChange($event, row)">
+                        <div
+                          class="tw-relative tw-w-11 tw-h-6 peer-checked:tw-bg-[#00AA00] tw-bg-gray-200 tw-rounded-full tw-peer peer-checked:after:tw-translate-x-full rtl:peer-checked:after:tw--translate-x-full tw-border-white after:tw-content-[''] after:tw-absolute after:tw-top-[2px] after:tw-start-[2px] after:tw-bg-white after:tw-rounded-full after:tw-h-5 after:tw-w-5 after:tw-transition-all"
                           [ngClass]="{
                             'peer-checked:tw-bg-[#00AA00]/40': isDisabledForm
-                          }"
-                        ></div>
+                          }"></div>
                       </label>
                     </div>
 
                     <!-- text link Content -->
-                    <div *ngSwitchCase="'textlink'" class="tw-flex tw-justify-center tw-gap-4" (click)="$event.stopPropagation()">
+                    <div *ngSwitchCase="'textlink'" class="tw-flex tw-justify-center tw-gap-4"
+                      (click)="$event.stopPropagation()">
                       <a *ngIf="getRowTextlinkActions(column, row).includes('view')" href="javascript:void(0)"
                         class="tw-text-[#5500FF] hover:tw-text-[#5f31bb] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
                         (click)="onClickView($event, row)">
@@ -389,7 +362,8 @@
                       </a>
                     </div>
 
-                    <div *ngSwitchCase="'textlink-custom'" class="tw-flex tw-justify-center tw-gap-4" (click)="$event.stopPropagation()">
+                    <div *ngSwitchCase="'textlink-custom'" class="tw-flex tw-justify-center tw-gap-4"
+                      (click)="$event.stopPropagation()">
                       <div *ngIf="getCellValue(row, column.field)">
                         <a href="javascript:void(0)"
                           class="tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
@@ -417,7 +391,7 @@
             <td class="tw-px-2 tw-py-2 tw-align-middle" [style.width]="getColumnWidth(column)">
               <ng-container [ngSwitch]="column.typeFn ? column.typeFn(footerRow) : column.type || 'text'">
                 <!-- __index -->
-                <ng-container  *ngIf="column.field === '__index'" >
+                <ng-container *ngIf="column.field === '__index'">
                   <div class="tw-text-center">
                     {{indexAdd}}
                   </div>
@@ -442,9 +416,9 @@
                 <!-- toggle -->
                 <ng-container *ngSwitchCase="'toggle'">
                   <label class="tw-flex tw-items-center tw-cursor-pointer tw-justify-center">
-                    <input type="checkbox" class="tw-sr-only tw-peer"
-                          [(ngModel)]="footerRow.activeStatus">
-                    <div class="tw-relative tw-w-11 tw-h-6 peer-checked:tw-bg-[#00AA00] tw-bg-gray-200 tw-rounded-full tw-peer
+                    <input type="checkbox" class="tw-sr-only tw-peer" [(ngModel)]="footerRow.activeStatus">
+                    <div
+                      class="tw-relative tw-w-11 tw-h-6 peer-checked:tw-bg-[#00AA00] tw-bg-gray-200 tw-rounded-full tw-peer
                                 peer-checked:after:tw-translate-x-full after:tw-content-[''] after:tw-absolute after:tw-top-[2px]
                                 after:tw-start-[2px] after:tw-bg-white after:tw-rounded-full after:tw-h-5 after:tw-w-5 after:tw-transition-all">
                     </div>
@@ -453,18 +427,16 @@
 
                 <!-- select -->
                 <ng-container *ngSwitchCase="'select'">
-                  <button
-                    type="button"
-                    cdkOverlayOrigin #footerOrigin="cdkOverlayOrigin"
+                  <button type="button" cdkOverlayOrigin #footerOrigin="cdkOverlayOrigin"
                     class="dropdown-button tw-bg-white tw-border tw-border-gray-300 tw-rounded-md tw-px-3 tw-py-1 tw-w-full tw-text-sm tw-flex tw-items-center tw-justify-between tw-truncate tw-transition-all tw-duration-200 hover:tw-border-gray-400"
                     [id]="'dropdown-button-footer-' + column.field"
                     (click)="toggleFooterDropdown(column.field, footerOrigin, $event)"
                     [attr.aria-expanded]="isFooterDropdownOpen(column.field)">
-                    <span class="tw-text-left tw-w-full tw-truncate" [class.tw-text-gray-400]="!footerRow[column.field]">
+                    <span class="tw-text-left tw-w-full tw-truncate"
+                      [class.tw-text-gray-400]="!footerRow[column.field]">
                       {{ footerRow[column.field] || 'Select' }}
                     </span>
-                    <app-icon name="chevron-down" [size]="16"
-                      fill="currentColor"
+                    <app-icon name="chevron-down" [size]="16" fill="currentColor"
                       [extraClass]="'tw-ml-2 tw-flex-shrink-0 tw-transition-transform tw-duration-200 ' + (isFooterDropdownOpen(column.field) ? 'tw-rotate-180' : '')">
                     </app-icon> </button>
                 </ng-container>
@@ -472,15 +444,14 @@
                 <!-- date -->
                 <ng-container *ngSwitchCase="'date'">
                   <input type="date"
-                        class="tw-border tw-border-gray-300 tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white"
-                        [(ngModel)]="footerRow[column.field]" />
+                    class="tw-border tw-border-gray-300 tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white"
+                    [(ngModel)]="footerRow[column.field]" />
                 </ng-container>
 
                 <!-- number -->
                 <ng-container *ngSwitchCase="'number'">
-                  <ng-container  *ngIf="column.field !== '__index'" >
-                    <input
-                      type="number"
+                  <ng-container *ngIf="column.field !== '__index'">
+                    <input type="number"
                       class="tw-border tw-border-gray-300 tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white"
                       [ngClass]="footerErrors[column.field] ? 'tw-border-red-500' : 'tw-border-gray-300'"
                       [(ngModel)]="footerRow[column.field]"
@@ -488,10 +459,8 @@
                       [attr.max]="(column.field === 'score' ? scoreMax : null)"
                       [attr.step]="(column.field === 'sort' || column.field === 'scoringMethod') ? 1 : (column.field === 'score' ? 'any' : null)"
                       [attr.inputmode]="(column.field === 'sort' || column.field === 'scoringMethod') ? 'numeric' : null"
-                      (keydown)="onFooterKeydown(column.field, $event)"
-                      (input)="onFooterInput(column.field, $event)"
-                      (blur)="onFooterBlur(column.field, $event)"
-                    />
+                      (keydown)="onFooterKeydown(column.field, $event)" (input)="onFooterInput(column.field, $event)"
+                      (blur)="onFooterBlur(column.field, $event)" />
 
                   </ng-container>
                 </ng-container>
@@ -499,26 +468,20 @@
                 <!-- text -->
                 <ng-container *ngSwitchDefault>
                   <ng-container *ngIf="column.type === 'text'; else emptyCell">
-                    <ng-container *ngIf="lockedPrefixConfig && column.field === lockedPrefixConfig.field; else normalFooterText">
+                    <ng-container
+                      *ngIf="lockedPrefixConfig && column.field === lockedPrefixConfig.field; else normalFooterText">
                       <div class="input-affix" [class.input-affix--error]="footerErrors[column.field]">
                         <span class="input-affix__prefix">{{ lockedPrefixConfig.prefix }}</span>
-                        <input
-                          type="text"
-                          class="input-affix__input"
+                        <input type="text" class="input-affix__input"
                           [value]="extractLockedSuffix(footerRow[column.field] || '')"
-                          (input)="onLockedPrefixFooterInput(column.field, $event)"
-                        />
+                          (input)="onLockedPrefixFooterInput(column.field, $event)" />
                       </div>
                     </ng-container>
 
                     <ng-template #normalFooterText>
-                      <input
-                        type="text"
-                        class="tw-border tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white"
+                      <input type="text" class="tw-border tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white"
                         [ngClass]="fieldErrors || footerErrors[column.field] ? 'tw-border-red-500' : 'tw-border-gray-300'"
-                        [(ngModel)]="footerRow[column.field]"
-                        (input)="onFooterInput(column.field, $event)"
-                      />
+                        [(ngModel)]="footerRow[column.field]" (input)="onFooterInput(column.field, $event)" />
                     </ng-template>
                   </ng-container>
                   <ng-template #emptyCell>
@@ -562,7 +525,8 @@
           [class.tw-bg-[#E6F4FF]]="(ctx.rowIndex === null ? footerRow[ctx.field] : getCellValue(rowsValue[ctx.rowIndex], ctx.field)) === opt">
           <span>{{ opt }}</span> <app-icon
             *ngIf="(ctx.rowIndex === null ? footerRow[ctx.field] : getCellValue(rowsValue[ctx.rowIndex], ctx.field)) === opt"
-            name="check" [size]="16" fill="currentColor" extraClass="tw-text-[#1677FF]"> </app-icon> </li>
+            name="check" [size]="16" fill="currentColor" extraClass="tw-text-[#1677FF]"> </app-icon>
+        </li>
       </ul>
     </div>
   </ng-template>

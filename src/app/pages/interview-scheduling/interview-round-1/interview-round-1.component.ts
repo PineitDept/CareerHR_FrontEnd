@@ -156,7 +156,7 @@ export class InterviewRound1Component {
 
     this.appointmentsService.setAppointmentsType(1);
 
-    const savedSearch = sessionStorage.getItem('interviewSearchForm');
+    const savedSearch = sessionStorage.getItem('interviewSearchForm1');
     if (savedSearch) {
       this.searchForm = JSON.parse(savedSearch);
       this.currentFilterParams = {
@@ -409,7 +409,7 @@ export class InterviewRound1Component {
 
   // ---------- Search / filter actions ----------
   onSearch() {
-    sessionStorage.setItem('interviewSearchForm', JSON.stringify(this.searchForm));
+    sessionStorage.setItem('interviewSearchForm1', JSON.stringify(this.searchForm));
 
     this.currentFilterParams = {
       ...this.currentFilterParams,
@@ -425,7 +425,7 @@ export class InterviewRound1Component {
 
   onClearSearch() {
     this.searchForm = { searchBy: '', searchValue: '' };
-    sessionStorage.removeItem('interviewSearchForm');
+    sessionStorage.removeItem('interviewSearchForm1');
 
     this.currentFilterParams = {
       page: 1,
@@ -560,7 +560,7 @@ export class InterviewRound1Component {
 
     const dialogRef = this.dialog.open(AlertDialogComponent, {
       width: '496px',
-      panelClass: 'custom-dialog-container',
+      panelClass: ['custom-dialog-container', 'pp-rounded-dialog'],
       autoFocus: false,
       disableClose: true,
       data: {
@@ -719,6 +719,8 @@ export class InterviewRound1Component {
           defaultSelected: defaultSelected
         }
       ];
+      
+      document.querySelector('.cdk-overlay-pane')?.classList.add('pp-rounded-dialog');
 
       const dialogRef = this.dialog.open(SelectDialogComponent, {
         width: '480px',
@@ -783,7 +785,7 @@ export class InterviewRound1Component {
 
     const dialogRef = this.dialog.open(AlertDialogComponent, {
       width: '496px',
-      panelClass: 'custom-dialog-container',
+      panelClass: ['custom-dialog-container', 'pp-rounded-dialog'],
       autoFocus: false,
       disableClose: true,
       data: {
@@ -888,6 +890,7 @@ export class InterviewRound1Component {
     Promise.resolve().then(() => {
       const container = document.querySelector('.cdk-overlay-container');
       container?.classList.add('dimmed-overlay');
+      document.querySelector('.cdk-overlay-pane')?.classList.add('pp-rounded-dialog');
     });
 
     const dialogRef = this.dialog.open(SelectDialogComponent, {
@@ -1007,6 +1010,7 @@ export class InterviewRound1Component {
     Promise.resolve().then(() => {
       const container = document.querySelector('.cdk-overlay-container');
       container?.classList.add('dimmed-overlay');
+      document.querySelector('.cdk-overlay-pane')?.classList.add('pp-rounded-dialog');
     });
 
     const dialogRef = this.dialog.open(SelectDialogComponent, {
@@ -1091,6 +1095,7 @@ export class InterviewRound1Component {
     Promise.resolve().then(() => {
       const container = document.querySelector('.cdk-overlay-container');
       container?.classList.add('dimmed-overlay');
+      document.querySelector('.cdk-overlay-pane')?.classList.add('pp-rounded-dialog');
     });
 
     const dialogRef = this.dialog.open(SelectDialogComponent, {

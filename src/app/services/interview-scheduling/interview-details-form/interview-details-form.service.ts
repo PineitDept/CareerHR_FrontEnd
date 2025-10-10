@@ -107,7 +107,7 @@ export class InterviewDetailsFormService {
   }
 
   // Preview form round for a user
-  previewFormRound<T>(userId: string): Observable<T> {
-    return this.api.get<T>(`${this.baseForm}/round/user/${userId}/preview`, { withAuth: true, loading: true });
+  previewFormRound<T>(round: number, userId: string): Observable<T> {
+    return this.api.get<T>(`${this.baseForm}/round/${round}/userId/${userId}/preview`, { withAuth: true, loading: true });
   }
 }
