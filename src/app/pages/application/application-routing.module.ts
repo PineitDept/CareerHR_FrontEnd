@@ -21,6 +21,10 @@ const routes: Routes = [
         component: ApplicationFormComponent,
       },
       {
+        path: 'all-applications/application-form/details',
+        component: ApplicationFormDetailsComponent
+      },
+      {
         path: 'screening',
        component: ScreeningComponent,
       },
@@ -39,6 +43,10 @@ const routes: Routes = [
       {
         path: 'tracking/application-form',
         component: ApplicationFormComponent
+      },
+      {
+        path: 'tracking/application-form/details',
+        component: ApplicationFormDetailsComponent
       },
     ]
   }
