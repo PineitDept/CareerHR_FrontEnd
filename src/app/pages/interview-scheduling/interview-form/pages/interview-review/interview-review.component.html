@@ -81,10 +81,15 @@
                     <div class="tw-text-gray-500 tw-font-medium">
                         Applicant Grade {{ applicant.grade }}
                     </div>
-                    <div class="tw-flex tw-items-center tw-gap-2">
-                        <app-icon name="thumbs-up" [size]="18"></app-icon>
-                        {{ applicant.views }}
-                    </div>
+                    <!-- Like / Unlike -->
+                    <button type="button"
+                        class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-md tw-px-2 tw-py-1 hover:tw-bg-gray-100 disabled:tw-opacity-60 disabled:tw-cursor-not-allowed"
+                        [disabled]="likeState.loading || !applicantId" (click)="onToggleLike()"
+                        [attr.aria-pressed]="likeState.liked" [title]="likeState.liked ? 'Unlike' : 'Like'">
+                        <app-icon [name]="likeState.liked ? 'thumbs-up-solid' : 'thumbs-up'" [size]="18"
+                            [ngClass]="likeState.liked ? 'tw-text-[#0A57C3]' : 'tw-text-inherit'"></app-icon>
+                        <span>{{ applicant.views }}</span>
+                    </button>
                 </div>
             </div>
         </section>

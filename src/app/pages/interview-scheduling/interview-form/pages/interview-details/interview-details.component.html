@@ -81,10 +81,15 @@
                     <div class="tw-text-gray-500 tw-font-medium">
                         Applicant Grade {{ applicant.grade }}
                     </div>
-                    <div class="tw-flex tw-items-center tw-gap-2">
-                        <app-icon name="thumbs-up" [size]="18"></app-icon>
-                        {{ applicant.views }}
-                    </div>
+                    <!-- Like / Unlike -->
+                    <button type="button"
+                        class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-md tw-px-2 tw-py-1 hover:tw-bg-gray-100 disabled:tw-opacity-60 disabled:tw-cursor-not-allowed"
+                        [disabled]="likeState.loading || !applicantId" (click)="onToggleLike()"
+                        [attr.aria-pressed]="likeState.liked" [title]="likeState.liked ? 'Unlike' : 'Like'">
+                        <app-icon [name]="likeState.liked ? 'thumbs-up-solid' : 'thumbs-up'" [size]="18"
+                            [ngClass]="likeState.liked ? 'tw-text-[#0A57C3]' : 'tw-text-inherit'"></app-icon>
+                        <span>{{ applicant.views }}</span>
+                    </button>
                 </div>
             </div>
         </section>
@@ -94,10 +99,12 @@
             <form [formGroup]="formInterviewDetails">
                 <div class="tw-bg-[#FFFFFF]">
                     <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
-                        <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer" (click)="isDetail1Open = !isDetail1Open">
-                        <!-- <div class="tw-flex tw-items-center tw-justify-between"> -->
+                        <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer"
+                            (click)="isDetail1Open = !isDetail1Open">
+                            <!-- <div class="tw-flex tw-items-center tw-justify-between"> -->
                             <label class="tw-text-lg tw-font-bold">Interview Detail 1</label>
-                            <app-icon name="chevron-down" [size]="14" [extraClass]="isDetail1Open ? 'tw-rotate-180 tw-transition-transform' : 'tw-transition-transform'"></app-icon>
+                            <app-icon name="chevron-down" [size]="14"
+                                [extraClass]="isDetail1Open ? 'tw-rotate-180 tw-transition-transform' : 'tw-transition-transform'"></app-icon>
                         </div>
 
                         <hr class="tw--mx-6 tw-mt-4" />
@@ -110,11 +117,14 @@
                             </div>
                         </ng-container>
                     </div>
-                    <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-mt-6">
-                        <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer" (click)="isDetail2Open = !isDetail2Open">
-                        <!-- <div class="tw-flex tw-items-center tw-justify-between"> -->
+                    <div
+                        class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-mt-6">
+                        <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer"
+                            (click)="isDetail2Open = !isDetail2Open">
+                            <!-- <div class="tw-flex tw-items-center tw-justify-between"> -->
                             <label class="tw-text-lg tw-font-bold">Interview Detail 2</label>
-                            <app-icon name="chevron-down" [size]="14" [extraClass]="isDetail2Open ? 'tw-rotate-180 tw-transition-transform' : 'tw-transition-transform'"></app-icon>
+                            <app-icon name="chevron-down" [size]="14"
+                                [extraClass]="isDetail2Open ? 'tw-rotate-180 tw-transition-transform' : 'tw-transition-transform'"></app-icon>
                         </div>
 
                         <hr class="tw--mx-6 tw-mt-4" />

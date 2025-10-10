@@ -635,6 +635,60 @@ export class InterviewFormDetailsComponent {
     }
   }
 
+  likeState = {
+    count: 0,
+    liked: false,
+    loading: false
+  };
+
+  private fetchInterest(id: number) {
+    if (!id) return;
+    this.applicationService.getInterestByCandidateId(id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.likeState.count = Number(res?.countLike ?? 0);
+          this.likeState.liked = !!res?.isLikedByCurrentEmployee;
+        },
+        error: (e) => {
+          console.error('[ApplicationForm] fetchInterest error:', e);
+          // fallback เงียบ ๆ: ไม่เปลี่ยน state
+        }
+      });
+  }
+
+  onToggleLike() {
+    if (!this.applicantId || this.likeState.loading) return;
+
+    const wantLike = !this.likeState.liked;
+    const body = { candidateId: this.applicantId };
+
+    // optimistic update
+    const prev = { ...this.likeState };
+    this.likeState.loading = true;
+    this.likeState.liked = wantLike;
+    this.likeState.count = Math.max(0, this.likeState.count + (wantLike ? 1 : -1));
+
+    const req$ = wantLike
+      ? this.applicationService.addInterest(body)
+      : this.applicationService.deleteInterest(body);
+
+    req$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          // สำเร็จ — อาจ refresh จาก server อีกครั้งเพื่อความชัวร์:
+          this.fetchInterest(this.applicantId);
+          this.likeState.loading = false;
+        },
+        error: (e) => {
+          console.error('[ApplicationForm] toggle like error:', e);
+          // rollback
+          this.likeState = prev;
+        }
+      });
+  }
+
   formatDateForInput(dateString: string | null | undefined): string {
     if (!dateString) return '';
 
