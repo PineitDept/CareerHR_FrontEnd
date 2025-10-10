@@ -161,11 +161,20 @@ interface ViewComment {
 })
 export class ApplicationFormComponent {
   // ====== Filter ======
-  filterButtons: { label: string; key: string; color: string }[] = [];
+  filterButtons: {
+    label: string;
+    key: string;
+    color?: string;
+    textColor?: string;
+    borderColor?: string;
+    outlineBtn?: boolean;
+    options?: Array<{ label: string; value: any }>;
+  }[] = [];
   disabledKeys: string[] = [];
 
   // ====== Routing ======
   applicantId: number = 0;
+  roundID: number = 0;
 
   // ====== Data Model (View) ======
   applicant: Applicant = {
@@ -308,6 +317,7 @@ export class ApplicationFormComponent {
       .pipe(takeUntil(this.destroy$))
       .subscribe((params) => {
         this.applicantId = Number(params['id'] || 0);
+        this.roundID = Number(params['round'] || 0);
         this.fetchCandidateTracking();
       });
 
@@ -345,11 +355,53 @@ export class ApplicationFormComponent {
             return;
           }
 
-          const exact =
-            items.find((i) => Number(i.userID) === this.applicantId) ||
-            items[0];
+          // เลือกภายใน user นี้ก่อน
+          const byUser = items.filter(i => Number(i.userID) === this.applicantId);
 
-          this.mapTrackingToView(exact);
+          // พยายาม match roundID ที่มาจาก query param
+          let exact = byUser.find(i => Number(i.roundID) === Number(this.roundID));
+
+          // fallback: ถ้าไม่เจอ ให้ใช้รอบล่าสุดของ user นี้ (หรือ items[0] เป็นที่สุดท้าย)
+          if (!exact) {
+            exact = byUser.sort((a, b) => Number(b.roundID) - Number(a.roundID))[0] || items[0];
+            // ถ้าไม่ได้ส่ง round มา ตั้งค่าให้ตรงกับ item ที่เลือก (optional)
+            if (!this.roundID && exact?.roundID != null) {
+              this.roundID = Number(exact.roundID);
+            }
+          }
+
+          // (optional) sync ให้แน่ใจว่า roundID ตอนนี้ตรงกับข้อมูลที่ map
+          if (exact?.roundID != null) {
+            this.roundID = Number(exact.roundID);
+          }
+
+          // สร้าง/อัปเดตปุ่ม Round จาก rounds ที่มีใน API
+          const sourceForRounds = byUser.length ? byUser : items;
+          const rounds = Array.from(
+            new Set(
+              sourceForRounds
+                .map(i => Number((i as any)?.roundID))
+                .filter(n => Number.isFinite(n) && n > 0)
+            )
+          ).sort((a, b) => a - b);
+
+          const roundButton = (rounds.length > 1)
+            ? [{
+                key: 'round',
+                label: `Round ${this.roundID || 1}`,
+                color: '#FFFFFF',
+                textColor: '#000000',
+                borderColor: '#000000',
+                options: rounds.map(r => ({ label: `Round ${r}`, value: r }))
+              }]
+            : [];
+
+          this.filterButtons = [
+            ...roundButton,
+            { label: 'Print', key: 'print', color: '#0055FF' }
+          ];
+
+          this.mapTrackingToView(exact as any);
           this.isLoading = false;
         },
         error: (err) => {
@@ -502,7 +554,7 @@ export class ApplicationFormComponent {
   private fetchAssessmentAndWarnings(userId: number) {
     if (!userId) return;
     this.applicationService
-      .getApplicationAssessmentAndCandidateWarning(userId)
+      .getApplicationAssessmentAndCandidateWarning(userId, this.roundID)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (res) => this.mapAssessmentFromApi(res),
@@ -602,6 +654,10 @@ export class ApplicationFormComponent {
   private fetchStageHistoryAndReasons(appId: number) {
     this.applicationService.getCandidateStageHistoryById(appId)
       .pipe(
+        // กรองเฉพาะรอบที่เลือก8j
+        map((histories: any[]) => (Array.isArray(histories) ? histories : []).filter(h =>
+          Number(h.roundId) === Number(this.roundID)
+        )),
         switchMap((histories: any[]) => {
           const uniqStageIds = Array.from(new Set(histories.map(h => Number(h.stageId))));
           const reasonsReq = uniqStageIds.map(id =>
@@ -805,7 +861,7 @@ export class ApplicationFormComponent {
     if (!id) return;
 
     const flow = this.resolveCurrentFlow();
-    const queryParams = { id };
+    const queryParams = { id, round: this.roundID };
 
     this.router.navigate([`/applications/${flow}/application-form/details`], { queryParams });
   }
@@ -1051,7 +1107,7 @@ export class ApplicationFormComponent {
       // ไม่เปลี่ยน activeIndex (คงพฤติกรรมเดิม)
       this.router.navigate(
         ['/interview-scheduling/interview-form/result'],
-        { queryParams: { id: this.applicantId, interview } }
+        { queryParams: { id: this.applicantId, interview, round: this.roundID } }
       );
       return;
     }
@@ -1321,6 +1377,21 @@ export class ApplicationFormComponent {
 
     // เผื่อกรณี URL แปลก ๆ ล้มกลับไปที่ screening
     return 'screening';
+  }
+
+  onFilterSelectChanged(e: { key: string; value: number; label: string }) {
+    if (!e) return;
+    if (e.key === 'round') {
+      const r = Number(e.value);
+      if (!isNaN(r) && r !== this.roundID) {
+        // อัปเดต query param ให้ sync กับ URL -> trigger fetch ใหม่อัตโนมัติ
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { round: r },
+          queryParamsHandling: 'merge',
+        });
+      }
+    }
   }
 }
 

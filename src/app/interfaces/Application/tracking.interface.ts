@@ -13,6 +13,7 @@ export interface Positions {
 
 export interface CandidateTracking {
   userID: number;
+  roundID?: number;
   fullName: string;
   fullNameTH: string;
   gradeCandidate: string;

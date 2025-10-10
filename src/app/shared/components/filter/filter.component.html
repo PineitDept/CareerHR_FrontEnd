@@ -101,17 +101,55 @@
 
     <!-- Dynamic Buttons -->
     <ng-container *ngFor="let btn of actionButtons">
-      <button
-        [ngStyle]="{ 'background-color': btn.color || '#0A84FF' }"
-        [ngClass]="btn.outlineBtn ? '!tw-bg-transparent tw-border tw-border-black !tw-text-black tw-font-bold hover:!tw-bg-black hover:!tw-text-white' : 'tw-text-white'"
-        class="btn-dynamic tw-rounded-lg tw-px-4 tw-py-2 tw-text-base
-              disabled:tw-opacity-50 disabled:tw-cursor-not-allowed tw-min-w-[120px]"
-        [style.--btn-bg]="btn.color || '#0A84FF'"
-        (click)="onActionButtonClick(btn.key)"
-        [disabled]="disabledKeys.includes(btn.key) || ((btn.key === 'submit' || btn.key === 'register') && (!(selectedRows.length)))"
-      >
-        {{ btn.label }}
-      </button>
+      <!-- ปุ่มแบบ Select (มี options) -->
+      <div class="tw-relative tw-min-w-[120px]" *ngIf="btn.options?.length; else normalBtn">
+        <button
+          (click)="toggleActionDropdown(btn.key, $event)"
+          class="btn-dynamic tw-rounded-lg tw-px-4 tw-py-2 tw-text-base tw-w-full tw-inline-flex tw-items-center tw-justify-between"
+          [style.--btn-bg]="btn.color || '#0A84FF'"
+          [style.--btn-ring]="btn.borderColor || btn.color || '#0A84FF'"
+          [style.color]="btn.textColor || (isWhite(btn.color) ? '#111827' : '#FFFFFF')"
+          [class.tw-border]="isWhite(btn.color) || btn.outlineBtn || !!btn.borderColor"
+          [style.borderColor]="btn.borderColor || (isWhite(btn.color) ? '#D1D5DB' : 'transparent')"
+          [ngClass]="btn.outlineBtn
+            ? '!tw-bg-transparent tw-border tw-border-black !tw-text-black tw-font-bold hover:!tw-bg-black hover:!tw-text-white'
+            : ''"
+        >
+          <span>{{ btn.label }}</span>
+          <app-icon name="chevron-down" [size]="16"></app-icon>
+        </button>
+
+        <ul
+          *ngIf="openActionKey === btn.key"
+          class="tw-absolute tw-right-0 tw-bg-white tw-shadow-md tw-rounded-lg tw-mt-1 tw-z-20 tw-w-full tw-min-w-[140px]"
+        >
+          <li
+            *ngFor="let opt of btn.options"
+            (click)="selectActionOption(btn, opt, $event)"
+            class="tw-px-4 tw-py-2 tw-text-base tw-cursor-pointer hover:tw-bg-gray-100"
+          >
+            {{ opt.label }}
+          </li>
+        </ul>
+      </div>
+
+      <!-- ปุ่มแบบปกติ -->
+      <ng-template #normalBtn>
+        <button
+          class="btn-dynamic tw-rounded-lg tw-px-4 tw-py-2 tw-text-base
+                disabled:tw-opacity-50 disabled:tw-cursor-not-allowed tw-min-w-[120px]"
+          [style.--btn-bg]="btn.color || '#0A84FF'"
+          [style.--btn-ring]="btn.borderColor || btn.color || '#0A84FF'"
+          [style.color]="btn.textColor || (isWhite(btn.color) ? '#111827' : '#FFFFFF')"
+          [class.tw-border]="isWhite(btn.color) || btn.outlineBtn || !!btn.borderColor"
+          [style.borderColor]="btn.borderColor || (isWhite(btn.color) ? '#D1D5DB' : 'transparent')"
+          (click)="onActionButtonClick(btn.key)"
+          [disabled]="disabledKeys.includes(btn.key) || ((btn.key === 'submit' || btn.key === 'register') && (!(selectedRows.length)))"
+        >
+          {{ btn.label }}
+        </button>
+      </ng-template>
+
     </ng-container>
   </div>
 </div>

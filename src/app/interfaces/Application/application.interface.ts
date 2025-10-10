@@ -77,6 +77,7 @@ export interface ScreeningRow {
   readonly totalBonus: number;
   readonly employeeAction: string;
   readonly screening: BadgeConfig;
+  readonly roundID?: number;
 }
 
 export interface IconConfig {
