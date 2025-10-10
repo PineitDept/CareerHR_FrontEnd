@@ -34,10 +34,13 @@ import { AlertDialogComponent } from '../dialogs/alert-dialog/alert-dialog.compo
 import { FormDialogComponent } from '../dialogs/form-dialog/form-dialog.component';
 import { ApplicationService } from '../../../services/application/application.service';
 import { FormDialogData } from '../../interfaces/dialog/dialog.interface';
+import { SelectOption } from '../multi-select-dropdown/multi-select-dropdown.component';
 
 export type SortState = {
   [field: string]: 'asc' | 'desc' | null;
 };
+
+type MultiOption = { label: string; value: any };
 
 interface DropdownOverlay {
   visible: boolean;
@@ -87,6 +90,7 @@ export class TablesComponent
   @Input() inlineFieldErrors: Record<string, boolean> = {};
   @Input() useExternalInlineSaveFlow: boolean = false;
   @Input() scoreMax: number = 1;
+  @Input() valueSelected: any
 
   @Output() selectionChanged = new EventEmitter<any[]>();
   @Output() rowClicked = new EventEmitter<any>();
@@ -403,18 +407,68 @@ export class TablesComponent
     }
   }
 
-  // FIXED: Dropdown Management
-  toggleDropdown(rowIndex: number, field: string, origin: CdkOverlayOrigin, event?: Event) {
-    event?.stopPropagation();
-    const column = this.columns.find(c => c.field === field);
-    if (!column?.options) return;
+  private resolveOptionsFrom(
+    src: string | string[] | ((row: any) => any[]) | undefined,
+    row: any
+  ): any[] {
+    if (Array.isArray(src)) return src;
+    if (typeof src === 'function') {
+      const out = src(row);
+      return Array.isArray(out) ? out : [];
+    }
+    if (typeof src === 'string') {
+      const out = row?.[src];
+      return Array.isArray(out) ? out : [];
+    }
+    return [];
+  }
 
-    this.openOverlay(origin, { rowIndex, field, options: column.options });
+  private toDisplayLabels(arr: any[]): string[] {
+    return (arr ?? []).map((o: any) =>
+      typeof o === 'string'
+        ? o
+        : (o?.label ?? o?.name ?? o?.text ?? String(o?.value ?? o?.id ?? o))
+    );
+  }
+
+  public resolveMultiOptions(row: any, column: any): MultiOption[] {
+    const src = column?.options as string | string[] | MultiOption[] | ((row: any) => any[]) | undefined;
+
+    let arr: any[] = [];
+    if (Array.isArray(src)) arr = src;
+    else if (typeof src === 'function') arr = Array.isArray(src(row)) ? src(row) : [];
+    else if (typeof src === 'string') arr = Array.isArray(row?.[src]) ? row[src] : [];
+
+    return (arr ?? []).map((o: any) => {
+      if (typeof o === 'string') return { label: o, value: o };
+      if (o?.label !== undefined && o?.value !== undefined) return o;
+      const label = o?.label ?? o?.name ?? o?.text ?? String(o?.value ?? o?.id ?? o);
+      const value = o?.value ?? o?.id ?? o?.key ?? label;
+      return { label, value };
+    });
+  }
+
+  onMultiSelectChange(selectedValues: SelectOption[]) {
+    console.log(selectedValues, '=>selectedValues')
+    // this.selectionMap[label] = selectedValues;
+  }
+
+  // FIXED: Dropdown Management
+  toggleDropdown(i: number, field: string, origin: CdkOverlayOrigin, e?: Event) {
+    e?.stopPropagation();
+    const column = this.columns.find(c => c.field === field);
+    if (!column) return;
+
+    const row = this.rowsValue[i];
+    const rawOpts = this.resolveOptionsFrom(column.options, row);
+    const displayOpts = this.toDisplayLabels(rawOpts); // ✅ กลายเป็น label แล้ว
+
+    this.openOverlay(origin, { rowIndex: i, field, options: displayOpts });
   }
 
   private openOverlay(
     origin: CdkOverlayOrigin,
-    ctx: { rowIndex: number | null; field: string; options: string[] }
+    ctx: { rowIndex: number | null; field: string; options: any[] }
   ) {
     const width = origin.elementRef.nativeElement.offsetWidth ?? 180;
 
@@ -466,12 +520,15 @@ export class TablesComponent
     this.cdr.detectChanges();
   }
 
-  toggleFooterDropdown(field: string, origin: CdkOverlayOrigin, event?: Event) {
-    event?.stopPropagation();
+  toggleFooterDropdown(field: string, origin: CdkOverlayOrigin, e?: Event) {
+    e?.stopPropagation();
     const column = this.columns.find(c => c.field === field);
-    if (!column?.options) return;
+    if (!column) return;
 
-    this.openOverlay(origin, { rowIndex: null, field, options: column.options });
+    const rawOpts = this.resolveOptionsFrom(column.options, this.footerRow ?? {});
+    const displayOpts = this.toDisplayLabels(rawOpts);
+
+    this.openOverlay(origin, { rowIndex: null, field, options: displayOpts });
   }
 
   isFooterDropdownOpen(field: string): boolean {
@@ -516,6 +573,7 @@ export class TablesComponent
 
     switch (val) {
       case 'pending':
+      case 'in process':
         return 'tw-text-[#FFAA00] hover:tw-text-[#D5920A]';
       case 'inprocess':
         return 'tw-text-[#5500FF] hover:tw-text-[#5f31bb]';
@@ -574,7 +632,7 @@ export class TablesComponent
 
       const dialogRef = this.dialog.open(AlertDialogComponent, {
         width: '496px',
-        panelClass: 'custom-dialog-container',
+        panelClass: ['custom-dialog-container', 'pp-rounded-dialog'],
         autoFocus: false,
         disableClose: true,
         data: {
@@ -601,7 +659,7 @@ export class TablesComponent
 
         const dialogRef = this.dialog.open(AlertDialogComponent, {
           width: '640px',
-          panelClass: 'custom-dialog-container',
+          panelClass: ['custom-dialog-container', 'pp-rounded-dialog'],
           autoFocus: false,
           disableClose: true,
           data: {
@@ -686,7 +744,7 @@ export class TablesComponent
 
       const dialogRef = this.dialog.open(AlertDialogComponent, {
         width: '496px',
-        panelClass: 'custom-dialog-container',
+        panelClass: ['custom-dialog-container', 'pp-rounded-dialog'],
         autoFocus: false,
         disableClose: true,
         data: {

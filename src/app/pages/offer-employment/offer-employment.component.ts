@@ -267,7 +267,9 @@ export class OfferEmploymentComponent {
               class: [
                 ...(item.result.offerResult.toLowerCase().trim() === 'offer'
                   ? ['tw-bg-green-500', 'tw-text-white', 'tw-ring-green-500/10']
-                  : ['tw-bg-red-500', 'tw-text-white', 'tw-ring-red-500/10']),
+                  : item.result.offerResult.toLowerCase().trim() === 'in process'
+                    ? ['tw-bg-orange-500', 'tw-text-white', 'tw-ring-orange-500/10']
+                    : ['tw-bg-red-500', 'tw-text-white', 'tw-ring-red-500/10']),
                 ...(interview1Hidden ? ['tw-hidden'] : []),
               ],
             },

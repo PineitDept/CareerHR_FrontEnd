@@ -1,6 +1,6 @@
 import { ChangeDetectorRef, Component, ElementRef, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { catchError, map, of, Subject, switchMap, takeUntil } from 'rxjs';
+import { catchError, map, Observable, of, Subject, switchMap, takeUntil } from 'rxjs';
 import { ApplicationService } from '../../../../../services/application/application.service';
 import { CandidatePagedResult } from '../../../../../interfaces/Application/application.interface';
 import {
@@ -27,23 +27,26 @@ type StepStatus = 'done' | 'pending';
 
 type Risk = 'Normal' | 'Warning';
 
-type ScreeningStatus = 'Accept' | 'Decline' | 'Hold'; type CellType = 'text' | 'input' | 'select' | 'multiselect' | 'textarea';
+type ScreeningStatus = 'Accept' | 'Decline' | 'Hold';
+
+type CellType = 'text' | 'input' | 'select' | 'multiselect' | 'textarea';
 
 interface WarningRow {
-  no: number | string;
-  warning: string;
+  no?: number | string;
+  warning?: string;
 
   // ค่าที่จะเก็บ
-  result1: any;
-  result2: any;
+  result1?: any;
+  result2?: any;
 
   // ชนิด control ของแต่ละคอลัมน์ (มาจาก API ต่อแถว)
-  result1Type: CellType;
-  result2Type: CellType;
+  result1Type?: CellType;
+  result2Type?: CellType;
 
   // option ต่อแถว (ถ้าเป็น select/multiselect)
-  result1Options?: Array<{ label: string; value: any }>;
-  result2Options?: Array<{ label: string; value: any }>;
+  result1Options?: any;
+  result2Options?: any;
+  selectedIds?: []
 }
 
 interface Applicant {
@@ -328,28 +331,30 @@ export class InterviewDetailsComponent {
 
   // ====== Candidate Warning UI ======
   isRevOpen = true; // ปุ่ม chevron พับ/กาง
-  isWarnOpen = true;
-  warningRows: any[] = [];
-  warningColumns: any[] = [];
+  isDetail1Open = true;
+  isDetail2Open = true;
+  detail1Rows: any[] = [];
+  detail1Columns: any[] = [];
+  detail2Rows: any[] = [];
+  detail2Columns: any[] = [];
 
   reviewHistory: any[] = [];
   selectedCategoryId: number | null = null;
 
-  private initWarningColumns() {
-    // this.warningColumns = [
-    //   { header: 'No', field: 'no', type: 'text', align: 'center', width: '56px', minWidth: '56px' },
-    //   { header: 'Question', field: 'warning', type: 'text', minWidth: '220px', wrapText: true, },
-    //   { header: 'Interview 1', field: 'result1', type: 'input', minWidth: '160px' },
-    //   { header: 'Interview 2', field: 'result2', type: 'select', minWidth: '160px' }
-    // ];
-
-    this.warningColumns = [
+  private initdetail1Columns() {
+    this.detail1Columns = [
       { header: 'No', field: 'no', type: 'text', align: 'center', width: '56px', minWidth: '56px' },
       { header: 'Question', field: 'warning', type: 'text', minWidth: '220px', wrapText: true },
+      { header: 'Interview 1', field: 'result1', type: 'dynamic', typeKey: 'result1Type', options: 'result1Options', minWidth: '160px' },
+      { header: 'Interview 2', field: 'result2', type: 'dynamic', typeKey: 'result2Type', options: 'result2Options', minWidth: '160px' },
+    ];
+  }
 
-      // ใช้ชนิดแบบ dynamic: ดู type/option จากแถว
-      { header: 'Interview 1', field: 'result1', type: 'dynamic', typeKey: 'result1Type', optionsKey: 'result1Options', minWidth: '160px' },
-      { header: 'Interview 2', field: 'result2', type: 'dynamic', typeKey: 'result2Type', optionsKey: 'result2Options', minWidth: '160px' },
+  private initdetail2Columns() {
+    this.detail2Columns = [
+      { header: 'No', field: 'no', type: 'text', align: 'center', width: '56px', minWidth: '56px' },
+      { header: 'Question', field: 'warning', type: 'text', minWidth: '220px', wrapText: true },
+      { header: 'Interview 2', field: 'result2', type: 'dynamic', typeKey: 'result2Type', options: 'result2Options', minWidth: '160px' },
     ];
   }
 
@@ -375,12 +380,11 @@ export class InterviewDetailsComponent {
         this.selectedTab = 'tab' + params['interview'];
 
         this.fetchCandidateTracking();
-        // this.fetchRecruitmentStagesWithReasons(Number(params['interview']) + 1)
-        this.fetchFormById(this.stageId)
       });
 
     // ตาราง Warning
-    this.initWarningColumns();
+    this.initdetail1Columns();
+    this.initdetail2Columns();
 
     const userString = sessionStorage.getItem('user');
     if (userString) {
@@ -463,10 +467,17 @@ export class InterviewDetailsComponent {
 
     this.interviewFormService.getApplicantTracking(this.applicantId).subscribe({
       next: (res) => {
-        const appointmentIdKey = `interview${this.stageId}AppointmentId`;
-        const appointmentIdValue = res[appointmentIdKey];
+        // const appointmentIdKey = `interview${this.stageId}AppointmentId`;
+        // const appointmentIdValue = res[appointmentIdKey];
 
-        (this as any)[appointmentIdKey] = appointmentIdValue;
+        // (this as any)[appointmentIdKey] = appointmentIdValue;
+
+        if (res.interview1FormResult.toLowerCase() === 'pending' || res.interview1FormResult === null) {
+          this.fetchFormById(this.stageId)
+        } else {
+          this.fetchPreviewFormRound(res)
+          // this.fetchFormById(this.stageId)
+        }
       },
       error: (err) => {
         console.error(err);
@@ -475,97 +486,65 @@ export class InterviewDetailsComponent {
 
   }
 
-  fetchInterviewer() {
-    this.interviewFormService.getApplicantReview(
-      Number(this.applicantId),
-      Number(this.stageId) + 1
-    ).subscribe({
-      next: (res) => {
-        this.reviewHistory = res.map((item: any) => ({
-          ...item,
-          expandState: {
-            strength: false,
-            concern: false,
-          },
-          overflowState: {
-            strength: false,
-            concern: false,
-          }
-        }));
+  fetchPreviewFormRound(items: any) {
+    (this.interviewDetailsFormService.previewFormRound(items.roundID, items.userID) as Observable<any[]>)
+      .subscribe(
+        (response: any[]) => {
+          const fields = Array.isArray(response[0].fields) ? response[0].fields : [];
 
-        const countIsSummaryFalse = this.reviewHistory.filter(item => item.isSummary === false).length;
+          this.detail1Rows = fields.map((item: any, idx: number) => {
+            const type = this.mapFieldType(item.fieldType);
+            let opts = []
 
-        setTimeout(() => {
-          this.slideConfig = {
-            ...this.slideConfig,
-            dots: countIsSummaryFalse > 2,
-            slidesToShow: countIsSummaryFalse === 1 ? 1 : 2,
-            responsive: [
-              {
-                breakpoint: 768,
-                settings: {
-                  slidesToShow: 1,
-                  dots: countIsSummaryFalse > 1
-                }
-              }
-            ]
-          };
-
-          // 👇 รี init slick
-          setTimeout(() => {
-            this.carousels.forEach((carousel) => {
-              carousel.unslick();
-              carousel.initSlick();
-            });
-          }, 0);
-
-          // ✅ เช็ค overflow หลัง DOM update
-          // setTimeout(() => this.checkAllOverflow(), 0);
-        }, 0);
-
-        setTimeout(() => this.checkAllOverflow(), 0);
-        this.foundisSummary = this.reviewHistory.find(user => user.isSummary === true);
-
-        this.initializeForm()
-
-        this.reasonsInterview1.forEach(category => {
-          category.rejectionReasons.forEach((reason: { reasonId: any; checked: boolean; }) => {
-            if (this.foundisSummary?.selectedReasonIds?.includes(reason.reasonId)) {
-              reason.checked = true;
+            if (item.fieldType !== 'dropdown') {
+              opts = Array.isArray(item.options)
+                ? item.options.map((o: any) => ({ label: o.optionIdname, value: o.optionId }))
+                : undefined;
             } else {
-              reason.checked = false;
+              opts = Array.isArray(item.options)
+                ? item.options.map((o: any) => ({ label: o.optionIdname, key: o.optionId }))
+                : undefined;
             }
+
+            console.log(item)
+
+            const row: WarningRow = {
+              no: idx + 1,
+              warning: item.questionName ?? '-',
+
+              result1: item.answers[0]?.existingAnswer,
+              result2: item.answers[1]?.existingAnswer,
+
+              result1Type: type,
+              result2Type: type,
+
+              result1Options: opts,
+              result2Options: opts,
+              selectedIds: item.answers?.[0]?.existingOptionIds ?? []
+            };
+
+            return row;
           });
-        });
 
-        this.selectedCategoryId = this.foundisSummary?.categoryId
-      },
+          const fields2 = Array.isArray(response[1].fields) ? response[1].fields : [];
+          this.detail2Rows = fields2.map((item: any, idx: number) => {
+            const type = this.mapFieldType(item.fieldType);
+            const opts = Array.isArray(item.options)
+              ? item.options.map((o: any) => ({ label: o.name ?? o.label ?? String(o), value: o.id ?? o.value ?? o }))
+              : undefined;
 
-      error: (error) => {
-        console.error('Error fetching applicant review:', error);
-      }
-    });
-  }
+            const row: WarningRow = {
+              no: idx + 1,
+              warning: item.questionName ?? '-',
+              result2: item.answers[0]?.existingAnswer,
+              result2Type: type,
+              result2Options: opts,
+            };
 
-  fetchRecruitmentStagesWithReasons(interview: number) {
-    this.reasonService.getRecruitmentStagesWithReasons(interview).subscribe({
-      next: (response) => {
-        this.reasonsInterview1 = response;
-
-        this.reasonsInterview1 = response.map((category: any) => ({
-          ...category,
-          rejectionReasons: category.rejectionReasons.map((reason: any) => ({
-            ...reason,
-            checked: false
-          }))
-        }));
-
-        this.fetchInterviewer();
-      },
-      error: (error) => {
-        console.error('Error fetching Recruitment Stages with reasons:', error);
-      },
-    });
+            return row;
+          });
+        }
+      );
   }
 
   private fetchFiles(id: number) {
@@ -725,41 +704,6 @@ export class InterviewDetailsComponent {
     return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
   }
 
-  getRejectionReasons(categoryId: number) {
-    const category = this.reasonsInterview1.find(item => item.categoryId === categoryId);
-    return category?.rejectionReasons?.filter((r: { isActive: any; }) => r.isActive) || [];
-  }
-
-  selectCategory(categoryId: number) {
-    this.reasonsInterview1 = this.reasonsInterview1.map((category: any) => ({
-      ...category,
-      rejectionReasons: category.rejectionReasons.map((reason: any) => ({
-        ...reason,
-        checked: false
-      }))
-    }));
-
-    if (this.selectedCategoryId === categoryId) {
-      this.selectedCategoryId = null; // ถ้ากดซ้ำ → reset
-    } else {
-      this.selectedCategoryId = categoryId; // กดอันใหม่ → set ใหม่
-    }
-  }
-
-  toggleExpand(index: number, field: 'strength' | 'concern') {
-    this.reviewHistory[index].expandState[field] = !this.reviewHistory[index].expandState[field];
-
-    setTimeout(() => this.checkOverflow(index, field), 0);
-  }
-
-  checkOverflow(index: number, field: 'strength' | 'concern') {
-    const el = field === 'strength'
-      ? this.strengthTexts.toArray()[index].nativeElement
-      : this.concernTexts.toArray()[index].nativeElement;
-
-    this.reviewHistory[index].overflowState[field] = el.scrollHeight > el.clientHeight;
-  }
-
   checkAllOverflow() {
     this.reviewHistory.forEach((review, i) => {
       const strengthEl = this.strengthTexts.toArray()[i]?.nativeElement;
@@ -776,53 +720,52 @@ export class InterviewDetailsComponent {
   }
 
   onComfirmReview() {
-    const payload = this.formDetails.value;
+    // const payload = this.formDetails.value;
 
-    const isoDate = new Date(payload.dateInterviewReview).toISOString();
-    let checkedReasonIds = []
-    checkedReasonIds = this.reasonsInterview1.flatMap((category: { rejectionReasons: any[]; }) =>
-      category.rejectionReasons
-        .filter(reason => reason.checked === true)
-        .map(reason => reason.reasonId)
-    );
+    // const isoDate = new Date(payload.dateInterviewReview).toISOString();
+    // let checkedReasonIds = []
+    // checkedReasonIds = this.reasonsInterview1.flatMap((category: { rejectionReasons: any[]; }) =>
+    //   category.rejectionReasons
+    //     .filter(reason => reason.checked === true)
+    //     .map(reason => reason.reasonId)
+    // );
 
-    const checkedCategoryIds = this.reasonsInterview1
-      .filter(category => category.rejectionReasons.some((reason: { checked: boolean; }) => reason.checked === true))
-      .map(category => category.categoryId);
+    // const checkedCategoryIds = this.reasonsInterview1
+    //   .filter(category => category.rejectionReasons.some((reason: { checked: boolean; }) => reason.checked === true))
+    //   .map(category => category.categoryId);
 
-    const appointmentIdKey = `interview${this.stageId}AppointmentId`;
-    const appointmentId = (this as any)[appointmentIdKey];
+    // const appointmentIdKey = `interview${this.stageId}AppointmentId`;
+    // const appointmentId = (this as any)[appointmentIdKey];
 
-    const transformedPayload = {
-      applicationId: this.applicantId,
-      stageId: this.stageId + 1,
-      categoryId: checkedCategoryIds[0],
-      isSummary: true,
-      stageDate: isoDate,
-      appointmentId: appointmentId.trim(),
-      satisfaction: null,
-      notes: payload.noteInterviewReview,
-      strength: "",
-      concern: "",
-      selectedReasonIds: checkedReasonIds
-    }
+    // const transformedPayload = {
+    //   applicationId: this.applicantId,
+    //   stageId: this.stageId + 1,
+    //   categoryId: checkedCategoryIds[0],
+    //   isSummary: true,
+    //   stageDate: isoDate,
+    //   appointmentId: appointmentId.trim(),
+    //   satisfaction: null,
+    //   notes: payload.noteInterviewReview,
+    //   strength: "",
+    //   concern: "",
+    //   selectedReasonIds: checkedReasonIds
+    // }
 
-    this.interviewFormService.postInterviewReview(transformedPayload).subscribe({
-      next: () => {
-        this.fetchInterviewer()
-        this.foundisSummary = this.reviewHistory.find(user => user.isSummary === true);
-      },
-      error: (err) => {
-        console.error('Error Rescheduled:', err);
-      }
-    });
+    // this.interviewFormService.postInterviewReview(transformedPayload).subscribe({
+    //   next: () => {
+    //     // this.fetchInterviewer()
+    //     this.foundisSummary = this.reviewHistory.find(user => user.isSummary === true);
+    //   },
+    //   error: (err) => {
+    //     console.error('Error Rescheduled:', err);
+    //   }
+    // });
   }
 
   onCancelReview() {
     this.initializeForm()
     this.selectedCategoryId = null;
   }
-
 
   onEditClicked() {
     this.isEditing = true;
@@ -1069,7 +1012,7 @@ export class InterviewDetailsComponent {
 
     const dialogRef = this.dialog.open(AlertDialogComponent, {
       width: '496px',
-      panelClass: 'custom-dialog-container',
+      panelClass: ['custom-dialog-container', 'pp-rounded-dialog'],
       autoFocus: false,
       disableClose: true,
       data: {
@@ -1235,11 +1178,12 @@ export class InterviewDetailsComponent {
   result1Type = '';
   result2Type = '';
   fetchFormById(stageId: number) {
-    this.interviewDetailsFormService.getFormById(stageId).subscribe({
+    this.interviewDetailsFormService.getFormById(1).subscribe({
       next: (response: any) => {
+        console.log(response)
         const fields = Array.isArray(response?.fields) ? response.fields : [];
 
-        this.warningRows = fields.map((item: any, idx: number) => {
+        this.detail1Rows = fields.map((item: any, idx: number) => {
           const type = this.mapFieldType(item.fieldType);
 
           // แปลง options จาก API ถ้ามี
@@ -1263,7 +1207,37 @@ export class InterviewDetailsComponent {
 
           return row;
         });
-        
+
+      },
+      error: (error) => console.error(error),
+    });
+
+    this.interviewDetailsFormService.getFormById(2).subscribe({
+      next: (response: any) => {
+        const fields = Array.isArray(response?.fields) ? response.fields : [];
+
+        this.detail2Rows = fields.map((item: any, idx: number) => {
+          const type = this.mapFieldType(item.fieldType);
+
+          // แปลง options จาก API ถ้ามี
+          const opts = Array.isArray(item.options)
+            ? item.options.map((o: any) => ({ label: o.name ?? o.label ?? String(o), value: o.id ?? o.value ?? o }))
+            : undefined;
+
+          const row: WarningRow = {
+            no: idx + 1,
+            warning: item.questionName ?? '-',
+
+            result2: type === 'multiselect' ? [] : '',
+
+            result2Type: type,
+
+            result2Options: opts,
+          };
+
+          return row;
+        });
+
       },
       error: (error) => console.error(error),
     });

@@ -270,8 +270,8 @@
                                     <div class="tw-text-[13px] tw-font-medium tw-mb-1">Confirmed Start Date</div>
                                     <input
                                         class="tw-w-full tw-block tw-bg-gray-light-4 tw-border tw-border-[#d1d5db] tw-rounded-[8px] tw-p-2 tw-text-sm tw-outline-none tw-gap-2 placeholder:tw-text-[#ADB5BD]"
-                                        type="date" formControlName="confirmedStartDate"
-                                        (input)="onDateInput()" (change)="onConfirmedStartDate($event)">
+                                        type="date" formControlName="confirmedStartDate" (input)="onDateInput()"
+                                        (change)="onConfirmedStartDate($event)">
                                 </div>
                                 <div>
                                     <p class="tw-text-[13px] tw-font-medium tw-mb-1">Contact</p>
@@ -316,7 +316,7 @@
                                             {{ appt?.interview?.missCallHistory?.[0]?.missCallReason }}
                                         </p>
 
-                                        <p class="tw-text-[10px] tw-mt-2" *ngIf="appt?.interview?.sendAt">
+                                        <p class="tw-text-[10px] tw-mt-2" *ngIf="appt?.interview?.sendAt && appt?.interview?.isEmailSent">
                                             {{ appt?.interview?.sendAt | date:'dd/MM/yyyy hh:mm a' }} The email has been
                                             sent.
                                         </p>
@@ -505,7 +505,8 @@
 
             <div class="tw-flex tw-flex-col">
                 <div class="tw-text-[14px] tw-font-medium tw-mb-1">Evaluation Period</div>
-                <app-cdk-dropdown [options]="positionOptions" placeholder="Select Position"></app-cdk-dropdown>
+                <app-cdk-dropdown [options]="probationOptions" placeholder="Select Period" [value]="selectedProbation"
+                    (valueChange)="onProbationChange($event)"></app-cdk-dropdown>
             </div>
         </div>
 

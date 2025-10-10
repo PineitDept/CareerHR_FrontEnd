@@ -154,21 +154,28 @@ export class OfferResultComponent {
   isActiveLevel: boolean = true;
   isActivePosition: boolean = true;
   isActiveManager: boolean = true;
+  isActiveProbation: boolean = true;
   positionOptions: DropdownOption[] = [];
   positionOptions2: DropdownOption[] = [];
   companyOptions: DropdownOption[] = [];
   departmentOptions: DropdownOption[] = [];
   divisionOptions: DropdownOption[] = [];
   LevelOptions: DropdownOption[] = [];
+  probationOptions: DropdownOption[] = [];
   managerOptions: DropdownOption[] = [];
   selectedPositionId: number | null = null;
-  selectedPositionId2: number | null = null;
+  selectedPositionId2: any | null = null;
   selectedCompanyId: number | null = null;
   selectedDepartmentId: number | null = null;
   selectedDivisionId: number | null = null;
   selectedLevelId: string | null = null;
+  selectedProbation: number | null = null;
   selectedManagerId: number | null = null;
   confirmedStartDate: string | null = null;
+  payloadforPosition: any;
+
+  private levelsRaw: any[] = [];
+  private positionsRaw: any[] = [];
 
   constructor(
     private route: ActivatedRoute,
@@ -201,6 +208,10 @@ export class OfferResultComponent {
       this.fetchRecruitmentStagesWithReasons(4); // offer state
       this.fetchCompanyDetails();
       this.fetchStatusCall();
+      this.fetchLevelDetails();
+      this.fetchProbationDetails();
+      this.fetchPositionDetails();
+      this.fetchManagerDetails();
     });
 
     const userString = sessionStorage.getItem('user');
@@ -279,8 +290,104 @@ export class OfferResultComponent {
 
         this.selectedPositionId = activeJob?.jobId ?? jobList[0]?.jobId ?? null;
 
+        this.fetchOfferEmploymentsByID()
+
       },
       error: (error) => console.error('Error fetching Recruitment Stages with reasons:', error),
+    });
+  }
+
+  private fetchOfferEmploymentsByID() {
+    if (!this.applicantId) return;
+
+    this.interviewFormService.getOfferEmploymentsByID(this.applicantId).subscribe({
+      next: (o) => {
+        if (!o) return;
+
+        // probationDay
+        if (o.probationDay) {
+          this.selectedProbation = o.probationDay;
+        }
+
+        // Company
+        if (o.companyId) {
+          this.selectedCompanyId = o.companyId;
+          this.companyValue = o.companyId;
+          this.isActiveDepartment = false;
+
+          // โหลด options ที่เหลือให้พร้อม
+          this.fetchDepartmentDetails(o.companyId);
+          // this.fetchManagerDetails();
+          // this.fetchLevelDetails();
+          // this.fetchPositionDetails();
+        }
+
+        // Department
+        if (o.companyId && o.departmentId) {
+          this.selectedDepartmentId = o.departmentId;
+          this.departmentValue = o.departmentId;
+          this.isActiveDivision = false;
+
+          // ต้องมี dept ก่อน ถึงจะโหลด division
+          this.fetchDivisionDetails(o.companyId, o.departmentId);
+        }
+
+        // Division
+        if (o.divisionId) {
+          this.selectedDivisionId = o.divisionId;
+          this.divisionValue = o.divisionId;
+          this.isActiveLevel = false;
+        }
+
+        // Level: map จาก levelId -> levelNameEn (value ของ dropdown เป็นชื่อ EN แบบ lower-case)
+        if (o.levelId) {
+          this.selectedLevelId = o.levelId;
+          this.levelValue = o.levelId;
+          this.isActivePosition = false;
+        }
+
+        // Position: map จาก positionId -> positionNameEN (value เป็น lower-case เหมือนกัน)
+        if (o.positionId) {
+          const setPositionFromId = () => {
+            const hit = (this.positionsRaw || []).find((p: any) => p.newPositionId === o.positionId);
+            if (hit?.positionNameEN) {
+              const label = `${hit.positionNameTH}${hit.positionNameEN ? ` (${hit.positionNameEN})` : ''}`.trim() || '-';
+              const key = label.toLowerCase();
+
+
+              // const value = String(hit.positionNameEN).toLowerCase().trim();
+              this.selectedPositionId2 = key;
+              this.isActiveManager = false;
+            }
+          };
+          // this.selectedPositionId2 = o.positionId;
+          // this.isActiveManager = false;
+          setPositionFromId()
+          console.log(this.positionsRaw, '=>this.positionsRaw')
+
+          // if (this.positionsRaw?.length) setPositionFromId();
+          // else {
+          //   this.interviewFormService.getCompanyPositions().subscribe({
+          //     next: (res) => { this.positionsRaw = Array.isArray(res) ? res : []; setPositionFromId(); }
+          //   });
+          // }
+        }
+
+        // Manager
+        if (o.managerId != null) {
+          this.selectedManagerId = Number(o.managerId);
+          this.managerValue = String(o.managerId);
+        }
+
+        // Start date
+        if (o.comfirmDate) {
+          this.formDetails.patchValue(
+            { confirmedStartDate: this.formatDateForInput(o.comfirmDate) },
+            { emitEvent: false }
+          );
+        }
+      },
+      error: (error) => console.error('Error fetchOfferEmploymentsByID:', error),
     });
   }
 
@@ -380,9 +487,9 @@ export class OfferResultComponent {
 
               if (this.companyValue != null) {
                 this.fetchDepartmentDetails(this.companyValue);
-                this.fetchManagerDetails(this.companyValue);
-                this.fetchLevelDetails(this.companyValue);
-                this.fetchPositionDetails();
+                // this.fetchManagerDetails();
+                // this.fetchLevelDetails();
+                // this.fetchPositionDetails();
                 if (this.departmentValue != null) {
                   this.fetchDivisionDetails(this.companyValue, this.departmentValue);
                 }
@@ -475,21 +582,34 @@ export class OfferResultComponent {
     });
   }
 
-  fetchLevelDetails(companyId: number) {
-    this.interviewFormService.getCompanyLevels(companyId).subscribe({
+  fetchLevelDetails() {
+    this.interviewFormService.getCompanyLevels().subscribe({
       next: (res) => {
-        const levelMap = new Map<number, DropdownOption>(
-          (res ?? []).map((x: any): [number, DropdownOption] => [
-            x.levelNameEn.toLowerCase().trim(),
-            { label: x.levelNameTh, value: x.levelNameEn.toLowerCase().trim() },
+        this.levelsRaw = Array.isArray(res) ? res : [];
+        const levelMap = new Map<string, DropdownOption>(
+          this.levelsRaw.map((x: any): [string, DropdownOption] => [
+            x.levelId,
+            { label: x.levelNameTh, value: x.levelId },
           ])
         );
-
         this.LevelOptions = Array.from(levelMap.values());
       },
-      error: (error) => {
-        console.error('Error fetching education levels:', error);
+      error: (error) => console.error('Error fetching education levels:', error),
+    });
+  }
+
+  fetchProbationDetails() {
+    this.interviewFormService.getProbation().subscribe({
+      next: (res) => {
+        const probationMap = new Map<number, DropdownOption>(
+          (res ?? []).map((x: any): [number, DropdownOption] => [
+            x.probationId,
+            { label: x.probationPeriod, value: x.probationPeriod },
+          ])
+        );
+        this.probationOptions = Array.from(probationMap.values());
       },
+      error: (error) => console.error('Error fetching education levels:', error),
     });
   }
 
@@ -497,49 +617,42 @@ export class OfferResultComponent {
     this.interviewFormService.getCompanyPositions().subscribe({
       next: (res) => {
         const items = Array.isArray(res) ? res : [];
+        this.positionsRaw = items; // <- เก็บ raw ไว้ด้วย
+
         const map = new Map<string, { label: string; value: string }>();
         for (const x of items) {
-          const label = String(x?.positionNameEN ?? '').trim();
+          const th = (x?.positionNameTH ?? '').trim();
+          const en = (x?.positionNameEN ?? '').trim();
+          const label = `${th}${en ? ` (${en})` : ''}`.trim() || '-';
           if (!label) continue;
-          const key = label.toLowerCase();
-          if (!map.has(key)) {
-            map.set(key, { label, value: key });
-          }
+          const key = label.toLowerCase(); // value = key แบบเดิม
+          if (!map.has(key)) map.set(key, { label, value: key });
         }
 
         const collator = new Intl.Collator('en', { sensitivity: 'base', numeric: true });
         const options = Array.from(map.values()).sort((a, b) => collator.compare(a.label, b.label));
-
         this.positionOptions2 = options as unknown as DropdownOption[];
+
+        console.log(this.positionOptions2, '=>this.positionOptions2')
       },
-      error: (error) => {
-        console.error('Error fetching positions:', error);
-      },
+      error: (error) => console.error('Error fetching positions:', error),
     });
   }
 
-  fetchManagerDetails(companyId: number) {
-    this.managerOptions = [
-      { label: 'Ithinai Yingsiri', value: '133001' },
-      { label: 'Pattanan Chongsermklang', value: '158851' },
-      { label: 'Luamdaun Thongkhamho', value: '150207' },
-      { label: 'Thantida Samitmongkol', value: '147059' }
-    ]
-    // this.interviewFormService.getCompanyLevels(companyId).subscribe({
-    //   next: (res) => {
-    //     const levelMap = new Map<number, DropdownOption>(
-    //       (res ?? []).map((x: any): [number, DropdownOption] => [
-    //         x.levelNameTh.toLowerCase().trim(),
-    //         { label: x.levelNameTh, value: x.levelNameTh.toLowerCase().trim() },
-    //       ])
-    //     );
 
-    //     this.LevelOptions = Array.from(levelMap.values());
-    //   },
-    //   error: (error) => {
-    //     console.error('Error fetching education levels:', error);
-    //   },
-    // });
+  fetchManagerDetails() {
+    this.interviewFormService.getManager().subscribe({
+      next: (res) => {
+        const ManagerMap = new Map<number, DropdownOption>(
+          (res ?? []).map((x: any): [number, DropdownOption] => [
+            x.managerId,
+            { label: x.mgrFullnameTH, value: x.managerId },
+          ])
+        );
+        this.managerOptions = Array.from(ManagerMap.values());
+      },
+      error: (error) => console.error('Error fetching education levels:', error),
+    });
   }
 
   protected currentFilterParams: IBenefitsFilterRequest = {
@@ -572,6 +685,33 @@ export class OfferResultComponent {
     });
   }
 
+  private getOptionLabelByValue(val: string): string {
+    const list = (this.positionOptions2 ?? []) as any[];
+
+    const hit = list.find((o) => {
+      // ถ้าเป็น object ที่มี value -> เทียบกับ selectedValue
+      if (o && typeof o === 'object' && 'value' in o) {
+        return String(o.value) === String(val);
+      }
+      // ถ้าเป็น string (หรือ primitive) -> เทียบ lowercase
+      return String(o).toLowerCase() === String(val).toLowerCase();
+    });
+
+    if (hit == null) return val ?? '';
+    if (typeof hit === 'string') return hit;
+    if (typeof hit.label === 'string') return hit.label;
+
+    return val ?? '';
+  }
+
+  private parsePositionLabel(label: string): { th: string; en: string } {
+    const m = label.match(/^(.*?)(?:\s*\((.*?)\))?$/);
+    const th = (m?.[1] ?? '').trim();
+    const en = (m?.[2] ?? '').trim();
+    return { th, en: en || th };
+  }
+
+
   // input change
   onPositionChange(selectedValue: number) {
     this.selectedPositionId = selectedValue;
@@ -582,14 +722,29 @@ export class OfferResultComponent {
     this.saveCache();
   }
 
-  onPositionChange2(selectedValue: number) {
-    const payload = { userId: this.applicantId, positionId: selectedValue };
+  onPositionChange2(selectedValue: string) {
+    const label = this.getOptionLabelByValue(selectedValue);
+    const { th, en } = this.parsePositionLabel(label);
+
+    const payload = {
+      userId: this.applicantId,
+      positionNameTh: th,
+      positionNameEn: en,
+    };
 
     this.selectedPositionId2 = selectedValue;
     this.isActiveManager = false;
-    this.saveCache();
+    // this.saveCache();
 
-    console.log(payload, '=>onPositionChange2')
+    this.interviewFormService.updatePosition(payload).subscribe({
+      next: () => {
+        this.fetchInterviewer();
+        this.foundisSummary = this.reviewHistory.find((user) => user.isSummary === true);
+        this.editReview = false;
+        this.allowEditButton = true;
+      },
+      error: (err) => console.error('Error Rescheduled:', err),
+    });
   }
 
   onCompanyChange(selectedValue: number) {
@@ -599,10 +754,10 @@ export class OfferResultComponent {
     this.selectedCompanyId = selectedValue;
     this.isActiveDepartment = false;
     this.fetchDepartmentDetails(this.companyValue!);
-    this.fetchManagerDetails(this.companyValue!);
-    this.fetchLevelDetails(this.companyValue!);
-    this.fetchPositionDetails();
-    this.saveCache();
+    // this.fetchManagerDetails();
+    // this.fetchLevelDetails();
+    // this.fetchPositionDetails();
+    // this.saveCache();
 
     this.interviewFormService.getCompanyUserInfo(payload).subscribe({
       error: (err) => {
@@ -623,7 +778,7 @@ export class OfferResultComponent {
       this.fetchDivisionDetails(this.companyValue, this.departmentValue!);
     }
 
-    this.saveCache();
+    // this.saveCache();
 
     this.interviewFormService.updateDepartment(payload).subscribe({
       error: (err) => {
@@ -640,7 +795,7 @@ export class OfferResultComponent {
     this.divisionValue = selectedValue;
     this.selectedDivisionId = selectedValue;
     this.isActiveLevel = false;
-    this.saveCache();
+    // this.saveCache();
 
     this.interviewFormService.updateDivision(payload).subscribe({
       error: (err) => {
@@ -652,12 +807,12 @@ export class OfferResultComponent {
   }
 
   onLevelChange(selectedValue: string) {
-    const payload = { userId: this.applicantId, levelnameEN: selectedValue };
+    const payload = { userId: this.applicantId, levelId: selectedValue };
 
     this.levelValue = String(selectedValue);
     this.selectedLevelId = selectedValue;
     this.isActivePosition = false;
-    this.saveCache();
+    // this.saveCache();
 
     this.interviewFormService.updateLevel(payload).subscribe({
       error: (err) => {
@@ -669,20 +824,32 @@ export class OfferResultComponent {
   }
 
   onManagerChange(selectedValue: number) {
-    const payload = { userid: this.applicantId, manager: selectedValue };
+    const payload = { userId: this.applicantId, managerId: selectedValue };
 
-    this.managerValue = String(selectedValue);
     this.selectedManagerId = selectedValue;
-    this.saveCache();
-    console.log(payload, '=>ManagerChange');
+    this.managerValue = String(selectedValue);
 
-    // this.interviewFormService.updateLevel(payload).subscribe({
-    //   error: (err) => {
-    //     console.error('Error update level:', err);
+    this.interviewFormService.updateManager(payload).subscribe({
+      error: (err) => {
+        console.error('Error update manager:', err);
 
-    //     this.notificationService.error('Error update level');
-    //   }
-    // });
+        this.notificationService.error('Error update manager');
+      }
+    });
+  }
+
+  onProbationChange(selectedValue: number) {
+    const payload = { userId: this.applicantId, probationDay: selectedValue };
+    this.selectedProbation = selectedValue;
+    // this.saveCache();
+
+    this.interviewFormService.updateProbation(payload).subscribe({
+      error: (err) => {
+        console.error('Error update probation:', err);
+
+        this.notificationService.error('Error update probation');
+      }
+    });
   }
 
   onConfirmedStartDate(event: Event) {
@@ -704,7 +871,7 @@ export class OfferResultComponent {
       }
     });
 
-    this.saveCache();
+    // this.saveCache();
   }
 
 
@@ -820,7 +987,7 @@ export class OfferResultComponent {
 
     const dialogRef = this.dialog.open(AlertDialogComponent, {
       width: '496px',
-      panelClass: 'custom-dialog-container',
+      panelClass: ['custom-dialog-container', 'pp-rounded-dialog'],
       autoFocus: false,
       disableClose: true,
       data: {
@@ -925,7 +1092,8 @@ export class OfferResultComponent {
     }
 
     this.clearDraftsReview();
-    this.setReviewEditing(false);
+    this.clearDraftsForCurrentType()
+    // this.setReviewEditing(false);
   }
 
   onEditReview() {
@@ -1067,9 +1235,9 @@ export class OfferResultComponent {
     // โหลด options ตาม chain
     if (this.selectedCompanyId) {
       this.fetchDepartmentDetails(this.selectedCompanyId);
-      this.fetchManagerDetails(this.selectedCompanyId);
-      this.fetchLevelDetails(this.selectedCompanyId);
-      this.fetchPositionDetails();
+      // this.fetchManagerDetails(this.selectedCompanyId);
+      // this.fetchLevelDetails();
+      // this.fetchPositionDetails();
     }
     if (this.selectedCompanyId && this.selectedDepartmentId) {
       this.fetchDivisionDetails(this.selectedCompanyId, this.selectedDepartmentId);
@@ -1181,8 +1349,6 @@ export class OfferResultComponent {
     const currentAppointmentId = appt?.profile?.appointmentId;
     const missCallCount = appt?.interview?.missCallCount || 0;
 
-    console.log(appt)
-
     this.historyData = this.getHistoryDataForUser(appt);
 
     const historyOptions: SelectOption[] = this.historyData.map((item, index) => ({
@@ -1218,6 +1384,7 @@ export class OfferResultComponent {
     Promise.resolve().then(() => {
       const container = document.querySelector('.cdk-overlay-container');
       container?.classList.add('dimmed-overlay');
+      document.querySelector('.cdk-overlay-pane')?.classList.add('pp-rounded-dialog');
     });
 
     const dialogRef = this.dialog.open(SelectDialogComponent, {
@@ -1283,7 +1450,9 @@ export class OfferResultComponent {
 
   onShowCallStatus(item: any) {
     const currentUserId = item.profile.userId;
-    this.historyData = this.getHistoryDataForUser(currentUserId);
+    // this.historyData = this.getHistoryDataForUser(currentUserId);
+
+    this.historyData = this.getHistoryDataForUser(item);
 
     const historyOptions: SelectOption[] = this.historyData.map((item, index) => ({
       value: index,
@@ -1291,6 +1460,8 @@ export class OfferResultComponent {
     }));
 
     const defaultSelected = historyOptions.slice(0, 2).map(opt => opt.value);
+
+    console.log(defaultSelected, '=>defaultSelected')
 
     this.dropdownConfigs = [
       {
@@ -1305,6 +1476,7 @@ export class OfferResultComponent {
     Promise.resolve().then(() => {
       const container = document.querySelector('.cdk-overlay-container');
       container?.classList.add('dimmed-overlay');
+      document.querySelector('.cdk-overlay-pane')?.classList.add('pp-rounded-dialog');
     });
 
     const dialogRef = this.dialog.open(SelectDialogComponent, {

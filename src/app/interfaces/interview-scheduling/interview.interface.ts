@@ -77,5 +77,8 @@ export interface UpdateCandidateStageHistoryPayload {
 export interface GetCompanyUserInfoReq { userId: number, companyId: number }
 export interface UpdateDepartmentReq { userId: number, departmentId: number }
 export interface UpdateDivisionReq { userId: number, divisionId: number }
-export interface UpdateLevelReq { userId: number, levelnameEN: string }
+export interface UpdateLevelReq { userId: number, levelId: string }
+export interface UpdatePositionReq { userId: number, positionNameTh: string, positionNameEn: string }
 export interface UpdateSelectedPositionReq { userId: number; selectedPositionId: number; }
+export interface UpdateProbationReq { userId: number; probationDay: number; }
+export interface UpdateManagerReq { userId: number; managerId: number; }

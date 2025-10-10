@@ -223,7 +223,15 @@
                     <span *ngSwitchCase="'input'">
                       <input type="text"
                         class="tw-border tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white tw-border-gray-300"
+                        [(ngModel)]="row[column.field]" [ngModelOptions]="{ standalone: true }"
                         (click)="$event.stopPropagation()" />
+                    </span>
+
+                    <span *ngSwitchCase="'textarea'">
+                      <textarea type="text"
+                        class="tw-border tw-rounded tw-px-2 tw-py-1 tw-w-full tw-bg-white tw-border-gray-300"
+                        [(ngModel)]="row[column.field]" [ngModelOptions]="{ standalone: true }"
+                        (click)="$event.stopPropagation()"></textarea>
                     </span>
 
                     <!-- Select Dropdown -->
@@ -246,7 +254,9 @@
                     </div>
 
                     <div *ngSwitchCase="'multiselect'">
-                      <app-multi-select-dropdown [inTable]="true"></app-multi-select-dropdown>
+                      <app-multi-select-dropdown [inTable]="true" [options]="resolveMultiOptions(row, column)"
+                        (selectionChange)="onMultiSelectChange($event)"
+                        [defaultSelected]="['1']"></app-multi-select-dropdown>
                     </div>
 
                     <!-- Button Content -->

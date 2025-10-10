@@ -10,6 +10,9 @@ import {
   UpdateDepartmentReq,
   UpdateDivisionReq,
   UpdateLevelReq,
+  UpdateManagerReq,
+  UpdatePositionReq,
+  UpdateProbationReq,
   UpdateSelectedPositionReq
 } from '../../../interfaces/interview-scheduling/interview.interface';
 
@@ -122,8 +125,29 @@ export class InterviewFormService {
     });
   }
 
-  getCompanyLevels(companyId: number): Observable<any> {
-    return this.api.get<any>(`${this.baseCompany}/Level?companyId=${companyId}`, {
+  getCompanyLevels(): Observable<any> {
+    return this.api.get<any>(`${this.baseCompany}/Level`, {
+      withAuth: true,
+      loading: true,
+    });
+  }
+
+  getOfferEmploymentsByID(userId: number): Observable<any> {
+    return this.api.get<any>(`OfferEmployments/${userId}`, {
+      withAuth: true,
+      loading: true,
+    });
+  }
+
+  getProbation(): Observable<any> {
+    return this.api.get<any>(`CompanyMasters/Probation`, {
+      withAuth: true,
+      loading: true,
+    });
+  }
+
+  getManager(): Observable<any> {
+    return this.api.get<any>(`CompanyMasters/Manager`, {
       withAuth: true,
       loading: true,
     });
@@ -164,6 +188,27 @@ export class InterviewFormService {
   // PATCH /api/OfferEmployments/update-level
   updateLevel(body: UpdateLevelReq): Observable<any> {
     return this.api.patch<any>(`${this.base}/update-level`, body, {
+      withAuth: true,
+      loading: false,
+    });
+  }
+
+  updatePosition(body: UpdatePositionReq): Observable<any> {
+    return this.api.patch<any>(`${this.base}/update-position`, body, {
+      withAuth: true,
+      loading: false,
+    });
+  }
+
+  updateProbation(body: UpdateProbationReq): Observable<any> {
+    return this.api.patch<any>(`${this.base}/update-probation`, body, {
+      withAuth: true,
+      loading: false,
+    });
+  }
+
+  updateManager(body: UpdateManagerReq): Observable<any> {
+    return this.api.patch<any>(`${this.base}/update-manager`, body, {
       withAuth: true,
       loading: false,
     });

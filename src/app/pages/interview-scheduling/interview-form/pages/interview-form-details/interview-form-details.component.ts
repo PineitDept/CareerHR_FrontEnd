@@ -778,7 +778,7 @@ export class InterviewFormDetailsComponent {
 
     const dialogRef = this.dialog.open(AlertDialogComponent, {
       width: '496px',
-      panelClass: 'custom-dialog-container',
+      panelClass: ['custom-dialog-container', 'pp-rounded-dialog'],
       autoFocus: false,
       disableClose: true,
       data: {
@@ -1274,7 +1274,7 @@ export class InterviewFormDetailsComponent {
 
     const dialogRef = this.dialog.open(AlertDialogComponent, {
       width: '496px',
-      panelClass: 'custom-dialog-container',
+      panelClass: ['custom-dialog-container', 'pp-rounded-dialog'],
       autoFocus: false,
       disableClose: true,
       data: {
@@ -1683,7 +1683,7 @@ export class InterviewFormDetailsComponent {
         }));
 
         // console.log(this.warningColumns, this.warningRows);
-        console.log(response.fields.map((f: any) => f.fieldType));
+        // console.log(response.fields.map((f: any) => f.fieldType));
       },
       error: (error) => {
         console.error(error);

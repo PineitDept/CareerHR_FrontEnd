@@ -234,7 +234,7 @@ export class WebPolicyDetailsComponent {
 
     const dialogRef = this.dialog.open(AlertDialogComponent, {
       width: '640px',
-      panelClass: 'custom-dialog-container',
+      panelClass: ['custom-dialog-container', 'pp-rounded-dialog'],
       autoFocus: false,
       disableClose: true,
       data: {

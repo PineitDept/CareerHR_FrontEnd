@@ -562,7 +562,7 @@ export class InterviewRound2HistoryComponent {
 
     const dialogRef = this.dialog.open(AlertDialogComponent, {
       width: '496px',
-      panelClass: 'custom-dialog-container',
+      panelClass: ['custom-dialog-container', 'pp-rounded-dialog'],
       autoFocus: false,
       disableClose: true,
       data: {
@@ -721,6 +721,8 @@ export class InterviewRound2HistoryComponent {
           defaultSelected: defaultSelected
         }
       ];
+      
+      document.querySelector('.cdk-overlay-pane')?.classList.add('pp-rounded-dialog');
 
       const dialogRef = this.dialog.open(SelectDialogComponent, {
         width: '480px',
@@ -785,7 +787,7 @@ export class InterviewRound2HistoryComponent {
 
     const dialogRef = this.dialog.open(AlertDialogComponent, {
       width: '496px',
-      panelClass: 'custom-dialog-container',
+      panelClass: ['custom-dialog-container', 'pp-rounded-dialog'],
       autoFocus: false,
       disableClose: true,
       data: {
@@ -890,6 +892,7 @@ export class InterviewRound2HistoryComponent {
     Promise.resolve().then(() => {
       const container = document.querySelector('.cdk-overlay-container');
       container?.classList.add('dimmed-overlay');
+      document.querySelector('.cdk-overlay-pane')?.classList.add('pp-rounded-dialog');
     });
 
     const dialogRef = this.dialog.open(SelectDialogComponent, {
@@ -1009,6 +1012,7 @@ export class InterviewRound2HistoryComponent {
     Promise.resolve().then(() => {
       const container = document.querySelector('.cdk-overlay-container');
       container?.classList.add('dimmed-overlay');
+      document.querySelector('.cdk-overlay-pane')?.classList.add('pp-rounded-dialog');
     });
 
     const dialogRef = this.dialog.open(SelectDialogComponent, {
@@ -1093,6 +1097,7 @@ export class InterviewRound2HistoryComponent {
     Promise.resolve().then(() => {
       const container = document.querySelector('.cdk-overlay-container');
       container?.classList.add('dimmed-overlay');
+      document.querySelector('.cdk-overlay-pane')?.classList.add('pp-rounded-dialog');
     });
 
     const dialogRef = this.dialog.open(SelectDialogComponent, {
