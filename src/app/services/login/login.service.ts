@@ -37,6 +37,7 @@ export class LoginService {
       tap(() => {
         this.authService.clearTokens();
         this.authService.clearUserProfile();
+        sessionStorage.clear();
         this.router.navigate(['/login']);
       })
     );

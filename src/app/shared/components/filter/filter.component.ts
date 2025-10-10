@@ -18,7 +18,15 @@ import dayjs from 'dayjs';
 })
 export class FilterComponent {
 
-  @Input() actionButtons: { label: string; key: string; color?: string; outlineBtn?: boolean }[] = [];
+  @Input() actionButtons: {
+    label: string;
+    key: string;
+    color?: string;
+    textColor?: string;
+    borderColor?: string;
+    outlineBtn?: boolean;
+    options?: Array<{ label: string; value: any }>;
+  }[] = [];
   @Input() disabledKeys: string[] = [];
   @Input() selectedRows: any[] = [];
   @Input() filterDynamicButton: boolean = false;
@@ -35,6 +43,7 @@ export class FilterComponent {
   @Output() dateRangeSelected = new EventEmitter<{ startDate: string; endDate: string }>();
   @Output() gradeSelected = new EventEmitter<string>();
   @Output() DateToday = new EventEmitter<Date>();
+  @Output() selectChanged = new EventEmitter<{ key: string; value: any; label: string }>();
 
   currentYear = new Date().getFullYear();
   currentMonth = new Date().getMonth(); // 0-indexed
@@ -62,6 +71,8 @@ export class FilterComponent {
   @ViewChild('yearDropdown') yearDropdown!: ElementRef;
   @ViewChild('monthDropdown') monthDropdown!: ElementRef;
   @ViewChild('gradeDropdown') gradeDropdown!: ElementRef;
+
+  openActionKey: string | null = null;
 
   constructor(
     private router: Router,
@@ -94,6 +105,11 @@ export class FilterComponent {
   getYearsWithOptionalAll(): string[] {
     const baseYears = Array.from({ length: 6 }, (_, i) => String(this.currentYear - i));
     return this.showAllYearOption ? ['All', ...baseYears] : baseYears;
+  }
+
+  isWhite(c?: string): boolean {
+    const s = (c || '').trim().toLowerCase();
+    return s === '#ffffff' || s === 'white' || s === 'rgb(255, 255, 255)';
   }
 
   onBackClick() {
@@ -239,8 +255,24 @@ export class FilterComponent {
     this.dateRangeSelected.emit({ startDate, endDate });
   }
 
+  toggleActionDropdown(key: string, ev?: MouseEvent) {
+    ev?.stopPropagation();
+    this.openActionKey = this.openActionKey === key ? null : key;
+  }
+
+  selectActionOption(
+    btn: { key: string; label: string; options?: Array<{ label: string; value: any }> },
+    opt: { label: string; value: any },
+    ev?: MouseEvent
+  ) {
+    ev?.stopPropagation();
+    this.openActionKey = null;
+    this.selectChanged.emit({ key: btn.key, value: opt.value, label: opt.label });
+  }
+
   @HostListener('document:click', ['$event'])
   handleClickOutside(event: MouseEvent) {
+    this.openActionKey = null;
     const target = event.target as Node;
     if (!this.yearDropdown?.nativeElement.contains(target)) {
       this.isYearOpen = false;

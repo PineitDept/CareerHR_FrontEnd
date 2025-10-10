@@ -77,8 +77,8 @@ export class ApplicationService {
     );
   }
 
-  getApplicationAssessmentAndCandidateWarning(id: number): Observable<any> {
-    return this.apiService.get<any>(`Validation/candidate-score/${id}`, {
+  getApplicationAssessmentAndCandidateWarning(id: number, round: number): Observable<any> {
+    return this.apiService.get<any>(`Validation/candidate-score/${id}/round/${round}`, {
       loading: true,
       withAuth: true,
     });
@@ -168,5 +168,5 @@ export class ApplicationService {
       loading: true,
       withAuth: true,
     });
-  } 
+  }
 }
