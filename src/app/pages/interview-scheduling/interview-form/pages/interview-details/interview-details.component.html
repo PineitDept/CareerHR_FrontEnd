@@ -1,10 +1,11 @@
 <!-- sentinel สำหรับ back-to-top -->
 <div id="page-top-sentinel" class="tw-h-px tw-w-px tw-opacity-0" aria-hidden="true"></div>
+
 <div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
     <app-header-content [headerName]="'Interview Details'" [headerType]="''"></app-header-content>
 </div>
 
-<app-filter [filterDynamicButton]="true" [actionButtons]="filterButtons" (buttonClicked)="onFilterButtonClick($event)"
+<app-filter [filterDynamicButton]="true" [ButtonBackSave]="true" [actionButtons]="filterButtons" (buttonClicked)="onFilterButtonClick($event)"
     [disabledKeys]="disabledKeys"></app-filter>
 
 <app-loading></app-loading>
@@ -110,10 +111,13 @@
                         <hr class="tw--mx-6 tw-mt-4" />
 
                         <ng-container *ngIf="isDetail1Open">
-                            <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
+                            <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden" (input)="onAnyTextInput()" (change)="onAnyTextInput()">
                                 <app-tables [rows]="detail1Rows" [columns]="detail1Columns" [showCheckbox]="false"
                                     [splitRows]="false" [hasOverflowY]="false" [enableRowClick]="false"
-                                    [withinCard]="true" [isDisabledForm]="false"></app-tables>
+                                    [withinCard]="true" [preferIdForSelect]="true"
+                                    (selectChanged)="onSelectChanged1($event)"
+                                    (inlineFieldCommit)="onInlineFieldCommit1($event)">
+                                </app-tables>
                             </div>
                         </ng-container>
                     </div>
@@ -130,10 +134,13 @@
                         <hr class="tw--mx-6 tw-mt-4" />
 
                         <ng-container *ngIf="isDetail2Open">
-                            <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
+                            <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden" (input)="onAnyTextInput()" (change)="onAnyTextInput()">
                                 <app-tables [rows]="detail2Rows" [columns]="detail2Columns" [showCheckbox]="false"
                                     [splitRows]="false" [hasOverflowY]="false" [enableRowClick]="false"
-                                    [withinCard]="true"></app-tables>
+                                    [withinCard]="true" [preferIdForSelect]="true" 
+                                    (selectChanged)="onSelectChanged2($event)"
+                                    (inlineFieldCommit)="onInlineFieldCommit2($event)">
+                                </app-tables>
                             </div>
                         </ng-container>
                     </div>
@@ -143,3 +150,11 @@
 
     </div>
 </div>
+
+<!-- Floating Back-to-Top -->
+<app-back-to-top
+  [sentinelSelector]="'#page-top-sentinel'"
+  [buttonClass]="'tw-fixed tw-bottom-6 tw-right-6 tw-rounded-full tw-h-14 tw-w-14 tw-flex tw-items-center tw-justify-center tw-shadow-xl bg-red-blood hover:bg-maroon-1 tw-text-white tw-z-[60]'"
+  [iconName]="'arrow-upward'"
+  [iconSize]="26">
+</app-back-to-top>
