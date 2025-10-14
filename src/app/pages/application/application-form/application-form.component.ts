@@ -1,5 +1,5 @@
 import { ChangeDetectorRef, Component, ElementRef, QueryList, ViewChildren } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, forkJoin, map, of, Subject, switchMap, takeUntil } from 'rxjs';
 import { ApplicationService } from '../../../services/application/application.service';
 import { CandidatePagedResult } from '../../../interfaces/Application/application.interface';
@@ -15,6 +15,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { AlertDialogData } from '../../../shared/interfaces/dialog/dialog.interface';
 import { AlertDialogComponent } from '../../../shared/components/dialogs/alert-dialog/alert-dialog.component';
 import { SlickCarouselComponent, SlickItemDirective } from 'ngx-slick-carousel';
+import { NotificationService } from '../../../shared/services/notification/notification.service';
 
 dayjs.extend(utc);
 
@@ -84,7 +85,7 @@ interface HistoryLog {
   action: string;
 }
 
-type Variant = 'green' | 'blue' | 'gray' | 'red' | 'white';
+type Variant = 'green' | 'blue' | 'gray' | 'red' | 'white' | 'purple';
 interface StepperItem {
   label: string;
   sub?: string;
@@ -160,11 +161,20 @@ interface ViewComment {
 })
 export class ApplicationFormComponent {
   // ====== Filter ======
-  filterButtons: { label: string; key: string; color: string }[] = [];
+  filterButtons: {
+    label: string;
+    key: string;
+    color?: string;
+    textColor?: string;
+    borderColor?: string;
+    outlineBtn?: boolean;
+    options?: Array<{ label: string; value: any }>;
+  }[] = [];
   disabledKeys: string[] = [];
 
   // ====== Routing ======
   applicantId: number = 0;
+  roundID: number = 0;
 
   // ====== Data Model (View) ======
   applicant: Applicant = {
@@ -291,6 +301,8 @@ export class ApplicationFormComponent {
     private reasonService: ReasonService,
     private dialog: MatDialog,
     private cdr: ChangeDetectorRef,
+    private notify: NotificationService,
+    private router: Router,
   ) {}
 
   // ===================== Lifecycle =====================
@@ -305,6 +317,7 @@ export class ApplicationFormComponent {
       .pipe(takeUntil(this.destroy$))
       .subscribe((params) => {
         this.applicantId = Number(params['id'] || 0);
+        this.roundID = Number(params['round'] || 0);
         this.fetchCandidateTracking();
       });
 
@@ -342,11 +355,53 @@ export class ApplicationFormComponent {
             return;
           }
 
-          const exact =
-            items.find((i) => Number(i.userID) === this.applicantId) ||
-            items[0];
+          // เลือกภายใน user นี้ก่อน
+          const byUser = items.filter(i => Number(i.userID) === this.applicantId);
 
-          this.mapTrackingToView(exact);
+          // พยายาม match roundID ที่มาจาก query param
+          let exact = byUser.find(i => Number(i.roundID) === Number(this.roundID));
+
+          // fallback: ถ้าไม่เจอ ให้ใช้รอบล่าสุดของ user นี้ (หรือ items[0] เป็นที่สุดท้าย)
+          if (!exact) {
+            exact = byUser.sort((a, b) => Number(b.roundID) - Number(a.roundID))[0] || items[0];
+            // ถ้าไม่ได้ส่ง round มา ตั้งค่าให้ตรงกับ item ที่เลือก (optional)
+            if (!this.roundID && exact?.roundID != null) {
+              this.roundID = Number(exact.roundID);
+            }
+          }
+
+          // (optional) sync ให้แน่ใจว่า roundID ตอนนี้ตรงกับข้อมูลที่ map
+          if (exact?.roundID != null) {
+            this.roundID = Number(exact.roundID);
+          }
+
+          // สร้าง/อัปเดตปุ่ม Round จาก rounds ที่มีใน API
+          const sourceForRounds = byUser.length ? byUser : items;
+          const rounds = Array.from(
+            new Set(
+              sourceForRounds
+                .map(i => Number((i as any)?.roundID))
+                .filter(n => Number.isFinite(n) && n > 0)
+            )
+          ).sort((a, b) => a - b);
+
+          const roundButton = (rounds.length > 1)
+            ? [{
+                key: 'round',
+                label: `Round ${this.roundID || 1}`,
+                color: '#FFFFFF',
+                textColor: '#000000',
+                borderColor: '#000000',
+                options: rounds.map(r => ({ label: `Round ${r}`, value: r }))
+              }]
+            : [];
+
+          this.filterButtons = [
+            ...roundButton,
+            { label: 'Print', key: 'print', color: '#0055FF' }
+          ];
+
+          this.mapTrackingToView(exact as any);
           this.isLoading = false;
         },
         error: (err) => {
@@ -469,8 +524,8 @@ export class ApplicationFormComponent {
   private initAssessmentColumns() {
     this.assessmentColumns = [
       { header: 'No', field: 'no', type: 'text', align: 'center', width: '56px', minWidth: '56px' },
-      { header: 'Application Review', field: 'review', type: 'text', minWidth: '220px' },
-      { header: 'Result', field: 'result', type: 'text', minWidth: '140px' },
+      { header: 'Application Review', field: 'review', type: 'text', minWidth: '220px', wrapText: true },
+      { header: 'Result', field: 'result', type: 'text', minWidth: '140px', wrapText: true },
       { header: 'Score', field: 'score', type: 'number', align: 'center', width: '90px', minWidth: '90px', maxWidth: '100px' },
       { header: 'Visibility', field: 'visibility', type: 'icon', align: 'center', width: '110px', minWidth: '110px' },
       {
@@ -479,6 +534,7 @@ export class ApplicationFormComponent {
         type: 'text',
         minWidth: '220px',
         typeFn: (row: AssessmentItem) => row?.isTotalRow ? 'badge' : 'text',
+        wrapText: true
       },
     ];
   }
@@ -486,11 +542,11 @@ export class ApplicationFormComponent {
   private initWarningColumns() {
     this.warningColumns = [
       { header: 'No', field: 'no', type: 'text', align: 'center', width: '56px', minWidth: '56px' },
-      { header: 'Warning', field: 'warning', type: 'text', minWidth: '220px' },
-      { header: 'Result', field: 'result', type: 'text', minWidth: '140px' },
+      { header: 'Warning', field: 'warning', type: 'text', minWidth: '220px', wrapText: true },
+      { header: 'Result', field: 'result', type: 'text', minWidth: '140px', wrapText: true },
       { header: 'Risk', field: 'risk', type: 'badge', align: 'center', width: '110px', minWidth: '110px' },
       { header: 'Visibility', field: 'visibility', type: 'icon', align: 'center', width: '110px', minWidth: '110px' },
-      { header: 'Detail', field: 'detail', type: 'text', minWidth: '220px' },
+      { header: 'Detail', field: 'detail', type: 'text', minWidth: '220px', wrapText: true },
     ];
   }
 
@@ -498,7 +554,7 @@ export class ApplicationFormComponent {
   private fetchAssessmentAndWarnings(userId: number) {
     if (!userId) return;
     this.applicationService
-      .getApplicationAssessmentAndCandidateWarning(userId)
+      .getApplicationAssessmentAndCandidateWarning(userId, this.roundID)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (res) => this.mapAssessmentFromApi(res),
@@ -598,6 +654,10 @@ export class ApplicationFormComponent {
   private fetchStageHistoryAndReasons(appId: number) {
     this.applicationService.getCandidateStageHistoryById(appId)
       .pipe(
+        // กรองเฉพาะรอบที่เลือก8j
+        map((histories: any[]) => (Array.isArray(histories) ? histories : []).filter(h =>
+          Number(h.roundId) === Number(this.roundID)
+        )),
         switchMap((histories: any[]) => {
           const uniqStageIds = Array.from(new Set(histories.map(h => Number(h.stageId))));
           const reasonsReq = uniqStageIds.map(id =>
@@ -761,8 +821,35 @@ export class ApplicationFormComponent {
     if (key === 'print') this.onPrintClicked();
   }
 
+  private buildPrintUrl(userId: number, round = 1): string {
+    const base = 'https://career.pinepacific.com/WebFormApply/WebFormApply.aspx';
+    const qs = new URLSearchParams({
+      UserID: String(userId),
+      Round: String(round),
+    });
+    return `${base}?${qs.toString()}`;
+  }
+
   onPrintClicked() {
-    console.log('Print clicked');
+    // กันเคสไม่มี applicantId
+    if (!this.applicantId || isNaN(this.applicantId)) {
+      this.notify?.error?.('Missing applicant ID. Cannot open the printable application form.');
+      return;
+    }
+
+    // ถ้าระบบมี round จาก API สามารถเปลี่ยนจาก 1 เป็นค่าจริงได้
+    const round = 1;
+    const url = this.buildPrintUrl(this.applicantId, round);
+
+    // เปิดแท็บใหม่แบบเชื่อถือได้กว่าการใช้ window.open
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener'; // ปลอดภัย และไม่พาแท็บเดิมไปยุ่งกับหน้าใหม่
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
   }
 
   onScreeningCardClick() {
@@ -770,7 +857,13 @@ export class ApplicationFormComponent {
   }
 
   onViewDetailClick() {
-    console.log('View detail clicked');
+    const id = this.applicantId;
+    if (!id) return;
+
+    const flow = this.resolveCurrentFlow();
+    const queryParams = { id, round: this.roundID };
+
+    this.router.navigate([`/applications/${flow}/application-form/details`], { queryParams });
   }
 
   // Comments
@@ -996,10 +1089,32 @@ export class ApplicationFormComponent {
   }
 
   onStepperChanged(index: number) {
+
+    const item  = this.stepperItems?.[index];
+    const label = (item?.label || '').trim();
+    const key   = this.slugify(label); // applied, screened, interview-1, interview-2, offered, hired
+
+    // เฉพาะ Interview 1/2: นำทางเมื่อผลเป็น Pass/Fail เท่านั้น
+    if (key === 'interview-1' || key === 'interview-2') {
+      const sub = String(item?.sub || '').toLowerCase();
+      const isFinal = /(pass|passed|fail|failed)/.test(sub);
+
+      if (!this.applicantId) return;
+      if (!isFinal) return; // ยังไม่ Final → ไม่ต้อง navigate
+
+      const interview = key === 'interview-1' ? 1 : 2;
+
+      // ไม่เปลี่ยน activeIndex (คงพฤติกรรมเดิม)
+      this.router.navigate(
+        ['/interview-scheduling/interview-form/result'],
+        { queryParams: { id: this.applicantId, interview, round: this.roundID } }
+      );
+      return;
+    }
+
+    // สเต็ปอื่น ๆ = พฤติกรรมเดิม (scroll ไป section)
     this.activeStepIndex = index;
 
-    const label = (this.stepperItems?.[index]?.label || '').trim();
-    const key = this.slugify(label); // applied, screened, interview-1, interview-2, offered, hired
     let targetId: string | null = null;
 
     switch (key) {
@@ -1009,18 +1124,18 @@ export class ApplicationFormComponent {
       case 'screened':
         targetId = this.firstStageId('screened');
         break;
-      case 'interview-1':
-        targetId = this.firstStageId('interview-1');
-        break;
-      case 'interview-2':
-        targetId = this.firstStageId('interview-2');
-        break;
+      // case 'interview-1':
+      //   targetId = this.firstStageId('interview-1');
+      //   break;
+      // case 'interview-2':
+      //   targetId = this.firstStageId('interview-2');
+      //   break;
       case 'offered':
         targetId = this.firstStageId('offered');
         break;
       case 'hired':
         // ตาม requirement ให้ไป Offered อันแรก
-        targetId = this.firstStageId('offered');
+        targetId = this.firstStageId('hired');
         break;
     }
 
@@ -1111,23 +1226,33 @@ export class ApplicationFormComponent {
     });
   }
 
+  // ===== สีป้าย Result ใน Stage History (Summary Card) =====
   getCategoryBtnClass(c: CategoryOption, selectedId?: number) {
     const isActive = c.categoryId === selectedId;
-
-    // โทนสีโดยชื่อ category (แก้เพิ่มได้ตามระบบจริง)
     const name = (c.categoryName || '').toLowerCase();
-    const tone =
-      name.includes('accept') ? 'tw-bg-green-500 tw-text-white tw-border-green-600' :
-      name.includes('decline') ? 'tw-bg-red-500 tw-text-white tw-border-red-600' :
-      name.includes('application decline') ? 'tw-bg-red-500 tw-text-white tw-border-red-600' :
-      name.includes('no-show') ? 'tw-bg-gray-200 tw-text-gray-800 tw-border-gray-300' :
-      name.includes('on hold') ? 'tw-bg-amber-500 tw-text-white tw-border-amber-600' :
-      'tw-bg-white tw-text-gray-700 tw-border-gray-300';
+
+    // จัดลำดับความสำคัญ: “ปฏิเสธ” ก่อน “รอ/hold/อื่นๆ” ก่อน “บวก”
+    const isDecline = /(decline|rejected?|fail|failed)/.test(name); // ครอบคลุม 'decline offer' ด้วย
+    const isHold    = /(on hold|hold)/.test(name);
+    const isNoShow  = /no-?show/.test(name);
+    const isPositive = /(accept|offer|offered|onboarded?|hired?|hire)/.test(name);
+
+    let tone: string;
+    if (isDecline) {
+      tone = 'tw-bg-red-500 tw-text-white tw-border-red-600';
+    } else if (isHold) {
+      tone = 'tw-bg-amber-500 tw-text-white tw-border-amber-600';
+    } else if (isNoShow) {
+      tone = 'tw-bg-gray-200 tw-text-gray-800 tw-border-gray-300';
+    } else if (isPositive) {
+      tone = 'tw-bg-green-500 tw-text-white tw-border-green-600';
+    } else {
+      tone = 'tw-bg-white tw-text-gray-700 tw-border-gray-300';
+    }
 
     const inactive = 'hover:tw-brightness-105';
     const activeRing = 'tw-ring-2 tw-ring-white/40';
-
-    return isActive ? `${tone} ${activeRing}` : `tw-bg-white tw-text-gray-700 tw-border-gray-300 ${inactive}`;
+    return isActive ? `${tone} ${activeRing}` : `${tone.includes('tw-bg-white') ? tone : 'tw-bg-white tw-text-gray-700 tw-border-gray-300'} ${inactive}`;
   }
 
   private stageLabel(which: 'i1'|'i2'): string {
@@ -1243,6 +1368,31 @@ export class ApplicationFormComponent {
       });
   }
 
+  private resolveCurrentFlow():
+    'all-applications' | 'screening' | 'tracking' {
+    const url = this.router.url || '';
+    if (url.includes('/all-applications/')) return 'all-applications';
+    if (url.includes('/screening/'))        return 'screening';
+    if (url.includes('/tracking/'))         return 'tracking';
+
+    // เผื่อกรณี URL แปลก ๆ ล้มกลับไปที่ screening
+    return 'screening';
+  }
+
+  onFilterSelectChanged(e: { key: string; value: number; label: string }) {
+    if (!e) return;
+    if (e.key === 'round') {
+      const r = Number(e.value);
+      if (!isNaN(r) && r !== this.roundID) {
+        // อัปเดต query param ให้ sync กับ URL -> trigger fetch ใหม่อัตโนมัติ
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { round: r },
+          queryParamsHandling: 'merge',
+        });
+      }
+    }
+  }
 }
 
 // ====== Helpers ======
@@ -1296,22 +1446,27 @@ const COLOR = {
 };
 
 // สถานะ -> โทนสี
-function statusToVariant(
-  raw?: string | null
-): 'green' | 'blue' | 'gray' | 'red' | 'white' {
+function statusToVariant(raw?: string|null): 'green'|'blue'|'gray'|'red'|'white'|'purple' {
   const s = String(raw || '').trim().toLowerCase();
 
-  if (!s) return 'white';
-  if (/(decline|declined|reject|rejected|fail|failed|decline offer)/.test(s))
-    return 'red';
-  if (/(inprocess|in process|scheduled|schedule|in schedule|inprogress)/.test(s))
-    return 'blue';
+  // 1) เคสพิเศษ PINE
+  if (/(didn?['’]?t|did\s*not)\s*interview.*\(pine\)/.test(s)) return 'purple';
+
+  // 2) เคส "Not Pass" และคำใกล้เคียง → ต้องมาก่อน rule "pass"
+  if (/\b(not\s*pass(ed)?|did\s*not\s*pass|not\s*selected|unsuccessful)\b/.test(s)) return 'red';
+
+  // 3) เคสลบอื่น ๆ
+  if (/(decline|rejected?|fail|failed|decline offer)/.test(s)) return 'red';
+
+  // 4) ระหว่างดำเนินการ
+  if (/(inprocess|in process|scheduled|schedule|in schedule|inprogress)/.test(s)) return 'blue';
+
+  // 5) รอผล
   if (/(pending|awaiting|waiting)/.test(s)) return 'gray';
-  if (
-    /(accept|accepted|pass|passed|hired|hire|applied|submitted|screened|offer|offered|onboarded|onboard)/.test(
-      s
-    )
-  )
-    return 'green';
+
+  // 6) เคสบวก
+  if (/(accept|accepted|pass|passed|hired?|hire|applied|submitted|screened|offer|offered|onboarded?)/.test(s)) return 'green';
+
   return 'white';
 }
+

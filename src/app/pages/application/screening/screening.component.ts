@@ -277,9 +277,9 @@ export class ScreeningComponent extends BaseApplicationComponent {
     const summary = item.summary;
 
     return {
-      id: summary.userID.toString(),
+      id: item.userID.toString(),
       submitDate: summary.submitDate || '',
-      userID: summary.userID.toString(),
+      userID: item.userID.toString(),
       fullName: summary.fullName,
       position:
         item.positions?.map((pos: IPositionDto) => pos.namePosition) || [],
@@ -294,6 +294,7 @@ export class ScreeningComponent extends BaseApplicationComponent {
       totalBonus: summary.totalBonus,
       employeeAction: summary.employeeAction?.split(' ')[0] || '',
       screening: createStatusBadge(summary.screening),
+      roundID: item.roundID,
     };
   }
 
@@ -303,6 +304,7 @@ export class ScreeningComponent extends BaseApplicationComponent {
 
     const queryParams = {
       id: id,
+      round: (row as any)?.roundID
     }
 
     this.router.navigate(['/applications/screening/application-form'], { queryParams });

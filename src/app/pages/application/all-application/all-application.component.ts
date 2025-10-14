@@ -245,10 +245,10 @@ export class AllApplicationComponent extends BaseApplicationComponent {
     const summary = item.summary;
 
     return {
-      id: summary.userID.toString(),
+      id: item.userID.toString(),
       qualifield: createQualifiedIcon(summary.qualifield),
       submitDate: summary.submitDate || '',
-      userID: summary.userID.toString(),
+      userID: item.userID.toString(),
       fullName: summary.fullName,
       position:
         item.positions?.map((pos: IPositionDto) => pos.namePosition) || [],
@@ -261,7 +261,8 @@ export class AllApplicationComponent extends BaseApplicationComponent {
       eqScore: summary.eqScore,
       ethicsScore: summary.ethicsScore,
       totalBonus: summary.totalBonus,
-      submitStatusLabel: createStatusBadge(summary.submitStatusLabel),
+      submitStatusLabel: createStatusBadge(summary.submitStatusLabel ?? ''),
+      roundID: (item as any).roundID,
     };
   }
 
@@ -282,6 +283,21 @@ export class AllApplicationComponent extends BaseApplicationComponent {
         };
       }
     }
+  }
+
+  override onRowClick(row: ApplicationRow): void {
+    const id = (row as any)?.id;
+    if (!id) return;
+
+    const queryParams = {
+      id,
+      round: (row as any)?.roundID,
+    };
+
+    this.router.navigate(
+      ['/applications/all-applications/application-form'],
+      { queryParams }
+    );
   }
 
   override ngOnDestroy(): void {

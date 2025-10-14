@@ -1,18 +1,19 @@
-/* ปุ่ม Dynamic ใช้สีพื้นฐานจากตัวแปร --btn-bg */
+/* ปุ่ม Dynamic ใช้สีพื้นฐานจากตัวแปร */
 .btn-dynamic {
-  background-color: var(--btn-bg);
-  color: #fff;
+  background-color: var(--btn-bg, #0A84FF);
+  color: var(--btn-fg, inherit);        /* เผื่ออนาคต ถ้าอยากใช้ตัวแปรสีตัวอักษร */
+  border: 1px solid var(--btn-border, transparent);
   border-radius: 0.5rem;
   transition: background-color .15s ease, filter .15s ease, box-shadow .15s ease, transform .02s ease;
   outline: none;
 }
 
-/* Hover & Focus (รองรับเบราว์เซอร์สมัยใหม่ด้วย color-mix) */
+/* Hover & Focus (ใช้ --btn-ring ถ้ามี, ไม่งั้น fallback เป็น --btn-bg) */
 @supports (background: color-mix(in srgb, red, white)) {
   .btn-dynamic:not(:disabled):hover,
   .btn-dynamic:not(:disabled):focus-visible {
-    background-color: color-mix(in srgb, var(--btn-bg) 90%, black 10%);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--btn-bg) 30%, transparent);
+    background-color: color-mix(in srgb, var(--btn-bg, #0A84FF) 90%, black 10%);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--btn-ring, var(--btn-bg, #0A84FF)) 30%, transparent);
   }
 }
 
@@ -21,11 +22,12 @@
   .btn-dynamic:not(:disabled):hover,
   .btn-dynamic:not(:disabled):focus-visible {
     filter: brightness(0.9);
+    /* วงแหวนพื้น ๆ ถ้าไม่มี color-mix */
     box-shadow: 0 0 0 3px rgba(0,0,0,0.08);
   }
 }
 
-/* Active กดแล้วมี feedback เล็กน้อย */
+/* Active feedback เล็กน้อย */
 .btn-dynamic:not(:disabled):active {
   transform: translateY(0.5px);
 }
