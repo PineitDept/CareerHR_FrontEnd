@@ -131,15 +131,11 @@ export interface CandidatePagedResult<T> {
 export interface ICandidateWithPositionsDto {
   userID: number;
   roundID?: number;
-   userID: number;
-   round : number;
   summary: ICandidateSummaryDto;
   positions: IPositionDto[];
 }
 
 export interface ICandidateSummaryDto {
-  userID?: number;
-
   statusCSD: number;
   screening: string;
   fullName: string;
@@ -148,7 +144,7 @@ export interface ICandidateSummaryDto {
   submitDate?: string;
   submitDateFormatted?: string;
   daysSinceSubmit?: number;
-  submitStatusLabel?: string;
+  submitStatusLabel: string;
 
   email?: string;
   phoneNumber?: string;
@@ -177,8 +173,6 @@ export interface ICandidateSummaryDto {
   employeeId?: number;
   employeeAction?: string;
   employeeActionDate?: string;
-  daysSinceEmployeeActionDate?: number;
-  employeeActionDate? : string;
   daysSinceEmployeeActionDate?: number;
 }
 

@@ -261,8 +261,8 @@ export class AllApplicationComponent extends BaseApplicationComponent {
       gpaScore: summary.gpaScore,
       eqScore: summary.eqScore,
       ethicsScore: summary.ethicsScore,
-      totalBonus: summary.totalBonus,
-      submitStatusLabel: createStatusBadge(summary.submitStatusLabel ?? ''),
+      // totalBonus: summary.totalBonus,
+      submitStatusLabel: createStatusBadge(summary.submitStatusLabel),
       roundID: (item as any).roundID,
     };
   }
@@ -270,21 +270,21 @@ export class AllApplicationComponent extends BaseApplicationComponent {
   // protected override loadPersistedState(): void {
   //   super.loadPersistedState();
 
-    const { HEADER_SEARCH_FORM } = this.getStorageKeys();
-    const headerForm = this.loadFromStorage<{ searchBy: string; searchValue: string }>(HEADER_SEARCH_FORM);
-    if (headerForm) {
-      this.searchForm = { ...headerForm };
-    } else {
-      // ถ้าไม่มี headerForm แต่ filter เคยมี search ให้เดาง่าย ๆ ว่าค้นหาด้วย option แรก
-      const f = this.filterRequest();
-      if (f.search) {
-        this.searchForm = {
-          searchBy: this.searchByOptions?.[0] || 'Application ID',
-          searchValue: f.search,
-        };
-      }
-    }
-  }
+  //   const { HEADER_SEARCH_FORM } = this.getStorageKeys();
+  //   const headerForm = this.loadFromStorage<{ searchBy: string; searchValue: string }>(HEADER_SEARCH_FORM);
+  //   if (headerForm) {
+  //     this.searchForm = { ...headerForm };
+  //   } else {
+  //     // ถ้าไม่มี headerForm แต่ filter เคยมี search ให้เดาง่าย ๆ ว่าค้นหาด้วย option แรก
+  //     const f = this.filterRequest();
+  //     if (f.search) {
+  //       this.searchForm = {
+  //         searchBy: this.searchByOptions?.[0] || 'Application ID',
+  //         searchValue: f.search,
+  //       };
+  //     }
+  //   }
+  // }
 
   override onRowClick(row: ApplicationRow): void {
     const id = (row as any)?.id;
