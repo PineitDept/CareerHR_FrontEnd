@@ -311,6 +311,7 @@ export class ScreeningComponent extends BaseApplicationComponent {
 
     const queryParams = {
       id: id,
+      round: (row as any)?.roundID
     }
 
     this.router.navigate(['/applications/screening/application-form'], { queryParams });

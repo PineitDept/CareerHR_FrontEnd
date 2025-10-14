@@ -8,6 +8,7 @@ import {
   OnDestroy,
   signal,
   computed,
+  HostListener,
 } from '@angular/core';
 import { Observable, tap, catchError, EMPTY, map } from 'rxjs';
 
@@ -69,7 +70,7 @@ export class TrackingComponent
 {
   // Additional ViewChild for tracking-specific functionality
   @ViewChild('filter', { static: false }) filterRef!: ElementRef;
-
+  @ViewChild('tableContainer') tableContainerRef!: ElementRef<HTMLDivElement>;
   @ViewChild('scrollArea') scrollArea!: ElementRef<HTMLDivElement>;
   hasOverflowY = false;
   private ro?: ResizeObserver;
@@ -464,6 +465,7 @@ export class TrackingComponent
       offer: this.mapStatusIdToIcon(item.offer?.id) || STATUS_ICON_MAP[12],
       hired: this.mapStatusIdToIcon(item.hired?.id) || STATUS_ICON_MAP[12],
       lastUpdate: item.lastUpdate,
+      roundID: item.roundID,
     };
   }
 
@@ -487,6 +489,12 @@ export class TrackingComponent
     }
   }
 
+  // เพิ่ม HostListener สำหรับรีไซส์หน้าต่าง
+  @HostListener('window:resize')
+  onWindowResize() {
+    this.updateTableHeight();
+  }
+
   private disconnectResizeObserver(): void {
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
@@ -495,13 +503,21 @@ export class TrackingComponent
 
   private updateTableHeight(): void {
     requestAnimationFrame(() => {
-      if (this.filterRef?.nativeElement && this.tableContainer?.nativeElement) {
-        const filterHeight = this.filterRef.nativeElement.offsetHeight;
-        const windowHeight = window.innerHeight;
-        const newTableHeight = windowHeight - filterHeight - 300;
+      const container = this.tableContainerRef?.nativeElement;
+      if (!container) return;
 
-        this.tableContainer.nativeElement.style.height = `${newTableHeight}px`;
-        this.filterHeight.set(filterHeight);
+      // วัดระยะจากขอบบนของ container ถึงขอบล่างของ viewport
+      const top = container.getBoundingClientRect().top;
+      const viewportH = window.innerHeight;
+      const bottomGap = 16; // กันไว้เล็กน้อยไม่ให้ชนขอบ
+
+      const newHeight = Math.max(240, viewportH - top - bottomGap);
+      container.style.height = `${newHeight}px`;
+
+      // อัปเดตสถานะมีสกรอลล์แนวตั้งหรือไม่ (ส่งต่อไปที่ <app-tables [hasOverflowY]>)
+      const hasOverflow = container.scrollHeight > container.clientHeight;
+      if (this.hasOverflowY !== hasOverflow) {
+        this.hasOverflowY = hasOverflow;
       }
     });
   }
@@ -561,8 +577,12 @@ export class TrackingComponent
   override onRowClick(row: any): void {
     const id = (row as any)?.id;
     if (!id) return;
+    console.log('Row clicked:', row);
 
-    const queryParams = { id };
+    const queryParams = {
+      id,
+      round: (row as any)?.roundID
+    };
     this.router.navigate(['/applications/tracking/application-form'], { queryParams });
   }
 
