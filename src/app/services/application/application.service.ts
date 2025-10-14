@@ -163,8 +163,8 @@ export class ApplicationService {
     });
   }
 
-  getApplicantDetailById(id: number): Observable<any> {
-    return this.apiService.get<any>(`ApplicantDetail/${id}`, {
+  getApplicantDetailById(id: number, round: number): Observable<any> {
+    return this.apiService.get<any>(`ApplicantDetail/${id}/round/${round}`, {
       loading: true,
       withAuth: true,
     });
