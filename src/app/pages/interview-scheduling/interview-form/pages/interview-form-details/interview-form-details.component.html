@@ -102,13 +102,16 @@
                     (click)="onInterviewClick('tab1')" [class.active]="selectedTab === 'tab1'"
                     [ngClass]="getInterview1StatusClass()">
                     <div class="tw-w-full tw-flex tw-items-center tw-justify-between tw-gap-3">
-                        <div>
-                            <div class="tw-mb-2 tw-text-[24px] tw-font-bold leading-none">
-                                Interview 1
-                            </div>
-                            <div class="tw-text-[14px] tw-opacity-80"
-                                *ngIf="applicant.interview1Date !== 'Invalid Date'">
-                                Interview1 Date {{ applicant.interview1Date }}
+                        <div class="tw-flex tw-justify-center tw-items-center tw-gap-2">
+                            <app-icon name="check-circle-solid" [size]="48" class="tw-mr-2 tw-relative tw-bottom-[2px]" [ngClass]="selectedTab === 'tab1' ? '':'!tw-hidden'"></app-icon>
+                            <div>
+                                <div class="tw-mb-2 tw-text-[24px] tw-font-bold leading-none">
+                                    Interview 1
+                                </div>
+                                <div class="tw-text-[14px] tw-opacity-80"
+                                    *ngIf="applicant.interview1Date !== 'Invalid Date'">
+                                    Interview1 Date {{ applicant.interview1Date }}
+                                </div>
                             </div>
                         </div>
                         <div class="tw-opacity-80" *ngIf="applicant.interview1Status !== null">
@@ -127,13 +130,16 @@
                     (click)="onInterviewClick('tab2')" [class.active]="selectedTab === 'tab2'"
                     [ngClass]="getInterview2StatusClass()">
                     <div class="tw-w-full tw-flex tw-items-center tw-justify-between tw-gap-3">
-                        <div>
-                            <div class="tw-mb-2 tw-text-[24px] tw-font-bold leading-none">
-                                Interview 2
-                            </div>
-                            <div class="tw-text-[14px] tw-opacity-80"
-                                *ngIf="applicant.interview2Date !== 'Invalid Date'">
-                                Interview2 Date {{ applicant.interview2Date }}
+                        <div class="tw-flex tw-justify-center tw-items-center tw-gap-2">
+                            <app-icon name="check-circle-solid" [size]="48" class="tw-mr-2 tw-relative tw-bottom-[2px]" [ngClass]="selectedTab === 'tab2' ? '':'!tw-hidden'"></app-icon>
+                            <div>
+                                <div class="tw-mb-2 tw-text-[24px] tw-font-bold leading-none">
+                                    Interview 2
+                                </div>
+                                <div class="tw-text-[14px] tw-opacity-80"
+                                    *ngIf="applicant.interview2Date !== 'Invalid Date'">
+                                    Interview2 Date {{ applicant.interview2Date }}
+                                </div>
                             </div>
                         </div>
                         <div class="tw-opacity-80" *ngIf="applicant.interview2Status !== null">
@@ -218,7 +224,8 @@
         <section class="tw-w-full">
             <form [formGroup]="formInterviewDetails">
                 <div class="tw-bg-[#FFFFFF]">
-                    <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]" *ngIf="stageId === 1">
+                    <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]"
+                        *ngIf="stageId === 1">
                         <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer"
                             (click)="isDetail1Open = !isDetail1Open">
                             <!-- <div class="tw-flex tw-items-center tw-justify-between"> -->
@@ -238,7 +245,8 @@
                             </div>
                         </ng-container>
                     </div>
-                    <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]" *ngIf="stageId === 2">
+                    <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]"
+                        *ngIf="stageId === 2">
                         <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer"
                             (click)="isDetail1Open = !isDetail1Open">
                             <!-- <div class="tw-flex tw-items-center tw-justify-between"> -->
@@ -258,8 +266,8 @@
                             </div>
                         </ng-container>
                     </div>
-                    <div
-                        class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-mt-6" *ngIf="stageId === 2">
+                    <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-mt-6"
+                        *ngIf="stageId === 2">
                         <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer"
                             (click)="isDetail2Open = !isDetail2Open">
                             <!-- <div class="tw-flex tw-items-center tw-justify-between"> -->
@@ -746,9 +754,7 @@
 </div>
 
 <!-- Floating Back-to-Top -->
-<app-back-to-top
-  [sentinelSelector]="'#page-top-sentinel'"
-  [buttonClass]="'tw-fixed tw-bottom-6 tw-right-6 tw-rounded-full tw-h-14 tw-w-14 tw-flex tw-items-center tw-justify-center tw-shadow-xl bg-red-blood hover:bg-maroon-1 tw-text-white tw-z-[60]'"
-  [iconName]="'arrow-upward'"
-  [iconSize]="26">
+<app-back-to-top [sentinelSelector]="'#page-top-sentinel'"
+    [buttonClass]="'tw-fixed tw-bottom-6 tw-right-6 tw-rounded-full tw-h-14 tw-w-14 tw-flex tw-items-center tw-justify-center tw-shadow-xl bg-red-blood hover:bg-maroon-1 tw-text-white tw-z-[60]'"
+    [iconName]="'arrow-upward'" [iconSize]="26">
 </app-back-to-top>
