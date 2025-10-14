@@ -1,0 +1,87 @@
+// :host ::ng-deep .career-page .fc-header-toolbar .fc-toolbar-title {
+//     display: none !important;
+// }
+
+// :host ::ng-deep .career-page .fc-header-toolbar .fc-toolbar-chunk:last-child .fc-button-group {
+//     display: none !important;
+// }
+
+// :host ::ng-deep .career-page .fc-header-toolbar .fc-toolbar-chunk > button {
+//     display: none !important;
+// }
+
+// :host ::ng-deep .career-page .fc-header-toolbar {
+//     justify-content: right;
+//     position: absolute;
+//     right: 0;
+//     top: -56px;
+// }
+
+// :host ::ng-deep .career-page {
+//     position: relative;
+// }
+
+::ng-deep .fc-view,
+::ng-deep .fc-list-empty {
+    height: 75dvh;
+    display: block;
+    border-radius: 0;
+    overflow: hidden;
+}
+
+.career-page {
+    height: 75dvh;
+    display: block;
+    border-radius: 16px 16px 0 0;
+    overflow: hidden;
+    border: 1px solid #e8e8e8;
+}
+
+::ng-deep .fc-theme-standard .fc-list {
+    border-width: 0;
+}
+
+::ng-deep .fc-header-toolbar {
+    padding: 24px 16px;
+    margin-bottom: 0 !important;
+    // border-radius: 16px 16px 0 0;
+    border-bottom: 1px solid #e8e8e8;
+}
+
+::ng-deep .fc .fc-button.fc-today-button {
+    font-family: "Sarabun", sans-serif;
+    text-transform: capitalize;
+}
+
+.btn-calendar {
+    width: -webkit-fill-available;
+    background: #930000;
+    color: #fff;
+    font-size: 16px;
+    padding: 16px;
+    margin: 16px;
+    text-align: center;
+    border-radius: 12px;
+    position: relative;
+    transition: .3s ease-in-out;
+}
+
+.btn-calendar:hover {
+    background: #7c0404;
+}
+
+.wrap-btn {
+    border: 1px solid #e8e8e8;
+    border-top: 0;
+    border-radius: 0 0 16px 16px;
+}
+
+.grid-list {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+@media screen and (min-width:1025px) {
+    .grid-list {
+        grid-column: span 2 / span 2;
+    }
+}
