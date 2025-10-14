@@ -65,6 +65,7 @@ export class ApplicationFormDetailsComponent {
 
   // ====== Routing ======
   applicantId: number = 0;
+  roundID: number = 0;
 
   private destroy$ = new Subject<void>();
 
@@ -268,6 +269,7 @@ export class ApplicationFormDetailsComponent {
       .pipe(takeUntil(this.destroy$))
       .subscribe((params) => {
         this.applicantId = Number(params['id'] || 0);
+        this.roundID = Number(params['round'] || 0);
         this.fetchApplicantDetails();
         this.fetchCandidateTracking();
 
@@ -285,7 +287,7 @@ export class ApplicationFormDetailsComponent {
     if (!this.applicantId) return;
 
     this.applicationService
-      .getApplicantDetailById(this.applicantId)
+      .getApplicantDetailById(this.applicantId, this.roundID)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (res) => {
