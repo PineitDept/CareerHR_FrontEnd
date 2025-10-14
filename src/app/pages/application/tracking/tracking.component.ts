@@ -42,15 +42,19 @@ const STATUS_ICON_MAP: Record<
   number,
   { icon: string; fill?: string; size?: string; extraClass?: string }
 > = {
-  12: {icon: 'minus-circle-solid', extraClass: 'fill-gray-light-1', size: '25'}, // Pending
-  15: { icon: 'check-circle-solid', fill: 'skyblue', size: '25' }, // Scheduled
-  20: { icon: 'onhold-solid', fill: 'orange', size: '25' }, // On Hold
-  21: { icon: 'check-circle-solid', fill: 'green', size: '25' }, // Accept
-  22: { icon: 'xmark-circle-solid', fill: 'red', size: '25' }, // Decline
-  23: { icon: 'xmark-circle-solid', fill: 'purple', size: '25' }, // NO SHOW PINE (นัดสัมภาษณ์แล้ว candidate ติดต่อไม่ได้)
-  25: { icon: 'xmark-circle-solid', fill: 'pink', extraClass: 'fill-pink', size: '25' }, // NO SHOW Candidate (นัดสัมภาษณ์แล้ว candidate ยกเลิกการสัมภาษณ์)
-  41: { icon: 'check-circle-solid', fill: 'green', size: '25' }, // Onboarded
-  44: { icon: 'xmark-circle-solid', fill: 'red', size: '25' }, // Declined onboard
+   12: { icon: 'minus-circle-solid', fill: '#9ca3af', size: '25' }, // gray-400
+  15: { icon: 'check-circle-solid', fill: '#38bdf8', size: '25' }, // sky-400
+  16: { icon: 'check-circle-solid', fill: '#2563eb', size: '25' }, // blue-600
+  20: { icon: 'minus-circle-solid', fill: '#f97316', size: '25' }, // orange-500
+  21: { icon: 'check-circle-solid', fill: '#16a34a', size: '25' }, // green-600
+  22: { icon: 'xmark-circle-solid', fill: '#dc2626', size: '25' }, // red-600
+  23: { icon: 'xmark-circle-solid', fill: '#9333ea', size: '25' }, // purple-600
+  25: { icon: 'xmark-circle-solid', fill: '#ec4899', size: '25' }, // pink-500
+  40: { icon: 'check-circle-solid', fill: '#0d9488', size: '25' }, // teal-600
+  41: { icon: 'check-circle-solid', fill: '#047857', size: '25' }, // emerald-700
+  42: { icon: 'xmark-circle-solid', fill: '#d97706', size: '25' }, // amber-600
+  43: { icon: 'minus-circle-solid', fill: '#eab308', size: '25' }, // yellow-500
+  44: { icon: 'xmark-circle-solid', fill: '#be123c', size: '25' }, // rose-700
 };
 
 @Component({
@@ -233,9 +237,10 @@ export class TrackingComponent
         groupLabel: 'Interview 1',
         options: [
           { key: '12', label: 'Pending' },
-          { key: '15', label: 'Scheduled' },
-          { key: '23', label: 'No-Show (PINE)' },
-          { key: '25', label: 'No-Show (Candidate)' },
+          { key: '15', label: 'Inprocess' },
+          { key: '16', label: 'Scheduled' },
+          { key: '23', label: 'No-Show' },
+          { key: '25', label: 'Decline Interview' },
           { key: '21', label: 'Accept' },
           { key: '22', label: 'Decline' },
         ],
@@ -245,9 +250,10 @@ export class TrackingComponent
         groupLabel: 'Interview 2',
         options: [
           { key: '12', label: 'Pending' },
-          { key: '15', label: 'Scheduled' },
-          { key: '23', label: 'No-Show (PINE)' },
-          { key: '25', label: 'No-Show (Candidate)' },
+          { key: '15', label: 'Inprocess' },
+          { key: '16', label: 'Scheduled' },
+          { key: '23', label: 'No-Show' },
+          { key: '25', label: 'Decline Interview' },
           { key: '21', label: 'Accept' },
           { key: '22', label: 'Decline' },
         ],
@@ -257,8 +263,9 @@ export class TrackingComponent
         groupLabel: 'Offered',
         options: [
           { key: '12', label: 'Pending' },
-          { key: '41', label: 'Accept' },
-          { key: '44', label: 'Decline' },
+          { key: '40', label: 'Accept' },
+          { key: '42', label: 'Decline' },
+          { key: '43', label: 'OnHold' },
         ],
       },
       {
@@ -266,7 +273,7 @@ export class TrackingComponent
         groupLabel: 'Hired',
         options: [
           { key: '41', label: 'Onboarded' },
-          { key: '25', label: 'No-Show' },
+          { key: '45', label: 'No-Show' },
           { key: '44', label: 'Decline' },
         ],
       },
@@ -288,7 +295,6 @@ export class TrackingComponent
     return {
       page: 1,
       pageSize: 30,
-      month: '7', // Set default month
     };
   }
 
@@ -310,8 +316,8 @@ export class TrackingComponent
     };
 
     // persist UI
-    const { HEADER_SEARCH_FORM } = this.getStorageKeys();
-    this.saveToStorage(HEADER_SEARCH_FORM, payload);
+    // const { HEADER_SEARCH_FORM } = this.getStorageKeys();
+    // this.saveToStorage(HEADER_SEARCH_FORM, payload);
 
     // ส่งต่อให้ Base (ซึ่งจะเติม __nonce ให้เองและรีเฟรชทุกครั้ง)
     super.onSearch(payload);
@@ -320,8 +326,8 @@ export class TrackingComponent
   override onClearSearch(): void {
     this.searchForm = { searchBy: '', searchValue: '' };
 
-    const { HEADER_SEARCH_FORM } = this.getStorageKeys();
-    this.saveToStorage(HEADER_SEARCH_FORM, { searchBy: '', searchValue: '' });
+    // const { HEADER_SEARCH_FORM } = this.getStorageKeys();
+    // this.saveToStorage(HEADER_SEARCH_FORM, { searchBy: '', searchValue: '' });
 
     super.onClearSearch();
   }
@@ -361,18 +367,18 @@ export class TrackingComponent
           });
         }
       }),
-      tap(() => this.persistFilterState()),
+      // tap(() => this.persistFilterState()),
       catchError((error: any) => this.handleApiError(error)),
       tap(() => this.loadingState.set(false)),
       map(() => void 0)
     );
   }
 
-  protected override persistFilterState(): void {
-    const storageKeys = this.getStorageKeys();
-    const normalized = this.normalizeTrackingFilter(this.filterRequest());
-    this.saveToStorage(storageKeys.FILTER_SETTINGS, normalized);
-  }
+  // protected override persistFilterState(): void {
+  //   const storageKeys = this.getStorageKeys();
+  //   const normalized = this.normalizeTrackingFilter(this.filterRequest());
+  //   this.saveToStorage(storageKeys.FILTER_SETTINGS, normalized);
+  // }
 
   // Lifecycle hooks
   ngAfterViewInit(): void {
@@ -501,40 +507,40 @@ export class TrackingComponent
   }
 
   // Override persistence methods to handle tracking-specific data
-  protected override loadPersistedState(): void {
-    super.loadPersistedState();
+  // protected override loadPersistedState(): void {
+  //   super.loadPersistedState();
 
-    // 1) normalize filterRequest ที่ Base เพิ่งเซ็ตขึ้นมา
-    const normalized = this.normalizeTrackingFilter(this.filterRequest());
-    this.filterRequest.set({ ...this.createInitialFilter(), ...normalized });
-    this.filterDateRange = {
-      month: normalized.month || '',
-      year: normalized.year || '',
-    };
+  //   // 1) normalize filterRequest ที่ Base เพิ่งเซ็ตขึ้นมา
+  //   const normalized = this.normalizeTrackingFilter(this.filterRequest());
+  //   this.filterRequest.set({ ...this.createInitialFilter(), ...normalized });
+  //   this.filterDateRange = {
+  //     month: normalized.month || '',
+  //     year: normalized.year || '',
+  //   };
 
-    // 2) restore Header search UI
-    const { HEADER_SEARCH_FORM } = this.getStorageKeys();
-    const headerForm = this.loadFromStorage<{ searchBy: string; searchValue: string }>(HEADER_SEARCH_FORM);
-    if (headerForm) {
-      this.searchForm = { ...headerForm };
-    } else if (normalized.search) {
-      // fallback: ถ้ามี search แต่ยังไม่เคยเก็บ UI
-      this.searchForm = {
-        searchBy: this.searchByOptions?.[0] || 'Application ID',
-        searchValue: normalized.search,
-      };
-    }
+  //   // 2) restore Header search UI
+  //   const { HEADER_SEARCH_FORM } = this.getStorageKeys();
+  //   const headerForm = this.loadFromStorage<{ searchBy: string; searchValue: string }>(HEADER_SEARCH_FORM);
+  //   if (headerForm) {
+  //     this.searchForm = { ...headerForm };
+  //   } else if (normalized.search) {
+  //     // fallback: ถ้ามี search แต่ยังไม่เคยเก็บ UI
+  //     this.searchForm = {
+  //       searchBy: this.searchByOptions?.[0] || 'Application ID',
+  //       searchValue: normalized.search,
+  //     };
+  //   }
 
-    // 3) set default month '7' ถ้ายังไม่มี (พฤติกรรมเดิม)
-    const currentFilter = this.filterRequest();
-    if (!currentFilter.month) {
-      this.filterDateRange.month = '7';
-      this.trackingFilterRequest.update((filter) => ({
-        ...filter,
-        month: '7',
-      }));
-    }
-  }
+  //   // 3) set default month '7' ถ้ายังไม่มี (พฤติกรรมเดิม)
+  //   const currentFilter = this.filterRequest();
+  //   if (!currentFilter.month) {
+  //     this.filterDateRange.month = '7';
+  //     this.trackingFilterRequest.update((filter) => ({
+  //       ...filter,
+  //       month: '7',
+  //     }));
+  //   }
+  // }
 
   // Helper method for creating pipe operators (extracted for reusability)
   private createDataPipeOperators(append: boolean): Observable<void> {
@@ -545,7 +551,7 @@ export class TrackingComponent
 
     return this.applicationService.getTrackingApplications(trackingFilter).pipe(
       tap((response: any) => this.handleApiResponse(response, append)),
-      tap(() => this.persistFilterState()),
+      // tap(() => this.persistFilterState()),
       catchError((error: any) => this.handleApiError(error)),
       tap(() => this.loadingState.set(false)),
       map(() => void 0)

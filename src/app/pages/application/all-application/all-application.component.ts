@@ -154,13 +154,13 @@ export class AllApplicationComponent extends BaseApplicationComponent {
       subColumn: 'totalCandidatePoint',
       sortable: true,
     },
-    {
-      header: 'Bonus',
-      field: 'totalBonus',
-      type: 'text',
-      align: 'right',
-      sortable: true,
-    },
+    // {
+    //   header: 'Bonus',
+    //   field: 'totalBonus',
+    //   type: 'text',
+    //   align: 'right',
+    //   sortable: true,
+    // },
     {
       header: 'Status',
       field: 'submitStatusLabel',
@@ -188,15 +188,16 @@ export class AllApplicationComponent extends BaseApplicationComponent {
   }
 
   // Abstract method implementations
-  protected getStorageKeys() {
-    return ALL_APPLICATION_CONFIG.STORAGE_KEYS;
-  }
+  // protected getStorageKeys() {
+  //   return ALL_APPLICATION_CONFIG.STORAGE_KEYS;
+  // }
 
   protected createInitialFilter(): ICandidateFilterRequest {
     return {
       page: 1,
       pageSize: 30,
       status: ALL_APPLICATION_CONFIG.DEFAULT_STATUS,
+      isScreening: false,
     };
   }
 
@@ -218,8 +219,8 @@ export class AllApplicationComponent extends BaseApplicationComponent {
     };
 
     // persist UI header
-    const { HEADER_SEARCH_FORM } = this.getStorageKeys();
-    this.saveToStorage(HEADER_SEARCH_FORM, payload);
+    // const { HEADER_SEARCH_FORM } = this.getStorageKeys();
+    // this.saveToStorage(HEADER_SEARCH_FORM, payload);
 
     // ส่งเข้า Base → Base จะเติม __nonce ให้เอง (กดซ้ำก็รีเฟรช)
     super.onSearch(payload);
@@ -227,8 +228,8 @@ export class AllApplicationComponent extends BaseApplicationComponent {
 
   override onClearSearch(): void {
     this.searchForm = { searchBy: '', searchValue: '' };
-    const { HEADER_SEARCH_FORM } = this.getStorageKeys();
-    this.saveToStorage(HEADER_SEARCH_FORM, { searchBy: '', searchValue: '' });
+    // const { HEADER_SEARCH_FORM } = this.getStorageKeys();
+    // this.saveToStorage(HEADER_SEARCH_FORM, { searchBy: '', searchValue: '' });
 
     super.onClearSearch();
   }
@@ -245,10 +246,10 @@ export class AllApplicationComponent extends BaseApplicationComponent {
     const summary = item.summary;
 
     return {
-      id: summary.userID.toString(),
+      id: item.userID.toString(),
       qualifield: createQualifiedIcon(summary.qualifield),
       submitDate: summary.submitDate || '',
-      userID: summary.userID.toString(),
+      userID: item.userID.toString(),
       fullName: summary.fullName,
       position:
         item.positions?.map((pos: IPositionDto) => pos.namePosition) || [],
@@ -260,29 +261,29 @@ export class AllApplicationComponent extends BaseApplicationComponent {
       gpaScore: summary.gpaScore,
       eqScore: summary.eqScore,
       ethicsScore: summary.ethicsScore,
-      totalBonus: summary.totalBonus,
+      // totalBonus: summary.totalBonus,
       submitStatusLabel: createStatusBadge(summary.submitStatusLabel),
     };
   }
 
-  protected override loadPersistedState(): void {
-    super.loadPersistedState();
+  // protected override loadPersistedState(): void {
+  //   super.loadPersistedState();
 
-    const { HEADER_SEARCH_FORM } = this.getStorageKeys();
-    const headerForm = this.loadFromStorage<{ searchBy: string; searchValue: string }>(HEADER_SEARCH_FORM);
-    if (headerForm) {
-      this.searchForm = { ...headerForm };
-    } else {
-      // ถ้าไม่มี headerForm แต่ filter เคยมี search ให้เดาง่าย ๆ ว่าค้นหาด้วย option แรก
-      const f = this.filterRequest();
-      if (f.search) {
-        this.searchForm = {
-          searchBy: this.searchByOptions?.[0] || 'Application ID',
-          searchValue: f.search,
-        };
-      }
-    }
-  }
+  //   const { HEADER_SEARCH_FORM } = this.getStorageKeys();
+  //   const headerForm = this.loadFromStorage<{ searchBy: string; searchValue: string }>(HEADER_SEARCH_FORM);
+  //   if (headerForm) {
+  //     this.searchForm = { ...headerForm };
+  //   } else {
+  //     // ถ้าไม่มี headerForm แต่ filter เคยมี search ให้เดาง่าย ๆ ว่าค้นหาด้วย option แรก
+  //     const f = this.filterRequest();
+  //     if (f.search) {
+  //       this.searchForm = {
+  //         searchBy: this.searchByOptions?.[0] || 'Application ID',
+  //         searchValue: f.search,
+  //       };
+  //     }
+  //   }
+  // }
 
   override ngOnDestroy(): void {
     this.ro?.disconnect?.();

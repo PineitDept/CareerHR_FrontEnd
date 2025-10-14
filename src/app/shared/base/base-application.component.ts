@@ -71,11 +71,11 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
   protected tableContainer!: ElementRef<HTMLElement>;
 
   // Abstract properties that child components must implement
-  protected abstract getStorageKeys(): {
-    FILTER_SETTINGS: string;
-    CLICKED_ROWS: string;
-    SORT_CONFIG: string;
-  };
+  // protected abstract getStorageKeys(): {
+  //   FILTER_SETTINGS: string;
+  //   CLICKED_ROWS: string;
+  //   SORT_CONFIG: string;
+  // };
 
   protected abstract createInitialFilter(): ICandidateFilterRequest;
   protected abstract createInitialTabs(): TabMenu[];
@@ -126,7 +126,7 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.persistCurrentState();
+    // this.persistCurrentState();
   }
 
   // Public Event Handlers
@@ -179,7 +179,7 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
       .map((c) => `${c}:${filteredSortState[c]}`)
       .join(',');
 
-    this.persistSortConfig(filteredSortState);
+    // this.persistSortConfig(filteredSortState);
     this.columnSortSubject.next(sortedColumnsString);
   }
 
@@ -189,12 +189,12 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
 
   onClickedRowsChanged(clickedRowIds: Set<string>): void {
     this.clickedRowIds.set(new Set(clickedRowIds));
-    this.persistClickedRows(clickedRowIds);
+    // this.persistClickedRows(clickedRowIds);
   }
 
   // Protected Initialization Methods
   protected initializeComponent(): void {
-    this.loadPersistedState();
+    // this.loadPersistedState();
     this.loadInitialData();
   }
 
@@ -317,7 +317,7 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
 
     return this.applicationService.getApplications(filter).pipe(
       tap((response) => this.handleApiResponse(response, append)),
-      tap(() => this.persistFilterState()),
+      // tap(() => this.persistFilterState()),
       catchError((error) => this.handleApiError(error)),
       tap(() => this.loadingState.set(false)),
       map(() => void 0) //เปลี่ยนเป็น: Observable<void>
@@ -451,76 +451,76 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
   }
 
   // Protected Persistence Methods
-  protected loadPersistedState(): void {
-    const storageKeys = this.getStorageKeys();
+  // protected loadPersistedState(): void {
+  //   const storageKeys = this.getStorageKeys();
 
-    const persistedFilter = this.loadFromStorage<ICandidateFilterRequest>(
-      storageKeys.FILTER_SETTINGS
-    );
-    if (persistedFilter) {
-      this.filterRequest.set({
-        ...this.createInitialFilter(),
-        ...persistedFilter,
-      });
-      this.filterDateRange = {
-        month: persistedFilter.month || '',
-        year: persistedFilter.year || '',
-      };
-    }
+  //   const persistedFilter = this.loadFromStorage<ICandidateFilterRequest>(
+  //     storageKeys.FILTER_SETTINGS
+  //   );
+  //   if (persistedFilter) {
+  //     this.filterRequest.set({
+  //       ...this.createInitialFilter(),
+  //       ...persistedFilter,
+  //     });
+  //     this.filterDateRange = {
+  //       month: persistedFilter.month || '',
+  //       year: persistedFilter.year || '',
+  //     };
+  //   }
 
-    const clickedRows = this.loadFromStorage<string[]>(
-      storageKeys.CLICKED_ROWS
-    );
-    if (clickedRows) {
-      this.clickedRowIds.set(new Set(clickedRows));
-    }
+    // const clickedRows = this.loadFromStorage<string[]>(
+    //   storageKeys.CLICKED_ROWS
+    // );
+    // if (clickedRows) {
+    //   this.clickedRowIds.set(new Set(clickedRows));
+    // }
 
-    const persistedSortConfig = this.loadFromStorage<SortState>(
-      storageKeys.SORT_CONFIG
-    );
-    if (persistedSortConfig) {
-      this.sortConfig.set(persistedSortConfig);
-    }
-  }
+    // const persistedSortConfig = this.loadFromStorage<SortState>(
+    //   storageKeys.SORT_CONFIG
+    // );
+    // if (persistedSortConfig) {
+    //   this.sortConfig.set(persistedSortConfig);
+    // }
+  // }
 
-  protected persistCurrentState(): void {
-    this.persistFilterState();
-    this.persistClickedRows(this.clickedRowIds());
-    this.persistSortConfig(this.sortConfig());
-  }
+  // protected persistCurrentState(): void {
+  //   this.persistFilterState();
+  //   this.persistClickedRows(this.clickedRowIds());
+  //   this.persistSortConfig(this.sortConfig());
+  // }
 
-  protected persistFilterState(): void {
-    const storageKeys = this.getStorageKeys();
-    this.saveToStorage(storageKeys.FILTER_SETTINGS, this.filterRequest());
-  }
+  // protected persistFilterState(): void {
+  //   const storageKeys = this.getStorageKeys();
+    // this.saveToStorage(storageKeys.FILTER_SETTINGS, this.filterRequest());
+  // }
 
-  protected persistClickedRows(clickedRowIds: Set<string>): void {
-    const storageKeys = this.getStorageKeys();
-    this.saveToStorage(storageKeys.CLICKED_ROWS, Array.from(clickedRowIds));
-  }
+  // protected persistClickedRows(clickedRowIds: Set<string>): void {
+  //   const storageKeys = this.getStorageKeys();
+    // this.saveToStorage(storageKeys.CLICKED_ROWS, Array.from(clickedRowIds));
+  // }
 
-  protected persistSortConfig(sortConfig: SortState): void {
-    const storageKeys = this.getStorageKeys();
-    this.saveToStorage(storageKeys.SORT_CONFIG, sortConfig);
-  }
+  // protected persistSortConfig(sortConfig: SortState): void {
+  //   const storageKeys = this.getStorageKeys();
+    // this.saveToStorage(storageKeys.SORT_CONFIG, sortConfig);
+  // }
 
-  protected saveToStorage<T>(key: string, data: T): void {
-    try {
-      sessionStorage.setItem(key, JSON.stringify(data));
-    } catch (error) {
-      console.warn(`Failed to save ${key} to sessionStorage:`, error);
-    }
-  }
+  // protected saveToStorage<T>(key: string, data: T): void {
+  //   try {
+  //     sessionStorage.setItem(key, JSON.stringify(data));
+  //   } catch (error) {
+  //     console.warn(`Failed to save ${key} to sessionStorage:`, error);
+  //   }
+  // }
 
-  protected loadFromStorage<T>(key: string): T | null {
-    try {
-      const item = sessionStorage.getItem(key);
-      return item ? JSON.parse(item) : null;
-    } catch (error) {
-      console.warn(`Failed to load ${key} from sessionStorage:`, error);
-      return null;
-    }
-  }
+  // protected loadFromStorage<T>(key: string): T | null {
+  //   try {
+  //     const item = sessionStorage.getItem(key);
+  //     return item ? JSON.parse(item) : null;
+  //   } catch (error) {
+  //     console.warn(`Failed to load ${key} from sessionStorage:`, error);
+  //     return null;
+  //   }
+  // }
 
   private nextNonce(): number {
     return Date.now() ^ Math.floor(Math.random() * 1e9);
