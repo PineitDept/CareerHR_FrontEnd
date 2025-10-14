@@ -1,5 +1,6 @@
 <!-- sentinel สำหรับ back-to-top -->
 <div id="page-top-sentinel" class="tw-h-px tw-w-px tw-opacity-0" aria-hidden="true"></div>
+
 <div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
     <app-header-content [headerName]="'Interview Review'" [headerType]="''"></app-header-content>
 </div>
@@ -81,10 +82,15 @@
                     <div class="tw-text-gray-500 tw-font-medium">
                         Applicant Grade {{ applicant.grade }}
                     </div>
-                    <div class="tw-flex tw-items-center tw-gap-2">
-                        <app-icon name="thumbs-up" [size]="18"></app-icon>
-                        {{ applicant.views }}
-                    </div>
+                    <!-- Like / Unlike -->
+                    <button type="button"
+                        class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-md tw-px-2 tw-py-1 hover:tw-bg-gray-100 disabled:tw-opacity-60 disabled:tw-cursor-not-allowed"
+                        [disabled]="likeState.loading || !applicantId" (click)="onToggleLike()"
+                        [attr.aria-pressed]="likeState.liked" [title]="likeState.liked ? 'Unlike' : 'Like'">
+                        <app-icon [name]="likeState.liked ? 'thumbs-up-solid' : 'thumbs-up'" [size]="18"
+                            [ngClass]="likeState.liked ? 'tw-text-[#0A57C3]' : 'tw-text-inherit'"></app-icon>
+                        <span>{{ applicant.views }}</span>
+                    </button>
                 </div>
             </div>
         </section>
@@ -204,3 +210,11 @@
         </section>
     </div>
 </div>
+
+<!-- Floating Back-to-Top -->
+<app-back-to-top
+  [sentinelSelector]="'#page-top-sentinel'"
+  [buttonClass]="'tw-fixed tw-bottom-6 tw-right-6 tw-rounded-full tw-h-14 tw-w-14 tw-flex tw-items-center tw-justify-center tw-shadow-xl bg-red-blood hover:bg-maroon-1 tw-text-white tw-z-[60]'"
+  [iconName]="'arrow-upward'"
+  [iconSize]="26">
+</app-back-to-top>

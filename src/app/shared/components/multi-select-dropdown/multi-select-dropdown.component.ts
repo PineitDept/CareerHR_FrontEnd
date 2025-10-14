@@ -1,12 +1,9 @@
 import { Overlay, OverlayRef, OverlayConfig, ConnectedPosition, FlexibleConnectedPositionStrategy, ScrollStrategyOptions } from '@angular/cdk/overlay';
-import { Component, ElementRef, EventEmitter, HostListener, Input, Output, TemplateRef, ViewChild, ViewContainerRef } from '@angular/core';
+import { Component, ElementRef, EventEmitter, HostListener, Input, Output, SimpleChanges, TemplateRef, ViewChild, ViewContainerRef } from '@angular/core';
 import { ControlValueAccessor } from '@angular/forms';
 import { TemplatePortal } from '@angular/cdk/portal';
 
-export interface SelectOption {
-  value: string;
-  label: string;
-}
+export interface SelectOption { value: string | number; label: string; }
 
 @Component({
   selector: 'app-multi-select-dropdown',
@@ -19,7 +16,7 @@ export class MultiSelectDropdownComponent implements ControlValueAccessor {
   @Input() label?: string;
   @Input() required: boolean = false;
   @Input() disabled: boolean = false;
-  @Input() defaultSelected: string[] = [];
+  @Input() defaultSelected: Array<string | number> = [];
   @Input() isHistory: boolean = false;
   @Input() inTable: boolean = false;
 
@@ -43,6 +40,8 @@ export class MultiSelectDropdownComponent implements ControlValueAccessor {
     { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -8 },
   ];
 
+  private eq(a: string | number, b: string | number) { return String(a) === String(b); }
+
   constructor(
     private elementRef: ElementRef,
     private overlay: Overlay,
@@ -50,20 +49,25 @@ export class MultiSelectDropdownComponent implements ControlValueAccessor {
     private sso: ScrollStrategyOptions,
   ) { }
 
-  ngOnChanges(): void {
-    if (this.defaultSelected?.length && this.options?.length) {
-      this.selectedOptions = this.options.filter(option =>
-        this.defaultSelected.includes(option.value)
-      );
+  ngOnChanges(changes: SimpleChanges): void {
+    if (this.defaultSelected && this.options?.length) {
+      const next = new Set((this.defaultSelected || []).map(String));
+      const curr = new Set(this.selectedOptions.map(o => String(o.value)));
+
+      const same =
+        next.size === curr.size && [...next].every(v => curr.has(v));
+
+      if (!same) {
+        this.selectedOptions = this.options.filter(o => next.has(String(o.value)));
+      }
     }
   }
 
-  // ControlValueAccessor implementation
-  writeValue(value: string[] | null): void {
-    if (value && Array.isArray(value)) {
-      this.selectedOptions = this.options.filter(option =>
-        value.includes(option.value)
-      );
+  // writeValue ก็รองรับ number/string
+  writeValue(value: Array<string | number> | null): void {
+    if (Array.isArray(value)) {
+      const vals = value.map(String);
+      this.selectedOptions = this.options.filter(opt => vals.includes(String(opt.value)));
     } else {
       this.selectedOptions = [];
     }
@@ -184,7 +188,7 @@ export class MultiSelectDropdownComponent implements ControlValueAccessor {
   }
 
   isSelected(option: SelectOption): boolean {
-    return this.selectedOptions.some(selected => selected.value === option.value);
+    return this.selectedOptions.some(s => this.eq(s.value, option.value));
   }
 
   onSearchChange(): void {
@@ -250,15 +254,24 @@ export class MultiSelectDropdownComponent implements ControlValueAccessor {
     return text.replace(regex, '<mark class="bg-yellow-200">$1</mark>');
   }
 
-  trackByValue(index: number, option: SelectOption): string {
+  trackByValue(index: number, option: SelectOption): string | number {
     return option.value;
   }
 
   // Close dropdown when clicking outside
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: Event): void {
-    if (!this.elementRef.nativeElement.contains(event.target)) {
+    const target = event.target as Node;
+
+    // ถ้าคลิกภายในแผง overlay ของตัวเอง -> อย่าปิด
+    if (this.overlayRef?.hasAttached() && this.overlayRef.overlayElement.contains(target)) {
+      return;
+    }
+
+    // ถ้าคลิกอยู่นอกคอมโพเนนต์ และอยู่นอก overlay -> ปิด
+    if (!this.elementRef.nativeElement.contains(target)) {
       this.closeDropdown();
     }
   }
+
 }

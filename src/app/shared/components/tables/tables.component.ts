@@ -90,7 +90,8 @@ export class TablesComponent
   @Input() inlineFieldErrors: Record<string, boolean> = {};
   @Input() useExternalInlineSaveFlow: boolean = false;
   @Input() scoreMax: number = 1;
-  @Input() valueSelected: any
+  @Input() valueSelected: any;
+  @Input() preferIdForSelect: boolean = false;
 
   @Output() selectionChanged = new EventEmitter<any[]>();
   @Output() rowClicked = new EventEmitter<any>();
@@ -159,22 +160,17 @@ export class TablesComponent
     // ใช้ effect เพื่อ watch การเปลี่ยนแปลงของ rows signal
     effect(() => {
       const currentRows = this.rows();
-
-      // อัพเดต selection state เมื่อ rows เปลี่ยน
       this.updateAllSelectedState();
-
-      // ถ้า selectedRows มีค่าที่เกินจำนวน rows ปัจจุบัน ให้ลบออก
       if (currentRows && currentRows.length > 0) {
         const validIndices = new Set<number>();
         this.selectedRows.forEach((index) => {
-          if (index < currentRows.length) {
-            validIndices.add(index);
-          }
+          if (index < currentRows.length) validIndices.add(index);
         });
-        this.selectedRows = validIndices;
+        if (validIndices.size !== this.selectedRows.size) {
+          this.selectedRows = validIndices;
+        }
       }
-
-      this.cdr.detectChanges();
+      this.cdr.markForCheck();
     });
   }
 
@@ -431,8 +427,8 @@ export class TablesComponent
     );
   }
 
-  public resolveMultiOptions(row: any, column: any): MultiOption[] {
-    const src = column?.options as string | string[] | MultiOption[] | ((row: any) => any[]) | undefined;
+  public resolveMultiOptions(row: any, column: any): { label: string; value: any }[] {
+    const src = column?.options as string | any[] | ((row: any) => any[]) | undefined;
 
     let arr: any[] = [];
     if (Array.isArray(src)) arr = src;
@@ -440,30 +436,33 @@ export class TablesComponent
     else if (typeof src === 'string') arr = Array.isArray(row?.[src]) ? row[src] : [];
 
     return (arr ?? []).map((o: any) => {
-      if (typeof o === 'string') return { label: o, value: o };
-      if (o?.label !== undefined && o?.value !== undefined) return o;
-      const label = o?.label ?? o?.name ?? o?.text ?? String(o?.value ?? o?.id ?? o);
+      if (typeof o === 'string' || typeof o === 'number') {
+        return { label: String(o), value: o };
+      }
+      const label = o?.label ?? o?.name ?? o?.text ?? String(o?.value ?? o?.id ?? o?.key ?? o);
       const value = o?.value ?? o?.id ?? o?.key ?? label;
       return { label, value };
     });
   }
 
-  onMultiSelectChange(selectedValues: SelectOption[]) {
-    console.log(selectedValues, '=>selectedValues')
-    // this.selectionMap[label] = selectedValues;
+  onMultiSelectSelectionChange(
+    rowIndex: number,
+    field: string,
+    selected: SelectOption[]
+  ) {
+    const values = (selected || []).map(o => String(o.value));
+    this.inlineFieldCommit.emit({ rowIndex, field, value: values });
   }
 
   // FIXED: Dropdown Management
   toggleDropdown(i: number, field: string, origin: CdkOverlayOrigin, e?: Event) {
+    const row = this.rowsValue[i];
+    if (this.isCellDisabled(row, field)) return;
     e?.stopPropagation();
     const column = this.columns.find(c => c.field === field);
     if (!column) return;
-
-    const row = this.rowsValue[i];
-    const rawOpts = this.resolveOptionsFrom(column.options, row);
-    const displayOpts = this.toDisplayLabels(rawOpts); // ✅ กลายเป็น label แล้ว
-
-    this.openOverlay(origin, { rowIndex: i, field, options: displayOpts });
+    const opts = this.resolveMultiOptions(row, column);
+    this.openOverlay(origin, { rowIndex: i, field, options: opts });
   }
 
   private openOverlay(
@@ -508,39 +507,65 @@ export class TablesComponent
     );
   }
 
-  selectDropdownOption(rowIndex: number, field: string, value: string) {
-    const currentRows = this.rowsValue;
-    if (currentRows[rowIndex]) {
-      currentRows[rowIndex][field] = value;
+  selectDropdownOption(rowIndex: number, field: string, opt: { label: string; value: any }) {
+    const r = this.rowsValue[rowIndex];
+    if (r) {
+      if (this.preferIdForSelect) {
+        r[field + 'Id'] = String(opt.value);
+        if (!r[field]) r[field] = opt.label;
+      } else {
+        r[field] = opt.label;
+      }
     }
-
-    this.selectChanged.emit({ rowIndex, field, value });
-
-    this.dropdownOverlay = null;
+    this.selectChanged.emit({ rowIndex, field, value: String(opt.value) }); // << บังคับเป็น string
+    this.closeOverlay();
     this.cdr.detectChanges();
   }
 
   toggleFooterDropdown(field: string, origin: CdkOverlayOrigin, e?: Event) {
+    if (this.isDisabledForm) return;       // ✅ กันคลิก
     e?.stopPropagation();
     const column = this.columns.find(c => c.field === field);
     if (!column) return;
 
-    const rawOpts = this.resolveOptionsFrom(column.options, this.footerRow ?? {});
-    const displayOpts = this.toDisplayLabels(rawOpts);
-
-    this.openOverlay(origin, { rowIndex: null, field, options: displayOpts });
+    const opts = this.resolveMultiOptions(this.footerRow ?? {}, column);
+    this.openOverlay(origin, { rowIndex: null, field, options: opts });
   }
 
   isFooterDropdownOpen(field: string): boolean {
     return this.dropdownOverlay?.rowIndex === null && this.dropdownOverlay?.field === field;
   }
 
-  selectFooterDropdownOption(field: string, value: string) {
-    this.footerRow[field] = value;
-    // re-validate ถ้าฟิลด์นี้เป็น required
+  selectFooterDropdownOption(field: string, opt: { label: string; value: any }) {
+    if (this.preferIdForSelect) {
+      this.footerRow[field + 'Id'] = String(opt.value);
+      if (!this.footerRow[field]) this.footerRow[field] = opt.label;
+    } else {
+      this.footerRow[field] = opt.label;
+    }
     if (this.isRequired(field)) this.validateFooterField(field);
-    this.dropdownOverlay = null;
+    this.closeOverlay();
     this.cdr.detectChanges();
+  }
+
+  getSelectDisplay(row: any, column: any): string {
+    if (!this.preferIdForSelect) {
+      const v = this.getCellValue(row, column.field);
+      return v == null ? '' : String(v);
+    }
+
+    const id = row?.[column.field + 'Id'];
+    if (id == null || id === '') {
+      const v = this.getCellValue(row, column.field);
+      return v == null ? '' : String(v);
+    }
+    const opts = this.resolveMultiOptions(row, column);
+    const found = (opts || []).find(o => String(o?.value) === String(id));
+    return found?.label ?? (row?.[column.field] ?? '');
+  }
+
+  isCellDisabled(row: any, field: string): boolean {
+    return !!this.isDisabledForm || !!row?.[field + 'Readonly'];
   }
 
   private closeOverlay() {
@@ -801,7 +826,7 @@ export class TablesComponent
   // TrackBy Functions for Performance
   trackByColumn: TrackByFunction<Column> = (index, column) => column.field;
   trackByRow: TrackByFunction<any> = (index, row) => row._tempId ?? row.id ?? index;
-  trackByOption: TrackByFunction<string> = (index, option) => option;
+  trackByOption: TrackByFunction<any> = (index, option) => String(option?.value ?? option);
 
   startInlineCreate(defaults: any = {}, position: 'top' | 'bottom' = 'top') {
     const newRow = { _tempId: `__new__${Date.now()}`, _isNew: true, ...defaults };

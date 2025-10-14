@@ -30,6 +30,7 @@ export class FilterComponent {
   @Input() disabledKeys: string[] = [];
   @Input() selectedRows: any[] = [];
   @Input() filterDynamicButton: boolean = false;
+  @Input() ButtonBackSave: boolean = false;
   @Input() filterDate: boolean = true;
   @Input() filterOurCompany: boolean = false;
   @Input() filterDateRange: { month: string; year: string } = { month: '', year: '' };
@@ -268,6 +269,10 @@ export class FilterComponent {
     ev?.stopPropagation();
     this.openActionKey = null;
     this.selectChanged.emit({ key: btn.key, value: opt.value, label: opt.label });
+  }
+  
+  onBackSave() {
+    this.buttonClicked.emit('saveback');
   }
 
   @HostListener('document:click', ['$event'])

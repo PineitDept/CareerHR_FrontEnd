@@ -10,7 +10,7 @@ import { AlertDialogData } from '../../../interfaces/dialog/dialog.interface';
 
 @Component({
   selector: 'app-alert-dialog',
-  templateUrl: './alert-dialog.component.html', 
+  templateUrl: './alert-dialog.component.html',
   styleUrl: './alert-dialog.component.scss',
 })
 export class AlertDialogComponent {
@@ -21,6 +21,8 @@ export class AlertDialogComponent {
   dropdownLeft: number = 0;
   dropdownWidth: number = 0;
 
+  isChecked = false;
+
   @ViewChild('poDropdownButton', { static: false })
   poDropdownButton!: ElementRef;
   @ViewChild('poDropdownContainer', { static: false })
@@ -29,20 +31,31 @@ export class AlertDialogComponent {
   constructor(
     private dialogRef: MatDialogRef<AlertDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: AlertDialogData
-  ) {}
+  ) { }
 
   onCancel(): void {
     this.dialogRef.close(false);
   }
 
   onConfirm(): void {
-    const result = this.data.confirm
-      ? this.data.poType
-        ? { selectedRows: this.data.selectedRows, poType: this.selectedPOType }
-        : { selectedRows: this.data.selectedRows }
-      : true;
+    if (this.data.confirm) {
+      const result: any = { selectedRows: this.data.selectedRows || [] };
 
-    this.dialogRef.close(result);
+      if (this.data.poType) {
+        result.poType = this.selectedPOType ?? null;
+      }
+      if (this.data.checkApprove) {
+        result.isComplete = this.isChecked;
+      }
+
+      this.dialogRef.close(result);
+    } else {
+      this.dialogRef.close(true);
+    }
+  }
+
+  toggleCheck() {
+    this.isChecked = !this.isChecked;
   }
 
   toggleDropdown(type: 'po') {

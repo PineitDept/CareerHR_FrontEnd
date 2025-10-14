@@ -238,3 +238,8 @@ table thead tr th:last-child {
     &[type=number] { -moz-appearance: textfield; }
   }
 }
+
+.cell-content span {   /* ปรับ selector ให้ตรงกับของคุณ */
+  white-space: pre-wrap;
+  word-break: break-word;
+}
