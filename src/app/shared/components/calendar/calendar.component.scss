@@ -142,6 +142,10 @@
     cursor: pointer;
 }
 
+::ng-deep .fc .fc-list-event:hover td {
+    background: inherit;
+}
+
 ::ng-deep .fc-button-group .fc-button {
     background: #E9ECEF;
     color: #333;

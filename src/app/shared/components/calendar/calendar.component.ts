@@ -5,7 +5,9 @@ import {
   signal,
   SimpleChanges,
   ViewChild,
-  AfterViewInit
+  AfterViewInit,
+  Output,
+  EventEmitter
 } from '@angular/core';
 import { CalendarOptions, EventApi, EventClickArg } from '@fullcalendar/core';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -15,6 +17,8 @@ import interactionPlugin from '@fullcalendar/interaction';
 import { FullCalendarComponent } from '@fullcalendar/angular';
 import { Router } from '@angular/router';
 import { AppointmentEvent } from '../../../interfaces/interview-scheduling/interview.interface';
+
+type AllowedView = 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay' | 'listMonth' | 'listDay';
 
 @Component({
   selector: 'app-calendar',
@@ -26,6 +30,12 @@ export class CalendarComponent implements AfterViewInit {
 
   @Input() events: AppointmentEvent[] = [];
   @Input() DateSelected: string = '';
+  @Input() initialView: AllowedView | null = null;
+  private _initialView: AllowedView | null = null;
+
+  @Output() dateRangeChanged = new EventEmitter<{ year: number; month: number }>()
+  private lastYear: number | null = null;
+  private lastMonth: number | null = null;
 
   currentEvents = signal<EventApi[]>([]);
   private isCalendarReady = false;
@@ -49,10 +59,12 @@ export class CalendarComponent implements AfterViewInit {
   ngAfterViewInit() {
     this.isCalendarReady = true;
 
+    if (this._initialView && this.calendarComponent) {
+      setTimeout(() => this.calendarComponent.getApi().changeView(this._initialView as AllowedView), 0);
+    }
+
     if (this.DateSelected) {
-      setTimeout(() => {
-        this.gotoDate(this.DateSelected);
-      });
+      setTimeout(() => this.gotoDate(this.DateSelected), 0);
     }
   }
 
@@ -79,19 +91,50 @@ export class CalendarComponent implements AfterViewInit {
       }
     }
 
+    if (changes['initialView']) {
+      const view = this.coerceView(changes['initialView'].currentValue);
+      this._initialView = view;
+
+      if (view && this.isCalendarReady && this.calendarComponent) {
+        queueMicrotask(() => this.calendarComponent.getApi().changeView(view));
+      } else if (view) {
+        this.calendarOptions = {
+          ...this.calendarOptions,
+          initialView: view,
+          headerToolbar: {
+            start: 'title',
+            end: 'prev,next today'
+          },
+          datesSet: this.onDatesSet.bind(this),
+        };
+      }
+    }
+
     if (changes['DateSelected'] && this.isCalendarReady && this.calendarComponent) {
-      this.gotoDate(this.DateSelected);
+      queueMicrotask(() => this.gotoDate(this.DateSelected));
     }
   }
 
+  onDatesSet(arg: any) {
+    const start = arg.start;
+    const year = start.getFullYear();
+    const month = start.getMonth() + 1;
+
+    if (year !== this.lastYear || month !== this.lastMonth) {
+      this.lastYear = year;
+      this.lastMonth = month;
+      this.dateRangeChanged.emit({ year, month });
+    }
+  }
+
+  private coerceView(v: unknown): AllowedView | null {
+    const allowed: AllowedView[] = ['dayGridMonth', 'timeGridWeek', 'timeGridDay', 'listMonth', 'listDay'];
+    return (typeof v === 'string' && allowed.includes(v as AllowedView)) ? v as AllowedView : null;
+  }
 
   getEventType(event: AppointmentEvent): { type: string, title: string } {
     const teamPart = event.teamName ? `(${event.teamName}) ` : '';
     let title = `${teamPart}${event.time} ${event.userName}`;
-
-    // if (event.status === "No Show") {
-    //   return { type: 'strikethrough-dashed', title };
-    // }
 
     switch (Number(event.interview)) {
       case 1:
@@ -132,19 +175,6 @@ export class CalendarComponent implements AfterViewInit {
   handleEventClick(clickInfo: EventClickArg) {
     const eventInterviewType = clickInfo.event.extendedProps?.['interview'];
     const eventUserID = clickInfo.event.extendedProps?.['userId']
-
-    console.log(clickInfo.event.extendedProps, '=>clickInfo.event.extendedProps')
-
-    // if (eventInterviewType === 1) {
-    //   this.router.navigate(['/interview-scheduling/interview-round-1']);
-    //   console.log('Navigating to Interview Round 1');
-    // } else if (eventInterviewType === 2) {
-    //   this.router.navigate(['/interview-scheduling/interview-round-2']);
-    //   console.log('Navigating to Interview Round 2');
-    // } else if (eventInterviewType === 3) {
-    //   this.router.navigate(['/offer-employment']);
-    //   console.log('Navigating to Offer Employment');
-    // }
 
     const queryParams = {
       id: eventUserID,

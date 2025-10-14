@@ -1,1 +1,46 @@
-index
+<div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
+    <app-header-content [headerName]="'Career'" [headerType]="''"></app-header-content>
+</div>
+<app-loading></app-loading>
+
+<div class="tw-m-6 tw-grid tw-grid-cols-6 tw-gap-6 tw-min-h-[80dvh]">
+    <div class="grid-list">
+        <!-- <p class="tw-mb-6 tw-text-2xl"><strong>Today ({{startDate}})</strong></p> -->
+        <div class="career-page">
+            <app-calendar [events]="filteredEvents" [DateSelected]="startDate" [initialView]="'listDay'"
+                (dateRangeChanged)="onCalendarDateChange($event)">
+            </app-calendar>
+        </div>
+        <div class="wrap-btn">
+            <button class="btn-calendar" (click)="toCalendar()">See All Appointment</button>
+        </div>
+    </div>
+    <!-- <div class="tw-col-span-1 tw-mt-[48px] tw-m-[-24px]">
+        <div #filter>
+            <app-filter-check-box
+                [items]="filterItems"
+                [config]="filterConfig"
+                [directCol]="true"
+                [canScroll]="true"
+                (selected)="onFiltersSelected($event)" 
+            >
+            </app-filter-check-box>
+        </div>
+
+        <div class="tw-px-6 tw-flex tw-gap-4">
+            <p class="tw-mb-1"><strong>Notice:</strong></p>
+            <ul class="notice-list">
+                <li class="tw-flex tw-items-center tw-mb-1"><span class="dot dot-blue"></span> Interview 1 Schedule</li>
+                <li class="tw-flex tw-items-center tw-mb-1"><span class="line dot-blue"></span> Interview 1 Declined</li>
+                <li class="tw-flex tw-items-center tw-mb-1"><span class="dash dash-blue"></span> Interview 1 No-Show</li>
+                <li class="tw-flex tw-items-center tw-mb-1"><span class="dot dot-orange"></span> Interview 2 Schedule</li>
+                <li class="tw-flex tw-items-center tw-mb-1"><span class="line dot-orange"></span> Interview 2 Declined</li>
+                <li class="tw-flex tw-items-center tw-mb-1"><span class="dash dash-orange"></span> Interview 2 No-Show</li>
+                <li class="tw-flex tw-items-center tw-mb-1"><span class="dot dot-green"></span> Onboarded Hired</li>
+                <li class="tw-flex tw-items-center"><span class="line dot-green"></span> Onboarded Declined</li>
+                <li class="tw-flex tw-items-center tw-mb-1"><span class="dash dash-green"></span> Onboarded No-Show</li>
+            </ul>
+        </div>
+
+    </div> -->
+</div>

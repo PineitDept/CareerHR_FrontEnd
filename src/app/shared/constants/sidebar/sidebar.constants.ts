@@ -1,7 +1,7 @@
 import { MenuItem } from "../../interfaces/menu/menu.interface";
 
 export const MAIN_MENU: MenuItem[] = [
-    { label: 'Manpower', icon: 'user', path: 'manpower' },
+    // { label: 'Manpower', icon: 'user', path: 'manpower' },
     { label: 'Applications Form', icon: 'hand-taking-user', path: 'applications' },
     { label: 'Interview Scheduling', icon: 'calendar-days', path: 'interview-scheduling' },
     { label: 'Offer Employment', icon: 'dollar-circle', path: 'offer-employment' },

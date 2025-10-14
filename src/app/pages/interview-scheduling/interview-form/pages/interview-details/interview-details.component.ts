@@ -1,4 +1,5 @@
-import { ChangeDetectorRef, Component, ElementRef, QueryList, ViewChild, ViewChildren } from '@angular/core';
+import { Location } from '@angular/common';
+import { ChangeDetectorRef, Component, ElementRef, QueryList, ViewChildren } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, map, Observable, of, Subject, switchMap, takeUntil } from 'rxjs';
 import { ApplicationService } from '../../../../../services/application/application.service';
@@ -16,7 +17,6 @@ import * as QRCode from 'qrcode';
 import { SlickCarouselComponent, SlickItemDirective } from 'ngx-slick-carousel';
 import { InterviewFormService } from '../../../../../services/interview-scheduling/interview-form/interview-form.service';
 import { ReasonService } from '../../../../../services/admin-setting/reason/reason.service';
-import { AlertDialogData } from '../../../../../shared/interfaces/dialog/dialog.interface';
 import { NotificationService } from '../../../../../shared/services/notification/notification.service';
 import { InterviewDetailsFormService } from '../../../../../services/interview-scheduling/interview-details-form/interview-details-form.service';
 
@@ -30,6 +30,8 @@ type Risk = 'Normal' | 'Warning';
 type ScreeningStatus = 'Accept' | 'Decline' | 'Hold';
 
 type CellType = 'text' | 'input' | 'select' | 'multiselect' | 'textarea';
+
+type EditPhase = 'none' | 'r1' | 'r2';
 
 interface WarningRow {
   no?: number | string;
@@ -47,6 +49,11 @@ interface WarningRow {
   result1Options?: any;
   result2Options?: any;
   selectedIds?: []
+  result1SelectedIds?: any;
+  result1Readonly?: any;
+  result2SelectedIds?: any;
+  result2Readonly?: any;
+  questionId?: any;
 }
 
 interface Applicant {
@@ -79,20 +86,14 @@ interface StageSection {
   historyId: number;
   stageId: number;
   stageName: string;
-  stageNameNormalized: string;  // lower-cased for switch
+  stageNameNormalized: string; 
   headerTitle: string;
-
   hrUserName: string;
   stageDate: string | Date;
-
   categories: CategoryOption[];
   selectedCategoryId?: number;
-
   reasons: ReasonOption[];
-
-  // notes: ใช้กับ Screened/Offered
   notes?: string | null;
-  // ใช้กับ Interview 1/2 (ถ้า API ยังไม่มี แสดง '—')
   strength?: string | null;
   concern?: string | null;
 
@@ -197,7 +198,7 @@ export class InterviewDetailsComponent {
 
   // ====== Routing ======
   applicantId: number = 0;
-  appointmentId: number = 0;
+  appointmentId: string | undefined;
   stageId: number = 0;
   interview1AppointmentId: string | undefined;
   interview2AppointmentId: string | undefined;
@@ -253,7 +254,6 @@ export class InterviewDetailsComponent {
 
   applicationFormSubmittedDate: string | Date = '';
 
-  // UI: ขนาดรอยบั้งของ chevron (ไม่ใช้แล้ว แต่คงไว้หากต้องกลับไปใช้ pipeline เดิม)
   chevW = 28;
 
   // ====== Stepper bindings ======
@@ -287,6 +287,7 @@ export class InterviewDetailsComponent {
   commentCtrl!: FormControl<string>;
 
   foundisSummary: any;
+  private requestedRound: 1 | 2 = 1;
 
   constructor(
     private route: ActivatedRoute,
@@ -298,7 +299,8 @@ export class InterviewDetailsComponent {
     private applicationService: ApplicationService,
     private reasonService: ReasonService,
     private notificationService: NotificationService,
-    private interviewDetailsFormService: InterviewDetailsFormService
+    private interviewDetailsFormService: InterviewDetailsFormService,
+    private location: Location
   ) { }
 
   // ---------- Carousel config ----------
@@ -376,8 +378,10 @@ export class InterviewDetailsComponent {
       .pipe(takeUntil(this.destroy$))
       .subscribe((params) => {
         this.applicantId = Number(params['id'] || 0);
-        this.stageId = Number(params['interview'] || 1);
-        this.selectedTab = 'tab' + params['interview'];
+        const rq = Number(params['interview'] || 1);
+        this.requestedRound = rq === 2 ? 2 : 1;       // <= เก็บรอบที่ขอ
+        this.stageId = this.requestedRound;           // โฟกัสแท็บตาม URL
+        this.selectedTab = 'tab' + this.requestedRound;
 
         this.fetchCandidateTracking();
       });
@@ -467,84 +471,35 @@ export class InterviewDetailsComponent {
 
     this.interviewFormService.getApplicantTracking(this.applicantId).subscribe({
       next: (res) => {
-        // const appointmentIdKey = `interview${this.stageId}AppointmentId`;
-        // const appointmentIdValue = res[appointmentIdKey];
+        this.interview1AppointmentId = res.interview1AppointmentId;
+        this.interview2AppointmentId = res.interview2AppointmentId;
 
-        // (this as any)[appointmentIdKey] = appointmentIdValue;
+        this.i1Status = (res.interview1FormResult || '').toLowerCase();
+        this.i2Status = (res.interview2FormResult || '').toLowerCase();
 
-        if (res.interview1FormResult.toLowerCase() === 'pending' || res.interview1FormResult === null) {
-          this.fetchFormById(this.stageId)
-        } else {
-          this.fetchPreviewFormRound(res)
-          // this.fetchFormById(this.stageId)
+        this.roundID = res.roundID || 1
+
+        const i1Has = this.hasRoundData(this.i1Status);
+        const i2Has = this.hasRoundData(this.i2Status);
+
+        if (i1Has || i2Has) {
+          this.fetchPreviewFormRound(res, { useRound1: i1Has, useRound2: i2Has });
         }
+
+        if (!i1Has) this.fetchFormByIdForm1();
+        if (!i2Has) this.fetchFormByIdForm2();
+
+        this.appointmentId = this.requestedRound === 1
+          ? this.interview1AppointmentId
+          : this.interview2AppointmentId;
+
+        this.applyEditingLocks();
       },
-      error: (err) => {
-        console.error(err);
-      },
+      error: (err) => console.error(err),
     });
 
-  }
 
-  fetchPreviewFormRound(items: any) {
-    (this.interviewDetailsFormService.previewFormRound(items.roundID, items.userID) as Observable<any[]>)
-      .subscribe(
-        (response: any[]) => {
-          const fields = Array.isArray(response[0].fields) ? response[0].fields : [];
 
-          this.detail1Rows = fields.map((item: any, idx: number) => {
-            const type = this.mapFieldType(item.fieldType);
-            let opts = []
-
-            if (item.fieldType !== 'dropdown') {
-              opts = Array.isArray(item.options)
-                ? item.options.map((o: any) => ({ label: o.optionIdname, value: o.optionId }))
-                : undefined;
-            } else {
-              opts = Array.isArray(item.options)
-                ? item.options.map((o: any) => ({ label: o.optionIdname, key: o.optionId }))
-                : undefined;
-            }
-
-            console.log(item)
-
-            const row: WarningRow = {
-              no: idx + 1,
-              warning: item.questionName ?? '-',
-
-              result1: item.answers[0]?.existingAnswer,
-              result2: item.answers[1]?.existingAnswer,
-
-              result1Type: type,
-              result2Type: type,
-
-              result1Options: opts,
-              result2Options: opts,
-              selectedIds: item.answers?.[0]?.existingOptionIds ?? []
-            };
-
-            return row;
-          });
-
-          const fields2 = Array.isArray(response[1].fields) ? response[1].fields : [];
-          this.detail2Rows = fields2.map((item: any, idx: number) => {
-            const type = this.mapFieldType(item.fieldType);
-            const opts = Array.isArray(item.options)
-              ? item.options.map((o: any) => ({ label: o.name ?? o.label ?? String(o), value: o.id ?? o.value ?? o }))
-              : undefined;
-
-            const row: WarningRow = {
-              no: idx + 1,
-              warning: item.questionName ?? '-',
-              result2: item.answers[0]?.existingAnswer,
-              result2Type: type,
-              result2Options: opts,
-            };
-
-            return row;
-          });
-        }
-      );
   }
 
   private fetchFiles(id: number) {
@@ -554,8 +509,6 @@ export class InterviewDetailsComponent {
       .subscribe({
         next: (res: any[]) => {
           const files = Array.isArray(res) ? res : [];
-
-          // 1) Avatar จาก fileType = 'Profile'
           const profile = files.find(f => String(f?.fileType).toLowerCase() === 'profile');
 
           this.applicant.avatarUrl = profile?.filePath || '';
@@ -563,7 +516,6 @@ export class InterviewDetailsComponent {
         },
         error: (e) => {
           console.error('[ApplicationForm] getFileByCandidateId error:', e);
-          // ไม่เปลี่ยน state ถ้า error
         }
       });
   }
@@ -625,15 +577,75 @@ export class InterviewDetailsComponent {
   onFilterButtonClick(key: string) {
     switch (key) {
       case 'edit':
-        // this.setActionButtons('edit');
         this.onEditClicked();
-        // this.isEditing = true
-        // this.formDetails.enable();
         break;
       case 'save':
-        this.onSaveClicked()
+        this.onSaveClicked();
+        break;
+      case 'saveback':
+        if (this.isEditing) {
+          if (this.canSave) {
+            this.onSaveClicked({ goBackAfter: true });
+          } else {
+            this.location.back();
+          }
+        } else {
+          this.location.back();
+        }
         break;
     }
+  }
+
+  likeState = {
+    count: 0,
+    liked: false,
+    loading: false
+  };
+
+  private fetchInterest(id: number) {
+    if (!id) return;
+    this.applicationService.getInterestByCandidateId(id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.likeState.count = Number(res?.countLike ?? 0);
+          this.likeState.liked = !!res?.isLikedByCurrentEmployee;
+        },
+        error: (e) => {
+          console.error('[ApplicationForm] fetchInterest error:', e);
+        }
+      });
+  }
+
+  onToggleLike() {
+    if (!this.applicantId || this.likeState.loading) return;
+
+    const wantLike = !this.likeState.liked;
+    const body = { candidateId: this.applicantId };
+
+    // optimistic update
+    const prev = { ...this.likeState };
+    this.likeState.loading = true;
+    this.likeState.liked = wantLike;
+    this.likeState.count = Math.max(0, this.likeState.count + (wantLike ? 1 : -1));
+
+    const req$ = wantLike
+      ? this.applicationService.addInterest(body)
+      : this.applicationService.deleteInterest(body);
+
+    req$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.fetchInterest(this.applicantId);
+          this.likeState.loading = false;
+        },
+        error: (e) => {
+          console.error('[ApplicationForm] toggle like error:', e);
+          // rollback
+          this.likeState = prev;
+        }
+      });
   }
 
   formatDateForInput(dateString: string | null | undefined): string {
@@ -719,69 +731,13 @@ export class InterviewDetailsComponent {
     });
   }
 
-  onComfirmReview() {
-    // const payload = this.formDetails.value;
-
-    // const isoDate = new Date(payload.dateInterviewReview).toISOString();
-    // let checkedReasonIds = []
-    // checkedReasonIds = this.reasonsInterview1.flatMap((category: { rejectionReasons: any[]; }) =>
-    //   category.rejectionReasons
-    //     .filter(reason => reason.checked === true)
-    //     .map(reason => reason.reasonId)
-    // );
-
-    // const checkedCategoryIds = this.reasonsInterview1
-    //   .filter(category => category.rejectionReasons.some((reason: { checked: boolean; }) => reason.checked === true))
-    //   .map(category => category.categoryId);
-
-    // const appointmentIdKey = `interview${this.stageId}AppointmentId`;
-    // const appointmentId = (this as any)[appointmentIdKey];
-
-    // const transformedPayload = {
-    //   applicationId: this.applicantId,
-    //   stageId: this.stageId + 1,
-    //   categoryId: checkedCategoryIds[0],
-    //   isSummary: true,
-    //   stageDate: isoDate,
-    //   appointmentId: appointmentId.trim(),
-    //   satisfaction: null,
-    //   notes: payload.noteInterviewReview,
-    //   strength: "",
-    //   concern: "",
-    //   selectedReasonIds: checkedReasonIds
-    // }
-
-    // this.interviewFormService.postInterviewReview(transformedPayload).subscribe({
-    //   next: () => {
-    //     // this.fetchInterviewer()
-    //     this.foundisSummary = this.reviewHistory.find(user => user.isSummary === true);
-    //   },
-    //   error: (err) => {
-    //     console.error('Error Rescheduled:', err);
-    //   }
-    // });
-  }
-
-  onCancelReview() {
-    this.initializeForm()
-    this.selectedCategoryId = null;
-  }
-
-  onEditClicked() {
-    this.isEditing = true;
-    this.formDetails.enable();
-    // this.initialSnapshot = this.buildSnapshot();
-
-    this.nextTick(() => this.setActionButtons('edit'));
-  }
-
   private setActionButtons(mode: 'view' | 'edit') {
     if (mode === 'view') {
       this.filterButtons = [{ label: 'Edit', key: 'edit', color: '#000000' }];
       this.disabledKeys = [];
     } else {
       this.filterButtons = [{ label: 'Save', key: 'save', color: '#000055' }];
-      this.disabledKeys = ['save'];
+      this.disabledKeys = this.canSave ? [] : ['save'];
     }
   }
 
@@ -802,13 +758,19 @@ export class InterviewDetailsComponent {
   }
 
   onInterviewClick(tab: string) {
+    const round = tab === 'tab1' ? 1 : 2;
+
+    if (this.isEditing) {
+      if (round === 1 && !this.canEditRound1) return;
+      if (round === 2 && !this.canEditRound2) return;
+    }
+
     this.selectedTab = tab;
-    const interviewNumber = tab === 'tab1' ? '1' : '2';
-    this.stageId = Number(interviewNumber)
+    this.stageId = round;
 
     this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { interview: interviewNumber },
+      queryParams: { interview: String(round) },
       queryParamsHandling: 'merge',
       replaceUrl: true
     });
@@ -819,192 +781,27 @@ export class InterviewDetailsComponent {
     return (this.applicant as Record<string, any>)?.[key] ?? '';
   }
 
-  onTimeStartChange(event: Event) {
-    const inputElement = event.target as HTMLInputElement;
-    const newTimeValue = inputElement.value;
+  onEditClicked() {
+    this.isEditing = true;
 
-    // เก็บค่าเดิมไว้ก่อนเปลี่ยน (ก่อน user เปลี่ยน)
-    const oldTimeValue = this.formatTimeForInput(this.getInterviewDateByStage());
-
-    const dateValue = this.formatDateForInput(this.getInterviewDateByStage());
-    const dataPatch = `${dateValue}T${newTimeValue}`;
-
-    const appointmentIdKey = `interview${this.stageId}AppointmentId`;
-    const appointmentId = (this as any)[appointmentIdKey];
-
-    const payload = {
-      appointmentId: appointmentId,
-      interviewStartTime: dataPatch
-    };
-
-    setTimeout(() => {
-      this.interviewFormService.updateInterviewDateStart(payload).subscribe({
-        next: () => { },
-        error: (err) => {
-          console.error('Error Rescheduled:', err);
-          this.notificationService.error('Failed to set start interview time');
-
-          inputElement.value = oldTimeValue;
-        }
-      });
-    }, 3000)
-  }
-
-  onTimeEndChange(event: Event) {
-    const inputElement = event.target as HTMLInputElement;
-    const newTimeValue = inputElement.value;
-
-    const oldTimeValue = this.formatTimeForInput(this.getInterviewDateByStage());
-
-    const dateValue = this.formatDateForInput(this.getInterviewDateByStage());
-    const dataPatch = `${dateValue}T${newTimeValue}`;
-
-    const appointmentIdKey = `interview${this.stageId}AppointmentId`;
-    const appointmentId = (this as any)[appointmentIdKey];
-
-    const payload = {
-      appointmentId: appointmentId,
-      interviewEndTime: dataPatch
-    };
-
-    setTimeout(() => {
-      this.interviewFormService.updateInterviewDateEnd(payload).subscribe({
-        next: () => { },
-        error: (err) => {
-          console.error('Error Rescheduled:', err);
-          this.notificationService.error('Failed to set end interview time');
-
-          inputElement.value = oldTimeValue;
-        }
-      });
-    }, 3000)
-  }
-
-  getInterview1StatusClass(): string {
-    switch (this.applicant?.interview1Result) {
-      case 12: return 'tw-bg-yellow-400 tw-text-black';           // Pending
-      case 15: return 'tw-bg-blue-400 tw-text-white';            // Inprocess
-      case 16: return 'tw-bg-indigo-400 tw-text-white';          // Scheduled
-      case 21: return 'tw-bg-[#005500] tw-text-white';           // Pass Interview (สีเขียว)
-      case 22: return 'tw-bg-red-500 tw-text-white';             // Not Pass Interview (สีแดง)
-      case 23: return 'tw-bg-gray-500 tw-text-white';            // No Show
-      case 24: return 'tw-bg-purple-400 tw-text-white';          // Reschedule
-      case 25: return 'tw-bg-pink-400 tw-text-white';            // Candidate Decline
-      case 41: return 'tw-bg-green-700 tw-text-white';           // Hire
-      case 42: return 'tw-bg-red-700 tw-text-white';             // Not Hire
-      case 43: return 'tw-bg-orange-400 tw-text-white';          // Comparison
-      default: return 'tw-bg-gray-300 tw-text-black';            // Default สีเทา
-    }
-  }
-
-  getInterview2StatusClass(): string {
-    switch (this.applicant?.interview2Result) {
-      case 12: return 'tw-bg-yellow-400 tw-text-white';           // Pending
-      case 15: return 'tw-bg-blue-400 tw-text-white';            // Inprocess
-      case 16: return 'tw-bg-indigo-400 tw-text-white';          // Scheduled
-      case 21: return 'tw-bg-[#005500] tw-text-white';           // Pass Interview (สีเขียว)
-      case 22: return 'tw-bg-red-500 tw-text-white';             // Not Pass Interview (สีแดง)
-      case 23: return 'tw-bg-gray-500 tw-text-white';            // No Show
-      case 24: return 'tw-bg-purple-400 tw-text-white';          // Reschedule
-      case 25: return 'tw-bg-pink-400 tw-text-white';            // Candidate Decline
-      case 41: return 'tw-bg-green-700 tw-text-white';           // Hire
-      case 42: return 'tw-bg-red-700 tw-text-white';             // Not Hire
-      case 43: return 'tw-bg-orange-400 tw-text-white';          // Comparison
-      default: return 'tw-bg-gray-300 tw-text-black';            // Default สีเทา
-    }
-  }
-
-  getCategoryBtnClass(c: CategoryOption, selectedId?: number | null) {
-    const isActive = c.categoryId === selectedId;
-    const name = (c.categoryName || '').toLowerCase();
-    const tone =
-      name.includes('accept') ? 'tw-bg-green-500 tw-text-white tw-border-green-600' :
-        name.includes('decline') ? 'tw-bg-red-500 tw-text-white tw-border-red-600' :
-          name.includes('application decline') ? 'tw-bg-red-500 tw-text-white tw-border-red-600' :
-            name.includes('no-show') ? 'tw-bg-gray-200 tw-text-gray-800 tw-border-gray-300' :
-              name.includes('on hold') ? 'tw-bg-amber-500 tw-text-white tw-border-amber-600' :
-                'tw-bg-white tw-text-gray-700 tw-border-gray-300';
-
-    const inactive = 'hover:tw-brightness-105';
-    const activeRing = 'tw-ring-2 tw-ring-white/40';
-
-    return isActive ? `${tone} ${activeRing}` : `tw-bg-white tw-text-gray-700 tw-border-gray-300 ${inactive}`;
-  }
-
-  generateQRCode(text: string): void {
-    QRCode.toDataURL(text, (err: any, url: string) => {
-      if (err) {
-        console.error(err);
-        return;
-      }
-
-      this.qrCodeImageUrl = url;
-    });
-  }
-
-  onViewDetailClick() {
-    const queryParams = {
-      id: this.applicantId
-    }
-    this.router.navigate(['/applications/screening/application-form'], { queryParams });
-  }
-
-  onInterviewDetailClick() {
-    const queryParams = {
-      id: this.applicantId,
-      interview: this.stageId,
-    }
-    this.router.navigate(['/interview-scheduling/interview-form/details'], { queryParams });
-  }
-
-  onReviewClick(idEmployee?: number) {
-
-    if (!idEmployee) {
-      const userDataString = sessionStorage.getItem('user');
-      if (userDataString !== null) {
-        const userData = JSON.parse(userDataString);
-        idEmployee = userData.idEmployee;
-      }
+    if (this.requestedRound === 2 && this.i1Status !== 'complete') {
+      this.notificationService.warn?.('Please complete Interview 1 first.');
+      this.editPhase = 'r1';
+      this.stageId = 1;
+      this.appointmentId = this.interview1AppointmentId;
+    } else {
+      this.editPhase = this.requestedRound === 1 ? 'r1' : 'r2';
+      this.stageId = this.requestedRound;
+      this.appointmentId = this.requestedRound === 1
+        ? this.interview1AppointmentId
+        : this.interview2AppointmentId;
     }
 
-    const queryParams = {
-      id: this.applicantId,
-      interview: this.stageId,
-      idEmployee: idEmployee
-    }
-
-    this.router.navigate(['/interview-scheduling/interview-form/review'], { queryParams });
+    this.setActionButtons('edit');
+    this.applyEditingLocks();
   }
 
-  genQRReviewPage() {
-    let idEmployee
-    const userDataString = sessionStorage.getItem('user');
-    if (userDataString !== null) {
-      const userData = JSON.parse(userDataString);
-      idEmployee = userData.idEmployee;
-    }
-
-    const queryParams = {
-      id: this.applicantId,
-      interview: this.stageId,
-      idEmployee: idEmployee
-    };
-
-    const urlTree = this.router.createUrlTree(
-      ['/interview-scheduling/interview-form/review'],
-      { queryParams }
-    );
-
-    const relativeUrl = this.router.serializeUrl(urlTree);
-    const fullUrl = window.location.origin + relativeUrl;
-
-    this.generateQRCode(fullUrl)
-
-  }
-
-  onSaveClicked() {
-    // if (!this.hasFormChanged()) return;
-
+  onSaveClicked(opts?: { goBackAfter?: boolean }) {
     Promise.resolve().then(() => {
       const container = document.querySelector('.cdk-overlay-container');
       container?.classList.add('dimmed-overlay');
@@ -1016,18 +813,85 @@ export class InterviewDetailsComponent {
       autoFocus: false,
       disableClose: true,
       data: {
-        title: 'Confirmation',
-        message: 'Are you sure you want to save this data?',
+        title: 'Confirmation Interview Detail',
+        message: 'Your submitted answer is confirmed.',
+        checkApprove: true,
         confirm: true
       }
     });
 
-    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+    dialogRef.afterClosed().subscribe((confirmed: any) => {
       const container = document.querySelector('.cdk-overlay-container');
       container?.classList.remove('dimmed-overlay');
 
       if (confirmed) {
-        console.log('Save Click')
+        const appointmentId = this.appointmentId?.trim();
+        const candidateId = this.applicantId;
+
+        const ans1_r1 = this.buildChangedAnswersFromRows(
+          this.detail1Rows, this.initialDetail1Rows, 1, 'result1'
+        );
+        const ans1_r2 = this.buildChangedAnswersFromRows(
+          this.detail1Rows, this.initialDetail1Rows, 1, 'result2'
+        );
+        const ans2_r2 = this.buildChangedAnswersFromRows(
+          this.detail2Rows, this.initialDetail2Rows, 2, 'result2'
+        );
+
+        let existingAnswers: any[] = [];
+        if (this.stageId === 1) {
+          existingAnswers = [...ans1_r1];
+        } else {
+          existingAnswers = [...ans1_r2, ...ans2_r2];
+        }
+
+        if (!existingAnswers.length) {
+          this.notificationService.info?.('No changes to save');
+          if (confirmed?.isComplete) {
+          }
+          return;
+        }
+
+        const body = {
+          appointmentId,
+          candidateId,
+          isComplete: !!confirmed.isComplete,
+          existingAnswers,
+        };
+
+        this.interviewDetailsFormService.saveFormAnswers(body).subscribe({
+          next: () => {
+            this.notificationService.success('Saved');
+            this.isEditing = false;
+            this.canSave = false;
+            this.setActionButtons('view');
+            this.applyEditingLocks();
+
+            if (confirmed?.isComplete) {
+              if (this.editPhase === 'r1') {
+                this.i1Status = 'complete';
+                this.editPhase = 'r2';
+                this.stageId = 2;
+                this.appointmentId = this.interview2AppointmentId;
+              } else if (this.editPhase === 'r2') {
+                this.i2Status = 'complete';
+                this.isEditing = false;
+                this.editPhase = 'none';
+              }
+            }
+
+            this.captureInitialSnapshot();
+            if (opts?.goBackAfter) this.location.back();
+          },
+          error: (err) => {
+            console.error('Save error:', err);
+            this.notificationService.error('Save failed');
+          }
+        });
+      } else {
+        if (opts?.goBackAfter) {
+          this.location.back();
+        }
       }
     });
 
@@ -1177,81 +1041,405 @@ export class InterviewDetailsComponent {
   // Form Interview Detail
   result1Type = '';
   result2Type = '';
-  fetchFormById(stageId: number) {
+  currentFormId1?: number;
+  currentFormId2?: number;
+  roundID?: number | undefined;
+  canSave = false;
+  private editPhase: EditPhase = 'none';
+  private i1Status: string = '';
+  private i2Status: string = '';
+  private initialDetail1Rows: any[] = [];
+  private initialDetail2Rows: any[] = [];
+
+  fetchFormByIdForm1() {
     this.interviewDetailsFormService.getFormById(1).subscribe({
       next: (response: any) => {
-        console.log(response)
+        this.currentFormId1 = Number(response?.formId ?? 1);
         const fields = Array.isArray(response?.fields) ? response.fields : [];
 
         this.detail1Rows = fields.map((item: any, idx: number) => {
           const type = this.mapFieldType(item.fieldType);
-
-          // แปลง options จาก API ถ้ามี
           const opts = Array.isArray(item.options)
-            ? item.options.map((o: any) => ({ label: o.name ?? o.label ?? String(o), value: o.id ?? o.value ?? o }))
-            : undefined;
+            ? item.options.map((o: any) => ({ label: o.optionIdname, value: String(o.optionId) }))
+            : [];
 
-          const row: WarningRow = {
+          const base: any = {
             no: idx + 1,
             warning: item.questionName ?? '-',
-
-            result1: type === 'multiselect' ? [] : '',
-            result2: type === 'multiselect' ? [] : '',
+            // ⭐ สำคัญ: เก็บ questionId ไว้ใช้ตอน save
+            questionId: Number(item.questionId ?? item.id ?? idx + 1),
 
             result1Type: type,
             result2Type: type,
-
             result1Options: opts,
             result2Options: opts,
+
+            result1Readonly: !this.canEditRound1,
+            result2Readonly: !this.canEditRound2,
           };
 
-          return row;
+          if (type === 'multiselect') {
+            base.result1SelectedIds = [];
+            base.result2SelectedIds = [];
+          } else if (type === 'select') {
+            base.result1Id = null as string | null;
+            base.result2Id = null as string | null;
+          } else if (type === 'input' || type === 'textarea') {
+            base.result1 = '';
+            base.result2 = '';
+          } else {
+            base.result1 = '';
+            base.result2 = '';
+          }
+
+          return base;
         });
 
-      },
-      error: (error) => console.error(error),
+        this.captureInitialSnapshot();
+      }
     });
+  }
 
+  fetchFormByIdForm2() {
     this.interviewDetailsFormService.getFormById(2).subscribe({
       next: (response: any) => {
+        this.currentFormId2 = Number(response?.formId ?? 2);
         const fields = Array.isArray(response?.fields) ? response.fields : [];
 
         this.detail2Rows = fields.map((item: any, idx: number) => {
           const type = this.mapFieldType(item.fieldType);
-
-          // แปลง options จาก API ถ้ามี
           const opts = Array.isArray(item.options)
-            ? item.options.map((o: any) => ({ label: o.name ?? o.label ?? String(o), value: o.id ?? o.value ?? o }))
-            : undefined;
+            ? item.options.map((o: any) => ({ label: o.name ?? o.label ?? String(o), value: String(o.id ?? o.value ?? o) }))
+            : [];
 
-          const row: WarningRow = {
+          const base: any = {
             no: idx + 1,
             warning: item.questionName ?? '-',
-
-            result2: type === 'multiselect' ? [] : '',
+            questionId: Number(item.questionId ?? item.id ?? idx + 1),
 
             result2Type: type,
-
             result2Options: opts,
+            result2Readonly: !this.canEditRound2,
           };
 
-          return row;
+          if (type === 'multiselect') base.result2SelectedIds = [];
+          else if (type === 'select') base.result2Id = null as string | null;
+          else if (type === 'input' || type === 'textarea') base.result2 = '';
+          else base.result2 = '';
+
+          return base;
         });
 
-      },
-      error: (error) => console.error(error),
+        this.captureInitialSnapshot();
+      }
     });
+  }
+
+  fetchPreviewFormRound(items: any, opts: { useRound1: boolean; useRound2: boolean }) {
+    (this.interviewDetailsFormService.previewFormRound(items.roundID, items.userID) as Observable<any[]>)
+      .subscribe((response: any[]) => {
+        this.currentFormId1 = Number(response?.[0]?.formId ?? this.currentFormId1 ?? 1);
+        this.currentFormId2 = Number(response?.[1]?.formId ?? this.currentFormId2 ?? 2);
+
+        // ===== Round 1 -> detail1Rows =====
+        if (opts.useRound1) {
+          const fields1 = Array.isArray(response[0]?.fields) ? response[0].fields : [];
+          this.detail1Rows = fields1.map((item: any, idx: number) => {
+            const type = this.mapFieldType(item.fieldType);
+            const optsList = Array.isArray(item.options)
+              ? item.options.map((o: any) => ({ label: o.optionIdname, value: String(o.optionId) }))
+              : [];
+
+            const ansR1 = (item.answers || []).find((a: any) => Number(a.interviewRound) === 1);
+            const ansR2 = (item.answers || []).find((a: any) => Number(a.interviewRound) === 2);
+
+            const r1Sel = Array.isArray(ansR1?.existingOptionIds) ? ansR1.existingOptionIds.map((id: any) => String(id)) : [];
+            const r2Sel = Array.isArray(ansR2?.existingOptionIds) ? ansR2.existingOptionIds.map((id: any) => String(id)) : [];
+
+            const r1Id = Array.isArray(ansR1?.existingOptionIds) && ansR1.existingOptionIds.length === 1 ? String(ansR1.existingOptionIds[0]) : null;
+            const r2Id = Array.isArray(ansR2?.existingOptionIds) && ansR2.existingOptionIds.length === 1 ? String(ansR2.existingOptionIds[0]) : null;
+
+            const r1Txt = ansR1?.existingAnswer ?? '';
+            const r2Txt = ansR2?.existingAnswer ?? '';
+
+            const row: WarningRow = {
+              no: idx + 1,
+              warning: item.questionName ?? '-',
+              questionId: Number(item.questionId ?? item.id ?? idx + 1),
+
+              result1Type: type,
+              result2Type: type,
+              result1Options: optsList,
+              result2Options: optsList,
+
+              ...(type === 'multiselect' ? { result1SelectedIds: r1Sel, result2SelectedIds: r2Sel } : {}),
+              ...(type === 'select' ? { result1Id: r1Id, result2Id: r2Id } : {}),
+              ...(type === 'input' || type === 'textarea' ? { result1: r1Txt, result2: r2Txt } : {}),
+
+              // อ่านจาก getter เพื่อให้สอดคล้องกฎ I1 complete ถึงแก้ I2 ได้
+              result1Readonly: !this.canEditRound1,
+              result2Readonly: !this.canEditRound2,
+            };
+            return row;
+          });
+        }
+
+        // ===== Round 2 -> detail2Rows =====
+        if (opts.useRound2) {
+          const fields2 = Array.isArray(response[1]?.fields) ? response[1].fields : [];
+          this.detail2Rows = fields2.map((item: any, idx: number) => {
+            const type = this.mapFieldType(item.fieldType);
+            const optsList = Array.isArray(item.options)
+              ? item.options.map((o: any) => ({ label: o.optionIdname, value: String(o.optionId) }))
+              : [];
+
+            const ansR2 = (item.answers || []).find((a: any) => Number(a.interviewRound) === 2);
+
+            const r2Sel = Array.isArray(ansR2?.existingOptionIds) ? ansR2.existingOptionIds.map((id: any) => String(id)) : [];
+            const r2Id = Array.isArray(ansR2?.existingOptionIds) && ansR2.existingOptionIds.length === 1 ? String(ansR2.existingOptionIds[0]) : null;
+            const r2Txt = ansR2?.existingAnswer ?? '';
+
+            const row: WarningRow = {
+              no: idx + 1,
+              warning: item.questionName ?? '-',
+              questionId: Number(item.questionId ?? item.id ?? idx + 1),
+
+              result2Type: type,
+              result2Options: optsList,
+
+              ...(type === 'multiselect' ? { result2SelectedIds: r2Sel } : {}),
+              ...(type === 'select' ? { result2Id: r2Id } : {}),
+              ...(type === 'input' || type === 'textarea' ? { result2: r2Txt } : {}),
+
+              result2Readonly: !this.canEditRound2,
+            };
+            return row;
+          });
+        }
+
+        this.captureInitialSnapshot();
+      });
+  }
+
+
+  private normCell(row: any, col: 'result1' | 'result2') {
+    const type = row[`${col}Type`];
+    return {
+      type,
+      id: row[`${col}Id`] ?? null,
+      txt: (row[col] ?? '').toString().trim(),
+      sel: Array.isArray(row[`${col}SelectedIds`])
+        ? [...row[`${col}SelectedIds`]].map(String).sort()
+        : [],
+    };
+  }
+
+  private sameCell(a: any, b: any) {
+    if (!a || !b) return false;
+    if (a.type !== b.type) return false;
+    if (a.type === 'multiselect') {
+      return JSON.stringify(a.sel) === JSON.stringify(b.sel);
+    }
+    if (a.type === 'select') {
+      return String(a.id ?? '') === String(b.id ?? '');
+    }
+    if (a.type === 'input' || a.type === 'textarea' || a.type === 'text') {
+      return a.txt === b.txt;
+    }
+    return true;
+  }
+
+  private enableSaveButton(): void {
+    this.disabledKeys = this.disabledKeys.filter(k => k !== 'save');
+  }
+
+  private applyEditingLocks(): void {
+    this.detail1Rows = (this.detail1Rows || []).map(row => ({
+      ...row,
+      result1Readonly: !this.canEditRound1,
+      result2Readonly: !this.canEditRound2,
+    }));
+
+    this.detail2Rows = (this.detail2Rows || []).map(row => ({
+      ...row,
+      result2Readonly: !this.canEditRound2,
+    }));
+  }
+
+  onSelectChanged1(e: { rowIndex: number; field: string; value: string }) {
+    const key = e.field + 'Id';
+    this.detail1Rows[e.rowIndex][key] = String(e.value);
+    this.detail1Rows = [...this.detail1Rows];
+    this.refreshCanSave();
+  }
+
+  onSelectChanged2(e: { rowIndex: number; field: string; value: string }) {
+    const key = e.field + 'Id';
+    this.detail2Rows[e.rowIndex][key] = String(e.value);
+    this.detail2Rows = [...this.detail2Rows];
+    this.refreshCanSave();
+  }
+
+  onInlineFieldCommit1(e: { rowIndex: number; field: string; value: any[] }) {
+    const key = e.field + 'SelectedIds';
+    this.detail1Rows[e.rowIndex][key] = (e.value || []).map(v => String(v));
+    this.detail1Rows = [...this.detail1Rows];
+    this.refreshCanSave();
+  }
+
+  onInlineFieldCommit2(e: { rowIndex: number; field: string; value: any[] }) {
+    const key = e.field + 'SelectedIds';
+    this.detail2Rows[e.rowIndex][key] = (e.value || []).map(v => String(v));
+    this.detail2Rows = [...this.detail2Rows];
+    this.refreshCanSave();
+  }
+
+  onAnyTextInput() {
+    this.refreshCanSave();
+  }
+
+  onInlineFieldCommit(e: { rowIndex: number; field: string; value: any[] }) {
+    const key = e.field + 'SelectedIds';
+    this.detail1Rows[e.rowIndex][key] = (e.value || []).map(v => String(v));
+    this.detail1Rows = [...this.detail1Rows];
+  }
+
+  onTextChanged1(e: { rowIndex: number; field: string; value: string }) {
+    this.detail1Rows[e.rowIndex][e.field] = e.value ?? '';
+    this.detail1Rows = [...this.detail1Rows];
+    this.enableSaveButton();
+  }
+
+  onTextChanged2(e: { rowIndex: number; field: string; value: string }) {
+    this.detail2Rows[e.rowIndex][e.field] = e.value ?? '';
+    this.detail2Rows = [...this.detail2Rows];
+    this.enableSaveButton();
+  }
+
+  get canEditRound1() { return this.isEditing && this.editPhase === 'r1'; }
+  get canEditRound2() { return this.isEditing && this.editPhase === 'r2'; }
+
+  private get bothComplete() {
+    return this.i1Status === 'complete' && this.i2Status === 'complete';
   }
 
   mapFieldType(apiType: string): CellType {
     switch ((apiType || '').toLowerCase()) {
-      case 'checkbox': return 'multiselect'; // checkbox หลายตัว => multiselect
+      case 'checkbox': return 'multiselect';
       case 'dropdown': return 'select';
       case 'textarea': return 'textarea';
       case 'text': return 'input';
       default: return 'text';
     }
   }
+
+  private hasRoundData(s?: string | null) {
+    const v = (s || '').toLowerCase();
+    return v === 'inprocess' || v === 'complete';
+  }
+
+  private isCellChanged(
+    currentRow: any,
+    initialRow: any,
+    col: 'result1' | 'result2'
+  ): boolean {
+    const a = this.normCell(currentRow, col);
+    const b = this.normCell(initialRow ?? {}, col);
+    return !this.sameCell(a, b);
+  }
+
+  private buildChangedAnswersFromRows(
+    rows: any[],
+    initialRows: any[],
+    formId: 1 | 2,
+    col: 'result1' | 'result2'
+  ) {
+    const out: Array<{
+      questionId: number;
+      formId: number;
+      round: number | undefined;
+      options: number[];
+      answer: string;
+      remark: string;
+    }> = [];
+
+    rows.forEach((r, idx) => {
+      const init = initialRows?.[idx];
+      if (!this.isCellChanged(r, init, col)) return; // ไม่เปลี่ยน ⇒ ข้าม
+
+      const type = r[`${col}Type`];
+      const qid = Number(r.questionId);
+      if (!qid) return;
+
+      if (type === 'multiselect') {
+        const ids: string[] = (r[`${col}SelectedIds`] || []).map(String);
+        out.push({
+          formId, questionId: qid, round: this.roundID,
+          options: ids.map(n => Number(n)), answer: '', remark: ''
+        });
+      } else if (type === 'select') {
+        const idStr = r[`${col}Id`] ?? null;
+        out.push({
+          formId, questionId: qid, round: this.roundID,
+          options: idStr ? [Number(idStr)] : [], answer: '', remark: ''
+        });
+      } else if (type === 'input' || type === 'textarea' || type === 'text') {
+        const txt = (r[col] ?? '').toString().trim();
+        out.push({
+          formId, questionId: qid, round: this.roundID,
+          options: [], answer: txt, remark: ''
+        });
+      }
+    });
+
+    return out;
+  }
+
+  private captureInitialSnapshot() {
+    this.initialSnapshot = this.buildSnapshot();
+    this.initialDetail1Rows = JSON.parse(JSON.stringify(this.detail1Rows || []));
+    this.initialDetail2Rows = JSON.parse(JSON.stringify(this.detail2Rows || []));
+    this.canSave = false;
+    this.setActionButtons(this.isEditing ? 'edit' : 'view');
+  }
+
+
+  // ทำสแน็ปช็อต (normalize ให้เทียบเท่ากัน)
+  private buildSnapshot(): string {
+    const norm = (r: any) => ({
+      // ใช้เฉพาะค่าที่ส่งผลต่อการบันทึก
+      r1Type: r.result1Type,
+      r2Type: r.result2Type,
+
+      r1Id: r.result1Id ?? null,
+      r2Id: r.result2Id ?? null,
+
+      r1Txt: r.result1 ?? '',
+      r2Txt: r.result2 ?? '',
+
+      r1Sel: Array.isArray(r.result1SelectedIds)
+        ? [...r.result1SelectedIds].map(String).sort()
+        : [],
+      r2Sel: Array.isArray(r.result2SelectedIds)
+        ? [...r.result2SelectedIds].map(String).sort()
+        : [],
+    });
+
+    return JSON.stringify({
+      d1: (this.detail1Rows || []).map(norm),
+      d2: (this.detail2Rows || []).map(norm),
+    });
+  }
+
+  // เรียกทุกครั้งที่มีการแก้ไข เพื่อคำนวณ canSave
+  private refreshCanSave() {
+    const now = this.buildSnapshot();
+    this.canSave = now !== this.initialSnapshot;
+    // อัปเดตปุ่ม Save ให้ตรงสถานะ
+    if (this.isEditing) this.setActionButtons('edit');
+  }
+
+
 }
 
 // ====== Helpers ======

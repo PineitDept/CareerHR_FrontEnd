@@ -23,38 +23,26 @@
         Purchase Order Type
       </label>
       <div class="tw-relative tw-w-1/2 dropdown-container-po" #poDropdownContainer>
-        <button #poDropdownButton
-          (click)="toggleDropdown('po')"
-          class="tw-w-full tw-flex tw-justify-between tw-items-center
+        <button #poDropdownButton (click)="toggleDropdown('po')" class="tw-w-full tw-flex tw-justify-between tw-items-center
                 tw-bg-gray-light-4 tw-border tw-border-[#ADB5BD] tw-rounded-[8px]
-                tw-px-4 tw-py-2 tw-text-base tw-text-[#495057] tw-outline-none tw-gap-2"
-          [ngClass]="{
+                tw-px-4 tw-py-2 tw-text-base tw-text-[#495057] tw-outline-none tw-gap-2" [ngClass]="{
             'tw-text-[#ADB5BD]': !selectedPOType,
             'tw-text-[#495057]': selectedPOType
-          }"
-        >
+          }">
           {{ selectedPOType || 'Select PO Type' }}
           <app-icon name="chevron-down" [size]="14" class="tw-text-[#495057]" />
         </button>
-        <ul
-          *ngIf="isDropdownOpenPO"
-          class="tw-fixed tw-bg-white tw-border tw-rounded-md tw-shadow-lg tw-z-[1000]"
-          [style.top.px]="dropdownTop"
-          [style.left.px]="dropdownLeft"
-          [style.width.px]="dropdownWidth"
-        >
-          <li
-            *ngFor="let option of data.poType"
-            (click)="selectOption('po', option)"
-            class="tw-px-4 tw-py-2 tw-cursor-pointer hover:tw-bg-gray-100 tw-text-base tw-text-[#495057]"
-          >
+        <ul *ngIf="isDropdownOpenPO" class="tw-fixed tw-bg-white tw-border tw-rounded-md tw-shadow-lg tw-z-[1000]"
+          [style.top.px]="dropdownTop" [style.left.px]="dropdownLeft" [style.width.px]="dropdownWidth">
+          <li *ngFor="let option of data.poType" (click)="selectOption('po', option)"
+            class="tw-px-4 tw-py-2 tw-cursor-pointer hover:tw-bg-gray-100 tw-text-base tw-text-[#495057]">
             {{ option }}
           </li>
         </ul>
       </div>
     </div>
   </ng-container>
-  <div class="tw-text-base tw-text-gray-700 tw-px-6 tw-py-6">
+  <div class="tw-text-base tw-text-gray-700 tw-px-6 tw-py-6" *ngIf="!data.checkApprove">
     <p>{{ data.message }}</p>
     <ng-container *ngIf="!data.confirm">
       <p class="tw-mt-2"><span class="tw-font-semibold">Tel:</span> 02-705-5900</p>
@@ -62,23 +50,33 @@
     </ng-container>
   </div>
 
+  <!-- <div class="tw-flex tw-items-start tw-gap-2 tw-px-6 tw-py-6" *ngIf="data.checkApprove" (click)="toggleCheck()">
+    <input type="checkbox" class="tw-mt-1.5 tw-w-4 tw-h-4 tw-rounded tw-border tw-border-gray-400" [checked]="isChecked"
+      (click)="$event.stopPropagation(); toggleCheck()" />
+    <p class="tw-text-base tw-text-gray-700">{{ data.message }}</p>
+  </div> -->
+
+  <div class="tw-flex tw-items-start tw-gap-2 tw-px-6 tw-py-6 tw-cursor-pointer" *ngIf="data.checkApprove"
+    (click)="toggleCheck()" role="checkbox" [attr.aria-checked]="isChecked">
+    <span class="tw-inline-flex tw-items-center tw-justify-center tw-rounded-[4px] tw-border tw-align-middle tw-mt-0.5"
+      [ngClass]="isChecked ? 'tw-border-green-500 tw-bg-green-50' : 'tw-border-gray-300 tw-bg-white'"
+      style="width:18px;height:18px;min-width:18px;min-height:18px">
+      <app-icon *ngIf="isChecked" name="check" [size]="14" class="tw-text-green-600"></app-icon>
+    </span>
+    <p class="tw-text-base tw-text-gray-700">{{ data.message }}</p>
+  </div>
+
   <div class="tw-border-t tw-border-gray-300"></div>
 
   <div class="tw-text-right tw-px-6 tw-pt-3 tw-pb-3">
-    <button
-      *ngIf="data.confirm"
+    <button *ngIf="data.confirm"
       class="tw-bg-gray-200 hover:tw-bg-gray-300 tw-text-black tw-font-medium tw-py-1.5 tw-px-5 tw-rounded-lg tw-mr-2"
-      (click)="onCancel()"
-    >
+      (click)="onCancel()">
       Cancel
     </button>
-    <button
-      class="tw-text-white tw-font-medium tw-py-1.5 tw-px-6 tw-rounded-lg"
-      (click)="onConfirm()"
-      [ngClass]="data.confirm ? 'tw-bg-[#00AA55] hover:tw-bg-[#02934a]' : 'tw-bg-[#930000] hover:tw-bg-[#7a0000]'"
-    >
+    <button class="tw-text-white tw-font-medium tw-py-1.5 tw-px-6 tw-rounded-lg" (click)="onConfirm()"
+      [ngClass]="data.confirm ? 'tw-bg-[#00AA55] hover:tw-bg-[#02934a]' : 'tw-bg-[#930000] hover:tw-bg-[#7a0000]'">
       {{ data.confirm ? 'Confirm' : 'OK' }}
     </button>
   </div>
 </div>
-
