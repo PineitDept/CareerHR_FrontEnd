@@ -334,9 +334,9 @@ export class InterviewFormDetailsComponent {
 
   // ====== Candidate Warning UI ======
   isRevOpen = true; // ปุ่ม chevron พับ/กาง
-  isDetailOpen = true;
-  isDetail1Open = true;
-  isDetail2Open = true;
+  isDetailOpen = false;
+  isDetail1Open = false;
+  isDetail2Open = false;
   detailRows: any[] = [];
   detailColumns: any[] = [];
   detail1Rows: any[] = [];
