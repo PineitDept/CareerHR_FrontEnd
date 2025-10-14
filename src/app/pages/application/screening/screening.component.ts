@@ -63,7 +63,7 @@ export class ScreeningComponent extends BaseApplicationComponent {
       align: 'center'
     },
     {
-      header: 'Submit Date',
+      header: 'Screen Date',
       field: 'submitDate',
       type: 'date',
       align: 'center',

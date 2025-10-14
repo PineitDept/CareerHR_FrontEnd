@@ -75,13 +75,21 @@ export class TrackingComponent
   private readonly trackingFilterRequest =
     signal<ICandidateTrackingFilterRequest>({
       page: 1,
-      pageSize: 30,
+      pageSize: 20,
     });
   private readonly filterHeight = signal<number>(0);
   private resizeObserver!: ResizeObserver;
 
   // Computed properties for tracking
   readonly currentTrackingFilter = computed(() => this.trackingFilterRequest());
+
+  private readonly groupCounts = signal<{
+    pending?: number;
+    accept?: number;
+    decline?: number;
+    hold?: number;
+    received?: number;
+  }>({});
 
   // Table Configuration
   readonly columns: Columns = [
@@ -185,65 +193,87 @@ export class TrackingComponent
   ] as const;
 
   // Filter configuration for tracking
-  readonly filterItems: GroupedCheckboxOption[] = [
-    {
-      groupKey: 'applied',
-      groupLabel: 'Applied',
-      options: [{ key: 'received', label: 'Received (20,000)' }],
-    },
-    {
-      groupKey: 'screened',
-      groupLabel: 'Screened',
-      options: [
-        { key: 'pending', label: 'Pending (3,000)' },
-        { key: 'accept', label: 'Accept (3,000)' },
-        { key: 'decline', label: 'Decline (3,000)' },
-        { key: 'hold', label: 'On Hold (3,000)' },
-      ],
-    },
-    {
-      groupKey: 'interview1',
-      groupLabel: 'Interview 1',
-      options: [
-        { key: '12', label: 'Pending' },
-        { key: '15', label: 'Scheduled' },
-        { key: '23', label: 'No-Show (PINE)' },
-        { key: '25', label: 'No-Show (Candidate)' },
-        { key: '21', label: 'Accept' },
-        { key: '22', label: 'Decline' },
-      ],
-    },
-    {
-      groupKey: 'interview2',
-      groupLabel: 'Interview 2',
-      options: [
-        { key: '12', label: 'Pending' },
-        { key: '15', label: 'Scheduled' },
-        { key: '23', label: 'No-Show (PINE)' },
-        { key: '25', label: 'No-Show (Candidate)' },
-        { key: '21', label: 'Accept' },
-        { key: '22', label: 'Decline' },
-      ],
-    },
-    {
-      groupKey: 'offered',
-      groupLabel: 'Offered',
-      options: [
-        { key: '12', label: 'Pending' },
-        { key: '41', label: 'Accept' },
-        { key: '44', label: 'Decline' },
-      ],
-    },
-    {
-      groupKey: 'hired',
-      groupLabel: 'Hired',
-      options: [
-        { key: '41', label: 'Onboarded' },
-        { key: '25', label: 'No-Show' },
-        { key: '44', label: 'Decline' },
-      ],
-    },
-  ];
+   readonly filterItems = computed<GroupedCheckboxOption[]>(() => {
+    const counts = this.groupCounts();
+    
+    return [
+      {
+        groupKey: 'applied',
+        groupLabel: 'Applied',
+        options: [
+          { 
+            key: 'received', 
+            label: `Received${counts.received !== undefined ? ` (${counts.received.toLocaleString()})` : ''}` 
+          }
+        ],
+      },
+      {
+        groupKey: 'screened',
+        groupLabel: 'Screened',
+        options: [
+          { 
+            key: 'pending', 
+            label: `Pending${counts.pending !== undefined ? ` (${counts.pending.toLocaleString()})` : ''}` 
+          },
+          { 
+            key: 'accept', 
+            label: `Accept${counts.accept !== undefined ? ` (${counts.accept.toLocaleString()})` : ''}` 
+          },
+          { 
+            key: 'decline', 
+            label: `Decline${counts.decline !== undefined ? ` (${counts.decline.toLocaleString()})` : ''}` 
+          },
+          { 
+            key: 'hold', 
+            label: `On Hold${counts.hold !== undefined ? ` (${counts.hold.toLocaleString()})` : ''}` 
+          },
+        ],
+      },
+      {
+        groupKey: 'interview1',
+        groupLabel: 'Interview 1',
+        options: [
+          { key: '12', label: 'Pending' },
+          { key: '15', label: 'Scheduled' },
+          { key: '23', label: 'No-Show (PINE)' },
+          { key: '25', label: 'No-Show (Candidate)' },
+          { key: '21', label: 'Accept' },
+          { key: '22', label: 'Decline' },
+        ],
+      },
+      {
+        groupKey: 'interview2',
+        groupLabel: 'Interview 2',
+        options: [
+          { key: '12', label: 'Pending' },
+          { key: '15', label: 'Scheduled' },
+          { key: '23', label: 'No-Show (PINE)' },
+          { key: '25', label: 'No-Show (Candidate)' },
+          { key: '21', label: 'Accept' },
+          { key: '22', label: 'Decline' },
+        ],
+      },
+      {
+        groupKey: 'offered',
+        groupLabel: 'Offered',
+        options: [
+          { key: '12', label: 'Pending' },
+          { key: '41', label: 'Accept' },
+          { key: '44', label: 'Decline' },
+        ],
+      },
+      {
+        groupKey: 'hired',
+        groupLabel: 'Hired',
+        options: [
+          { key: '41', label: 'Onboarded' },
+          { key: '25', label: 'No-Show' },
+          { key: '44', label: 'Decline' },
+        ],
+      },
+    ];
+  });
+
 
   readonly filterConfig: FilterConfig = {
     expandAllByDefault: true,
@@ -320,7 +350,18 @@ export class TrackingComponent
     };
 
     return this.applicationService.getTrackingApplications(trackingFilter).pipe(
-      tap((response: any) => this.handleApiResponse(response, append)),
+      tap((response: any) => {
+        this.handleApiResponse(response, append);
+        if (response?.groupCounts) {
+          this.groupCounts.set({
+            pending: response.groupCounts.pending,
+            accept: response.groupCounts.accept,
+            decline: response.groupCounts.decline,
+            hold: response.groupCounts.hold,
+            received: response.groupCounts.received,
+          });
+        }
+      }),
       tap(() => this.persistFilterState()),
       catchError((error: any) => this.handleApiError(error)),
       tap(() => this.loadingState.set(false)),
@@ -356,11 +397,17 @@ export class TrackingComponent
       ...currentTrackingFilter,
       page: 1,
     };
-
     // Handle status (screened)
-    const screened = filters['screened']?.[0];
-    if (['accept', 'decline', 'hold'].includes(screened)) {
-      updatedTrackingFilter.status = screened;
+    const screenedValues = filters['screened'];
+    if (screenedValues?.length) {
+      const validStatuses = screenedValues.filter(status =>
+        ['pending', 'accept', 'decline', 'hold'].includes(status)
+      );
+      if (validStatuses.length > 0) {
+        updatedTrackingFilter.status = validStatuses.join(',');
+      } else {
+        delete updatedTrackingFilter.status;
+      }
     } else {
       delete updatedTrackingFilter.status;
     }
@@ -412,6 +459,7 @@ export class TrackingComponent
       offer: this.mapStatusIdToIcon(item.offer?.id) || STATUS_ICON_MAP[12],
       hired: this.mapStatusIdToIcon(item.hired?.id) || STATUS_ICON_MAP[12],
       lastUpdate: item.lastUpdate,
+      roundID: item.roundID,
     };
   }
 
@@ -523,8 +571,12 @@ export class TrackingComponent
   override onRowClick(row: any): void {
     const id = (row as any)?.id;
     if (!id) return;
+    console.log('Row clicked:', row);
 
-    const queryParams = { id };
+    const queryParams = {
+      id,
+      round: (row as any)?.roundID
+    };
     this.router.navigate(['/applications/tracking/application-form'], { queryParams });
   }
 
