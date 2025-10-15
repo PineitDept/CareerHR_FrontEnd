@@ -117,11 +117,45 @@
                                 </div>
                                 <div>
                                     <div class="tw-text-[13px] tw-font-medium">Screening Date</div>
-                                    <input
-                                        [ngClass]="[!editReview ? 'tw-pointer-events-none tw-text-[#8b8b8b] tw-bg-gray-100':'']"
-                                        class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2"
-                                        type="date" [min]="today" formControlName="dateInterviewReview"
-                                        (input)="onDateInput()" (change)="onDateChange()">
+                                    <div
+                                      class="tw-relative tw-mt-1"
+                                      (mousedown)="onDateBoxMouseDown(nativePicker, $event)"
+                                      [ngClass]="canOpenDatePicker ? 'tw-cursor-pointer' : ''"
+                                    >
+                                      <!-- ช่องที่มองเห็น (อ่านอย่างเดียว) -->
+                                      <input
+                                        type="text"
+                                        class="tw-w-full tw-text-[14px] tw-rounded-md tw-border tw-border-gray-300 tw-h-10 tw-pl-3 tw-pr-9 tw-appearance-none"
+                                        [value]="formatDateDDMMYYYY(formDetails.get('dateInterviewReview')?.value) || 'DD/MM/YYYY'"
+                                        readonly
+                                        [ngClass]="!editReview ? 'tw-pointer-events-none tw-text-[#8b8b8b] tw-bg-gray-100' : ''"
+                                        title="Screening Date"
+                                      />
+
+                                      <!-- ไอคอนปฏิทิน -->
+                                      <button
+                                        type="button"
+                                        class="tw-absolute tw-inset-y-0 tw-right-2 tw-flex tw-items-center tw-justify-center tw-w-6 tw-cursor-pointer"
+                                        [disabled]="!canOpenDatePicker"
+                                        (click)="openDatePicker(nativePicker)"
+                                        [ngClass]="canOpenDatePicker ? 'tw-text-gray-600 hover:tw-text-black' : 'tw-text-gray-400 tw-cursor-not-allowed'"
+                                        aria-label="Open calendar"
+                                      >
+                                        <app-icon name="calendar-days" [size]="18"></app-icon>
+                                      </button>
+
+                                      <!-- ตัวจริงที่คุมค่า + เปิดปฏิทิน -->
+                                      <input
+                                        #nativePicker
+                                        type="date"
+                                        class="tw-absolute tw-top-0 tw-left-0 tw-w-px tw-h-10 tw-opacity-0"
+                                        [min]="today"
+                                        formControlName="dateInterviewReview"
+                                        (change)="onNativeDateChanged()"
+                                        aria-hidden="true"
+                                        tabindex="0"
+                                      />
+                                    </div>
                                 </div>
                             </div>
 
