@@ -143,6 +143,9 @@ export class InterviewRound2HistoryComponent {
   @ViewChildren('slickCarousel') carousels!: QueryList<SlickCarouselComponent>;
   @ViewChild('scrollContainer') scrollContainer!: ElementRef;
 
+  private dateSaveTimers: Record<string, any> = {};
+  private lastSubmittedDate: Record<string, string> = {};
+
   // ---------- Constructor ----------
   constructor(
     private interviewerService: InterviewerService,
@@ -163,7 +166,7 @@ export class InterviewRound2HistoryComponent {
     const day = String(now.getDate()).padStart(2, '0');
 
     this.today = `${year}-${month}-${day}`;
-    
+
     this.appointmentsService.setAppointmentsType(2);
 
     const savedSearch = sessionStorage.getItem('interviewSearchForm2History');
@@ -183,7 +186,7 @@ export class InterviewRound2HistoryComponent {
     this.fetchStatusCall();
 
     this.filterButtons = [{
-      label: 'Scheduled', key: 'back', outlineBtn: true, 
+      label: 'Scheduled', key: 'back', outlineBtn: true,
       color: '#FFFFFF',
       textColor: '#000000',
       borderColor: '#000000',
@@ -510,21 +513,49 @@ export class InterviewRound2HistoryComponent {
 
 
   onDateChange(event: Event, item: any) {
-    const input = event.target as HTMLInputElement;
-    const dateTime = input.value;
+    const el = event.target as HTMLInputElement;
+    const newValue = el.value;                 // yyyy-MM-ddTHH:mm
+    const prevValue = item?.interview?.date;
+    const appointmentId = item.profile.appointmentId;
 
-    const payload = {
-      appointmentId: item.profile.appointmentId,
-      interviewDate: dateTime
+    // อัปเดต UI ให้ input ที่มองเห็นเปลี่ยนทันที
+    item.interview = { ...(item.interview || {}), date: newValue };
+    this.cdr?.markForCheck?.();
+
+    // input = debounce / change = ทันที
+    const isChange = event.type === 'change';
+    const delay = isChange ? 0 : 600;
+
+    // กันยิงถี่
+    if (this.dateSaveTimers[appointmentId]) {
+      clearTimeout(this.dateSaveTimers[appointmentId]);
     }
 
-    this.appointmentsService.updateInterviewDate(payload).subscribe({
-      error: (err) => {
-        console.error('Error update date:', err);
+    this.dateSaveTimers[appointmentId] = setTimeout(() => {
+      // กันยิงซ้ำค่าซ้ำ
+      if (this.lastSubmittedDate[appointmentId] === newValue) return;
 
-        this.notificationService.error('Error update date');
-      }
-    });
+      const payload = {
+        appointmentId,
+        interviewDate: newValue,
+      };
+
+      this.appointmentsService.updateInterviewDate(payload).subscribe({
+        next: () => {
+          this.lastSubmittedDate[appointmentId] = newValue;
+          this.notificationService.success('Interview date updated.');
+        },
+        error: (err) => {
+          console.error('Error update date:', err);
+          this.notificationService.error('Error update date');
+
+          // rollback UI + ค่าใน input hidden
+          item.interview = { ...(item.interview || {}), date: prevValue };
+          el.value = this.toDateTimeLocalValue(prevValue);
+          this.cdr?.markForCheck?.();
+        }
+      });
+    }, delay);
   }
 
   onLocationChange(selectedValue: number, item: any) {
@@ -535,6 +566,9 @@ export class InterviewRound2HistoryComponent {
     }
 
     this.appointmentsService.updateInterviewLocation(payload).subscribe({
+      next: () => {
+        this.notificationService.success('Interview location updated.');
+      },
       error: (err) => {
         console.error('Error update location:', err);
 
@@ -734,7 +768,7 @@ export class InterviewRound2HistoryComponent {
           defaultSelected: defaultSelected
         }
       ];
-      
+
       document.querySelector('.cdk-overlay-pane')?.classList.add('pp-rounded-dialog');
 
       const dialogRef = this.dialog.open(SelectDialogComponent, {
@@ -879,7 +913,7 @@ export class InterviewRound2HistoryComponent {
         // interviewerListMap = this.interviewerList.filter(
         //   (i: any) => !allExcludedIds.has(i.value)
         // );
-        
+
       } catch (err) {
         console.error('Error fetching team:', err);
       }
@@ -1406,5 +1440,56 @@ export class InterviewRound2HistoryComponent {
         this.router.navigate(['/interview-scheduling/interview-round-2']);
         break;
     }
+  }
+
+  // === DateTime helpers ===
+  canOpenDateTimePicker(item: any): boolean {
+    // หน้า History: ล็อกไว้ให้อ่านอย่างเดียว (ปิดการแก้ไข)
+    return false;
+  }
+
+  toDateTimeLocalValue(value: any): string {
+    if (!value) return '';
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return '';
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    const MM = pad(d.getMonth() + 1);
+    const dd = pad(d.getDate());
+    const hh = pad(d.getHours());
+    const mm = pad(d.getMinutes());
+    return `${yyyy}-${MM}-${dd}T${hh}:${mm}`;
+  }
+
+  formatDateTimeDDMMYYYYHHmm(value: any): string {
+    if (!value) return '';
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return '';
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const dd = pad(d.getDate());
+    const MM = pad(d.getMonth() + 1);
+    const yyyy = d.getFullYear();
+    const hh = pad(d.getHours());
+    const mm = pad(d.getMinutes());
+    return `${dd}/${MM}/${yyyy} ${hh}:${mm}`;
+  }
+
+  openDateTimePicker(nativeInput: HTMLInputElement | null): void {
+    if (!this.canOpenDateTimePicker(null)) return;
+    if (!nativeInput) return;
+    // Chrome มี showPicker; ถ้าไม่มีให้ fallback เป็น focus/click
+    // @ts-ignore
+    if (typeof nativeInput.showPicker === 'function') {
+      // @ts-ignore
+      nativeInput.showPicker();
+    } else {
+      nativeInput.focus();
+      nativeInput.click();
+    }
+  }
+
+  onDateTimeBoxMouseDown(nativeInput: HTMLInputElement | null, _item: any): void {
+    if (!this.canOpenDateTimePicker(_item)) return;
+    this.openDateTimePicker(nativeInput);
   }
 }
