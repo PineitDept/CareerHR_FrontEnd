@@ -37,13 +37,36 @@ const TRACKING_CONFIG = {
     HEADER_SEARCH_FORM: 'trackingHeaderSearchForm',
   },
 } as const;
-
+const STATUS_COLOR_MAP: Record<number | string, string> = {
+  // Screened statuses (text-based)
+  'pending': '#9ca3af',   // gray-400
+  'accept': '#16a34a',    // green-600
+  'decline': '#dc2626',   // red-600
+  'hold': '#f97316',      // orange-500
+  'received': '#38bdf8',  // sky-400
+  
+  // Interview/Offer/Hired statuses (number-based)
+  12: '#9ca3af',  // gray-400 - Pending
+  15: '#38bdf8',  // sky-400 - Inprocess
+  16: '#2563eb',  // blue-600 - Scheduled
+  20: '#f97316',  // orange-500
+  21: '#16a34a',  // green-600 - Accept
+  22: '#dc2626',  // red-600 - Decline
+  23: '#9333ea',  // purple-600 - No-Show
+  25: '#ec4899',  // pink-500 - Decline Interview
+  40: '#0d9488',  // teal-600 - Accept (Offer)
+  41: '#047857',  // emerald-700 - Onboarded
+  42: '#d97706',  // amber-600 - Decline (Offer)
+  43: '#eab308',  // yellow-500 - OnHold
+  44: '#be123c',  // rose-700 - Decline (Hired)
+  45: '#9333ea',  // purple-600 - No-Show (Hired)
+};
 // Status ID to Icon mapping
 const STATUS_ICON_MAP: Record<
   number,
   { icon: string; fill?: string; size?: string; extraClass?: string }
 > = {
-   12: { icon: 'minus-circle-solid', fill: '#9ca3af', size: '25' }, // gray-400
+  12: { icon: 'minus-circle-solid', fill: '#9ca3af', size: '25' }, // gray-400
   15: { icon: 'check-circle-solid', fill: '#38bdf8', size: '25' }, // sky-400
   16: { icon: 'check-circle-solid', fill: '#2563eb', size: '25' }, // blue-600
   20: { icon: 'minus-circle-solid', fill: '#f97316', size: '25' }, // orange-500
@@ -93,6 +116,27 @@ export class TrackingComponent
     decline?: number;
     hold?: number;
     received?: number;
+    pending1?: number;
+    inprocess1?: number;
+    scheduled1?: number;
+    noshow1?: number;
+    declineInterview1?: number;
+    accept1?: number;
+    decline1?: number;
+    pending2?: number;
+    inprocess2?: number;
+    scheduled2?: number;
+    noshow2?: number;
+    declineInterview2?: number;
+    accept2?: number;
+    decline2?: number;
+    pendingOffer?: number;
+    offer_accept?: number;
+    offer_decline?: number;
+    offer_onhold?: number;
+    onboarded?: number;
+    hired_decline?: number;
+    hired_noshow?: number;
   }>({});
 
   // Table Configuration
@@ -197,89 +241,178 @@ export class TrackingComponent
   ] as const;
 
   // Filter configuration for tracking
-   readonly filterItems = computed<GroupedCheckboxOption[]>(() => {
-    const counts = this.groupCounts();
-    
-    return [
-      {
-        groupKey: 'applied',
-        groupLabel: 'Applied',
-        options: [
-          { 
-            key: 'received', 
-            label: `Received${counts.received !== undefined ? ` (${counts.received.toLocaleString()})` : ''}` 
-          }
-        ],
-      },
-      {
-        groupKey: 'screened',
-        groupLabel: 'Screened',
-        options: [
-          { 
-            key: 'pending', 
-            label: `Pending${counts.pending !== undefined ? ` (${counts.pending.toLocaleString()})` : ''}` 
-          },
-          { 
-            key: 'accept', 
-            label: `Accept${counts.accept !== undefined ? ` (${counts.accept.toLocaleString()})` : ''}` 
-          },
-          { 
-            key: 'decline', 
-            label: `Decline${counts.decline !== undefined ? ` (${counts.decline.toLocaleString()})` : ''}` 
-          },
-          { 
-            key: 'hold', 
-            label: `On Hold${counts.hold !== undefined ? ` (${counts.hold.toLocaleString()})` : ''}` 
-          },
-        ],
-      },
-      {
-        groupKey: 'interview1',
-        groupLabel: 'Interview 1',
-        options: [
-          { key: '12', label: 'Pending' },
-          { key: '15', label: 'Inprocess' },
-          { key: '16', label: 'Scheduled' },
-          { key: '23', label: 'No-Show' },
-          { key: '25', label: 'Decline Interview' },
-          { key: '21', label: 'Accept' },
-          { key: '22', label: 'Decline' },
-        ],
-      },
-      {
-        groupKey: 'interview2',
-        groupLabel: 'Interview 2',
-        options: [
-          { key: '12', label: 'Pending' },
-          { key: '15', label: 'Inprocess' },
-          { key: '16', label: 'Scheduled' },
-          { key: '23', label: 'No-Show' },
-          { key: '25', label: 'Decline Interview' },
-          { key: '21', label: 'Accept' },
-          { key: '22', label: 'Decline' },
-        ],
-      },
-      {
-        groupKey: 'offered',
-        groupLabel: 'Offered',
-        options: [
-          { key: '12', label: 'Pending' },
-          { key: '40', label: 'Accept' },
-          { key: '42', label: 'Decline' },
-          { key: '43', label: 'OnHold' },
-        ],
-      },
-      {
-        groupKey: 'hired',
-        groupLabel: 'Hired',
-        options: [
-          { key: '41', label: 'Onboarded' },
-          { key: '45', label: 'No-Show' },
-          { key: '44', label: 'Decline' },
-        ],
-      },
-    ];
-  });
+ readonly filterItems = computed<GroupedCheckboxOption[]>(() => {
+  const counts = this.groupCounts();
+  
+  return [
+    {
+      groupKey: 'applied',
+      groupLabel: 'Applied',
+      options: [
+        { 
+          key: 'received', 
+          label: `Received${counts.received !== undefined ? ` (${counts.received.toLocaleString()})` : ''}`,
+          color: STATUS_COLOR_MAP['received']
+        }
+      ],
+    },
+    {
+      groupKey: 'screened',
+      groupLabel: 'Screened',
+      options: [
+        { 
+          key: 'pending', 
+          label: `Pending${counts.pending !== undefined ? ` (${counts.pending.toLocaleString()})` : ''}`,
+          color: STATUS_COLOR_MAP['pending']
+        },
+        { 
+          key: 'accept', 
+          label: `Accept${counts.accept !== undefined ? ` (${counts.accept.toLocaleString()})` : ''}`,
+          color: STATUS_COLOR_MAP['accept']
+        },
+        { 
+          key: 'decline', 
+          label: `Decline${counts.decline !== undefined ? ` (${counts.decline.toLocaleString()})` : ''}`,
+          color: STATUS_COLOR_MAP['decline']
+        },
+        { 
+          key: 'hold', 
+          label: `On Hold${counts.hold !== undefined ? ` (${counts.hold.toLocaleString()})` : ''}`,
+          color: STATUS_COLOR_MAP['hold']
+        },
+      ],
+    },
+    {
+      groupKey: 'interview1',
+      groupLabel: 'Interview 1',
+      options: [
+        { 
+          key: '12', 
+          label: `Pending${counts.pending1 !== undefined ? ` (${counts.pending1.toLocaleString()})` : ''}`, 
+          color: STATUS_COLOR_MAP[12] 
+        },
+        { 
+          key: '15', 
+          label: `Inprocess${counts.inprocess1 !== undefined ? ` (${counts.inprocess1.toLocaleString()})` : ''}`, 
+          color: STATUS_COLOR_MAP[15] 
+        },
+        { 
+          key: '16', 
+          label: `Scheduled${counts.scheduled1 !== undefined ? ` (${counts.scheduled1.toLocaleString()})` : ''}`, 
+          color: STATUS_COLOR_MAP[16] 
+        },
+        { 
+          key: '23', 
+          label: `No-Show${counts.noshow1 !== undefined ? ` (${counts.noshow1.toLocaleString()})` : ''}`, 
+          color: STATUS_COLOR_MAP[23] 
+        },
+        { 
+          key: '25', 
+          label: `Decline Interview${counts.declineInterview1 !== undefined ? ` (${counts.declineInterview1.toLocaleString()})` : ''}`, 
+          color: STATUS_COLOR_MAP[25] 
+        },
+        { 
+          key: '21', 
+          label: `Accept${counts.accept1 !== undefined ? ` (${counts.accept1.toLocaleString()})` : ''}`, 
+          color: STATUS_COLOR_MAP[21] 
+        },
+        { 
+          key: '22', 
+          label: `Decline${counts.decline1 !== undefined ? ` (${counts.decline1.toLocaleString()})` : ''}`, 
+          color: STATUS_COLOR_MAP[22] 
+        },
+      ],
+    },
+    {
+      groupKey: 'interview2',
+      groupLabel: 'Interview 2',
+      options: [
+        { 
+          key: '12', 
+          label: `Pending${counts.pending2 !== undefined ? ` (${counts.pending2.toLocaleString()})` : ''}`, 
+          color: STATUS_COLOR_MAP[12] 
+        },
+        { 
+          key: '15', 
+          label: `Inprocess${counts.inprocess2 !== undefined ? ` (${counts.inprocess2.toLocaleString()})` : ''}`, 
+          color: STATUS_COLOR_MAP[15] 
+        },
+        { 
+          key: '16', 
+          label: `Scheduled${counts.scheduled2 !== undefined ? ` (${counts.scheduled2.toLocaleString()})` : ''}`, 
+          color: STATUS_COLOR_MAP[16] 
+        },
+        { 
+          key: '23', 
+          label: `No-Show${counts.noshow2 !== undefined ? ` (${counts.noshow2.toLocaleString()})` : ''}`, 
+          color: STATUS_COLOR_MAP[23] 
+        },
+        { 
+          key: '25', 
+          label: `Decline Interview${counts.declineInterview2 !== undefined ? ` (${counts.declineInterview2.toLocaleString()})` : ''}`, 
+          color: STATUS_COLOR_MAP[25] 
+        },
+        { 
+          key: '21', 
+          label: `Accept${counts.accept2 !== undefined ? ` (${counts.accept2.toLocaleString()})` : ''}`, 
+          color: STATUS_COLOR_MAP[21] 
+        },
+        { 
+          key: '22', 
+          label: `Decline${counts.decline2 !== undefined ? ` (${counts.decline2.toLocaleString()})` : ''}`, 
+          color: STATUS_COLOR_MAP[22] 
+        },
+      ],
+    },
+    {
+      groupKey: 'offered',
+      groupLabel: 'Offered',
+      options: [
+        { 
+          key: '12', 
+          label: `Pending${counts.pendingOffer !== undefined ? ` (${counts.pendingOffer.toLocaleString()})` : ''}`, 
+          color: STATUS_COLOR_MAP[12] 
+        },
+        { 
+          key: '40', 
+          label: `Accept${counts.offer_accept !== undefined ? ` (${counts.offer_accept.toLocaleString()})` : ''}`, 
+          color: STATUS_COLOR_MAP[40] 
+        },
+        { 
+          key: '42', 
+          label: `Decline${counts.offer_decline !== undefined ? ` (${counts.offer_decline.toLocaleString()})` : ''}`, 
+          color: STATUS_COLOR_MAP[42] 
+        },
+        { 
+          key: '43', 
+          label: `OnHold${counts.offer_onhold !== undefined ? ` (${counts.offer_onhold.toLocaleString()})` : ''}`, 
+          color: STATUS_COLOR_MAP[43] 
+        },
+      ],
+    },
+    {
+      groupKey: 'hired',
+      groupLabel: 'Hired',
+      options: [
+        { 
+          key: '41', 
+          label: `Onboarded${counts.onboarded !== undefined ? ` (${counts.onboarded.toLocaleString()})` : ''}`, 
+          color: STATUS_COLOR_MAP[41] 
+        },
+        { 
+          key: '45', 
+          label: `No-Show${counts.hired_noshow !== undefined ? ` (${counts.hired_noshow.toLocaleString()})` : ''}`, 
+          color: STATUS_COLOR_MAP[45] 
+        },
+        { 
+          key: '44', 
+          label: `Decline${counts.hired_decline !== undefined ? ` (${counts.hired_decline.toLocaleString()})` : ''}`, 
+          color: STATUS_COLOR_MAP[44] 
+        },
+      ],
+    },
+  ];
+});
 
 
   readonly filterConfig: FilterConfig = {
@@ -288,9 +421,9 @@ export class TrackingComponent
   };
 
   // Abstract method implementations
-  protected getStorageKeys() {
-    return TRACKING_CONFIG.STORAGE_KEYS;
-  }
+  // protected getStorageKeys() {
+  //   return TRACKING_CONFIG.STORAGE_KEYS;
+  // }
 
   protected createInitialFilter(): ICandidateFilterRequest {
     return {
@@ -338,7 +471,16 @@ export class TrackingComponent
   ): TrackingRow[] {
     return items.map((item) => this.transformSingleItem(item));
   }
+@ViewChild('scrollContainer') scrollContainer!: ElementRef<HTMLDivElement>;
 
+// แก้ไข scrollToTop method
+protected override scrollToTop(): void {
+  requestAnimationFrame(() => {
+    if (this.scrollContainer?.nativeElement) {
+      this.scrollContainer.nativeElement.scrollTop = 0;
+    }
+  });
+}
   // Override for tracking-specific data fetching
   protected override fetchData(
     filter: ICandidateFilterRequest,
@@ -365,6 +507,27 @@ export class TrackingComponent
             decline: response.groupCounts.decline,
             hold: response.groupCounts.hold,
             received: response.groupCounts.received,
+            pending1:  response.groupCounts.pending1,
+            inprocess1: response.groupCounts.inprocess1,
+            scheduled1:  response.groupCounts.scheduled1,
+            noshow1: response.groupCounts.noshow1,
+            declineInterview1: response.groupCounts.declineInterview1,
+            accept1: response.groupCounts.accept1,
+            decline1: response.groupCounts.decline1,
+            pending2: response.groupCounts.pending2,
+            inprocess2: response.groupCounts.inprocess2,
+            scheduled2: response.groupCounts.scheduled2,
+            noshow2: response.groupCounts.noshow2,
+            declineInterview2: response.groupCounts.declineInterview2,
+            accept2: response.groupCounts.accept2,
+            decline2:  response.groupCounts.decline2,
+            pendingOffer:  response.groupCounts.pendingOffer,
+            offer_accept:  response.groupCounts.offer_accept,
+            offer_decline:   response.groupCounts.offer_decline,
+            offer_onhold:  response.groupCounts.offer_onhold,
+            onboarded:   response.groupCounts.onboarded,
+            hired_decline:   response.groupCounts.hired_decline,
+            hired_noshow:  response.groupCounts.hired_noshow
           });
         }
       }),
@@ -384,8 +547,9 @@ export class TrackingComponent
   // Lifecycle hooks
   ngAfterViewInit(): void {
     super.ngOnInit();
-    this.updateTableHeight();
-    this.setupResizeObserver();
+    // this.updateTableHeight();
+    // this.setupResizeObserver();
+    console.log('TrackingComponent initialized');
   }
 
   override ngOnDestroy(): void {
@@ -480,20 +644,20 @@ export class TrackingComponent
     return STATUS_ICON_MAP[id] || STATUS_ICON_MAP[12];
   }
 
-  private setupResizeObserver(): void {
-    if (this.filterRef?.nativeElement) {
-      this.resizeObserver = new ResizeObserver(() => {
-        this.updateTableHeight();
-      });
-      this.resizeObserver.observe(this.filterRef.nativeElement);
-    }
-  }
+  // private setupResizeObserver(): void {
+  //   if (this.filterRef?.nativeElement) {
+  //     this.resizeObserver = new ResizeObserver(() => {
+  //       this.updateTableHeight();
+  //     });
+  //     this.resizeObserver.observe(this.filterRef.nativeElement);
+  //   }
+  // }
 
   // เพิ่ม HostListener สำหรับรีไซส์หน้าต่าง
-  @HostListener('window:resize')
-  onWindowResize() {
-    this.updateTableHeight();
-  }
+  // @HostListener('window:resize')
+  // onWindowResize() {
+  //   this.updateTableHeight();
+  // }
 
   private disconnectResizeObserver(): void {
     if (this.resizeObserver) {
@@ -501,26 +665,26 @@ export class TrackingComponent
     }
   }
 
-  private updateTableHeight(): void {
-    requestAnimationFrame(() => {
-      const container = this.tableContainerRef?.nativeElement;
-      if (!container) return;
+  // private updateTableHeight(): void {
+  //   requestAnimationFrame(() => {
+  //     const container = this.tableContainerRef?.nativeElement;
+  //     if (!container) return;
 
-      // วัดระยะจากขอบบนของ container ถึงขอบล่างของ viewport
-      const top = container.getBoundingClientRect().top;
-      const viewportH = window.innerHeight;
-      const bottomGap = 16; // กันไว้เล็กน้อยไม่ให้ชนขอบ
+  //     // วัดระยะจากขอบบนของ container ถึงขอบล่างของ viewport
+  //     const top = container.getBoundingClientRect().top;
+  //     const viewportH = window.innerHeight;
+  //     const bottomGap = 16; // กันไว้เล็กน้อยไม่ให้ชนขอบ
 
-      const newHeight = Math.max(240, viewportH - top - bottomGap);
-      container.style.height = `${newHeight}px`;
+  //     const newHeight = Math.max(240, viewportH - top - bottomGap) + 500;
+  //     container.style.height = `${newHeight}px`;
 
-      // อัปเดตสถานะมีสกรอลล์แนวตั้งหรือไม่ (ส่งต่อไปที่ <app-tables [hasOverflowY]>)
-      const hasOverflow = container.scrollHeight > container.clientHeight;
-      if (this.hasOverflowY !== hasOverflow) {
-        this.hasOverflowY = hasOverflow;
-      }
-    });
-  }
+  //     // อัปเดตสถานะมีสกรอลล์แนวตั้งหรือไม่ (ส่งต่อไปที่ <app-tables [hasOverflowY]>)
+  //     const hasOverflow = container.scrollHeight > container.clientHeight;
+  //     if (this.hasOverflowY !== hasOverflow) {
+  //       this.hasOverflowY = hasOverflow;
+  //     }
+  //   });
+  // }
 
   // Override persistence methods to handle tracking-specific data
   // protected override loadPersistedState(): void {
@@ -559,20 +723,20 @@ export class TrackingComponent
   // }
 
   // Helper method for creating pipe operators (extracted for reusability)
-  private createDataPipeOperators(append: boolean): Observable<void> {
-    const trackingFilter: ICandidateTrackingFilterRequest = {
-      ...this.filterRequest(),
-      ...this.trackingFilterRequest(),
-    };
+  // private createDataPipeOperators(append: boolean): Observable<void> {
+  //   const trackingFilter: ICandidateTrackingFilterRequest = {
+  //     ...this.filterRequest(),
+  //     ...this.trackingFilterRequest(),
+  //   };
 
-    return this.applicationService.getTrackingApplications(trackingFilter).pipe(
-      tap((response: any) => this.handleApiResponse(response, append)),
-      // tap(() => this.persistFilterState()),
-      catchError((error: any) => this.handleApiError(error)),
-      tap(() => this.loadingState.set(false)),
-      map(() => void 0)
-    );
-  }
+  //   return this.applicationService.getTrackingApplications(trackingFilter).pipe(
+  //     tap((response: any) => this.handleApiResponse(response, append)),
+  //     // tap(() => this.persistFilterState()),
+  //     catchError((error: any) => this.handleApiError(error)),
+  //     tap(() => this.loadingState.set(false)),
+  //     map(() => void 0)
+  //   );
+  // }
 
   override onRowClick(row: any): void {
     const id = (row as any)?.id;

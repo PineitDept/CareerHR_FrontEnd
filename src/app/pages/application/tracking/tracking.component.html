@@ -1,5 +1,5 @@
-<div class="tw-min-h-screen"> <!-- เพิ่ม wrapper เพื่อให้แน่ใจว่ามี scroll -->
-  <div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
+<div class="tw-h-[calc(100vh-80px)] tw-overflow-y-auto" (scroll)="onScroll($event)" #scrollContainer>
+  <div class="tw-sticky tw-top-0 tw-z-[30]">
     <app-header-content
       [headerName]="'Applications Tracking'"
       [headerType]="'search'"
@@ -26,22 +26,20 @@
 
   <app-loading></app-loading>
 
-  <div #tableContainer #scrollArea>
+  <div #tableContainer  >
     <app-tables
       [columns]="columns"
       [rows]="rows()"
       [resetKey]="resetCounter()"
       [splitRows]="false"
       [showCheckbox]="false"
+      [stickyHeader]="true"
       [sortStates]="currentSort()"
       (rowClicked)="onRowClick($event)"
       (columnClicked)="onColumnClick($event)"
       (listClickedRows)="onClickedRowsChanged($event)"
-      [hasOverflowY]="false"
+      [hasOverflowY]="hasOverflowY"
       [tableFixed]="false"
     ></app-tables>
   </div>
-  
-  <!-- เพิ่ม spacer ด้านล่างเพื่อให้แน่ใจว่ามี scroll -->
-  <div class="tw-h-20"></div>
 </div>

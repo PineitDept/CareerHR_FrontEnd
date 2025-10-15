@@ -7,7 +7,7 @@
   <div class="tw-shadow-sm tw-border tw-border-gray-200" [ngClass]="withinCard ? '' : 'tw-overflow-clip tw-rounded-md'">
     <table class="tw-w-full tw-text-sm tw-text-left tw-border-separate tw-border-spacing-0"
       [ngClass]="tableFixed ? 'tw-table-fixed' : ''">
-      <thead>
+     <thead [class.tw-sticky]="stickyHeader" [class.tw-top-[90px]]="stickyHeader" [class.tw-z-10]="stickyHeader" class="tw-bg-white">
         <tr class="tw-text-white" [ngClass]="{
             'tw-text-white': !withinCard,
             'tw-text-black': withinCard,
