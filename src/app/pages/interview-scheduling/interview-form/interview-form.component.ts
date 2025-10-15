@@ -273,7 +273,9 @@ export class InterviewFormComponent {
               class: [
                 ...(item.interview1Result === 21
                   ? ['tw-bg-green-500', 'tw-text-white', 'tw-ring-green-500/10']
-                  : ['tw-bg-red-500', 'tw-text-white', 'tw-ring-red-500/10']),
+                  : item.interview1Result === 16
+                    ? ['tw-bg-indigo-400', 'tw-text-white', 'tw-ring-indigo-400/10']
+                    : ['tw-bg-red-500', 'tw-text-white', 'tw-ring-red-500/10']),
                 ...(interview1Hidden ? ['tw-hidden'] : []),
               ],
             },
@@ -282,7 +284,9 @@ export class InterviewFormComponent {
               class: [
                 ...(item.interview2Result === 21
                   ? ['tw-bg-green-500', 'tw-text-white', 'tw-ring-green-500/10']
-                  : ['tw-bg-red-500', 'tw-text-white', 'tw-ring-red-500/10']),
+                  : item.interview2Result === 16
+                    ? ['tw-bg-indigo-400', 'tw-text-white', 'tw-ring-indigo-400/10']
+                    : ['tw-bg-red-500', 'tw-text-white', 'tw-ring-red-500/10']),
                 ...(interview2Hidden ? ['tw-hidden'] : []),
               ],
             },
@@ -595,7 +599,9 @@ export class InterviewFormComponent {
               class: [
                 ...(item.interview1Result === 21
                   ? ['tw-bg-green-500', 'tw-text-white', 'tw-ring-green-500/10']
-                  : ['tw-bg-red-500', 'tw-text-white', 'tw-ring-red-500/10']),
+                  : item.interview1Result === 16
+                    ? ['tw-bg-indigo-400', 'tw-text-white', 'tw-ring-indigo-400/10']
+                    : ['tw-bg-red-500', 'tw-text-white', 'tw-ring-red-500/10']),
                 ...(interview1Hidden ? ['tw-hidden'] : []),
               ],
             },
@@ -604,7 +610,9 @@ export class InterviewFormComponent {
               class: [
                 ...(item.interview2Result === 21
                   ? ['tw-bg-green-500', 'tw-text-white', 'tw-ring-green-500/10']
-                  : ['tw-bg-red-500', 'tw-text-white', 'tw-ring-red-500/10']),
+                  : item.interview2Result === 16
+                    ? ['tw-bg-indigo-400', 'tw-text-white', 'tw-ring-indigo-400/10']
+                    : ['tw-bg-red-500', 'tw-text-white', 'tw-ring-red-500/10']),
                 ...(interview2Hidden ? ['tw-hidden'] : []),
               ],
             },

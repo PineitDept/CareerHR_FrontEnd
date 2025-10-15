@@ -64,7 +64,15 @@ export class InterviewRound1Component {
 
   // ---------- Tabs / filters ----------
   selectedTab = 'total';
-  filterButtons: { label: string; key: string; color: string; outlineBtn?: boolean }[] = [];
+  filterButtons: {
+    label: string;
+    key: string;
+    color?: string;
+    textColor?: string;
+    borderColor?: string;
+    outlineBtn?: boolean;
+    options?: Array<{ label: string; value: any }>;
+  }[] = [];
 
   // ---------- Dropdown data sources ----------
   locationsList: any;
@@ -175,7 +183,12 @@ export class InterviewRound1Component {
     this.fetchInterviewer();
     this.fetchStatusCall();
 
-    this.filterButtons = [{ label: 'History', key: 'history', color: 'transparent', outlineBtn: true }];
+    this.filterButtons = [{
+      label: 'History', key: 'history', outlineBtn: true, 
+      color: '#FFFFFF',
+      textColor: '#000000',
+      borderColor: '#000000',
+    }];
   }
 
   // ---------- Data fetching ----------
