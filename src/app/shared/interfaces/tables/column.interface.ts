@@ -1,7 +1,10 @@
+type TableCellType = 'text' | 'badge' | 'number' | 'select' | 'button' | 'date' | 'dateWithTime' | 'list' | 'icon' | 'expandable' | 'toggle' | 'textlink' | 'textlink-custom' | 'input' | 'textarea' | 'multipleselect' | 'dynamic'; // Column type
+
 export interface Column {
   header: string;           // Displayed column header name
   field: string;           // Field name to map with row data
-  type?: 'text' | 'badge' | 'number' | 'select' | 'button' | 'date' | 'dateWithTime' | 'list' | 'icon' | 'expandable' | 'toggle' | 'textlink'; // Column type
+  type?: TableCellType;     // Column type
+  typeFn?: (row: any) => TableCellType;
   textlinkActions?: Array<'view' | 'edit-topopup' | 'edit-inrow' | 'save' | 'cancel' | 'delete'>; // type: textlink
   width?: string;
   minWidth?: string;
@@ -12,13 +15,21 @@ export interface Column {
   subColumn?: string;
 
   // Type-specific properties
-  options?: string[];       // Options for select type
+  options?: string[] | ((row: any) => any[]) | string;      // Options for select type
   buttonText?: string;      // Button label (if type is button)
   onClick?: (row: any) => void; // Callback when button is clicked
 
   // Sortable
   sortable?: boolean;
-  sortDirection?: 'asc' | 'desc' | null; 
+  sortDirection?: 'asc' | 'desc' | null;
+
+  editing?: boolean;
+
+  useRowTextlinkActions?: boolean;
+
+  // textlink-custom
+  iconLink?: string;
+  optionsKey?: any;
 }
 
 export type Columns = Column[];

@@ -1,6 +1,14 @@
-import { NgModule } from '@angular/core';
+import { APP_INITIALIZER, NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
+
+import { MatDialogModule } from '@angular/material/dialog';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule }   from '@angular/material/icon';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule }  from '@angular/material/input';
+
+import { DragDropModule } from '@angular/cdk/drag-drop';
 
 import { HeaderContentComponent } from './components/headers/header-content/header-content.component';
 import { HeaderMainComponent } from './components/headers/header-main/header-main.component';
@@ -15,7 +23,26 @@ import { LoadingComponent } from './components/loading/loading.component';
 import { MultiSelectDropdownComponent } from './components/multi-select-dropdown/multi-select-dropdown.component';
 import { FilterCheckBoxComponent } from './components/filter-check-box/filter-check-box.component';
 import { FormDialogComponent } from './components/dialogs/form-dialog/form-dialog.component';
-// import { PurchaseOrderDetailsFormComponent } from './components/forms/purchase-order-details-form/purchase-order-details-form.component';
+import { CaptchaDialogComponent } from './components/dialogs/captcha-dialog/captcha-dialog.component';
+import { ConfirmLeaveDialogComponent } from './components/dialogs/confirm-leave-dialog/confirm-leave-dialog.component';
+import { OverlayModule } from '@angular/cdk/overlay';
+import { PortalModule } from '@angular/cdk/portal';
+import { ScrollingModule } from '@angular/cdk/scrolling';
+import { ConfirmChangesDialogComponent } from './components/dialogs/confirm-changes-dialog/confirm-changes-dialog.component';
+import { DualListboxComponent } from './components/dual-listbox/dual-listbox.component';
+import { QualityDialogComponent } from './components/dialogs/quality-dialog/quality-dialog.component';
+import { CdkDropdownComponent } from './components/cdk-dropdown/cdk-dropdown.component';
+import { BackToTopComponent } from './components/back-to-top/back-to-top.component';
+import { FullCalendarModule } from '@fullcalendar/angular';
+import { CalendarComponent } from './components/calendar/calendar.component';
+import { SlickCarouselModule } from 'ngx-slick-carousel';
+import { SelectDialogComponent } from './components/dialogs/select-dialog/select-dialog.component';
+import { MailDialogComponent } from './components/dialogs/mail-dialog/mail-dialog.component';
+import { RevisionHistoryFooterComponent } from './components/revision-history-footer/revision-history-footer.component';
+import { QuillModule } from 'ngx-quill';
+import { quillInitFactory } from '../app.module';
+import { UniversityPickerDialogComponent } from './components/dialogs/university-picker-dialog/university-picker-dialog.component';
+import { StepperComponent } from './components/stepper/stepper.component';
 
 @NgModule({
   declarations: [
@@ -31,13 +58,37 @@ import { FormDialogComponent } from './components/dialogs/form-dialog/form-dialo
     MultiSelectDropdownComponent,
     FilterCheckBoxComponent,
     FormDialogComponent,
-    // PurchaseOrderDetailsFormComponent
+    CaptchaDialogComponent,
+    ConfirmLeaveDialogComponent,
+    ConfirmChangesDialogComponent,
+    DualListboxComponent,
+    QualityDialogComponent,
+    CdkDropdownComponent,
+    BackToTopComponent,
+    CalendarComponent,
+    SelectDialogComponent,
+    MailDialogComponent,
+    RevisionHistoryFooterComponent,
+    UniversityPickerDialogComponent,
+    StepperComponent,
   ],
   imports: [
     CommonModule,
     FormsModule,
-    ReactiveFormsModule
-  ],
+    ReactiveFormsModule,
+    MatDialogModule,
+    MatButtonModule,
+    MatIconModule,
+    MatFormFieldModule,
+    MatInputModule,
+    DragDropModule,
+    OverlayModule,
+    PortalModule,
+    ScrollingModule,
+    FullCalendarModule,
+    SlickCarouselModule,
+    QuillModule.forRoot(),
+],
   exports: [
     HeaderContentComponent,
     HeaderMainComponent,
@@ -51,7 +102,23 @@ import { FormDialogComponent } from './components/dialogs/form-dialog/form-dialo
     MultiSelectDropdownComponent,
     FilterCheckBoxComponent,
     FormDialogComponent,
+    CaptchaDialogComponent,
+    ConfirmLeaveDialogComponent,
+    ConfirmChangesDialogComponent,
+    DualListboxComponent,
+    OverlayModule,
+    CdkDropdownComponent,
+    BackToTopComponent,
     // PurchaseOrderDetailsFormComponent
+    CalendarComponent,
+    FullCalendarModule,
+    SlickCarouselModule,
+    RevisionHistoryFooterComponent,
+    UniversityPickerDialogComponent,
+    StepperComponent,
+  ],
+  providers: [
+    { provide: APP_INITIALIZER, useFactory: quillInitFactory, multi: true },
   ]
 })
 export class SharedModule { }

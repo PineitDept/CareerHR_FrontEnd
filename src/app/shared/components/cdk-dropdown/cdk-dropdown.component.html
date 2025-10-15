@@ -1,0 +1,29 @@
+<p *ngIf="label" class="tw-text-sm tw-font-bold tw-mb-2 text-black">{{ label }} <span *ngIf="require" class="text-red">*</span></p>
+
+<!-- Trigger -->
+<button #trigger type="button" class="dd-trigger" [class.dd-disabled]="disabledSelected" [disabled]="disabledSelected"
+    (click)="open(trigger)" (keydown)="onTriggerKeydown($event, trigger)">
+    <span class="dd-text tw-text-left">{{ display }}</span>
+    <svg class="dd-caret" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" />
+    </svg>
+</button>
+
+<!-- Panel -->
+<ng-template #panel>
+    <div class="dd-panel" role="listbox" [style.max-height.px]="panelMaxHeight" tabindex="0"
+        (keydown)="onPanelKeydown($event)">
+        <ul class="dd-menu">
+            <li *ngFor="let i of items; let idx = index" class="dd-item"
+                [attr.data-active]="activeIndex === idx ? 'true' : null" [class.dd-selected]="isEqual(i.value, value)"
+                (mouseenter)="activeIndex = idx" (click)="selectAt(idx)">
+                <span class="dd-label">{{ i.label }}</span>
+
+                <svg *ngIf="isEqual(i.value, value)" class="dd-check" width="16" height="16" viewBox="0 0 24 24"
+                    aria-hidden="true">
+                    <path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2" />
+                </svg>
+            </li>
+        </ul>
+    </div>
+</ng-template>

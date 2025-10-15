@@ -1,1 +1,39 @@
-<p>reason-request works!</p>
+<div class="tw-sticky tw-top-0 tw-z-[30]">
+  <app-header-content
+    [headerName]="'Reason Manpower Request'"
+    [headerType]="''"
+  ></app-header-content>
+</div>
+
+<app-filter
+  [filterDate]="false"
+  [actionButtons]="filterButtons"
+  [disabledKeys]="isAddingRow ? ['add'] : []"
+  (buttonClicked)="onFilterButtonClick($event)"
+></app-filter>
+
+<app-loading></app-loading>
+
+<div
+  #tableContainer
+  class="tw-max-h-[calc(100vh-260px)] tw-overflow-y-auto"
+  (scroll)="onScroll($event)"
+  #scrollArea
+>
+  <app-tables
+    #tables
+    [columns]="columns"
+    [rows]="ScreenRows"
+    [splitRows]="true"
+    [showCheckbox]="false"
+    [enableRowClick]="false"
+    (toggleChange)="onUserToggleRequested($event)"
+    (editClicked)="handleEditRow($event)"
+    (createInlineSave)="onInlineSave($event)"
+    (createInlineCancel)="onInlineCancel()"
+    [isAddMode]="isAddingRow"
+    [fieldErrors]="fieldErrors"
+    [highlightRowIndex]="duplicateRowIndex"
+    [hasOverflowY]="hasOverflowY"
+  ></app-tables>
+</div>

@@ -1,0 +1,80 @@
+<div class="tw-text-black">
+  <!-- Header -->
+  <div class="tw-text-lg tw-font-semibold tw-px-6 tw-pt-4 tw-pb-3">
+    Select University
+  </div>
+
+  <div class="tw-border-t tw-border-[#E3E3E3]"></div>
+
+  <!-- Body -->
+  <div class="tw-px-6 tw-py-6">
+    <label class="tw-block tw-text-base tw-font-medium tw-text-gray-700 tw-mb-1">
+      University
+    </label>
+
+    <!-- ปุ่ม + cdk overlay -->
+    <div class="tw-relative tw-w-full" cdkOverlayOrigin #uniOrigin="cdkOverlayOrigin">
+      <button
+        #uniBtn
+        type="button"
+        (click)="toggleOverlay()"
+        (keydown.arrowDown)="moveActive(+1)"
+        (keydown.arrowUp)="moveActive(-1)"
+        (keydown.enter)="confirmActive()"
+        class="tw-w-full tw-flex tw-justify-between tw-items-center
+               tw-bg-gray-light-4 tw-border tw-border-[#ADB5BD] tw-rounded-[8px]
+               tw-px-4 tw-py-2 tw-text-base tw-text-[#495057] tw-outline-none tw-gap-2"
+        [attr.aria-expanded]="isOpen ? 'true' : 'false'">
+        {{ selected || 'Select university' }}
+        <app-icon name="chevron-down" [size]="14" class="tw-text-[#495057]"></app-icon>
+      </button>
+    </div>
+
+    <!-- Dropdown Overlay -->
+    <ng-template
+      cdkConnectedOverlay
+      [cdkConnectedOverlayOrigin]="uniOrigin"
+      [cdkConnectedOverlayOpen]="isOpen"
+      [cdkConnectedOverlayHasBackdrop]="true"
+      [cdkConnectedOverlayBackdropClass]="'overlay-clear-backdrop'"
+      (backdropClick)="closeOverlay()"
+      (detach)="closeOverlay()"
+      [cdkConnectedOverlayPanelClass]="'tw-z-[1100]'"
+      [cdkConnectedOverlayPositions]="overlayPositions">
+      <div
+        class="tw-bg-white tw-border tw-rounded-md tw-shadow-lg tw-max-h-[260px] tw-overflow-y-auto"
+        [style.width.px]="overlayWidth || 260">
+        <ul class="tw-py-1" role="listbox">
+          <li
+            *ngFor="let u of universities; let i = index"
+            (mousedown)="onMouseDownSelect(u, $event)"
+            class="tw-px-4 tw-py-2 tw-cursor-pointer hover:tw-bg-gray-100 tw-text-base tw-text-[#495057]"
+            [class.tw-bg-[#E6F4FF]]="i === activeIndex"
+            role="option"
+            [attr.aria-selected]="i === activeIndex">
+            {{ u }}
+          </li>
+        </ul>
+      </div>
+    </ng-template>
+  </div>
+
+  <div class="tw-border-t tw-border-gray-300"></div>
+
+  <!-- Footer -->
+  <div class="tw-text-right tw-px-6 tw-pt-3 tw-pb-3">
+    <button
+      type="button"
+      class="tw-bg-gray-200 hover:tw-bg-gray-300 tw-text-black tw-font-medium tw-py-1.5 tw-px-5 tw-rounded-lg tw-mr-2"
+      (click)="onCancel()">
+      Cancel
+    </button>
+    <button
+      type="button"
+      class="tw-text-white tw-font-medium tw-py-1.5 tw-px-6 tw-rounded-lg tw-bg-[#00AA55] hover:tw-bg-[#02934a]"
+      [disabled]="!selected"
+      (click)="onConfirm()">
+      Add
+    </button>
+  </div>
+</div>

@@ -1,4 +1,4 @@
-<div class="tw-flex tw-gap-4 tw-overflow-x-auto tw-scrollbar-hide tw-py-4 tw-mx-6">
+<div class="tw-flex tw-gap-4 tw-overflow-x-auto tw-scrollbar-hide tw-py-4 tw-mx-6" [ngClass]="directCol ? 'tw-flex-col' : ''">
   @for (group of items; track group.groupKey) {
   <div class="tw-group tw-flex-1 tw-min-w-[200px]">
     <!-- Card Container -->
@@ -9,7 +9,7 @@
 
       <!-- Header -->
       <div class="tw-relative tw-overflow-hidden tw-rounded-t-lg tw-bg-white tw-rounded-lg">
-        <div class="tw-flex tw-justify-between tw-items-center tw-px-4 tw-py-2 tw-cursor-pointer
+        <div class="tw-flex tw-justify-between tw-items-center tw-p-4 tw-cursor-pointer
                       tw-transition-all tw-duration-200 hover:tw-bg-gray-50" (click)="toggleGroup(group.groupKey)">
 
           <div class="tw-flex tw-items-center tw-gap-3">
@@ -37,7 +37,8 @@
       </div>
 
       <!-- Content Area -->
-      <div class="tw-overflow-hidden tw-transition-all tw-animate-in tw-slide-in-from-top-2 tw-fade-in tw-duration-300"
+      <div class="tw-transition-all tw-animate-in tw-slide-in-from-top-2 tw-fade-in tw-duration-300"
+        [ngClass]="canScroll ? 'tw-overflow-auto tw-max-h-[350px]' : 'tw-overflow-hidden'"
         [class.tw-max-h-0]="!isExpanded(group.groupKey)" [class.tw-max-h-96]="isExpanded(group.groupKey)">
         @if (isExpanded(group.groupKey)) {
         <div class="tw-space-y-1">

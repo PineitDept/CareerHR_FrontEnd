@@ -2,6 +2,10 @@
 import {
   Component,
   ChangeDetectionStrategy,
+  ViewChild,
+  ElementRef,
+  effect,
+  Injector,
 } from '@angular/core';
 
 import { BaseApplicationComponent } from '../../../shared/base/base-application.component';
@@ -10,6 +14,7 @@ import {
   ICandidateFilterRequest,
   ICandidateWithPositionsDto,
   IPositionDto,
+  SearchForm,
   TabMenu,
 } from '../../../interfaces/Application/application.interface';
 import { Columns } from '../../../shared/interfaces/tables/column.interface';
@@ -22,6 +27,7 @@ const ALL_APPLICATION_CONFIG = {
     FILTER_SETTINGS: 'candidateFilterSettings',
     CLICKED_ROWS: 'candidateclickedRowIndexes',
     SORT_CONFIG: 'candidateSortConfig',
+    HEADER_SEARCH_FORM: 'allAppHeaderSearchForm',
   },
   DEFAULT_STATUS: 'pending',
 } as const;
@@ -33,6 +39,16 @@ const ALL_APPLICATION_CONFIG = {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AllApplicationComponent extends BaseApplicationComponent {
+
+  @ViewChild('scrollArea') scrollArea!: ElementRef<HTMLDivElement>;
+  hasOverflowY = false;
+  private ro?: ResizeObserver;
+
+  constructor(
+    private injector: Injector,
+  ) {
+    super();
+  }
 
   // Table Configuration
   readonly columns: Columns = [
@@ -153,6 +169,24 @@ export class AllApplicationComponent extends BaseApplicationComponent {
     },
   ] as const;
 
+  ngAfterViewInit(): void {
+    this.measureOverflow();
+
+    this.ro = new ResizeObserver(() => this.measureOverflow());
+    this.ro.observe(this.scrollArea.nativeElement);
+
+    // 👇 วัดใหม่ทุกครั้งที่ rows() อัปเดตจาก Base
+    effect(() => {
+      const _ = this.rows();          // อ่านค่าเพื่อให้ effect ติดตาม
+      queueMicrotask(() => this.measureOverflow()); // วัดหลัง DOM อัปเดต
+    }, { injector: this.injector });
+  }
+
+  measureOverflow(): void {
+    const el = this.scrollArea.nativeElement;
+    this.hasOverflowY = el.scrollHeight > el.clientHeight;
+  }
+
   // Abstract method implementations
   protected getStorageKeys() {
     return ALL_APPLICATION_CONFIG.STORAGE_KEYS;
@@ -176,6 +210,29 @@ export class AllApplicationComponent extends BaseApplicationComponent {
     ];
   }
 
+  override onSearch(form: SearchForm): void {
+    // clone เพื่อกัน reference เดิมจาก ngModel
+    const payload: SearchForm = {
+      searchBy: form.searchBy,
+      searchValue: form.searchValue,
+    };
+
+    // persist UI header
+    const { HEADER_SEARCH_FORM } = this.getStorageKeys();
+    this.saveToStorage(HEADER_SEARCH_FORM, payload);
+
+    // ส่งเข้า Base → Base จะเติม __nonce ให้เอง (กดซ้ำก็รีเฟรช)
+    super.onSearch(payload);
+  }
+
+  override onClearSearch(): void {
+    this.searchForm = { searchBy: '', searchValue: '' };
+    const { HEADER_SEARCH_FORM } = this.getStorageKeys();
+    this.saveToStorage(HEADER_SEARCH_FORM, { searchBy: '', searchValue: '' });
+
+    super.onClearSearch();
+  }
+
   protected transformApiDataToRows(
     items: readonly ICandidateWithPositionsDto[]
   ): ApplicationRow[] {
@@ -188,10 +245,10 @@ export class AllApplicationComponent extends BaseApplicationComponent {
     const summary = item.summary;
 
     return {
-      id: summary.userID.toString(),
+      id: item.userID.toString(),
       qualifield: createQualifiedIcon(summary.qualifield),
       submitDate: summary.submitDate || '',
-      userID: summary.userID.toString(),
+      userID: item.userID.toString(),
       fullName: summary.fullName,
       position:
         item.positions?.map((pos: IPositionDto) => pos.namePosition) || [],
@@ -204,7 +261,47 @@ export class AllApplicationComponent extends BaseApplicationComponent {
       eqScore: summary.eqScore,
       ethicsScore: summary.ethicsScore,
       totalBonus: summary.totalBonus,
-      submitStatusLabel: createStatusBadge(summary.submitStatusLabel),
+      submitStatusLabel: createStatusBadge(summary.submitStatusLabel ?? ''),
+      roundID: (item as any).roundID,
     };
+  }
+
+  protected override loadPersistedState(): void {
+    super.loadPersistedState();
+
+    const { HEADER_SEARCH_FORM } = this.getStorageKeys();
+    const headerForm = this.loadFromStorage<{ searchBy: string; searchValue: string }>(HEADER_SEARCH_FORM);
+    if (headerForm) {
+      this.searchForm = { ...headerForm };
+    } else {
+      // ถ้าไม่มี headerForm แต่ filter เคยมี search ให้เดาง่าย ๆ ว่าค้นหาด้วย option แรก
+      const f = this.filterRequest();
+      if (f.search) {
+        this.searchForm = {
+          searchBy: this.searchByOptions?.[0] || 'Application ID',
+          searchValue: f.search,
+        };
+      }
+    }
+  }
+
+  override onRowClick(row: ApplicationRow): void {
+    const id = (row as any)?.id;
+    if (!id) return;
+
+    const queryParams = {
+      id,
+      round: (row as any)?.roundID,
+    };
+
+    this.router.navigate(
+      ['/applications/all-applications/application-form'],
+      { queryParams }
+    );
+  }
+
+  override ngOnDestroy(): void {
+    this.ro?.disconnect?.();
+    super.ngOnDestroy();
   }
 }

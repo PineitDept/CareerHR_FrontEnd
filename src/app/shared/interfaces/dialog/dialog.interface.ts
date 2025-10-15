@@ -5,6 +5,12 @@ export interface AlertDialogData {
   selectedRows?: any[];
   columns?: any[];
   poType?: string[];
+  options?: any[];
+  dropdownConfigs?: any[];
+  quality?: number;
+  missCallCount?: number;
+  dataMail?: any;
+  checkApprove?: boolean;
 }
 
 export interface FormDialogData {
@@ -16,4 +22,21 @@ export interface FormDialogData {
   labelInput?: string[];
   valInput?: string[];
   isEditMode?: boolean;
+}
+
+export interface ConfirmChangesData {
+  title?: string;
+  groups: Array<{
+    section: string;
+    items: Array<{
+      entity?: string;
+      id?: string | number | null;
+      label: string;
+      field: string; // '__index', 'questionTH', 'type', ...
+      from: any;
+      to: any;
+    }>;
+  }>;
+  confirm?: boolean;         // default: true
+  message?: string;          // optional note
 }

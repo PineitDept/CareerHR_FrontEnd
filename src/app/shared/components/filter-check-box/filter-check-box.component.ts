@@ -18,6 +18,8 @@ export interface FilterConfig {
   styleUrl: './filter-check-box.component.scss'
 })
 export class FilterCheckBoxComponent implements OnInit {
+  @Input() directCol: boolean = false
+  @Input() canScroll: boolean = false
   @Input() items: GroupedCheckboxOption[] = [];
   @Input() config: FilterConfig = {};
   @Output() selected = new EventEmitter<Record<string, string[]>>();

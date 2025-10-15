@@ -1,0 +1,180 @@
+::ng-deep .fc-event-time,
+::ng-deep .fc-daygrid-event-dot {
+    display: none;
+}
+
+::ng-deep .fc-toolbar-title {
+    font-size: 24px;
+    font-weight: 600;
+    font-family: "Sarabun", sans-serif;
+}
+
+::ng-deep .fc .fc-daygrid-day-number {
+    color: #333;
+    font-weight: 400;
+    font-size: 20px;
+    font-family: "Sarabun", sans-serif;
+}
+
+::ng-deep .fc .fc-daygrid-day.fc-day-today {
+    background: #dff13a23;
+}
+
+::ng-deep .fc-daygrid-day-top {
+    justify-content: start;
+}
+
+::ng-deep .fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+    color: #333;
+    font-weight: 700;
+}
+
+::ng-deep .fc-event {
+    border-radius: 4px;
+    border: 0;
+    padding: 4px;
+    margin-bottom: 4px;
+    cursor: pointer;
+}
+
+::ng-deep .fc-event-title {
+    font-weight: 600;
+    font-family: "Sarabun", sans-serif;
+}
+
+::ng-deep .fc .fc-daygrid-day-frame {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    padding: 4px;
+}
+
+::ng-deep .fc .fc-daygrid-day-events {
+    margin-top: auto !important;
+}
+
+
+::ng-deep .event-interview1 {
+    background: #0085FF1A;
+}
+
+::ng-deep .event-interview1 .fc-event-title {
+    color: #0085FF;
+}
+
+::ng-deep .event-interview2 {
+    background: #FF961B1A;
+}
+
+::ng-deep .event-interview2 .fc-event-title {
+    color: #FF9F2D;
+}
+
+::ng-deep .event-onboard {
+    background: #aaffaa6e;
+}
+
+::ng-deep .event-onboard .fc-event-title {
+    color: #00AA00;
+}
+
+::ng-deep .event-decline .fc-event-title {
+    text-decoration: line-through;
+}
+
+::ng-deep .strikethrough-dashed {
+    position: relative;
+}
+
+::ng-deep .strikethrough-dashed::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    border-bottom: 1px dashed black;
+    transform: translateY(-50%);
+    pointer-events: none;
+    margin: 0 4px;
+}
+
+::ng-deep .fc-listMonth-view .strikethrough-dashed::before {
+    display: none;
+}
+
+::ng-deep .strikethrough-dashed.event-interview1::before {
+    border-color: #0085FF;
+}
+
+::ng-deep .strikethrough-dashed.event-interview2::before {
+    border-color: #FF9F2D;
+}
+
+::ng-deep .strikethrough-dashed.event-onboard::before {
+    border-color: #00AA00;
+}
+
+::ng-deep .event-cancel {
+    background: #dddddd7a;
+}
+
+::ng-deep .event-cancel .fc-event-title {
+    color: #b3b3b3;
+    text-decoration: line-through;
+}
+
+::ng-deep .event-interview1.fc-event:hover {
+    opacity: 0.8;
+    background: #0085FF1A;
+    cursor: pointer;
+}
+
+::ng-deep .event-interview2.fc-event:hover {
+    opacity: 0.8;
+    background: #FF961B1A;
+    cursor: pointer;
+}
+
+::ng-deep .event-onboard.fc-event:hover {
+    opacity: 0.8;
+    background: #aaffaa6e;
+    cursor: pointer;
+}
+
+::ng-deep .fc .fc-list-event:hover td {
+    background: inherit;
+}
+
+::ng-deep .fc-button-group .fc-button {
+    background: #E9ECEF;
+    color: #333;
+    font-family: "Sarabun", sans-serif;
+    border: 0;
+    text-transform: capitalize;
+}
+
+::ng-deep .fc-button-group .fc-button:hover,
+::ng-deep .fc .fc-button-primary:not(:disabled).fc-button-active,
+::ng-deep .fc .fc-button-primary:not(:disabled):active {
+    background: #66070927;
+    color: #333;
+}
+
+::ng-deep .fc .fc-button-primary:not(:disabled).fc-button-active {
+    background: #660708;
+    color: #fff;
+}
+
+::ng-deep .fc .fc-button-primary:not(:disabled).fc-button-active:focus,
+::ng-deep .fc .fc-button-primary:not(:disabled):active:focus {
+    box-shadow: none;
+}
+
+::ng-deep .fc .fc-day-other {
+    opacity: 0.5;
+}
+
+::ng-deep .fc .fc-day-other .fc-daygrid-day-top {
+    opacity: 0.4;
+}

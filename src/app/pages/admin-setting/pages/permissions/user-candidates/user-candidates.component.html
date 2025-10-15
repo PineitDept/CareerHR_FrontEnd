@@ -1,1 +1,31 @@
-<p>user-candidates works!</p>
+<div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
+  <app-header-content
+    [headerName]="'User Candidates'"
+    [headerType]="'search'"
+    [searchByOptions]="searchByOptions"
+    [searchForm]="searchForm"
+    (search)="onSearch($event)"
+    (clearSearch)="onClearSearch()"
+  ></app-header-content>
+</div>
+
+<app-filter
+  [actionButtons]="filterButtons"
+  [disabledKeys]="rows.length === 0 ? ['export'] : []"
+  (dateRangeSelected)="onDateRangeSelected($event)"
+  (buttonClicked)="onFilterButtonClick($event)"
+></app-filter>
+
+<app-loading></app-loading>
+
+<div class="tw-h-[calc(100vh-300px)] tw-overflow-y-auto" (scroll)="onScroll($event)" #scrollArea>
+  <app-tables
+    [columns]="columns"
+    [rows]="rows"
+    [showCheckbox]="false"
+    [enableRowClick]="false"
+    [resetKey]="tableResetKey"
+    (columnClicked)="onColumnClicked($event)"
+    [hasOverflowY]="hasOverflowY"
+  ></app-tables>
+</div>

@@ -6,11 +6,16 @@ import { ScreeningComponent } from './screening/screening.component';
 import { ApplicationRoutingModule } from './application-routing.module';
 import { AllApplicationComponent } from './all-application/all-application.component';
 import { TrackingComponent } from './tracking/tracking.component';
+import { ApplicationFormComponent } from './application-form/application-form.component';
+import { SlickCarouselModule } from 'ngx-slick-carousel';
+import { ApplicationFormDetailsComponent } from './application-form-details/application-form-details.component';
 @NgModule({
   declarations: [
     ScreeningComponent,
     AllApplicationComponent,
-    TrackingComponent
+    TrackingComponent,
+    ApplicationFormComponent,
+    ApplicationFormDetailsComponent
   ],
   imports: [
     CommonModule,
@@ -18,6 +23,7 @@ import { TrackingComponent } from './tracking/tracking.component';
     ReactiveFormsModule,
     SharedModule,
     ApplicationRoutingModule,
+    SlickCarouselModule,
   ],
   exports: [
     ScreeningComponent

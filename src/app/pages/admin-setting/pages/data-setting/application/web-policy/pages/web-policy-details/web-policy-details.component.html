@@ -1,0 +1,75 @@
+<div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
+    <app-header-content [headerName]="'Web Policy Details'" [headerType]="''"></app-header-content>
+</div>
+<app-loading></app-loading>
+
+<app-filter [filterDynamicButton]="true" [actionButtons]="filterButtons" (buttonClicked)="onFilterButtonClick($event)"
+    [disabledKeys]="disabledKeys"></app-filter>
+
+
+<form [formGroup]="formDetails">
+    <div class="tw-grid tw-grid-cols-3 tw-gap-6 tw-px-6 tw-py-4 tw-bg-[#FFFFFF]">
+        <!-- Left Panel -->
+        <div
+            class="tw-col-span-3 tw-space-y-4 tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+            <div>
+                <label class="tw-text-lg tw-font-bold">Policy Details</label>
+                <hr class="tw--mx-6 tw-mt-4">
+            </div>
+
+            <div>
+                <div class="tw-mb-1.5">
+                    <label class="tw-text-sm tw-font-semibold">Policy Name <span class="text-red">*</span></label>
+                </div>
+                <input type="text"
+                    class="tw-w-full tw-bg-[#FFFFFF] tw-border tw-border-[#CED4DA] tw-rounded-lg tw-px-4 tw-py-2 tw-text-sm"
+                    formControlName="subject" [ngClass]="{'isDisabled': !isEditing, 'tw-border-red-600': fieldErrors}" />
+            </div>
+
+            <div>
+                <div class="tw-mb-1.5">
+                    <label class="tw-text-sm tw-font-semibold">Detail <span class="text-red">*</span></label>
+                </div>
+                <quill-editor #editor formControlName="emailContent" [modules]="modules" [formats]="formats"
+                    theme="snow" [placeholder]="'พิมพ์เนื้อหาอีเมล...'" [ngClass]="!isEditing ? 'isDisabled' : ''">
+                </quill-editor>
+            </div>
+        </div>
+
+        <!-- Right Panel -->
+        <!-- <div class="tw-col-span-1 tw-space-y-6">
+            <div
+                class="tw-space-y-4 tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+                <div>
+                    <label class="tw-text-lg tw-font-bold">Activation Status</label>
+                    <hr class="tw--mx-6 tw-mt-4">
+                </div>
+
+                <div class="tw-flex tw-flex-col tw-gap-y-2">
+                    <div class="tw-flex tw-items-center tw-gap-3">
+                        <input id="activeStatus" type="checkbox" class="tw-sr-only tw-peer"
+                            formControlName="activeStatus" role="switch"
+                            [attr.aria-checked]="formDetails.value.activeStatus ? 'true' : 'false'"
+                            aria-labelledby="activeStatusLabel" />
+
+                        <div class="tw-relative tw-w-11 tw-h-6 tw-cursor-pointer tw-rounded-full tw-transition-colors
+                        tw-bg-gray-200 peer-checked:tw-bg-[#00AA00]
+                        after:tw-content-[''] after:tw-absolute after:tw-top-[2px] after:tw-start-[2px]
+                        after:tw-bg-white after:tw-rounded-full after:tw-h-5 after:tw-w-5 after:tw-transition-all
+                        peer-checked:after:tw-translate-x-full rtl:peer-checked:after:tw--translate-x-full"
+                            (click)="toggleActive()" tabindex="0" (keyup.enter)="toggleActive()"
+                            (keyup.space)="toggleActive()" aria-controls="activeStatus"
+                            [ngClass]="!isEditing ? 'isDisabled tw-opacity-40' : ''">
+                        </div>
+
+                        <span id="activeStatusLabel" class="tw-text-sm tw-font-semibold">Active</span>
+                    </div>
+
+                    <p class="tw-text-sm tw-text-gray-500">
+                        Select to activate this category type.
+                    </p>
+                </div>
+            </div>
+        </div> -->
+    </div>
+</form>

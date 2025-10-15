@@ -1,0 +1,41 @@
+<!-- Single row + Horizontal scroll -->
+<div class="tw-overflow-x-auto tw-w-full">
+  <div class="tw-min-w-full">
+    <div
+      class="tw-grid tw-grid-flow-col tw-auto-cols-[minmax(200px,1fr)] tw-min-w-full tw-rounded-2xl tw-border tw-border-[#E5E7EB] tw-overflow-hidden"
+    >
+      <ng-container *ngFor="let s of viewItems; let i = index; trackBy: trackByLabel">
+        <button
+          class="tw-flex tw-items-center tw-gap-4 tw-font-[500] tw-relative tw-py-4 tw-pl-8 tw-pr-3 tw-h-full tw-min-w-[200px] tw-text-left tw-triangle-right"
+          [ngClass]="{ 'tw-triangle-none': isLast(i) }"
+          [style.--step-bg]="bgOf(variantOf(s))"
+          [style.--divider-color]="dividerColorOf(variantOf(s))"
+          [style.--divider-shadow]="dividerShadowOf(variantOf(s))"
+          [style.background]="bgOf(variantOf(s))"
+          [style.color]="textOf(variantOf(s))"
+          [style.zIndex]="viewItems.length - i"
+          [class.opacity-60]="isDisabled(i)"
+          [class.pointer-events-none]="isDisabled(i)"
+          (click)="stepActive(i)"
+          type="button"
+        >
+          <!-- วงกลมเลข -->
+          <span
+            class="step-index tw-rounded-full tw-w-[40px] tw-h-[40px] tw-flex tw-justify-center tw-items-center tw-text-[14px] tw-font-semibold tw-shrink-0"
+            [style.border]="'2px solid ' + circleBorderOf(variantOf(s))"
+            [style.color]="circleTextOf(variantOf(s))"
+          >
+            {{ i + 1 }}
+          </span>
+
+          <!-- ข้อความ 3 บรรทัด: label / sub / date -->
+          <span class="tw-flex tw-flex-col tw-leading-tight">
+            <span class="tw-text-[15px] tw-font-semibold">{{ s.label }}</span>
+            <span class="tw-text-[12px] tw-opacity-90">{{ s.sub || '' }}</span>
+            <span class="tw-text-[12px] tw-opacity-90">{{ s.date || '' }}</span>
+          </span>
+        </button>
+      </ng-container>
+    </div>
+  </div>
+</div>

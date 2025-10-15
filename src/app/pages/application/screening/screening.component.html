@@ -26,6 +26,7 @@
   #tableContainer
   class="tw-h-[calc(100vh-370px)] tw-overflow-y-auto"
   (scroll)="onScroll($event)"
+  #scrollArea
 >
   <app-tables
     [columns]="columns"
@@ -37,5 +38,7 @@
     (rowClicked)="onRowClick($event)"
     (columnClicked)="onColumnClick($event)"
     (listClickedRows)="onClickedRowsChanged($event)"
+    [hasOverflowY]="hasOverflowY"
+    [tableFixed]="false"
   ></app-tables>
 </div>

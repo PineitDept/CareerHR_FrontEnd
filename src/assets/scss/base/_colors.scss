@@ -7,6 +7,7 @@ $color-map: (
   gray-dark-2: $gray-dark-2,
   gray-dark-3: $gray-dark-3,
   gray-dark-4: $gray-dark-4,
+  gray-dark-5: $gray-dark-5,
   gray-light-1: $gray-light-1,
   gray-light-2: $gray-light-2,
   gray-light-3: $gray-light-3,
@@ -25,6 +26,7 @@ $color-map: (
   red: $red,
   strong-orange: $strong-orange,
   tawny-orange: $tawny-orange,
+  orange-dark: $orange-dark,
   orange: $orange,
   pale-orange: $pale-orange,
   yellow: $yellow,
@@ -58,6 +60,7 @@ $color-map: (
   blue: $blue,
   denim-blue: $denim-blue,
   azure: $azure,
+  azure-dark: $azure-dark,
   electric-indigo: $electric-indigo,
   neon-blue: $neon-blue,
   maya-blue: $maya-blue,
@@ -66,6 +69,7 @@ $color-map: (
   pale-blue: $pale-blue,
   sherpa-blue: $sherpa-blue,
   persian-green: $persian-green,
+  persian-green-dark: $persian-green-dark,
   tradewinds-blue: $tradewinds-blue,
 
   // Purple–Pink
@@ -98,5 +102,23 @@ $color-map: (
 
   .bg-#{$name} {
     background-color: #{$hex};
+  }
+
+  .hover\:bg-#{$name}:hover {
+    background-color: #{$hex};
+  }
+
+  .focus\:ring-#{$name}:focus {
+    outline: none;
+    box-shadow:
+      0 0 0 2px #ffffff,
+      0 0 0 5px rgba($hex, 0.45);
+  }
+
+  .focus-visible\:ring-#{$name}:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px #ffffff,
+      0 0 0 5px rgba($hex, 0.45);
   }
 }

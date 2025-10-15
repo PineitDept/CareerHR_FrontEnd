@@ -1,1 +1,53 @@
-index
+<div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
+    <app-header-content [headerName]="'Career'" [headerType]="''"></app-header-content>
+</div>
+<app-loading></app-loading>
+
+<div class="tw-m-6 tw-grid tw-gap-6 tw-min-h-[80dvh] grid-list">
+    <div>
+        <!-- <p class="tw-mb-6 tw-text-2xl"><strong>Today ({{startDate}})</strong></p> -->
+        <div class="career-page">
+            <app-calendar [events]="filteredEvents" [DateSelected]="startDate" [initialView]="'listDay'"
+                (dateRangeChanged)="onCalendarDateChange($event)">
+            </app-calendar>
+        </div>
+        <div class="wrap-btn">
+            <button class="btn-calendar" (click)="toCalendar()">See All Appointment</button>
+        </div>
+    </div>
+    <div class="tw-col-span-2">
+        <div class="tw-grid tw-gap-6 tw-grid-cols-4 tw-mb-6">
+            <div class="tw-bg-[#DEE2E6] tw-text-black tw-p-6 tw-rounded-lg">
+                <p class="tw-text-gray-500">All Applications Form</p>
+                <p class="tw-text-[30px]"><strong>{{totalItems}}</strong></p>
+            </div>
+            <div class="tw-bg-[#DEE2E6] tw-text-black tw-p-6 tw-rounded-lg">
+                <p class="tw-text-gray-500">Accept Interview 1</p>
+                <p class="tw-text-[30px]"><strong>{{interview1}}</strong></p>
+            </div>
+            <div class="tw-bg-[#DEE2E6] tw-text-black tw-p-6 tw-rounded-lg">
+                <p class="tw-text-gray-500">Accept Interview 2</p>
+                <p class="tw-text-[30px]"><strong>{{interview2}}</strong></p>
+            </div>
+            <div class="tw-bg-[#DEE2E6] tw-text-black tw-p-6 tw-rounded-lg">
+                <p class="tw-text-gray-500">Hired</p>
+                <p class="tw-text-[30px]"><strong>{{hired}}</strong></p>
+            </div>
+        </div>
+
+        <p class="tw-text-2xl"><strong>Stage Pending</strong></p>
+        <div class="tw-mx-[-24px]">
+            <app-tab-menus [tabs]="tabMenus" (tabChanged)="onTabChange($event)" [activeTab]="activeTab"></app-tab-menus>
+
+            <app-loading></app-loading>
+
+            <ng-container>
+                <div class="tw-max-h-[calc(100vh-510px)] tw-overflow-y-auto" #scrollArea (scroll)="onScroll($event)">
+                    <app-tables [columns]="columns" [rows]="rows" [showCheckbox]="false" [enableRowClick]="false"
+                        (columnRowClicked)="handleColumnRowClick($event)" [hasOverflowY]="hasOverflowY"
+                        [isToggleAlert]="true"></app-tables>
+                </div>
+            </ng-container>
+        </div>
+    </div>
+</div>

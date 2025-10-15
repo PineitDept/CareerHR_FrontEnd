@@ -1,0 +1,215 @@
+import { Injectable } from '@angular/core';
+import { Observable } from 'rxjs';
+import { ApiService } from '../../../shared/services/api/api.service';
+import { IAppointmentFilterRequest, SendEmailRequest } from '../../../interfaces/interview-scheduling/interview.interface';
+
+@Injectable({
+  providedIn: 'root',
+})
+export class AppointmentsService {
+  private baseAPI = 'Appointments';
+  private base = '';
+  private baseCandidate = 'Candidates'
+
+
+  setAppointmentsType(type?: number) {
+    switch (type) {
+      case 1:
+        this.base = 'Appointments/appointments/1';
+        break;
+      case 2:
+        this.base = 'Appointments/appointments/2';
+        break;
+      case 3:
+        this.base = 'Appointments/appointments/3';
+        break;
+      default:
+        this.base = 'Appointments/appointments';
+    }
+  }
+
+  constructor(private api: ApiService) { }
+
+  private clean(obj: Record<string, any>) {
+    const out: Record<string, any> = {};
+    Object.keys(obj).forEach(k => {
+      const v = obj[k];
+      if (v !== undefined && v !== null && v !== '') out[k] = v;
+    });
+    return out;
+  }
+
+  getAppointments<T>(params: IAppointmentFilterRequest): Observable<T> {
+    const query = this.clean({
+      Search: params.search,
+      PositionId: params.positionId,
+      Month: params.month,
+      Year: params.year,
+      InterviewDate: params.interviewDate,
+      InterviewResult: params.InterviewResult,
+      SortFields: params.sortFields,
+      page: params.page ?? 1,
+      pageSize: params.pageSize ?? 10,
+    });
+
+    return this.api.get<T>(`${this.base}`, {
+      params: query,
+      withAuth: true,
+      loading: true,
+    });
+  }
+
+  getAppointmentsHistory<T>(params: IAppointmentFilterRequest): Observable<T> {
+    const query = this.clean({
+      Search: params.search,
+      PositionId: params.positionId,
+      Month: params.month,
+      Year: params.year,
+      InterviewDate: params.interviewDate,
+      InterviewResult: params.InterviewResult,
+      SortFields: params.sortFields,
+      page: params.page ?? 1,
+      pageSize: params.pageSize ?? 10,
+    });
+
+    return this.api.get<T>(`${this.base}/history`, {
+      params: query,
+      withAuth: true,
+      loading: true,
+    });
+  }
+
+  getInterviewOffer<T>(params: IAppointmentFilterRequest): Observable<T> {
+    const query = this.clean({
+      Search: params.search,
+      PositionId: params.positionId,
+      Month: params.month,
+      Year: params.year,
+      InterviewDate: params.interviewDate,
+      InterviewResult: params.InterviewResult,
+      SortFields: params.sortFields,
+      page: params.page ?? 1,
+      pageSize: params.pageSize ?? 10,
+    });
+
+    return this.api.get<T>(`Appointments/appointments/offer`, {
+      params: query,
+      withAuth: true,
+      loading: true,
+    });
+  }
+
+  updateCandidateStatus(
+    id: number,
+    body: { isPassed: boolean; positionId: number; applyRound: number }
+  ): Observable<any> {
+    return this.api.patch<any>(`${this.baseCandidate}/${id}/status`, body, {
+      withAuth: true,
+      loading: false
+    });
+  }
+
+  getStatus<T>(params: IAppointmentFilterRequest): Observable<T> {
+    const query = this.clean({
+      Search: params.search,
+      PositionId: params.positionId,
+      Month: params.month,
+      Year: params.year,
+      InterviewDate: params.interviewDate,
+      InterviewResult: params.InterviewResult,
+      SortFields: params.sortFields,
+      page: params.page ?? 1,
+      pageSize: params.pageSize ?? 10,
+    });
+
+    return this.api.get<T>(`${this.baseAPI}/misscall-reasons`, {
+      params: query,
+      withAuth: true,
+      loading: true,
+    });
+  }
+
+  appointmentMisscall(body: { appointmentId: string; missCallId: number; isNoShow: boolean }): Observable<any> {
+    return this.api.post<any>(`${this.baseAPI}/appointment-misscall`, body, {
+      withAuth: true,
+      loading: false,
+    });
+  }
+
+  getPositionLogs(id: number, round: number): Observable<any> {
+    return this.api.get<any>(`PositionLogs/${id}/${round}`, {
+      withAuth: true,
+      loading: false,
+    });
+  }
+
+  addPositionJob(body: { userId: number; idjobPst: number; round: number }): Observable<any> {
+    return this.api.post<any>(`PositionLogs/add-job-log`, body, {
+      withAuth: true,
+      loading: false,
+    });
+  }
+
+  deletePositionJob(userId: number, round: number, idjobPst: number): Observable<any> {
+    return this.api.delete<any>(`PositionLogs/delete?userId=${userId}&round=${round}&positionid=${idjobPst}`, {
+      withAuth: true,
+      loading: false,
+    });
+  }
+
+  getEmailTemplate(appointmentId: number, mailId: number): Observable<any> {
+    return this.api.get<any>(`Email/template/${appointmentId}/${mailId}`, {
+      withAuth: true,
+      loading: false,
+    });
+  }
+
+  sendEmail(body: SendEmailRequest): Observable<any> {
+    return this.api.post<any>('Email/send', body, {
+      withAuth: true,
+      loading: false,
+    });
+  }
+
+  addMemberToTeam(body: { appointmentId: string; teamInterviewId: number; employeeIds: number[] }): Observable<any> {
+    return this.api.post<any>('AppointmentInterviews/add-member-to-team', body, {
+      withAuth: true,
+      loading: false,
+    });
+  }
+
+  updateInterviewDate(body: { appointmentId: string; interviewDate: string }): Observable<any> {
+    return this.api.patch<any>('AppointmentInterviews/interview-date', body, {
+      withAuth: true,
+      loading: false,
+    });
+  }
+
+  updateInterviewLocation(body: { appointmentId: string; location: number }): Observable<any> {
+    return this.api.patch<any>('AppointmentInterviews/interview-location', body, {
+      withAuth: true,
+      loading: false,
+    });
+  }
+
+  getInterviewer(appointmentId: string): Observable<any> {
+    return this.api.get<any>(`AppointmentInterviews/${appointmentId}`, {
+      withAuth: true,
+      loading: false,
+    });
+  }
+
+  getAppointmentsRevision(appointmentId: string): Observable<any> {
+    return this.api.get<any>(`${this.baseAPI}/revisions/${appointmentId}`, {
+      withAuth: true,
+      loading: true,
+    });
+  }
+
+  postReschedule(body: { appointmentId: string; userId: number; round: number; revice: number }): Observable<any> {
+    return this.api.post<any>('AppointmentInterviews/reschedule', body, {
+      withAuth: true,
+      loading: false,
+    });
+  }
+}

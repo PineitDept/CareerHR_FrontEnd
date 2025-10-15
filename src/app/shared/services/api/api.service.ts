@@ -136,7 +136,7 @@ export class ApiService {
     return this.request<T>('PATCH', endpoint, body, opts ?? {});
   }
 
-  delete<T>(endpoint: string, opts?: ApiRequestOptions): Observable<any> {
-    return this.request<T>('DELETE', endpoint, null, opts ?? {});
+  delete<T>(endpoint: string, opts?: ApiRequestOptions & { body?: any }): Observable<any> {
+    return this.request<T>('DELETE', endpoint, opts?.body ?? null, opts ?? {});
   }
 }

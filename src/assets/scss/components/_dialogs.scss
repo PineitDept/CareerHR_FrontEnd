@@ -31,3 +31,7 @@
   backdrop-filter: blur(2px);
   pointer-events: auto;
 }
+
+.pp-rounded-dialog .mdc-dialog__surface {
+  @apply tw-rounded-3xl tw-overflow-hidden;
+}

@@ -1,0 +1,39 @@
+<div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
+    <app-header-content [headerName]="'Interview Form Tracking'" [headerType]="'search'" (search)="onSearch()"
+        (clearSearch)="onClearSearch()" [searchByOptions]="searchByOptions"
+        [searchForm]="searchForm"></app-header-content>
+</div>
+
+<!-- <app-filter [showAllYearOption]="true" [defaultYearAll]="true" [filterDate]="true" [filterDateRange]="filterDateRange"
+    (dateRangeSelected)="onDateRangeSelected($event)" (buttonClicked)="onFilterButtonClick($event)"></app-filter> -->
+
+<!-- <app-tab-menus [tabs]="tabMenus" (tabChanged)="onTabChange($event)" [activeTab]="activeTab"></app-tab-menus> -->
+
+<app-loading></app-loading>
+
+<div class="tw-max-h-[calc(100vh-410px)] tw-overflow-y-auto tw-mt-6" #scrollArea 
+  (scroll)="onScroll($event)">
+  <app-tables
+    [columns]="columns"
+    [rows]="rows"
+    [showCheckbox]="false"
+    [enableRowClick]="false"
+    (columnRowClicked)="handleColumnRowClick($event)"
+    [hasOverflowY]="hasOverflowY"
+    [isToggleAlert]="true"
+  ></app-tables>
+</div>
+
+<p class="tw-px-6 tw-pb-2 tw-pt-6 tw-text-sm"><strong>คำอธิบาย (Application Interview Result)</strong></p>
+<div class="tw-flex tw-gap-1 tw-px-6 tw-text-sm">
+  <span>Scheduled Interview : </span>
+  <span>Passed screening and invited to interview.<br> ใบนัดสัมภาษณ์ถูกสร้างแล้ว (ผ่านการคัดกรองเบื้องต้น)</span>
+</div>
+<div class="tw-flex tw-gap-1 tw-px-6 tw-text-sm">
+  <span>Pass Interview : </span>
+  <span>The application has passed the screening process and is qualified for the next step. <br>ใบสมัครผ่านการคัดกรองเบื้องต้น และมีคุณสมบัติเหมาะสมสำหรับขั้นตอนถัดไป</span>
+</div>
+<div class="tw-flex tw-gap-1 tw-px-6 tw-mt-2 tw-text-sm">
+  <span>Not Pass Interview : </span>
+  <span>The application did not meet the screening criteria and has been rejected. <br>ใบสมัครไม่ผ่านการคัดกรองตามเกณฑ์ที่กำหนด จึงไม่ได้รับการพิจารณาต่อ</span>
+</div>

@@ -1,0 +1,51 @@
+<div class="dlb-container" [class.dlb-disabled]="disabledBox">
+    <!-- LEFT -->
+    <div class="dlb-col">
+        <div class="dlb-title">{{ leftTitle }}</div>
+
+        <div class="tw-relative">
+            <app-icon [name]="'search'" [size]="16"
+                extraClass="tw-text-gray-500 tw-absolute tw-top-0 tw-bottom-2 tw-left-[10px] tw-m-auto"></app-icon>
+            <input class="dlb-search" type="text" [placeholder]="leftFilterPlaceholder" [(ngModel)]="leftQuery"
+                [disabled]="disabledBox" />
+        </div>
+        <button type="button" (click)="hasAvailSelection ? moveRightFromCheckboxes() : moveAllRight()"
+            [disabled]="disabledBox || (!hasAvailSelection && !available().length)"
+            class="tw-bg-[#00AAFF] tw-transition-all hover:tw-bg-[#0199e6] tw-p-3 tw-text-white tw-w-full tw-rounded-t-lg" [ngClass]="disabledBox ? 'tw-pointer-events-none' : ''">
+            {{ hasAvailSelection ? 'Move Selected Item' : 'Move All Item' }}
+            <app-icon [name]="'arrow-right'" [size]="14" extraClass="tw-relative tw-bottom-[1px] tw-ml-2"></app-icon>
+        </button>
+        <div class="dlb-list" [style.height]="height" role="listbox" aria-multiselectable="true">
+            <label class="dlb-row" *ngFor="let i of filteredAvailable(); trackBy: trackByValue">
+                <input type="checkbox" [disabled]="disabledBox" [checked]="selectedAvailValues.has(i[valueField])"
+                    (change)="onAvailToggle(i, $any($event.target).checked)" class="tw-accent-blue-500/25">
+                <span [ngClass]="disabledBox? 'tw-opacity-40' : ''">{{ i[displayField] }}</span>
+            </label>
+        </div>
+    </div>
+    <!-- RIGHT -->
+    <div class="dlb-col">
+        <div class="dlb-title">{{ rightTitle }}</div>
+
+        <div class="tw-relative">
+            <app-icon [name]="'search'" [size]="16"
+                extraClass="tw-text-gray-500 tw-absolute tw-top-0 tw-bottom-2 tw-left-[10px] tw-m-auto"></app-icon>
+            <input class="dlb-search" type="text" [placeholder]="rightFilterPlaceholder" [(ngModel)]="rightQuery"
+                [disabled]="disabledBox" />
+        </div>
+        <button type="button" (click)="hasChosenSelection ? moveLeftFromCheckboxes() : moveAllLeft()"
+            [disabled]="disabledBox || (!hasChosenSelection && !chosen.length)"
+            class="tw-bg-[#ADB5BD] tw-transition-all hover:tw-bg-[#999fa5] tw-p-3 tw-text-white tw-w-full tw-rounded-t-lg" [ngClass]="disabledBox ? 'tw-pointer-events-none' : ''">
+            <app-icon [name]="'arrow-left'" [size]="14" extraClass="tw-relative tw-bottom-[1px] tw-mr-2"></app-icon>
+            {{ hasChosenSelection ? 'Remove Selected Item' : 'Remove All Item' }}
+        </button>
+        <div class="dlb-list" [style.height]="height" role="listbox" aria-multiselectable="true">
+            <label class="dlb-row" *ngFor="let i of filteredChosen(); trackBy: trackByValue">
+                <input type="checkbox" [disabled]="disabledBox" [checked]="selectedChosenValues.has(i[valueField])"
+                    (change)="onChosenToggle(i, $any($event.target).checked)" class="tw-accent-blue-500/25">
+                <span [ngClass]="disabledBox? 'tw-opacity-40' : ''">{{ i[displayField] }}</span>
+            </label>
+        </div>
+
+    </div>
+</div>

@@ -1,0 +1,41 @@
+<div class="tw-text-black">
+  <!-- Header -->
+  <div class="tw-text-lg tw-font-semibold tw-px-6 tw-pt-4 tw-pb-3">
+    {{ data.title || 'Leave this page?' }}
+  </div>
+
+  <div class="tw-border-t tw-border-[#E3E3E3]"></div>
+
+  <!-- Body -->
+  <div class="tw-text-base tw-text-gray-700 tw-px-6 tw-py-6">
+    <p>
+      {{ data.message || 'You have unsaved changes. What would you like to do?' }}
+    </p>
+  </div>
+
+  <div class="tw-border-t tw-border-gray-300"></div>
+
+  <!-- Footer / Actions -->
+  <div class="tw-text-right tw-px-6 tw-pt-3 tw-pb-3 tw-space-x-2">
+    <button
+      class="tw-bg-gray-200 hover:tw-bg-gray-300 tw-text-black tw-font-medium tw-py-1.5 tw-px-5 tw-rounded-lg"
+      (click)="onStay()"
+    >
+      Stay
+    </button>
+
+    <button
+      class="tw-bg-[#00AA55] hover:tw-bg-[#02934a] tw-text-white tw-font-medium tw-py-1.5 tw-px-6 tw-rounded-lg"
+      (click)="onKeep()"
+    >
+      Leave (keep)
+    </button>
+
+    <button
+      class="tw-bg-[#930000] hover:tw-bg-[#7a0000] tw-text-white tw-font-medium tw-py-1.5 tw-px-6 tw-rounded-lg"
+      (click)="onDiscard()"
+    >
+      Leave & Discard
+    </button>
+  </div>
+</div>

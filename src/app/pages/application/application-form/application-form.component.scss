@@ -1,0 +1,63 @@
+::ng-deep .slick-slide {
+  margin-right: 24px;
+  height: auto;
+}
+
+::ng-deep .slick-slider .slick-list {
+  margin: -24px;
+  padding: 24px;
+  padding-right: 0;
+  overflow: hidden;
+}
+
+::ng-deep .slick-dots {
+  position: relative;
+  bottom: -8px;
+}
+
+::ng-deep .slick-track {
+  display: flex;
+  margin: 0;
+}
+
+::ng-deep .slick-dots li,
+::ng-deep .slick-dots li button:before {
+  width: 14px;
+  height: 14px;
+}
+
+.review-card {
+  /* optional: ภาชนะข้อความรีวิว */
+}
+
+.ellipsis-3-lines {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  position: relative;
+}
+
+/* รายการไฟล์และประวัติให้มีระยะห่างเท่าตามภาพ */
+#transcript-section li,
+#certifications-section li,
+#history-log-section li {
+  line-height: 1.25rem; /* ~20px */
+}
+
+/* ป้องกันข้อความล้นกรอบ */
+#transcript-section li,
+#certifications-section li {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* มือถือให้สลับเป็น 1 คอลัมน์เหมือนเดิม */
+@media (max-width: 480px) {
+  #history-log-section li {
+    display: grid;
+    grid-template-columns: 1fr;
+    row-gap: 2px;
+  }
+}

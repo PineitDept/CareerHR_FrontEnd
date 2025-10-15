@@ -10,6 +10,24 @@ import { WebPolicyComponent } from './pages/data-setting/application/web-policy/
 import { GeneralBenefitsComponent } from './pages/data-setting/application/general-benefits/general-benefits.component';
 import { EmailTemplateComponent } from './pages/data-setting/application/email/email-template/email-template.component';
 import { EmailAttributeComponent } from './pages/data-setting/application/email/email-attribute/email-attribute.component';
+import { ApplicationQuestionComponent } from './pages/data-setting/application/application-question/application-question.component';
+import { ApplicationQuestionDetailsComponent } from './pages/data-setting/application/application-question/pages/application-question-details/application-question-details.component';
+import { SpecialBenefitsComponent } from './pages/data-setting/application/special-benefits/special-benefits.component';
+import { ComputerSkillsComponent } from './pages/data-setting/application/computer-skills/computer-skills.component';
+import { LanguageSkillsComponent } from './pages/data-setting/application/language-skills/language-skills.component';
+import { UniversityComponent } from './pages/data-setting/application/university/university.component';
+import { EmailTemplateDetailsComponent } from './pages/data-setting/application/email/email-template/pages/email-template-details/email-template-details.component';
+import { PendingDraftsGuard } from '../../guards/pending-draft.guard';
+import { EmailAttributeDetailsComponent } from './pages/data-setting/application/email/email-attribute/pages/email-attribute-details/email-attribute-details.component';
+import { WebPolicyDetailsComponent } from './pages/data-setting/application/web-policy/pages/web-policy-details/web-policy-details.component';
+import { ReasonComponent } from './pages/data-setting/application/reason/reason.component';
+import { ReasonDetailsComponent } from './pages/data-setting/application/reason/pages/reason-details/reason-details.component';
+import { JobPositionDetalisComponent } from './pages/data-setting/manpower/job-position/pages/job-position-detalis/job-position-detalis.component';
+import { InterviewerListComponent } from './pages/data-setting/interviewer/interviewer-list/interviewer-list.component';
+import { InterviewerTeamsComponent } from './pages/data-setting/interviewer/interviewer-teams/interviewer-teams.component';
+import { InterviewerTeamsDetailsComponent } from './pages/data-setting/interviewer/interviewer-teams/pages/interviewer-teams-details/interviewer-teams-details.component';
+import { ScoreComponent } from './pages/data-setting/application/score/score.component';
+import { ScoreDetailsComponent } from './pages/data-setting/application/score/pages/score-details/score-details.component';
 
 const routes: Routes = [
   {
@@ -33,6 +51,11 @@ const routes: Routes = [
         component: JobPositionComponent
       },
       {
+        path: 'data-setting/manpower/job-position/details',
+        component: JobPositionDetalisComponent,
+        canDeactivate: [PendingDraftsGuard]
+      },
+      {
         path: 'data-setting/manpower/reason-request',
         component: ReasonRequestComponent
       },
@@ -41,16 +64,86 @@ const routes: Routes = [
         component: WebPolicyComponent
       },
       {
+        path: 'data-setting/application/web-policy/details',
+        component: WebPolicyDetailsComponent,
+        canDeactivate: [PendingDraftsGuard]
+      },
+      {
         path: 'data-setting/application/general-benefits',
         component: GeneralBenefitsComponent
+      },
+      {
+        path: 'data-setting/application/reason',
+        component: ReasonComponent
+      },
+      {
+        path: 'data-setting/application/reason/details',
+        component: ReasonDetailsComponent,
+        canDeactivate: [PendingDraftsGuard]
+      },
+      {
+        path: 'data-setting/application/application-question',
+        component: ApplicationQuestionComponent
+      },
+      {
+        path: 'data-setting/application/application-question/details',
+        component: ApplicationQuestionDetailsComponent,
+        canDeactivate: [PendingDraftsGuard]
+      },
+      {
+        path: 'data-setting/application/special-benefits',
+        component: SpecialBenefitsComponent
+      },
+      {
+        path: 'data-setting/application/computer-skills',
+        component: ComputerSkillsComponent
+      },
+      {
+        path: 'data-setting/application/language-skills',
+        component: LanguageSkillsComponent
+      },
+      {
+        path: 'data-setting/application/university',
+        component: UniversityComponent
       },
       {
         path: 'data-setting/application/email/email-template',
         component: EmailTemplateComponent
       },
       {
+        path: 'data-setting/application/email/email-template/details',
+        component: EmailTemplateDetailsComponent,
+        canDeactivate: [PendingDraftsGuard]
+      },
+      {
         path: 'data-setting/application/email/email-attribute',
         component: EmailAttributeComponent
+      },
+      {
+        path: 'data-setting/application/email/email-attribute/details',
+        component: EmailAttributeDetailsComponent
+      },
+      {
+        path: 'data-setting/interviewer/interviewer-list',
+        component: InterviewerListComponent
+      },
+      {
+        path: 'data-setting/interviewer/interviewer-teams',
+        component: InterviewerTeamsComponent
+      },
+      {
+        path: 'data-setting/interviewer/interviewer-teams/details',
+        component: InterviewerTeamsDetailsComponent,
+        canDeactivate: [PendingDraftsGuard]
+      },
+      {
+        path: 'data-setting/application/score',
+        component: ScoreComponent
+      },
+      {
+        path: 'data-setting/application/score/details',
+        component: ScoreDetailsComponent,
+        canDeactivate: [PendingDraftsGuard]
       },
     ],
   }

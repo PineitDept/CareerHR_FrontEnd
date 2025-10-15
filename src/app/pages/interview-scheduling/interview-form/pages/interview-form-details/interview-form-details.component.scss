@@ -1,0 +1,128 @@
+::ng-deep .slick-slide {
+  margin-right: 24px;
+  height: auto;
+}
+
+::ng-deep .slick-slider .slick-list {
+  margin: -24px;
+  padding: 24px;
+  padding-right: 0;
+  overflow: hidden;
+}
+
+::ng-deep .slick-dots {
+  position: relative;
+  bottom: -8px;
+}
+
+::ng-deep .slick-track {
+  display: flex;
+  margin: 0;
+}
+
+::ng-deep .slick-dots li,
+::ng-deep .slick-dots li button:before {
+  width: 14px;
+  height: 14px;
+}
+
+button.active {
+  opacity: 1;
+}
+
+/* ---------- Base ---------- */
+button.active { position: relative; z-index: 1; }
+
+/* Pass (เขียวเข้ม #005500) */
+button.btn-pass.active {
+  box-shadow: 0 0 8px 4px #85ff95;
+}
+// button.btn-pass.active div { color: #85ff95; } /* ปล่อยไว้ตามที่คุณตั้ง */
+
+/* Not Pass (แดง-500) */
+button.btn-notpass.active {
+  box-shadow: 0 0 8px 4px #fdb3aa;
+}
+
+/* ---------- Common Statuses (ใช้คลาส tailwind ที่มีอยู่) ---------- */
+/* Pending (yellow-400) */
+button.active.tw-bg-yellow-400 {
+  /* ใช้แสงเหลืองอ่อน */
+  box-shadow: 0 0 8px 4px rgba(250, 204, 21, .55); /* #facc15 */
+  /* ข้อความสีดำจะอ่านง่ายกว่า ถ้าอยากบังคับ */
+  color: #111827; /* text-gray-900 */
+}
+
+/* Inprocess (blue-400) */
+button.active.tw-bg-blue-400 {
+  box-shadow: 0 0 8px 4px rgba(96, 165, 250, .55); /* #60a5fa */
+}
+
+/* Scheduled (indigo-400) */
+button.active.tw-bg-indigo-400 {
+  box-shadow: 0 0 8px 4px rgba(129, 140, 248, .55); /* #818cf8 */
+}
+
+/* No Show (gray-500) */
+button.active.tw-bg-gray-500 {
+  box-shadow: 0 0 8px 4px rgba(107, 114, 128, .45); /* #6b7280 */
+}
+
+/* Reschedule (purple-400) */
+button.active.tw-bg-purple-400 {
+  box-shadow: 0 0 8px 4px rgba(192, 132, 252, .55); /* #c084fc */
+}
+
+/* Candidate Decline (pink-400) */
+button.active.tw-bg-pink-400 {
+  box-shadow: 0 0 8px 4px rgba(244, 114, 182, .55); /* #f472b6 */
+}
+
+/* Hire (green-700) */
+button.active.tw-bg-green-700 {
+  box-shadow: 0 0 8px 4px rgba(34, 197, 94, .45); /* ใส่ glow เขียวอ่อน */
+}
+
+/* Not Hire (red-700) */
+button.active.tw-bg-red-700 {
+  box-shadow: 0 0 8px 4px rgba(239, 68, 68, .45); /* แดง-500 อ่อนเป็น glow */
+}
+
+/* Comparison (orange-400) */
+button.active.tw-bg-orange-400 {
+  box-shadow: 0 0 8px 4px rgba(251, 146, 60, .55); /* #fb923c */
+}
+
+/* Default (gray-300) */
+button.active.tw-bg-gray-300 {
+  box-shadow: 0 0 8px 4px rgba(209, 213, 219, .75); /* #d1d5db */
+  color: #111827; /* ช่วยคอนทราสต์ */
+}
+
+/* เผื่อมีพื้นหลังเขียวเข้มแบบ pass ที่เป็น hex (#005500) โดยไม่มีคลาส btn-pass */
+button.active.tw-bg-\[\#005500\] {
+  box-shadow: 0 0 8px 4px #85ff95;
+}
+
+/* ---------- UX เสริม (ไม่จำเป็นแต่ช่วยให้เนียน) ---------- */
+button:focus-visible.active {
+  outline: 2px solid rgba(255,255,255,.6);
+  outline-offset: 2px;
+}
+
+
+.ellipsis-3-lines {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  position: relative;
+}
+
+.ellipsis-4-lines {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  position: relative;
+}

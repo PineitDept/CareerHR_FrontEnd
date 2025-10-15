@@ -1,0 +1,123 @@
+<div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
+    <app-header-content [headerName]="'Email Attribute Details'" [headerType]="''"></app-header-content>
+</div>
+<app-loading></app-loading>
+
+<app-filter [filterDynamicButton]="true" [actionButtons]="filterButtons" (buttonClicked)="onFilterButtonClick($event)"
+    [disabledKeys]="disabledKeys"></app-filter>
+
+
+<form [formGroup]="formDetails">
+    <div class="tw-grid tw-grid-cols-3 tw-gap-6 tw-px-6 tw-py-4 tw-bg-[#FFFFFF]">
+        <!-- Left Panel -->
+        <!-- <div
+            class="tw-col-span-2 tw-space-y-4 tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+            <div>
+                <label class="tw-text-lg tw-font-bold">Email Attribute Detail</label>
+                <hr class="tw--mx-6 tw-mt-4">
+            </div>
+
+            <div>
+                <div class="tw-mb-1.5">
+                    <label class="tw-text-sm tw-font-semibold">Email Attribute Name <span class="text-red">*</span></label>
+                </div>
+                <input type="text"
+                    class="tw-w-full tw-bg-[#FFFFFF] tw-border tw-border-[#CED4DA] tw-rounded-lg tw-px-4 tw-py-2 tw-text-sm isDisabled"
+                    formControlName="subject"/>
+            </div>
+        </div> -->
+
+        <!-- Right Panel -->
+        <!-- <div class="tw-col-span-1 tw-space-y-6">
+            <div
+                class="tw-space-y-4 tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-h-full">
+                <div>
+                    <label class="tw-text-lg tw-font-bold">Activation Status</label>
+                    <hr class="tw--mx-6 tw-mt-4">
+                </div>
+
+                <div class="tw-flex tw-flex-col tw-gap-y-2">
+                    <div class="tw-flex tw-items-center tw-gap-3">
+                        <input id="activeStatus" type="checkbox" class="tw-sr-only tw-peer"
+                            formControlName="activeStatus" role="switch"
+                            [attr.aria-checked]="formDetails.value.activeStatus ? 'true' : 'false'"
+                            aria-labelledby="activeStatusLabel" />
+
+                        <div class="tw-relative tw-w-11 tw-h-6 tw-cursor-pointer tw-rounded-full tw-transition-colors
+                        tw-bg-gray-200 peer-checked:tw-bg-[#00AA00]
+                        after:tw-content-[''] after:tw-absolute after:tw-top-[2px] after:tw-start-[2px]
+                        after:tw-bg-white after:tw-rounded-full after:tw-h-5 after:tw-w-5 after:tw-transition-all
+                        peer-checked:after:tw-translate-x-full rtl:peer-checked:after:tw--translate-x-full"
+                            (click)="toggleActive()" tabindex="0" (keyup.enter)="toggleActive()"
+                            (keyup.space)="toggleActive()" aria-controls="activeStatus"
+                             [ngClass]="!isEditing ? 'isDisabled tw-opacity-40' : ''">
+                        </div>
+
+                        <span id="activeStatusLabel" class="tw-text-sm tw-font-semibold">Active</span>
+                    </div>
+
+                    <p class="tw-text-sm tw-text-gray-500">
+                        Select to activate this category type.
+                    </p>
+                </div>
+            </div>
+        </div> -->
+
+        <div class="tw-col-span-3">
+            <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-mt-2">
+
+            <div class="tw-flex tw-items-center tw-justify-between">
+                <!-- <label class="tw-text-lg tw-font-bold">Setting Attribute</label> -->
+                <label class="tw-text-lg tw-font-bold">Email Attribute Detail</label>
+
+                <!-- <button
+                    type="button"
+                    (click)="onAddQuestionClicked()"
+                    class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-lg bg-azure hover:bg-azure-dark
+                            tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5
+                            tw-shadow-[0_2px_6px_rgba(22,119,255,0.35)] focus:ring-azure focus-visible:ring-azure"
+                    [ngClass]="{
+                        'tw-pointer-events-none tw-opacity-50': !isEditing && !isAddMode
+                    }"
+                    aria-label="Add Question"
+                    *ngIf="!isViewMode">
+                    <app-icon [name]="'plus'" [size]="18" extraClass="tw-text-white"></app-icon>
+                    <span class="tw-font-semibold">Add</span>
+                </button> -->
+            </div>
+            <hr class="tw--mx-6 tw-mt-4">
+            <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden">
+               <div class="tw-py-4 tw-px-6">
+                    <div class="tw-mb-1.5">
+                        <label class="tw-text-sm tw-font-semibold">Email Attribute Name <span class="text-red">*</span></label>
+                    </div>
+                    <input type="text"
+                        class="tw-w-full tw-bg-[#FFFFFF] tw-border tw-border-[#CED4DA] tw-rounded-lg tw-px-4 tw-py-2 tw-text-sm isDisabled"
+                        formControlName="subject"/>
+               </div>
+                <app-tables
+                    #categoryTable
+                    [rows]="categoryRows"
+                    [columns]="categoryColumns"
+                    [showCheckbox]="false"
+                    [splitRows]="false"
+                    [hasOverflowY]="false"
+                    [enableRowClick]="false"
+                    [withinCard]="true"
+                    (toggleChange)="onToggleChangeDetails($event)"
+                    [isDisabledForm]="isDisabled"
+                    (createInlineSave)="onInlineSave($event)"
+                    (createInlineCancel)="onInlineCancel()"
+                    [isAddMode]="isAddingRow"
+                    [fieldErrors]="fieldErrors"
+                    [highlightRowIndex]="duplicateRowIndex"
+                    (deleteRowClicked)="onDeleteRowClicked($event)"
+                    (editClicked)="handleEditRow($event)"
+                    [isConfirmDialogSaveRequired]="false"
+                ></app-tables>
+            </div>
+            </div>
+        </div>
+
+    </div>
+</form>
