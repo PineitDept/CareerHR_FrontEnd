@@ -1067,12 +1067,15 @@ export class InterviewFormDetailsComponent {
     const resultKey = `interview${this.stageId}Result` as keyof typeof this.applicant;
     const result = this.applicant?.[resultKey];
 
-    // ถ้าเป็น 21 → ให้โชว์ปุ่ม Edit (ยังไม่เข้าสู่โหมดแก้)
-    if (result === 21 || result === 22) {
-      this.allowEditButton = true;
-      this.editReview = false;
+    if (result) {
+      if (this.foundisSummary) {
+        this.allowEditButton = true;
+        this.editReview = false;
+      } else {
+        this.allowEditButton = false;
+        this.editReview = true;
+      }
     } else {
-      // ถ้าไม่ใช่ 21 ก็เข้าโหมดแก้ไขได้เลย
       this.allowEditButton = false;
       this.editReview = true;
     }
@@ -1242,6 +1245,10 @@ export class InterviewFormDetailsComponent {
       case 21:
         return 'tw-pointer-events-none tw-bg-gray-100 tw-text-[#8b8b8b]'; // Pass Interview
       case 22:
+        return 'tw-pointer-events-none tw-bg-gray-100 tw-text-[#8b8b8b]'; // Fail Interview
+      case 23:
+        return 'tw-pointer-events-none tw-bg-gray-100 tw-text-[#8b8b8b]'; // Fail Interview
+      case 25:
         return 'tw-pointer-events-none tw-bg-gray-100 tw-text-[#8b8b8b]'; // Fail Interview
       default:
         return ''; // Default
