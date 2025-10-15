@@ -66,7 +66,15 @@ export class InterviewRound1HistoryComponent {
 
   // ---------- Tabs / filters ----------
   selectedTab = 'total';
-  filterButtons: { label: string; key: string; color: string; outlineBtn?: boolean }[] = [];
+  filterButtons: {
+    label: string;
+    key: string;
+    color?: string;
+    textColor?: string;
+    borderColor?: string;
+    outlineBtn?: boolean;
+    options?: Array<{ label: string; value: any }>;
+  }[] = [];
 
   // ---------- Dropdown data sources ----------
   locationsList: any;
@@ -155,7 +163,7 @@ export class InterviewRound1HistoryComponent {
     const day = String(now.getDate()).padStart(2, '0');
 
     this.today = `${year}-${month}-${day}`;
-    
+
     this.appointmentsService.setAppointmentsType(1);
 
     const savedSearch = sessionStorage.getItem('interviewSearchForm1History');
@@ -174,7 +182,12 @@ export class InterviewRound1HistoryComponent {
     this.fetchInterviewer();
     this.fetchStatusCall();
 
-    this.filterButtons = [{ label: 'Scheduled', key: 'back', color: 'transparent', outlineBtn: true }];
+    this.filterButtons = [{
+      label: 'Scheduled', key: 'back', outlineBtn: true, 
+      color: '#FFFFFF',
+      textColor: '#000000',
+      borderColor: '#000000',
+    }];
   }
 
   // ---------- Data fetching ----------
@@ -472,7 +485,7 @@ export class InterviewRound1HistoryComponent {
     if (endY !== 'NaN') {
       this.yearData = Number(endY);
 
-      if(endM - startM !== 11) {
+      if (endM - startM !== 11) {
         this.monthData = endM;
       } else {
         this.monthData = undefined;
@@ -585,7 +598,7 @@ export class InterviewRound1HistoryComponent {
         const payload = {
           appointmentId: appointmentid,
           userId: userId,
-          round : round,
+          round: round,
           revice: revision
         }
 
@@ -708,7 +721,7 @@ export class InterviewRound1HistoryComponent {
       ];
 
       document.querySelector('.cdk-overlay-pane')?.classList.add('pp-rounded-dialog');
-      
+
       const dialogRef = this.dialog.open(SelectDialogComponent, {
         width: '480px',
         data: {
@@ -851,7 +864,7 @@ export class InterviewRound1HistoryComponent {
         // interviewerListMap = this.interviewerList.filter(
         //   (i: any) => !allExcludedIds.has(i.value)
         // );
-        
+
       } catch (err) {
         console.error('Error fetching team:', err);
       }
