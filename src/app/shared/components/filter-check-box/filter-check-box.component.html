@@ -45,44 +45,53 @@
           @for (option of group.options; track option.key; let i = $index) {
           <label class="tw-group/option tw-flex tw-items-center tw-gap-3 tw-cursor-pointer 
                            tw-px-4 tw-py-2 tw-transition-all tw-duration-200 tw-ease-out
-                           hover:tw-bg-gray-50 tw-border-t tw-border-[#E5E5E5] last:tw-rounded-b-md !tw-mt-[0px]" [style.animation-delay]="i * 30 + 'ms'">
+                           hover:tw-bg-gray-50 tw-border-t tw-border-[#E5E5E5] last:tw-rounded-b-md !tw-mt-[0px]" 
+                 [style.animation-delay]="i * 30 + 'ms'">
 
             <!-- Custom Checkbox -->
             <div class="tw-relative tw-flex tw-items-center">
-              <input type="checkbox" class="tw-sr-only tw-peer" [checked]="isChecked(group.groupKey, option.key)"
-                (change)="toggleOption(group.groupKey, option.key)" />
+              <input type="checkbox" class="tw-sr-only tw-peer" 
+                     [checked]="isChecked(group.groupKey, option.key)"
+                     (change)="toggleOption(group.groupKey, option.key)" />
 
-              <!-- Checkbox Visual -->
+              <!-- Checkbox Visual with Dynamic Color -->
               <div class="tw-w-4 tw-h-4 tw-border tw-border-gray-300 tw-rounded 
                                tw-transition-all tw-duration-200 tw-ease-out tw-overflow-hidden tw-relative">
 
-                <!-- <div class="tw-w-3 tw-h-3 bg-azure tw-absolute tw-top-0.5 tw-left-0.5
-                                 tw-rounded 
-                                 tw-transition-all tw-duration-200 tw-ease-out"
-                  [class.tw-opacity-100]="isChecked(group.groupKey, option.key)"
-                  [class.tw-scale-100]="isChecked(group.groupKey, option.key)"
-                  [class.tw-opacity-0]="!isChecked(group.groupKey, option.key)"
-                  [class.tw-scale-0]="!isChecked(group.groupKey, option.key)"></div> -->
                 <div class="tw-w-full tw-h-full tw-absolute tw-rounded-[2px]
                             tw-flex tw-items-end tw-justify-center tw-text-white
-                            tw-transition-all tw-duration-200 tw-ease-out bg-azure"
-                    [class.tw-opacity-100]="isChecked(group.groupKey, option.key)"
-                    [class.tw-scale-100]="isChecked(group.groupKey, option.key)"
-                    [class.tw-opacity-0]="!isChecked(group.groupKey, option.key)"
-                    [class.tw-scale-0]="!isChecked(group.groupKey, option.key)">
+                            tw-transition-all tw-duration-200 tw-ease-out"
+                     [style.background-color]="option.color || '#1E90FF'"
+                     [class.tw-opacity-100]="isChecked(group.groupKey, option.key)"
+                     [class.tw-scale-100]="isChecked(group.groupKey, option.key)"
+                     [class.tw-opacity-0]="!isChecked(group.groupKey, option.key)"
+                     [class.tw-scale-0]="!isChecked(group.groupKey, option.key)">
                   <app-icon name="check" [size]="14" fill="#fff"></app-icon>
                 </div>
               </div>
             </div>
 
-            <!-- Label -->
-            <span class="tw-text-sm tw-font-normal tw-leading-relaxed 
-         tw-transition-colors tw-duration-200" [class.text-azure]="isChecked(group.groupKey, option.key)"
-              [class.tw-font-medium]="isChecked(group.groupKey, option.key)"
-              [class.tw-text-gray-700]="!isChecked(group.groupKey, option.key)"
-              [class.group-hover\:tw-text-gray-900]="!isChecked(group.groupKey, option.key)">
-              {{ option.label }}
-            </span>
+            <!-- Label with Color Indicator -->
+            <div class="tw-flex tw-items-center tw-gap-2 tw-flex-1">
+              <!-- Color Dot Indicator -->
+              @if (option.color) {
+                <div class="tw-w-2 tw-h-2 tw-rounded-full tw-transition-all tw-duration-200"
+                     [style.background-color]="option.color"
+                     [class.tw-scale-125]="isChecked(group.groupKey, option.key)"
+                     [class.tw-opacity-100]="isChecked(group.groupKey, option.key)"
+                     [class.tw-opacity-60]="!isChecked(group.groupKey, option.key)">
+                </div>
+              }
+              
+              <span class="tw-text-sm tw-font-normal tw-leading-relaxed 
+                           tw-transition-colors tw-duration-200" 
+                    [class.tw-font-medium]="isChecked(group.groupKey, option.key)"
+                    [class.tw-text-gray-700]="!isChecked(group.groupKey, option.key)"
+                    [class.group-hover\:tw-text-gray-900]="!isChecked(group.groupKey, option.key)"
+                    [style.color]="isChecked(group.groupKey, option.key) && option.color ? option.color : null">
+                {{ option.label }}
+              </span>
+            </div>
 
           </label>
           } @empty {

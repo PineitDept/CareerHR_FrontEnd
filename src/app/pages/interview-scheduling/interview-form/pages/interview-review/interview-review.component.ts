@@ -11,7 +11,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { AlertDialogComponent } from '../../../../../shared/components/dialogs/alert-dialog/alert-dialog.component';
 import { MatDialog } from '@angular/material/dialog';
-import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
+import { COMPOSITION_BUFFER_MODE, FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import * as QRCode from 'qrcode';
 import { SlickCarouselComponent, SlickItemDirective } from 'ngx-slick-carousel';
 import { InterviewFormService } from '../../../../../services/interview-scheduling/interview-form/interview-form.service';
@@ -28,6 +28,15 @@ type StepStatus = 'done' | 'pending';
 type Risk = 'Normal' | 'Warning';
 
 type ScreeningStatus = 'Accept' | 'Decline' | 'Hold';
+
+// --- เพิ่ม type ด้านบนไฟล์ ---
+type ResultGroupKey = 'accept' | 'decline';
+type ResultGroup = {
+  key: ResultGroupKey;
+  label: string;
+  regex: RegExp;
+  items: any[];
+};
 
 interface Applicant {
   id: string;
@@ -134,7 +143,8 @@ interface StepperItem {
 @Component({
   selector: 'app-interview-review',
   templateUrl: './interview-review.component.html',
-  styleUrl: './interview-review.component.scss'
+  styleUrl: './interview-review.component.scss',
+  providers: [{ provide: COMPOSITION_BUFFER_MODE, useValue: false }],
 })
 export class InterviewReviewComponent {
   // ====== Filter ======
@@ -145,6 +155,7 @@ export class InterviewReviewComponent {
   applicantId: number = 0;
   appointmentId: number = 0;
   stageId: number = 0;
+  idEmployee: number = 0;
   interview1AppointmentId: string | undefined;
   interview2AppointmentId: string | undefined;
 
@@ -229,19 +240,6 @@ export class InterviewReviewComponent {
 
   foundisSummary: any;
 
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private dialog: MatDialog,
-    private cdr: ChangeDetectorRef,
-    private fb: FormBuilder,
-    private interviewFormService: InterviewFormService,
-    private applicationService: ApplicationService,
-    private reasonService: ReasonService,
-    private notificationService: NotificationService,
-    private interviewDetailsFormService: InterviewDetailsFormService
-  ) { }
-
   // ---------- Carousel config ----------
   @ViewChildren(SlickItemDirective) slickItems!: QueryList<SlickItemDirective>;
 
@@ -279,6 +277,9 @@ export class InterviewReviewComponent {
   reviewHistory: any[] = [];
   selectedCategoryId: number | null = null;
 
+  editReview = false;
+  allowEditButton = true;
+
   private initWarningColumns() {
     this.warningColumns = [
       { header: 'No', field: 'no', type: 'text', align: 'center', width: '56px', minWidth: '56px' },
@@ -289,6 +290,22 @@ export class InterviewReviewComponent {
   }
 
   selectedTab: string = '';
+
+  snapshotInputForm: any;
+  private hasDraftInSession = false;
+
+  constructor(
+    private route: ActivatedRoute,
+    private router: Router,
+    private dialog: MatDialog,
+    private cdr: ChangeDetectorRef,
+    private fb: FormBuilder,
+    private interviewFormService: InterviewFormService,
+    private applicationService: ApplicationService,
+    private reasonService: ReasonService,
+    private notificationService: NotificationService,
+    private interviewDetailsFormService: InterviewDetailsFormService
+  ) { }
 
   // ===================== Lifecycle =====================
   ngOnInit() {
@@ -306,6 +323,7 @@ export class InterviewReviewComponent {
       .subscribe((params) => {
         this.applicantId = Number(params['id'] || 0);
         this.stageId = Number(params['interview'] || 1);
+        this.idEmployee = Number(params['idEmployee']);
         this.selectedTab = 'tab' + params['interview'];
 
         this.fetchCandidateTracking();
@@ -323,6 +341,18 @@ export class InterviewReviewComponent {
 
     this.initializeForm()
     this.initializeFormInterviewDetail()
+
+    this.formDetails.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => { this.saveCache(); this.updateSaveButtonState(); });
+
+    this.formDetails.get('concernInterviewReview')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.saveCache());
+    this.formDetails.get('strengthInterviewReview')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.saveCache());
+
   }
 
   ngAfterViewInit() {
@@ -339,8 +369,9 @@ export class InterviewReviewComponent {
     this.formDetails = this.fb.group({
       userInterviewReview: [this.foundisSummary?.hrUserName || this.usernameLogin],
       dateInterviewReview: [this.formatDateForInput(this.foundisSummary?.stageDate) || this.nowDate],
-      noteInterviewReview: [this.foundisSummary?.notes || '']
-    });
+      strengthInterviewReview: [this.foundisSummary?.strength || ''],
+      concernInterviewReview: [this.foundisSummary?.concern || '']
+    }, { updateOn: 'change' }); // สำคัญ
   }
 
   initializeFormInterviewDetail() {
@@ -380,6 +411,9 @@ export class InterviewReviewComponent {
 
           this.mapTrackingToView(exact);
           this.isLoading = false;
+          
+          // Attachments
+          this.fetchFiles(Number(this.applicantId || 0));
         },
         error: (err) => {
           console.error(
@@ -411,19 +445,14 @@ export class InterviewReviewComponent {
       Number(this.stageId) + 1
     ).subscribe({
       next: (res) => {
+        // 0) เตรียม reviewHistory + carousel config
         this.reviewHistory = res.map((item: any) => ({
           ...item,
-          expandState: {
-            strength: false,
-            concern: false,
-          },
-          overflowState: {
-            strength: false,
-            concern: false,
-          }
+          expandState: { strength: false, concern: false },
+          overflowState: { strength: false, concern: false }
         }));
 
-        const countIsSummaryFalse = this.reviewHistory.filter(item => item.isSummary === false).length;
+        const countIsSummaryFalse = this.reviewHistory.filter(i => i.isSummary === false).length;
 
         setTimeout(() => {
           this.slideConfig = {
@@ -433,42 +462,81 @@ export class InterviewReviewComponent {
             responsive: [
               {
                 breakpoint: 768,
-                settings: {
-                  slidesToShow: 1,
-                  dots: countIsSummaryFalse > 1
-                }
+                settings: { slidesToShow: 1, dots: countIsSummaryFalse > 1 }
               }
             ]
           };
 
-          // 👇 รี init slick
           setTimeout(() => {
-            this.carousels.forEach((carousel) => {
-              carousel.unslick();
+            this.carousels?.forEach((carousel) => {
+              try { carousel.unslick(); } catch { }
               carousel.initSlick();
             });
           }, 0);
-
-          // ✅ เช็ค overflow หลัง DOM update
-          // setTimeout(() => this.checkAllOverflow(), 0);
         }, 0);
 
         setTimeout(() => this.checkAllOverflow(), 0);
-        this.foundisSummary = this.reviewHistory.find(user => user.isSummary === true);
 
-        this.initializeForm()
+        // 1) เลือก summary record ที่เหมาะสม
+        if (this.idEmployee) {
+          // ถ้ามี idEmployee → ดึงรีวิวของคนนี้ก่อน, ถ้าไม่เจอค่อย fallback ไป summary
+          this.foundisSummary =
+            this.reviewHistory.find(u => u.hrUserId === this.idEmployee)
+          // this.reviewHistory.find(u => u.isSummary === true);
+        } else {
+          // ถ้าไม่มี idEmployee → ใช้เฉพาะ summary record เท่านั้น
+          this.foundisSummary = this.reviewHistory.find(u => u.isSummary === true) ?? null;
+        }
 
-        this.reasonsInterview1.forEach(category => {
-          category.rejectionReasons.forEach((reason: { reasonId: any; checked: boolean; }) => {
-            if (this.foundisSummary?.selectedReasonIds?.includes(reason.reasonId)) {
-              reason.checked = true;
-            } else {
-              reason.checked = false;
-            }
+        // 2) สร้างฟอร์มเบื้องต้น (ใช้ข้อมูลจาก foundisSummary หรือ fallback ปัจจุบัน)
+        this.initializeForm();
+
+        // 3) ลองอ่าน cache (ถ้ามี)
+        let rawObj: any = null;
+        const rawString = sessionStorage.getItem(this.cacheKey());
+        if (rawString) {
+          try { rawObj = JSON.parse(rawString); } catch { rawObj = null; }
+        }
+        this.hasDraftInSession = !!rawObj;
+
+        // 4) Apply เหตุผลที่ติ๊ก (priority: cache > server)
+        this.reasonsInterview1.forEach((category: any) => {
+          (category.rejectionReasons || []).forEach((reason: any) => {
+            const fromCache = rawObj?.selectedReasonIds?.includes(reason.reasonId);
+            const fromServer = this.foundisSummary?.selectedReasonIds?.includes(reason.reasonId);
+            reason.checked = !!(fromCache ?? fromServer);
           });
         });
 
-        this.selectedCategoryId = this.foundisSummary?.categoryId
+        // 5) เซ็ต category (priority: cache > server)
+        this.selectedCategoryId = rawObj?.categoryId ?? this.foundisSummary?.categoryId ?? null;
+
+        this.selectedGroupKey = rawObj?.selectedGroupKey
+          ?? this.resolveGroupByCategoryId(this.selectedCategoryId);
+
+        // 6) ถ้ามี cache → อัปเดตฟอร์มจาก cache (และเข้าโหมดแก้ไข)
+        if (rawObj) {
+          this.isEditing = true;
+          this.nextTick(() => this.setActionButtons('edit'));
+          this.formDetails.patchValue({
+            dateInterviewReview: this.formatDateForInput(rawObj?.stageDate),
+            strengthInterviewReview: rawObj?.strength ?? '',
+            concernInterviewReview: rawObj?.concern ?? ''
+          }, { emitEvent: false });
+
+          // baseline = ของ server (อย่าเอาค่า UI ทับ)
+          this.snapshotInputForm = this.buildServerBaselinePayload();
+        } else {
+          // baseline = UI ปัจจุบันจาก server
+          this.takeSnapshotFromUI();
+        }
+
+        // อัปเดตปุ่มหลังตั้ง baseline เสร็จ
+        this.updateSaveButtonState();
+
+
+        // 7) ตั้ง snapshot baseline จาก UI ปัจจุบัน
+        this.takeSnapshotFromUI();
       },
 
       error: (error) => {
@@ -490,12 +558,38 @@ export class InterviewReviewComponent {
           }))
         }));
 
+        this.resultGroups = this.resultGroups.map(g => ({
+          ...g,
+          items: this.reasonsInterview1.filter((c: any) => g.regex.test((c.categoryName || '').toLowerCase()))
+        }));
+
         this.fetchInterviewer();
       },
       error: (error) => {
         console.error('Error fetching Recruitment Stages with reasons:', error);
       },
     });
+  }
+
+  private fetchFiles(id: number) {
+    if (!id) return;
+    this.applicationService.getFileByCandidateId(id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res: any[]) => {
+          const files = Array.isArray(res) ? res : [];
+
+          // 1) Avatar จาก fileType = 'Profile'
+          const profile = files.find(f => String(f?.fileType).toLowerCase() === 'profile');
+
+          this.applicant.avatarUrl = profile?.filePath || '';
+
+        },
+        error: (e) => {
+          console.error('[ApplicationForm] getFileByCandidateId error:', e);
+          // ไม่เปลี่ยน state ถ้า error
+        }
+      });
   }
 
   // ===================== Mapping =====================
@@ -551,6 +645,93 @@ export class InterviewReviewComponent {
     this.historyLogs = [];
   }
 
+  private resolveGroupByCategoryId(catId: number | null): 'accept' | 'decline' | null {
+    if (!catId) return null;
+    const inAccept = this.resultGroups.find(g => g.key === 'accept')?.items.some(c => c.categoryId === catId);
+    const inDecline = this.resultGroups.find(g => g.key === 'decline')?.items.some(c => c.categoryId === catId);
+    return inAccept ? 'accept' : (inDecline ? 'decline' : null);
+  }
+
+  private readonly cacheKeyBase = 'interview-review:';
+  private cacheKey(): string {
+    // ให้ key ยูนีคตาม employee/applicant/stage
+    return `${this.cacheKeyBase}${this.idEmployee || 'emp'}:${this.applicantId || 'app'}:${this.stageId || 'stage'}`;
+  }
+
+  /** รวมค่าปัจจุบันจากฟอร์ม + เหตุผลที่ติ๊ก + หมวดที่เลือก เป็น payload เดียว */
+  private buildCurrentPayload() {
+    const payload = this.formDetails?.value || {};
+
+    const isoDate = payload?.dateInterviewReview
+      ? new Date(payload.dateInterviewReview).toISOString()
+      : '';
+
+    const selectedReasonIds: number[] = (this.reasonsInterview1 || []).flatMap((category: any) =>
+      (category.rejectionReasons || [])
+        .filter((r: any) => r.checked === true)
+        .map((r: any) => r.reasonId)
+    );
+
+    const checkedCategoryIds: number[] = (this.reasonsInterview1 || [])
+      .filter((c: any) => (c.rejectionReasons || []).some((r: any) => r.checked))
+      .map((c: any) => c.categoryId);
+
+    const appointmentIdKey = `interview${this.stageId}AppointmentId`;
+    const appointmentId = (this as any)[appointmentIdKey];
+
+    return {
+      applicationId: this.applicantId,
+      stageId: this.stageId + 1,
+      categoryId: checkedCategoryIds[0] ?? null,
+      isSummary: true,
+      stageDate: isoDate || '',
+      appointmentId: (appointmentId ?? '').trim(),
+      satisfaction: 0,
+      notes: '',
+      strength: payload?.strengthInterviewReview ?? '',
+      concern: payload?.concernInterviewReview ?? '',
+      selectedReasonIds,
+    };
+  }
+
+  /** baseline เดิมจาก server (ยังไม่รวม draft ใน session) */
+  private buildServerBaselinePayload() {
+    const s = this.foundisSummary || {};
+    const iso = s.stageDate ? new Date(s.stageDate).toISOString() : '';
+
+    const appointmentIdKey = `interview${this.stageId}AppointmentId`;
+    const appointmentId = (this as any)[appointmentIdKey];
+
+    return {
+      applicationId: this.applicantId,
+      stageId: this.stageId + 1,
+      categoryId: s.categoryId ?? null,
+      isSummary: true,
+      stageDate: iso,
+      appointmentId: (appointmentId ?? '').trim(),
+      satisfaction: 0,
+      notes: '',
+      strength: s.strength ?? '',
+      concern: s.concern ?? '',
+      selectedReasonIds: Array.isArray(s.selectedReasonIds) ? s.selectedReasonIds : []
+    };
+  }
+
+  onInputImmediate() { this.saveCache(); this.updateSaveButtonState(); }
+  onCompositionEnd() { this.saveCache(); this.updateSaveButtonState(); }
+  onDateInput() { this.saveCache(); this.updateSaveButtonState(); }
+  onDateChange() { this.saveCache(); this.updateSaveButtonState(); }
+
+  /** ตั้ง baseline/snapshot จากสิ่งที่ UI แสดงอยู่ตอนนี้ */
+  private takeSnapshotFromUI() {
+    this.snapshotInputForm = this.buildCurrentPayload();
+  }
+
+  updateSaveButtonState(): void {
+    if (!this.isEditing) return; // ยังไม่อยู่โหมดแก้ ก็ไม่ต้องเช็ค
+    this.nextTick(() => this.setButtonDisabled('save', !this.hasFormChanged()));
+  }
+
   // ===================== UI Events =====================
   onFilterButtonClick(key: string) {
     switch (key) {
@@ -561,9 +742,63 @@ export class InterviewReviewComponent {
         // this.formDetails.enable();
         break;
       case 'save':
-        this.onSaveClicked()
+        this.onComfirmReview()
         break;
     }
+  }
+
+  likeState = {
+    count: 0,
+    liked: false,
+    loading: false
+  };
+
+  private fetchInterest(id: number) {
+    if (!id) return;
+    this.applicationService.getInterestByCandidateId(id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.likeState.count = Number(res?.countLike ?? 0);
+          this.likeState.liked = !!res?.isLikedByCurrentEmployee;
+        },
+        error: (e) => {
+          console.error('[ApplicationForm] fetchInterest error:', e);
+          // fallback เงียบ ๆ: ไม่เปลี่ยน state
+        }
+      });
+  }
+
+  onToggleLike() {
+    if (!this.applicantId || this.likeState.loading) return;
+
+    const wantLike = !this.likeState.liked;
+    const body = { candidateId: this.applicantId };
+
+    // optimistic update
+    const prev = { ...this.likeState };
+    this.likeState.loading = true;
+    this.likeState.liked = wantLike;
+    this.likeState.count = Math.max(0, this.likeState.count + (wantLike ? 1 : -1));
+
+    const req$ = wantLike
+      ? this.applicationService.addInterest(body)
+      : this.applicationService.deleteInterest(body);
+
+    req$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          // สำเร็จ — อาจ refresh จาก server อีกครั้งเพื่อความชัวร์:
+          this.fetchInterest(this.applicantId);
+          this.likeState.loading = false;
+        },
+        error: (e) => {
+          console.error('[ApplicationForm] toggle like error:', e);
+          // rollback
+          this.likeState = prev;
+        }
+      });
   }
 
   formatDateForInput(dateString: string | null | undefined): string {
@@ -611,9 +846,9 @@ export class InterviewReviewComponent {
   }
 
   toggleReasonCheck(reason: any) {
-    if (!this.foundisSummary) {
-      reason.checked = !reason.checked;
-    }
+    reason.checked = !reason.checked;
+    this.saveCache();
+    this.updateSaveButtonState();
   }
 
   get filteredReviewHistory() {
@@ -629,7 +864,7 @@ export class InterviewReviewComponent {
 
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).toString().padStart(2, '0');
 
     return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
   }
@@ -649,10 +884,13 @@ export class InterviewReviewComponent {
     }));
 
     if (this.selectedCategoryId === categoryId) {
-      this.selectedCategoryId = null; // ถ้ากดซ้ำ → reset
+      this.selectedCategoryId = null;
     } else {
-      this.selectedCategoryId = categoryId; // กดอันใหม่ → set ใหม่
+      this.selectedCategoryId = categoryId;
     }
+
+    this.saveCache();
+    this.updateSaveButtonState();
   }
 
   toggleExpand(index: number, field: 'strength' | 'concern') {
@@ -702,49 +940,170 @@ export class InterviewReviewComponent {
     const appointmentIdKey = `interview${this.stageId}AppointmentId`;
     const appointmentId = (this as any)[appointmentIdKey];
 
-    const transformedPayload = {
-      applicationId: this.applicantId,
-      stageId: this.stageId + 1,
-      categoryId: checkedCategoryIds[0],
-      isSummary: true,
-      stageDate: isoDate,
-      appointmentId: appointmentId,
-      satisfaction: null,
-      notes: payload.noteInterviewReview,
-      strength: "",
-      concern: "",
-      selectedReasonIds: checkedReasonIds
-    }
+    Promise.resolve().then(() => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.add('dimmed-overlay');
+    });
 
-    this.interviewFormService.postInterviewReview(transformedPayload).subscribe({
-      next: () => {
-        this.fetchInterviewer()
-        this.foundisSummary = this.reviewHistory.find(user => user.isSummary === true);
-      },
-      error: (err) => {
-        console.error('Error Rescheduled:', err);
+    const dialogRef = this.dialog.open(AlertDialogComponent, {
+      width: '496px',
+      panelClass: ['custom-dialog-container', 'pp-rounded-dialog'],
+      autoFocus: false,
+      disableClose: true,
+      data: {
+        title: 'Confirmation',
+        message: 'Are you sure you want to save this data?',
+        confirm: true
+      }
+    });
+
+    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.remove('dimmed-overlay');
+
+      if (confirmed) {
+
+        this.isEditing = false;
+        this.nextTick(() => this.setActionButtons('view'));
+        this.clearDraftsForCurrentType()
+
+        if (this.foundisSummary) {
+          const payloadHistory = {
+            categoryId: checkedCategoryIds[0],
+            stageDate: isoDate,
+            strength: payload.strengthInterviewReview,
+            concern: payload.concernInterviewReview,
+            selectedReasonIds: checkedReasonIds
+          }
+
+          this.interviewFormService.updateCandidateStageHistory(this.foundisSummary.historyId, payloadHistory).subscribe({
+            next: () => {
+              this.fetchInterviewer()
+              this.foundisSummary = this.reviewHistory.find(user => user.isSummary === true);
+              this.editReview = false;
+              this.allowEditButton = true;
+            },
+            error: (err) => {
+              console.error('Error Rescheduled:', err);
+            }
+          });
+
+        } else {
+          const transformedPayload = {
+            applicationId: this.applicantId,
+            stageId: this.stageId + 1,
+            categoryId: checkedCategoryIds[0],
+            isSummary: false,
+            stageDate: isoDate,
+            appointmentId: (appointmentId ?? '').trim(),
+            satisfaction: 0,
+            notes: '',
+            strength: payload.strengthInterviewReview,
+            concern: payload.concernInterviewReview,
+            selectedReasonIds: checkedReasonIds
+          }
+
+          this.interviewFormService.postInterviewReview(transformedPayload).subscribe({
+            next: () => {
+              this.fetchInterviewer()
+              this.foundisSummary = this.reviewHistory.find(user => user.isSummary === true);
+              this.editReview = false;
+              this.allowEditButton = true;
+            },
+            error: (err) => {
+              console.error('Error Rescheduled:', err);
+            }
+          });
+        }
       }
     });
   }
 
   onCancelReview() {
-    this.initializeForm()
-    this.selectedCategoryId = null;
-  }
+    const payload = this.formDetails.value;
 
+    const isoDate = new Date(payload.dateInterviewReview).toISOString();
+    let checkedReasonIds = [];
+    checkedReasonIds = this.reasonsInterview1.flatMap((category: { rejectionReasons: any[]; }) =>
+      category.rejectionReasons
+        .filter(reason => reason.checked === true)
+        .map(reason => reason.reasonId)
+    );
+
+    const checkedCategoryIds = this.reasonsInterview1
+      .filter(category => category.rejectionReasons.some((reason: { checked: boolean; }) => reason.checked === true))
+      .map(category => category.categoryId);
+
+    const transformedPayload = {
+      categoryId: checkedCategoryIds[0],
+      stageDate: isoDate,
+      strength: payload.strengthInterviewReview,
+      concern: payload.concernInterviewReview,
+      selectedReasonIds: checkedReasonIds
+    }
+
+    if (JSON.stringify(this.snapshotInputForm) !== JSON.stringify(transformedPayload)) {
+      this.fetchInterviewer()
+      this.foundisSummary = this.reviewHistory.find(user => user.isSummary === true);
+      this.editReview = false;
+      this.allowEditButton = true;
+    }
+
+    const countIsSummaryTrue = this.reviewHistory.filter(item => item.isSummary === true).length;
+    if (!countIsSummaryTrue) {
+      this.editReview = true;
+      this.allowEditButton = false;
+    } else {
+      this.editReview = false;
+      this.allowEditButton = true;
+    }
+  }
 
   onEditClicked() {
     this.isEditing = true;
     this.formDetails.enable();
-    // this.initialSnapshot = this.buildSnapshot();
-
     this.nextTick(() => this.setActionButtons('edit'));
+
+    this.initializeForm();
+    this.editReview = true;
+    this.allowEditButton = false;
+
+    if (!this.snapshotInputForm) this.takeSnapshotFromUI();
+    this.updateSaveButtonState(); // << สำคัญ
   }
 
-  satisfactionClick() {
-    console.log(111111)
+  saveCache(): void {
+    const current = this.buildCurrentPayload();
+
+    if (!this.snapshotInputForm) {
+      this.snapshotInputForm = this.buildServerBaselinePayload();
+    }
+
+    const changed = JSON.stringify(current) !== JSON.stringify(this.snapshotInputForm);
+
+    if (changed) {
+      sessionStorage.setItem(this.cacheKey(), JSON.stringify(current));
+      this.hasDraftInSession = true;
+      this.updateSaveButtonState();
+    } else {
+      sessionStorage.removeItem(this.cacheKey());
+      this.hasDraftInSession = false;
+    }
   }
 
+  public hasFormChanged(): boolean {
+    if (!this.isEditing) return false;
+    if (!this.snapshotInputForm) return false;
+
+    const current = this.buildCurrentPayload();
+    const changed = JSON.stringify(current) !== JSON.stringify(this.snapshotInputForm);
+    return this.hasDraftInSession || changed;
+  }
+
+  public clearDraftsForCurrentType(): void {
+    sessionStorage.removeItem(this.cacheKey());
+    this.updateSaveButtonState();
+  }
   private setActionButtons(mode: 'view' | 'edit') {
     if (mode === 'view') {
       this.filterButtons = [{ label: 'Edit', key: 'edit', color: '#000000' }];
@@ -887,18 +1246,36 @@ export class InterviewReviewComponent {
   getCategoryBtnClass(c: CategoryOption, selectedId?: number | null) {
     const isActive = c.categoryId === selectedId;
     const name = (c.categoryName || '').toLowerCase();
+
+    const tones = {
+      accept: {
+        fill: 'tw-bg-green-500 tw-text-white',
+      },
+      decline: {
+        fill: 'tw-bg-red-500 tw-text-white',
+      },
+      noshow: {
+        fill: 'tw-bg-gray-500 tw-text-white',
+      },
+      onhold: {
+        fill: 'tw-bg-amber-500 tw-text-white',
+      },
+      default: {
+        fill: 'tw-bg-white tw-text-gray-700',
+      },
+    };
+
     const tone =
-      name.includes('accept') ? 'tw-bg-green-500 tw-text-white tw-border-green-600' :
-        name.includes('decline') ? 'tw-bg-red-500 tw-text-white tw-border-red-600' :
-          name.includes('application decline') ? 'tw-bg-red-500 tw-text-white tw-border-red-600' :
-            name.includes('no-show') ? 'tw-bg-gray-200 tw-text-gray-800 tw-border-gray-300' :
-              name.includes('on hold') ? 'tw-bg-amber-500 tw-text-white tw-border-amber-600' :
-                'tw-bg-white tw-text-gray-700 tw-border-gray-300';
+      name.includes('accept') ? tones.accept :
+        name.includes('decline') ? tones.decline :
+          name.includes('no-show') || name.includes('no show') ? tones.noshow :
+            name.includes('on hold') ? tones.onhold :
+              tones.default;
 
-    const inactive = 'hover:tw-brightness-105';
-    const activeRing = 'tw-ring-2 tw-ring-white/40';
+    const base = 'tw-text-sm tw-rounded-lg tw-px-3 tw-py-1.5 tw-border tw-transition';
+    const ring = isActive ? ' tw-ring-2 tw-ring-white/40' : '';
 
-    return isActive ? `${tone} ${activeRing}` : `tw-bg-white tw-text-gray-700 tw-border-gray-300 ${inactive}`;
+    return base + ' ' + (isActive ? tone.fill : '') + ring;
   }
 
   generateQRCode(text: string): void {
@@ -917,37 +1294,6 @@ export class InterviewReviewComponent {
       id: this.applicantId
     }
     this.router.navigate(['/applications/screening/application-form'], { queryParams });
-  }
-
-  onSaveClicked() {
-    // if (!this.hasFormChanged()) return;
-
-    Promise.resolve().then(() => {
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.add('dimmed-overlay');
-    });
-
-    const dialogRef = this.dialog.open(AlertDialogComponent, {
-      width: '496px',
-      panelClass: 'custom-dialog-container',
-      autoFocus: false,
-      disableClose: true,
-      data: {
-        title: 'Confirmation',
-        message: 'Are you sure you want to save this data?',
-        confirm: true
-      }
-    });
-
-    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.remove('dimmed-overlay');
-
-      if (confirmed) {
-        console.log('Save Click')
-      }
-    });
-
   }
 
   // ===== Helpers เดิม (ยังเก็บไว้เผื่อใช้งานต่อ) =====
@@ -1089,6 +1435,69 @@ export class InterviewReviewComponent {
     }
     return 4;
   }
+
+  private setButtonDisabled(key: string, disabled: boolean) {
+    const set = new Set(this.disabledKeys);
+    disabled ? set.add(key) : set.delete(key);
+    this.disabledKeys = Array.from(set);
+  }
+
+  // --- เพิ่ม state ใน class ---
+  selectedGroupKey: ResultGroupKey | null = null;
+  resultGroups: ResultGroup[] = [
+    { key: 'accept', label: 'Accept', regex: /(accept|on\s*hold)/i, items: [] },
+    { key: 'decline', label: 'Decline', regex: /(decline|no[\s-]?show)/i, items: [] },
+  ];
+
+  // label บนปุ่ม group: เช่น "Accept (Accept / On Hold)"
+  groupDisplayLabel(g: ResultGroup) {
+    const subs = g.items.map(i => i.categoryName).join(' / ');
+    return subs ? `${g.label}` : g.label;
+  }
+
+  // เรียกตอนกดปุ่ม group
+  selectGroup(key: ResultGroupKey) {
+    this.selectedGroupKey = (this.selectedGroupKey === key) ? null : key;
+
+    // เคลียร์หมวดย่อยที่เคยเลือก
+    this.selectedCategoryId = null;
+
+    // เคลียร์ reason ที่เคยติ๊ก
+    this.reasonsInterview1 = this.reasonsInterview1.map((cat: any) => ({
+      ...cat,
+      rejectionReasons: (cat.rejectionReasons || []).map((r: any) => ({ ...r, checked: false }))
+    }));
+
+    this.saveCache();
+    this.updateSaveButtonState();
+  }
+
+
+  // คืนรายการ category ภายใต้ group ที่เลือก (ไว้ใช้ใน html)
+  getCurrentGroupItems() {
+    if (!this.selectedGroupKey) return this.reasonsInterview1;
+    return (this.resultGroups.find(g => g.key === this.selectedGroupKey)?.items) ?? [];
+  }
+
+  // ปุ่ม group style
+  getGroupBtnClass(g: ResultGroup) {
+    const isActive = this.selectedGroupKey === g.key;
+    const base = 'tw-text-sm tw-rounded-lg tw-px-3 tw-py-1.5 tw-border tw-font-medium tw-transition';
+
+    const tones = {
+      accept: isActive
+        ? 'tw-bg-green-500 tw-text-white'
+        : '',
+      decline: isActive
+        ? 'tw-bg-red-500 tw-text-white'
+        : '',
+    };
+
+    const tone = tones[g.key] || 'tw-text-gray-700 tw-border-gray-300';
+    return `${base} ${tone}`;
+  }
+
+
 }
 
 // ====== Helpers ======

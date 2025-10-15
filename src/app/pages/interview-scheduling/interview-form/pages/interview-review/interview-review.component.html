@@ -1,5 +1,6 @@
 <!-- sentinel สำหรับ back-to-top -->
 <div id="page-top-sentinel" class="tw-h-px tw-w-px tw-opacity-0" aria-hidden="true"></div>
+
 <div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
     <app-header-content [headerName]="'Interview Review'" [headerType]="''"></app-header-content>
 </div>
@@ -81,10 +82,15 @@
                     <div class="tw-text-gray-500 tw-font-medium">
                         Applicant Grade {{ applicant.grade }}
                     </div>
-                    <div class="tw-flex tw-items-center tw-gap-2">
-                        <app-icon name="thumbs-up" [size]="18"></app-icon>
-                        {{ applicant.views }}
-                    </div>
+                    <!-- Like / Unlike -->
+                    <button type="button"
+                        class="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-md tw-px-2 tw-py-1 hover:tw-bg-gray-100 disabled:tw-opacity-60 disabled:tw-cursor-not-allowed"
+                        [disabled]="likeState.loading || !applicantId" (click)="onToggleLike()"
+                        [attr.aria-pressed]="likeState.liked" [title]="likeState.liked ? 'Unlike' : 'Like'">
+                        <app-icon [name]="likeState.liked ? 'thumbs-up-solid' : 'thumbs-up'" [size]="18"
+                            [ngClass]="likeState.liked ? 'tw-text-[#0A57C3]' : 'tw-text-inherit'"></app-icon>
+                        <span>{{ applicant.views }}</span>
+                    </button>
                 </div>
             </div>
         </section>
@@ -96,7 +102,7 @@
                         <!-- Header + Chevron -->
                         <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer">
                             <label class="tw-text-lg tw-font-bold">
-                                Application Interview 1
+                                Application Interview {{stageId}}
                             </label>
                         </div>
 
@@ -107,7 +113,7 @@
                                 <div>
                                     <div class="tw-text-[13px] tw-font-medium">Screened By</div>
                                     <input
-                                        class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100 tw-text-[#8b8b8b]"
+                                        class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100 tw-text-[#8b8b8b] tw-pointer-events-none"
                                         formControlName="userInterviewReview" />
                                 </div>
                                 <div>
@@ -115,7 +121,8 @@
                                     <input
                                         [ngClass]="!isEditing ? 'tw-pointer-events-none tw-text-[#8b8b8b] tw-bg-gray-100':''"
                                         class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2"
-                                        type="date" [min]="today" formControlName="dateInterviewReview" />
+                                        type="date" [min]="today" formControlName="dateInterviewReview"
+                                        (input)="onDateInput()" (change)="onDateChange()" />
                                 </div>
                             </div>
 
@@ -128,16 +135,25 @@
                             <!-- Result -->
                             <div class="tw-mb-4">
                                 <div class="tw-text-[13px] tw-font-medium">Result</div>
+
                                 <div class="tw-flex tw-flex-wrap tw-gap-2 tw-mt-1">
-                                    <div *ngFor="let s of reasonsInterview1">
-                                        <button type="button" (click)="selectCategory(s.categoryId)"
-                                            class="tw-text-sm tw-rounded-lg tw-px-3 tw-py-1.5 tw-border tw-transition"
-                                            [ngClass]="[getCategoryBtnClass(s, selectedCategoryId), !isEditing ? 'tw-pointer-events-none':'']">
-                                            {{ s.categoryName }}
-                                        </button>
-                                    </div>
+                                    <button *ngFor="let g of resultGroups" type="button" (click)="selectGroup(g.key)"
+                                        [ngClass]="[getGroupBtnClass(g), !isEditing ? 'tw-pointer-events-none':'']">
+                                        {{ groupDisplayLabel(g) }}
+                                    </button>
+                                </div>
+
+                                <!-- แสดง ‘หมวดย่อย’ ก็ต่อเมื่อเลือก Group แล้ว -->
+                                <div class="tw-flex tw-flex-wrap tw-gap-2 tw-mt-3" *ngIf="selectedGroupKey">
+                                    <button *ngFor="let s of getCurrentGroupItems()" type="button"
+                                        (click)="selectCategory(s.categoryId)"
+                                        class="tw-text-sm tw-rounded-lg tw-px-3 tw-py-1.5 tw-border tw-transition"
+                                        [ngClass]="[getCategoryBtnClass(s, selectedCategoryId), !isEditing ? 'tw-pointer-events-none':'']">
+                                        {{ s.categoryName }}
+                                    </button>
                                 </div>
                             </div>
+
 
                             <!-- Reason -->
                             <div class="tw-mb-4" *ngIf="selectedCategoryId">
@@ -145,12 +161,12 @@
                                 <div class="tw-grid md:tw-grid-cols-2 tw-gap-y-3 tw-gap-x-4 tw-mt-2">
                                     <div class="tw-flex tw-items-start tw-gap-2"
                                         *ngFor="let r of getRejectionReasons(selectedCategoryId)"
-                                        (click)="toggleReasonCheck(r)">
+                                        (click)="toggleReasonCheck(r)"
+                                        [ngClass]="!isEditing ? 'tw-pointer-events-none':''">
                                         <span role="checkbox" [attr.aria-checked]="r.checked"
                                             class="tw-inline-flex tw-items-center tw-justify-center tw-rounded-[4px] tw-border tw-align-middle tw-mt-0.5"
                                             [ngClass]="[r.checked ? 'tw-border-green-500 tw-bg-green-50' : 'tw-border-gray-300 tw-bg-white',
-                                                !isEditing ? 'tw-pointer-events-none':''
-                                            ]" style="width:18px;height:18px;min-width:18px;min-height:18px">
+                                                ]" style="width:18px;height:18px;min-width:18px;min-height:18px">
                                             <app-icon *ngIf="r.checked" name="check" [size]="14"
                                                 class="tw-text-green-600"></app-icon>
                                         </span>
@@ -166,15 +182,17 @@
                                         <textarea
                                             [ngClass]="!isEditing ? 'tw-pointer-events-none tw-text-[#8b8b8b] tw-bg-gray-100':''"
                                             class="tw-w-full tw-text-[14px] tw-h-32 tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2"
-                                            [value]="" formControlName="noteInterviewReview"></textarea>
+                                            [value]="" formControlName="strengthInterviewReview" (input)="saveCache()"
+                                            (compositionend)="saveCache()"></textarea>
                                     </div>
-                                    
+
                                     <div>
                                         <div class="tw-text-[13px] tw-font-medium">Concern</div>
                                         <textarea
                                             [ngClass]="!isEditing ? 'tw-pointer-events-none tw-text-[#8b8b8b] tw-bg-gray-100':''"
                                             class="tw-w-full tw-text-[14px] tw-h-32 tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2"
-                                            [value]="" formControlName="noteInterviewReview"></textarea>
+                                            [value]="" formControlName="concernInterviewReview" (input)="saveCache()"
+                                            (compositionend)="saveCache()"></textarea>
                                     </div>
                                 </ng-container>
                             </div>
@@ -192,3 +210,11 @@
         </section>
     </div>
 </div>
+
+<!-- Floating Back-to-Top -->
+<app-back-to-top
+  [sentinelSelector]="'#page-top-sentinel'"
+  [buttonClass]="'tw-fixed tw-bottom-6 tw-right-6 tw-rounded-full tw-h-14 tw-w-14 tw-flex tw-items-center tw-justify-center tw-shadow-xl bg-red-blood hover:bg-maroon-1 tw-text-white tw-z-[60]'"
+  [iconName]="'arrow-upward'"
+  [iconSize]="26">
+</app-back-to-top>

@@ -1,4 +1,4 @@
-<div class="tw-relative tw-w-full">
+<div class="tw-relative tw-w-full" [ngClass]="disabled ? 'tw-pointer-events-none':''">
   <!-- Label -->
   <label *ngIf="label" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
     <strong>{{ label }}</strong>
@@ -6,16 +6,17 @@
   </label>
 
   <!-- Main Input Container -->
-  <div #triggerEl
-    [ngClass]="inTable ? 'tw-py-1 tw-px-3 tw-rounded-md':'tw-py-2 tw-px-4 tw-min-h-[42px] tw-rounded-lg'"
-    class="tw-flex tw-justify-between tw-items-center tw-relative tw-w-full tw-border tw-border-gray-300 tw-bg-white tw-focus-within:tw-ring-2 tw-focus-within:tw-ring-[#D97706] tw-focus-within:tw-border-[#D97706] tw-transition-all tw-duration-200"
-    [class.tw-ring-2]="isOpen" [class.tw-ring-[#D97706]]="isOpen" [class.tw-border-[#D97706]]="isOpen">
+  <div #triggerEl  (click)="toggleDropdown()"
+    [ngClass]="[inTable ? 'tw-py-1 tw-px-3 tw-rounded-md tw-ring-0':'tw-py-2 tw-px-4 tw-min-h-[42px] tw-rounded-lg', disabled ? 'tw-bg-gray-100 tw-text-gray-500':'tw-bg-white']"
+    class="tw-flex tw-justify-between tw-items-center tw-relative tw-w-full tw-border tw-border-gray-300 tw-focus-within:tw-ring-2 tw-focus-within:tw-ring-[#D97706] tw-transition-all tw-duration-200"
+    >
     <!-- Selected Tags and Search Input -->
     <div class="tw-flex tw-flex-wrap tw-items-center tw-gap-1" style="width: inherit;">
 
       <!-- Selected Option Tags -->
       <div *ngFor="let option of selectedOptions; trackBy: trackByValue"
-        class="tw-inline-flex tw-items-center tw-px-2 tw-py-1 tw-rounded-md tw-text-sm tw-font-medium tw-bg-[#FFFBF3] tw-text-[#D97706] tw-border tw-border-[#FDECCE]">
+        class="tw-inline-flex tw-items-center tw-px-2 tw-py-1 tw-rounded-md tw-text-sm tw-font-medium tw-bg-[#FFFBF3] tw-text-[#D97706] tw-border tw-border-[#FDECCE]"
+        [ngClass]="disabled ? 'tw-opacity-75':''">
         <span>{{ option.label }}</span>
         <button *ngIf="!isHistory" type="button" (click)="removeOption(option); $event.stopPropagation()"
           class="tw-ml-1 tw-inline-flex tw-items-center tw-justify-center tw-w-4 tw-h-4 tw-rounded-full hover:tw-bg-[#FFFBF3] focus:tw-outline-none focus:tw-bg-[#FFFBF3] tw-transition-colors"
@@ -25,29 +26,27 @@
       </div>
 
       <!-- Search Input -->
-      <input *ngIf="!isHistory" #searchInput [(ngModel)]="searchTerm" (input)="onSearchChange()" (focus)="openDropdown()"
+      <input *ngIf="!isHistory" #searchInput [(ngModel)]="searchTerm" (input)="onSearchChange()"
         (keydown)="onKeyDown($event)" type="text"
         [ngClass]="inTable? 'placeholder:tw-text-[#9ca3af]':''"
         class="tw-flex-1 tw-min-w-[120px] tw-border-none tw-outline-none tw-bg-transparent tw-text-sm tw-placeholder-black"
-        [placeholder]="getPlaceholder()" autocomplete="off" />
+        [placeholder]="getPlaceholder()" autocomplete="off"/>
     </div>
 
     <!-- Dropdown Arrow -->
-    <button type="button" (click)="toggleDropdown()" class="tw-text-black">
+    <button type="button" class="tw-text-black">
       <app-icon [name]="'chevron-down'" [size]="14"></app-icon>
     </button>
   </div>
 
   <!-- Dropdown Options -->
-  <div *ngIf="isOpen"
+  <!-- <div *ngIf="isOpen"
     class="tw-fixed tw-z-100 tw-bg-white tw-border tw-border-gray-300 tw-rounded-lg tw-shadow-lg tw-max-h-60 tw-overflow-auto tw-z-10"
     [ngStyle]="dropdownStyles" role="listbox" [attr.aria-multiselectable]="true">
-    <!-- No Results Message -->
     <div *ngIf="filteredOptions.length === 0" class="tw-px-3 tw-py-2 tw-text-sm tw-text-gray-500 tw-text-center">
       {{ searchTerm ? 'No options found' : 'No options available' }}
     </div>
 
-    <!-- Options List -->
     <ng-container *ngFor="let option of filteredOptions; let i = index; trackBy: trackByValue">
       <div *ngIf="!isSelected(option)" (click)="toggleOption(option)"
         class="tw-flex tw-items-center tw-px-3 tw-py-2 tw-text-sm tw-cursor-pointer hover:tw-bg-gray-100 tw-transition-colors tw-duration-150"
@@ -55,9 +54,30 @@
         [class.tw-pointer-events-none]="isHistory"
         [attr.aria-selected]="isSelected(option)">
 
-        <!-- Option Label -->
+        <span [innerHTML]="highlightSearchTerm(option.label)"></span>
+      </div>
+    </ng-container>
+  </div> -->
+</div>
+
+
+<ng-template #dropdownTpl>
+  <div class="tw-bg-white tw-border tw-border-gray-300 tw-rounded-lg tw-shadow-lg tw-max-h-60 tw-overflow-auto"
+       role="listbox" [attr.aria-multiselectable]="true" style="width: 100%;">
+    <div *ngIf="filteredOptions.length === 0" class="tw-px-3 tw-py-2 tw-text-sm tw-text-gray-500 tw-text-center">
+      {{ searchTerm ? 'No options found' : 'No options available' }}
+    </div>
+
+    <ng-container *ngFor="let option of filteredOptions; let i = index; trackBy: trackByValue">
+      <div *ngIf="!isSelected(option)" (click)="toggleOption(option)"
+           class="tw-flex tw-items-center tw-px-3 tw-py-2 tw-text-sm tw-cursor-pointer hover:tw-bg-gray-100 tw-transition-colors tw-duration-150"
+           [class.tw-bg-[#ebd7c1]]="isSelected(option)"
+           [class.tw-bg-gray-100]="highlightedIndex === i"
+           role="option"
+           [class.tw-pointer-events-none]="isHistory"
+           [attr.aria-selected]="isSelected(option)">
         <span [innerHTML]="highlightSearchTerm(option.label)"></span>
       </div>
     </ng-container>
   </div>
-</div>
+</ng-template>

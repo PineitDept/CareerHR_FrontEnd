@@ -1,8 +1,8 @@
 import { ChangeDetectorRef, Component, computed, ElementRef, QueryList, signal, ViewChild, ViewChildren } from '@angular/core';
 import { InterviewerService } from '../../services/admin-setting/interviewer/interviewer.service';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { DateRange, SearchForm } from '../../interfaces/interview-scheduling/interview.interface';
-import { ICandidateFilterRequest, TabMenu } from '../../interfaces/Application/application.interface';
+import { ICandidateFilterRequest, IPositionDto, TabMenu } from '../../interfaces/Application/application.interface';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { SelectDialogComponent, SelectOption } from '../../shared/components/dialogs/select-dialog/select-dialog.component';
@@ -13,8 +13,10 @@ import { SlickCarouselComponent } from 'ngx-slick-carousel';
 import { MailDialogComponent } from '../../shared/components/dialogs/mail-dialog/mail-dialog.component';
 import { AppointmentsService } from '../../services/interview-scheduling/appointment-interview/appointments.service';
 import { AlertDialogComponent } from '../../shared/components/dialogs/alert-dialog/alert-dialog.component';
-import { catchError, finalize, forkJoin, map, Observable, of, tap } from 'rxjs';
+import { catchError, distinctUntilChanged, filter, finalize, forkJoin, map, Observable, of, startWith, tap } from 'rxjs';
 import { NotificationService } from '../../shared/services/notification/notification.service';
+import { Columns } from '../../shared/interfaces/tables/column.interface';
+import { InterviewFormService } from '../../services/interview-scheduling/interview-form/interview-form.service';
 
 const SEARCH_OPTIONS: string[] = [
   'Applicant ID',
@@ -31,18 +33,18 @@ export class OfferEmploymentComponent {
   createInitialTabs(): TabMenu[] {
     return [
       { key: 'total', label: 'All Status', count: 0 },
-    //   { key: 'hire', label: 'Hire', count: 0 },
-    //   { key: 'not-hire', label: 'Not Hire', count: 0 },
-      { key: 'pending', label: 'Pending', count: 0 },
-      { key: 'in-process', label: 'In Process', count: 0 },
-      { key: 'scheduled', label: 'Scheduled', count: 0 }
+      { key: 'hire-offer', label: 'Hire Offer', count: 0 },
+      // { key: 'in-process', label: 'Not Hire', count: 0 },
+      { key: 'candidate-decline-offer', label: 'Candidate Decline Offer', count: 0 }
     ];
   }
 
   protected currentFilterParams: IBenefitsFilterRequest = {
     page: 1,
-    pageSize: 5,
+    pageSize: 20,
   };
+
+  childActive = false;
 
   // ---------- Signals & reactive states ----------
   tabMenus = signal<TabMenu[]>(this.createInitialTabs());
@@ -109,29 +111,72 @@ export class OfferEmploymentComponent {
     isOffered: boolean
   }[] = [];
 
-  // ---------- Carousel config ----------
-  slideConfig = {
-    slidesToShow: 4,
-    slidesToScroll: 1,
-    infinite: false,
-    arrows: false,
-    responsive: [
-      {
-        breakpoint: 1800,
-        settings: { slidesToShow: 3 }
-      },
-      {
-        breakpoint: 1200,
-        settings: { slidesToShow: 2 }
-      },
-      {
-        breakpoint: 768,
-        settings: { slidesToShow: 1 }
-      }
-    ]
-  };
+  hasOverflowY = false;
+  rows: any[] = [];
+  readonly columns: Columns = [
+    {
+      header: 'Offer Status',
+      field: 'interview1ResultText',
+      type: 'badge',
+      align: 'center',
+      width: '10%',
+    },
+    {
+      header: 'Applicant ID.',
+      field: 'userID',
+      type: 'text',
+      align: 'center',
+      width: '10%',
+    },
+    {
+      header: 'Applicant Name',
+      field: 'fullName',
+      type: 'text',
+      // align: 'center',
+      width: '20%',
+    },
+    {
+      header: 'Job Position',
+      field: 'position',
+      type: 'list',
+      width: '20%',
+      wrapText: true,
+    },
+    {
+      header: 'Offer Date',
+      field: 'gradeCandidate',
+      type: 'text',
+      align: 'center',
+      width: '10%',
+    },
+    {
+      header: 'Offer Result',
+      field: 'OfferResult',
+      type: 'textlink-custom',
+      align: 'center',
+      width: '10%',
+      textlinkActions: ['view'],
+      iconLink: 'pen-to-square'
+    },
+    {
+      header: 'Hire Result',
+      field: 'HireResult',
+      type: 'textlink-custom',
+      align: 'center',
+      width: '10%',
+      textlinkActions: ['view'],
+      iconLink: 'pen-to-square'
+    },
+    {
+      header: 'Status',
+      field: 'statusDate',
+      type: 'badge',
+      align: 'center',
+      width: '10%',
+    },
+  ] as const;
 
-  @ViewChildren('slickCarousel') carousels!: QueryList<SlickCarouselComponent>;
+
   @ViewChild('scrollContainer') scrollContainer!: ElementRef;
 
   // ---------- Constructor ----------
@@ -144,6 +189,8 @@ export class OfferEmploymentComponent {
     private jobPositionService: JobPositionService,
     private appointmentsService: AppointmentsService,
     private notificationService: NotificationService,
+    private interviewFormService: InterviewFormService,
+    private route: ActivatedRoute
   ) { }
 
   // ---------- Lifecycle ----------
@@ -155,9 +202,9 @@ export class OfferEmploymentComponent {
 
     this.today = `${year}-${month}-${day}`;
 
-    this.appointmentsService.setAppointmentsType(1);
+    this.appointmentsService.setAppointmentsType(3);
 
-    const savedSearch = sessionStorage.getItem('interviewSearchForm');
+    const savedSearch = sessionStorage.getItem('interviewOffer');
     if (savedSearch) {
       this.searchForm = JSON.parse(savedSearch);
       this.currentFilterParams = {
@@ -167,121 +214,23 @@ export class OfferEmploymentComponent {
       };
     }
 
-    this.fetchLocationDetails();
-    this.fetchJobPosition();
-    this.fetchTeamID();
-    this.fetchInterviewer();
-    this.fetchStatusCall();
+    // this.fetchAppointments(true);
 
-    this.filterButtons = [{ label: 'History', key: 'history', color: 'transparent', outlineBtn: true }];
+    // this.loadInitialAppointments(true);
+
+    // this.filterButtons = [{ label: 'History', key: 'history', color: 'transparent', outlineBtn: true }];
   }
 
   // ---------- Data fetching ----------
-  fetchLocationDetails() {
-    this.benefitsService.setBenefitType('location');
-    this.benefitsService.getBenefitsWeb<IApiResponse<IUniversityWithPositionsDto>>(this.currentFilterParams).subscribe({
-      next: (res) => {
-        const list = Array.isArray(res) ? res : ((res as any)?.items ?? (res as any)?.data ?? []);
-        const activeLocations = (list as any[]).filter(x => x?.isActive !== false);
-
-        this.locationsList = activeLocations.map(loc => ({
-          label: loc.locationName,
-          value: loc.locationId
-        }));
-      },
-      error: (error) => {
-        console.error('Error fetching location details:', error);
-      },
-    });
-  }
-
-  fetchJobPosition() {
-    this.jobPositionService.setEMailType('job-position');
-    this.jobPositionService.getAllJobTemplates().subscribe({
-      next: (res) => {
-        const list = res.items ?? [];
-
-        const filteredPositions = (list as any[]).filter(x =>
-          x?.isActive !== false && x?.status === 31
-        );
-
-        this.jobpositionList = filteredPositions.map(loc => ({
-          label: loc.namePosition,
-          value: loc.idjobPst
-        }));
-      },
-      error: (error) => {
-        console.error('Error fetching category types:', error);
-      }
-    });
-  }
-
-  fetchTeamID() {
-    this.interviewerService.getAllTeams().subscribe({
-      next: (res) => {
-        const list = res.items ?? [];
-
-        const filteredTeam = (list as any[]).filter(x => x?.isActive !== false);
-
-        this.teamList = filteredTeam.map(loc => ({
-          label: loc.teamName,
-          value: loc.teamId
-        }));
-      },
-      error: (error) => {
-        console.error('Error fetching category types:', error);
-      }
-    });
-  }
-
-  fetchInterviewer() {
-    this.interviewerService.getAllInterviewers().subscribe({
-      next: (res) => {
-        const list = res ?? [];
-
-        const filteredInterviewer = (list as any[]).filter(x => x?.isActive !== false);
-
-        this.interviewerList = filteredInterviewer.map(loc => ({
-          label: loc.fullName,
-          value: loc.idEmployee
-        }));
-      },
-      error: (error) => {
-        console.error('Error fetching category types:', error);
-      }
-    });
-  }
-
-  fetchTeamInterviewer(id: number): Promise<any> {
-    return new Promise((resolve, reject) => {
-      this.interviewerService.getTeamById(id).subscribe({
-        next: (res) => resolve(res),
-        error: (err) => {
-          console.error('Error fetching team:', err);
-          reject(err);
-        }
-      });
-    });
-  }
-
-  fetchIDInterviewer(appointmentId: string): Promise<any> {
-    return new Promise((resolve, reject) => {
-      this.appointmentsService.getInterviewer(appointmentId).subscribe({
-        next: (res) => resolve(res),
-        error: (err) => {
-          console.error('Error fetching team:', err);
-          reject(err);
-        }
-      });
-    });
-  }
 
   currentPage = 1;
 
   loadInitialAppointments(updateTabCounts = false) {
     this.appointments = [];
     this.currentFilterParams.page = 1;
-    this.fetchAppointments(updateTabCounts);
+    if (this.isAtParentOnly()) {
+      this.fetchAppointments(updateTabCounts);
+    }
   }
 
   fetchAppointments(updateTabCounts = false, autoSubscribe = true): Observable<any> {
@@ -297,42 +246,50 @@ export class OfferEmploymentComponent {
       search: this.currentFilterParams.search,
     };
 
-    const obs$ = this.appointmentsService.getAppointments<any>(updatedParams).pipe(
+    const obs$ = this.appointmentsService.getInterviewOffer<any>(updatedParams).pipe(
       tap((res) => {
-        const newItems = res.items || [];
-        this.appointments = [...this.appointments, ...newItems];
 
-        if (newItems.length < Number(this.currentFilterParams.pageSize)) {
-          this.hasMoreData = false;
-        } else {
-          this.currentFilterParams.page = (this.currentFilterParams.page ?? 1);
-        }
+        this.hasMoreData = res.hasNextPage;
+
+        this.rows = (res.items ?? []).map((item: any) => {
+          const interview1Text = item.result.offerResult;
+          const interview2Text = item.result.statusResult.statusText;
+
+          const interview1Hidden = !interview1Text;
+          const interview2Hidden = !interview2Text;
+
+          return {
+            ...item,
+            userID: item.profile.userId,
+            fullName: item.profile.fullName,
+            interview1ResultText: {
+              label: interview1Text,
+              class: [
+                ...(item.result.offerResult.toLowerCase().trim() === 'offer'
+                  ? ['tw-bg-green-500', 'tw-text-white', 'tw-ring-green-500/10']
+                  : item.result.offerResult.toLowerCase().trim() === 'in process'
+                    ? ['tw-bg-orange-500', 'tw-text-white', 'tw-ring-orange-500/10']
+                    : ['tw-bg-red-500', 'tw-text-white', 'tw-ring-red-500/10']),
+                ...(interview1Hidden ? ['tw-hidden'] : []),
+              ],
+            },
+            statusDate: {
+              label: interview2Text,
+              class: [
+                ...(this.getStatusClasses(interview2Text)),
+                ...(interview2Hidden ? ['tw-hidden'] : []),
+              ],
+            },
+            gradeCandidate: this.formatCreateDateTimeDMY(item.interview.date).formattedDate,
+            OfferResult: item.result.offerResult ? item.result.offerResult : undefined,
+            HireResult: item.result.hireResult ? item.result.hireResult : undefined,
+            position: item.jobPosition.jobList?.map((pos: { jobId?: number; jobName: string; }) => pos.jobName) || [],
+          };
+        });
 
         if (updateTabCounts && res.groupCounts) {
           this.updateTabCountsFromGroup(res.groupCounts);
         }
-
-        this.appointments = this.appointments.map((item: any) => {
-          const revision = Number(item.interview?.revision || 1);
-
-          const revisionList = Array.from({ length: revision }, (_, i) => ({
-            label: i + 1,
-            value: i + 1
-          })).reverse();
-
-          return {
-            ...item,
-            revisionList
-          };
-        });
-
-        this.appointments = this.appointments.map(appointment => {
-          const offeredCount = appointment.jobPosition.jobList.filter((job: any) => job.isOffered === true).length;
-          return {
-            ...appointment,
-            isHidden: offeredCount >= 2
-          };
-        });
 
       }),
       catchError((err) => {
@@ -351,66 +308,22 @@ export class OfferEmploymentComponent {
     return obs$;
   }
 
-
-  getHistoryDataForUser(userId: number) {
-    const historyData: { date: string; time: string; status: any; value: any; }[] = [];
-
-    const userAppointment = this.appointments.find(item => item.profile?.userId === userId);
-    if (!userAppointment) return historyData;
-
-    const missCalls = userAppointment.interview?.missCallHistory || [];
-    missCalls.forEach((call: { missCallAt: string | number | Date; missCallReason: any; missCallId: any; }) => {
-      historyData.push({
-        date: call.missCallAt ? new Date(call.missCallAt).toISOString().split('T')[0].replace(/-/g, '/') : '',
-        time: call.missCallAt ? new Date(call.missCallAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '',
-        status: call.missCallReason || '',
-        value: call.missCallId || 0
-      });
-    });
-
-    return historyData;
+  getStatusClasses(status: string): string[] {
+    switch (status) {
+      case 'overweek':
+        return ['tw-bg-red-900', 'tw-text-white', 'tw-ring-red-900/10'];
+      case 'overmonth':
+        return ['tw-bg-red-900', 'tw-text-white', 'tw-ring-red-900/10'];
+      case 'over3day':
+        return ['tw-bg-yellow-400', 'tw-text-black', 'tw-ring-yellow-500/10'];
+      default:
+        return ['tw-bg-green-500', 'tw-text-white', 'tw-ring-green-500/10'];
+    }
   }
-
-  fetchStatusCall() {
-
-    const updatedParams = {
-      ...this.currentFilterParams,
-      page: this.currentFilterParams.page ?? 1,
-      search: this.currentFilterParams.search,
-    };
-
-    this.appointmentsService.getStatus<any>(updatedParams).subscribe({
-      next: (res) => {
-        const allMapped = res.map((item: { reasonMissCall: any; missCallId: number }) => ({
-          label: item.reasonMissCall,
-          value: item.missCallId
-        }));
-
-        this.dataStatusCallFirst = allMapped.filter((item: { value: number; }) => item.value >= 0 && item.value <= 49);
-        this.dataStatusCallSecond = allMapped.filter((item: { value: number; }) => item.value >= 50 && item.value <= 99);
-
-        this.dataStatusCall = [...this.dataStatusCallFirst, ...this.dataStatusCallSecond];
-      },
-      error: (err) => {
-        console.error('Error fetching appointments:', err);
-      }
-    });
-  }
-
-  fetchPositionLogFor(appointment: any): Observable<any> {
-    return this.appointmentsService.getPositionLogs(appointment.profile.userId, appointment.interview.round).pipe(
-      tap(res => {
-        appointment.positionLogs = res.data;
-      })
-    );
-  }
-
-
-
 
   // ---------- Search / filter actions ----------
   onSearch() {
-    sessionStorage.setItem('interviewSearchForm', JSON.stringify(this.searchForm));
+    sessionStorage.setItem('interviewOfferSearchForm', JSON.stringify(this.searchForm));
 
     this.currentFilterParams = {
       ...this.currentFilterParams,
@@ -426,11 +339,11 @@ export class OfferEmploymentComponent {
 
   onClearSearch() {
     this.searchForm = { searchBy: '', searchValue: '' };
-    sessionStorage.removeItem('interviewSearchForm');
+    sessionStorage.removeItem('interviewOfferSearchForm');
 
     this.currentFilterParams = {
       page: 1,
-      pageSize: 5,
+      pageSize: 20,
     };
 
     this.appointments = [];
@@ -447,7 +360,8 @@ export class OfferEmploymentComponent {
     const updatedParams = {
       ...this.currentFilterParams,
       InterviewResult: tabKey === 'total' ? undefined : tabKey,
-      page: 1
+      page: 1,
+      pageSize: 20,
     };
 
     this.filterRequest.set(updatedParams);
@@ -455,6 +369,22 @@ export class OfferEmploymentComponent {
 
     this.appointments = [];
     this.loadInitialAppointments(false);
+
+    if (tabKey === 'base') {
+      this.router.navigate(['./'], { relativeTo: this.route });
+    } else if (tabKey === 'hire') {
+      this.router.navigate(['hire-result'], { relativeTo: this.route });
+    } else if (tabKey === 'offer') {
+      this.router.navigate(['offer-result'], { relativeTo: this.route });
+    }
+  }
+
+  onChildActivate() {
+    Promise.resolve().then(() => this.childActive = true);
+  }
+
+  onChildDeactivate() {
+    Promise.resolve().then(() => this.childActive = false);
   }
 
   // ---------- Date range ----------
@@ -471,7 +401,7 @@ export class OfferEmploymentComponent {
     if (endY !== 'NaN') {
       this.yearData = Number(endY);
 
-      if(endM - startM !== 11) {
+      if (endM - startM !== 11) {
         this.monthData = endM;
       } else {
         this.monthData = undefined;
@@ -483,152 +413,48 @@ export class OfferEmploymentComponent {
 
     this.currentFilterParams = {
       page: 1,
-      pageSize: 5,
+      pageSize: 20,
     };
 
     this.hasMoreData = true;
     this.appointments = [];
 
-    this.fetchAppointments(true);
+    if (this.isAtParentOnly()) {
+      this.fetchAppointments(true);
+    }
 
     this.updateTabCounts(this.appointments);
   }
 
-
-  onDateChange(event: Event, item: any) {
-    const input = event.target as HTMLInputElement;
-    const dateOnly = input.value;
-    const time = '00:00:00';
-
-    const dateTimeString = `${dateOnly}T${time}`;
-
-    const payload = {
-      appointmentId: item.profile.appointmentId,
-      interviewDate: dateTimeString
-    }
-
-    this.appointmentsService.updateInterviewDate(payload).subscribe({
-      error: (err) => {
-        console.error('Error update date:', err);
-
-        this.notificationService.error('Error update date');
-      }
-    });
+  private isAtParentOnly(): boolean {
+    // ถ้ามี child แสดงว่าเราอยู่ /offer-employment/<child> → ไม่ fetch
+    const child = this.route.firstChild ?? this.route.snapshot.firstChild;
+    // กรณีมี child path = '' (หน้า default ของ parent) ยังถือว่าอยู่หน้า parent
+    return !child || child.routeConfig?.path === '';
   }
 
-  onLocationChange(selectedValue: number, item: any) {
+  // onDateChange(event: Event, item: any) {
+  //   const input = event.target as HTMLInputElement;
+  //   const dateTime = input.value;
 
-    const payload = {
-      appointmentId: item.profile.appointmentId,
-      location: selectedValue
-    }
+  //   const payload = {
+  //     appointmentId: item.profile.appointmentId,
+  //     interviewDate: dateTime
+  //   }
 
-    this.appointmentsService.updateInterviewLocation(payload).subscribe({
-      error: (err) => {
-        console.error('Error update location:', err);
+  //   this.appointmentsService.updateInterviewDate(payload).subscribe({
+  //     error: (err) => {
+  //       console.error('Error update date:', err);
 
-        this.notificationService.error('Error update location');
-      }
-    });
-  }
-
-  changeRevision: boolean | undefined;
-  onRevisionChange(selectedValue: number, item: any) {
-    const appointmentId = item.profile.appointmentId;
-    const AppointmentRevision = item.profile.appointmentId.slice(0, -1) + selectedValue;
-
-    this.appointmentsService.getAppointmentsRevision(AppointmentRevision).subscribe({
-      next: (res) => {
-        this.appointments = this.appointments.map(appointment => {
-          if (appointment.profile.appointmentId === appointmentId) {
-            this.changeRevision = true
-            appointment.interview = res.items[0].interview
-          }
-
-          return {
-            ...appointment
-          };
-        });
-      },
-      error: (err) => {
-        console.error('Error get revision:', err);
-      }
-    });
-  }
-
-  onRescheduledClick(item: any) {
-    Promise.resolve().then(() => {
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.add('dimmed-overlay');
-    });
-
-    const dialogRef = this.dialog.open(AlertDialogComponent, {
-      width: '496px',
-      panelClass: 'custom-dialog-container',
-      autoFocus: false,
-      disableClose: true,
-      data: {
-        title: 'Confirmation',
-        message: 'Do you want to reschedule this appointment?',
-        confirm: true
-      }
-    });
-
-    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.remove('dimmed-overlay');
-
-      if (confirmed) {
-        const appointmentid = item.profile.appointmentId;
-        const userId = item.profile.userId;
-        const round = item.interview.round;
-        const revision = item.interview.revision;
-
-        const payload = {
-          appointmentId: appointmentid,
-          userId: userId,
-          round : round,
-          revice: revision
-        }
-
-        this.appointmentsService.postReschedule(payload).subscribe({
-          next: () => {
-            const previousPage = this.currentFilterParams.page;
-            const focusedAppointmentId = item.profile.appointmentId;
-
-            this.appointments = [];
-            this.currentFilterParams.page = 1;
-            this.hasMoreData = true;
-
-            const fetchCalls: Observable<any>[] = [this.fetchAppointments(false, false)];
-
-            for (let page = 2; page <= previousPage; page++) {
-              this.currentFilterParams.page = page;
-              fetchCalls.push(this.fetchAppointments(false, false));
-            }
-
-            forkJoin(fetchCalls).subscribe(() => {
-              setTimeout(() => {
-                const el = document.getElementById(`appointment-${focusedAppointmentId}`);
-                if (el) {
-                  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-              }, 500);
-            });
-          },
-          error: (err) => {
-            console.error('Error Rescheduled:', err);
-
-            this.notificationService.error('Error Rescheduled');
-          }
-        });
-      }
-    })
-  }
+  //       this.notificationService.error('Error update date');
+  //     }
+  //   });
+  // }
 
   onInterviewFormClicked(item: any) {
     const queryParams = {
-      id: item.profile.userId
+      id: item.profile.appointmentId,
+      interview: 1
     }
     this.router.navigate(['/interview-scheduling/interview-form/result'], { queryParams });
   }
@@ -637,8 +463,8 @@ export class OfferEmploymentComponent {
   updateTabCounts(appointments: any[]) {
     const counts: { [key: string]: number } = {
       total: appointments.length,
-      pending: appointments.filter(a => a.result.interviewResult === 'pending').length,
-      scheduled: appointments.filter(a => a.result.interviewResult === 'scheduled').length,
+      'hire-offer': appointments.filter(a => a.result.interviewResult === 'hire-offer').length,
+      'candidate-decline-offer': appointments.filter(a => a.result.interviewResult === 'candidate-decline-offer').length,
       'in-process': appointments.filter(a => a.result.interviewResult === 'in-process').length
     };
 
@@ -673,592 +499,20 @@ export class OfferEmploymentComponent {
     this.tabMenus.set(newTabs);
   }
 
-  // ---------- Dialog handlers ----------
-  onAddPoscitionClick(index: number) {
-    this.appointments.forEach(item => item.isAddingPosition = false);
-    this.appointments[index].isAddingPosition = true;
-
-    const item = this.appointments[index];
-    const filteredJobPositionList = this.jobpositionList.filter((jp: { label: string; }) =>
-      !item.jobPosition.jobList.some((job: { jobName: string; }) =>
-        jp.label.trim().toLowerCase() === job.jobName.trim().toLowerCase()
-      )
-    );
-
-    this.historyData = [];
-
-    this.fetchPositionLogFor(this.appointments[index]).subscribe(() => {
-      const dataPosLogs = this.appointments[index].positionLogs;
-
-      const historyOptions: SelectOption[] = dataPosLogs.map((item: { createDate: string; namePosition: any; }, index: any) => {
-        const { formattedDate, formattedTime } = this.formatCreateDateTimeDMY(item.createDate);
-        return {
-          value: index,
-          label: `${formattedDate} ${formattedTime} ${item.namePosition}`
-        };
-      });
-
-      const defaultSelected = historyOptions.slice(0, 2).map(opt => opt.value);
-
-      this.dropdownConfigs = [
-        {
-          type: 'single',
-          label: 'Position',
-          placeholder: 'Select Position',
-          options: filteredJobPositionList,
-        },
-        {
-          type: 'multi',
-          label: 'History',
-          options: historyOptions,
-          isHistory: true,
-          defaultSelected: defaultSelected
-        }
-      ];
-
-      const dialogRef = this.dialog.open(SelectDialogComponent, {
-        width: '480px',
-        data: {
-          title: 'Job Position',
-          quality: 0,
-          confirm: true,
-          dropdownConfigs: this.dropdownConfigs
-        }
-      });
-
-      dialogRef.afterClosed().subscribe((result: any) => {
-
-        result = result.selectionMap
-
-        if (result?.Position) {
-          const item = this.appointments[index];
-          if (!item.selectedPositions) {
-            item.selectedPositions = [];
-          }
-          const exists = item.selectedPositions.some((pos: any) => pos.value === result.Position.value);
-          if (!exists && item.selectedPositions.length < 2) {
-
-            const payload = {
-              userId: item.profile.userId,
-              idjobPst: result.Position.value,
-              round: item.interview.round
-            }
-
-            this.appointmentsService.addPositionJob(payload).subscribe({
-              next: (res) => {
-                item.selectedPositions.push(result.Position);
-                const newJob = {
-                  jobId: result.Position.value,
-                  jobName: result.Position.label,
-                  isActive: true,
-                  isOffered: true
-                };
-                item.jobPosition.jobList.push(newJob);
-                item.jobPosition.totalJobs = item.jobPosition.jobList.length;
-
-                const offeredCount = item.jobPosition.jobList.filter((job: any) => job.isOffered === true).length;
-                item.isHidden = offeredCount >= 2;
-              },
-              error: (err) => {
-                console.error('Add Job Log Error:', err);
-              }
-            });
-
-          }
-        }
-      });
-    });
-  }
-
-  onRemoveJobByValue(jobToRemove: any, item: any) {
-
-    Promise.resolve().then(() => {
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.add('dimmed-overlay');
-    });
-
-    const dialogRef = this.dialog.open(AlertDialogComponent, {
-      width: '496px',
-      panelClass: 'custom-dialog-container',
-      autoFocus: false,
-      disableClose: true,
-      data: {
-        title: 'Confirmation',
-        message: 'Are you sure you want to delete this job position?',
-        confirm: true
-      }
-    });
-
-    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.remove('dimmed-overlay');
-
-      if (confirmed) {
-
-        this.appointmentsService.deletePositionJob(item.profile.userId, item.interview.round, jobToRemove.jobId).subscribe({
-          next: (res) => {
-            item.jobPosition.jobList = item.jobPosition.jobList.filter(
-              (job: any) => job.jobId !== jobToRemove.jobId
-            );
-
-            // item.selectedPositions = item.selectedPositions.filter(
-            //   (pos: any) => pos.value !== jobToRemove.jobId
-            // );
-
-            item.jobPosition.totalJobs = item.jobPosition.jobList.length;
-
-            const offeredCount = item.jobPosition.jobList.filter((job: any) => job.isOffered === true).length;
-            item.isHidden = offeredCount >= 2;
-          },
-          error: (err) => {
-            console.error('Delete Job Log Error:', err);
-          }
-        });
-      }
-    })
-
-  }
-
-  onRemoveJobApplicant(jobToRemove: any, item: any) {
-    const candidateId = item.profile.userId;
-    const positionId = jobToRemove.jobId;
-    const applyRound = item.interview.round || 1;
-    const isPassed = !jobToRemove.isActive;
-
-    this.appointmentsService.updateCandidateStatus(candidateId, {
-      isPassed,
-      positionId,
-      applyRound
-    }).subscribe({
-      error: (err) => {
-        console.error('เกิดข้อผิดพลาดขณะอัปเดตสถานะผู้สมัคร', err);
-      }
-    });
-  }
-
-  async getEmployee(item: any) {
-    const existingIdInterviewers = await this.fetchIDInterviewer(item.profile.appointmentId)
-    return existingIdInterviewers.employees.length
-  }
-
-  async onAddTeamClick(item: any) {
-    let TeamAppointmentIds = [];
-    // let interviewerListMap = []
-
-    if (item.interview.teamId !== null) {
-      try {
-        // const existingInterviewers = await this.fetchTeamInterviewer(item.interview.teamId);
-        const existingIdInterviewers = await this.fetchIDInterviewer(item.profile.appointmentId);
-
-        // const teamIds = existingInterviewers.members.map((i: any) => i.interviewerId);
-        TeamAppointmentIds = existingIdInterviewers.employees.map((i: any) => i.employeeId);
-
-        // const allExcludedIds = new Set([...teamIds, ...TeamAppointmentIds]);
-
-        // interviewerListMap = this.interviewerList.filter(
-        //   (i: any) => !allExcludedIds.has(i.value)
-        // );
-        
-      } catch (err) {
-        console.error('Error fetching team:', err);
-      }
-    }
-
-    this.dropdownConfigs = [
-      {
-        type: 'single',
-        label: 'Team',
-        placeholder: 'Select Team',
-        options: this.teamList,
-        defaultValue: item.interview.teamId
-      },
-      {
-        type: 'multi',
-        label: 'Interviewers',
-        isHistory: false,
-        options: this.interviewerList,
-        defaultSelected: TeamAppointmentIds
-      }
-    ];
-
-    Promise.resolve().then(() => {
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.add('dimmed-overlay');
-    });
-
-    const dialogRef = this.dialog.open(SelectDialogComponent, {
-      width: '480px',
-      data: {
-        title: 'Interviewers Team',
-        quality: 0,
-        confirm: true,
-        dropdownConfigs: this.dropdownConfigs
-      }
-    });
-
-    dialogRef.afterClosed().subscribe(async (result: any) => {
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.remove('dimmed-overlay');
-
-      if (result) {
-        const selectionMap = result.selectionMap;
-
-        item.teamName = this.getTeamNameById(selectionMap.Team?.value)
-
-        let valuesOnly = []
-        let teamId = '';
-
-        if (selectionMap.Interviewers === undefined) {
-          item.teamUser = 0
-          valuesOnly = TeamAppointmentIds
-        } else {
-          item.teamUser = selectionMap.Interviewers.length
-          valuesOnly = selectionMap.Interviewers.map((item: { value: any; }) => item.value);
-        }
-
-        if (selectionMap.Team !== undefined) {
-          teamId = selectionMap.Team?.value
-        } else {
-          teamId = item.interview.teamId
-        }
-
-        const payload = {
-          appointmentId: item.profile.appointmentId,
-          teamInterviewId: Number(teamId),
-          employeeIds: valuesOnly
-        }
-
-        this.appointmentsService.addMemberToTeam(payload).subscribe({
-          next: () => {
-            const previousPage = this.currentFilterParams.page;
-            const focusedAppointmentId = item.profile.appointmentId;
-
-            this.appointments = [];
-            this.currentFilterParams.page = 1;
-            this.hasMoreData = true;
-
-            const fetchCalls: Observable<any>[] = [this.fetchAppointments(false, false)];
-
-            for (let page = 2; page <= previousPage; page++) {
-              this.currentFilterParams.page = page;
-              fetchCalls.push(this.fetchAppointments(false, false));
-            }
-
-            forkJoin(fetchCalls).subscribe(() => {
-              setTimeout(() => {
-                const el = document.getElementById(`appointment-${focusedAppointmentId}`);
-                if (el) {
-                  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-              }, 500);
-            });
-          },
-          error: (err) => {
-            console.error('Error update team:', err);
-
-            this.notificationService.error('Error update team interview');
-          }
-        });
-      }
-    });
-
-  }
-
-  onAddCallStatus(item: any) {
-    const currentUserId = item.profile.userId;
-    const currentAppointmentId = item.profile.appointmentId;
-    const missCallCount = item.interview.missCallCount;
-    this.historyData = this.getHistoryDataForUser(currentUserId);
-
-    const historyOptions: SelectOption[] = this.historyData.map((item, index) => ({
-      value: index,
-      label: `${item.date} ${item.time} ${item.status}`,
-    }));
-
-    const defaultSelected = historyOptions.slice(0, 2).map(opt => opt.value);
-
-    this.dropdownConfigs = [
-      {
-        type: 'toggle',
-        missCallCount: missCallCount
-      },
-      {
-        type: 'single',
-        label: 'Status',
-        placeholder: 'Select Status',
-        optionsFirst: this.dataStatusCallFirst,
-        optionsSecond: this.dataStatusCallSecond,
-        dynamicByToggle: true
-      },
-      {
-        type: 'multi',
-        label: 'History',
-        options: historyOptions,
-        isHistory: true,
-        defaultSelected: defaultSelected,
-        placeholder: 'No History',
-      }
-    ];
-
-    Promise.resolve().then(() => {
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.add('dimmed-overlay');
-    });
-
-    const dialogRef = this.dialog.open(SelectDialogComponent, {
-      width: '480px',
-      data: {
-        title: 'Call Status',
-        quality: 0,
-        confirm: true,
-        options: this.dataOptions,
-        dropdownConfigs: this.dropdownConfigs
-      }
-    });
-
-    dialogRef.afterClosed().subscribe((result: any) => {
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.remove('dimmed-overlay');
-
-      if (result) {
-        const appointmentId = currentAppointmentId;
-        const missCallId = result.selectionMap.Status?.value || 0;
-        const isNoShow = result.isNoShow;
-
-        this.appointmentsService.appointmentMisscall({
-          appointmentId,
-          missCallId,
-          isNoShow
-        }).subscribe({
-          next: () => {
-            const previousPage = this.currentFilterParams.page;
-            const focusedAppointmentId = appointmentId;
-
-            this.appointments = [];
-            this.currentFilterParams.page = 1;
-            this.hasMoreData = true;
-
-            const fetchCalls: Observable<any>[] = [this.fetchAppointments(false, false)];
-
-            for (let page = 2; page <= previousPage; page++) {
-              this.currentFilterParams.page = page;
-              fetchCalls.push(this.fetchAppointments(false, false));
-            }
-
-            forkJoin(fetchCalls).subscribe(() => {
-              setTimeout(() => {
-                const el = document.getElementById(`appointment-${focusedAppointmentId}`);
-                if (el) {
-                  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-              }, 500);
-            });
-          },
-          error: (err) => {
-            console.error('API call error:', err);
-          }
-        });
-
-      }
-    });
-  }
-
-  onShowCallStatus(item: any) {
-    const currentUserId = item.profile.userId;
-    this.historyData = this.getHistoryDataForUser(currentUserId);
-
-    const historyOptions: SelectOption[] = this.historyData.map((item, index) => ({
-      value: index,
-      label: `${item.date} ${item.time} ${item.status}`,
-    }));
-
-    const defaultSelected = historyOptions.slice(0, 2).map(opt => opt.value);
-
-    this.dropdownConfigs = [
-      {
-        type: 'multi',
-        label: 'History',
-        options: historyOptions,
-        isHistory: true,
-        defaultSelected: defaultSelected
-      }
-    ];
-
-    Promise.resolve().then(() => {
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.add('dimmed-overlay');
-    });
-
-    const dialogRef = this.dialog.open(SelectDialogComponent, {
-      width: '480px',
-      data: {
-        title: 'Call Status History',
-        quality: 0,
-        confirm: false,
-        options: this.dataOptions,
-        dropdownConfigs: this.dropdownConfigs
-      }
-    });
-
-    dialogRef.afterClosed().subscribe((result: boolean) => {
-      const container = document.querySelector('.cdk-overlay-container');
-      container?.classList.remove('dimmed-overlay');
-    });
-  }
-
-  onSendMail(item: any) {
-    const statusCall = item.interview.isCalled;
-    if (statusCall !== 'complete') return;
-    if (!item.interview.locationId || !item.interview.teamId || !item.interview.date) return;
-
-    this.appointmentsService.getEmailTemplate(item.profile.appointmentId, 1).subscribe({
-      next: (res) => {
-        const container = document.querySelector('.cdk-overlay-container');
-        container?.classList.add('dimmed-overlay');
-
-        const dialogRef = this.dialog.open(MailDialogComponent, {
-          width: '1140px',
-          data: {
-            title: 'Send Mail',
-            quality: 0,
-            confirm: true,
-            options: this.dataOptions,
-            dropdownConfigs: this.dropdownConfigs,
-            dataMail: res
-          }
-        });
-
-        dialogRef.afterClosed().subscribe(async (result: any) => {
-          container?.classList.remove('dimmed-overlay');
-          if (result) {
-            const formData = result.formData as FormData;
-            const from = formData.get('from') as string;
-            const to = formData.get('to') as string;
-            const subject = formData.get('subject') as string;
-            const message = formData.get('message') as string;
-            const attachments = formData.getAll('attachments') as File[];
-
-            const emailAttachments = [];
-
-            for (const file of attachments) {
-              const base64Content = await this.fileToBase64(file);
-              emailAttachments.push({
-                fileName: file.name,
-                content: base64Content,
-                contentType: file.type
-              });
-            }
-
-            const payload = {
-              appointmentId: item.profile.appointmentId,
-              fromEmail: from,
-              fromName: res.formName,
-              to: to,
-              cc: [],
-              bcc: [],
-              subject: subject,
-              body: message,
-              isHtml: true,
-              attachments: emailAttachments,
-              priority: 0
-            };
-
-            this.appointmentsService.sendEmail(payload).subscribe({
-              next: () => {
-                const previousPage = this.currentFilterParams.page;
-                const focusedAppointmentId = item.profile.appointmentId;
-
-                this.appointments = [];
-                this.currentFilterParams.page = 1;
-                this.hasMoreData = true;
-
-                const fetchCalls: Observable<any>[] = [this.fetchAppointments(false, false)];
-
-                for (let page = 2; page <= previousPage; page++) {
-                  this.currentFilterParams.page = page;
-                  fetchCalls.push(this.fetchAppointments(false, false));
-                }
-
-                forkJoin(fetchCalls).subscribe(() => {
-                  setTimeout(() => {
-                    const el = document.getElementById(`appointment-${focusedAppointmentId}`);
-                    if (el) {
-                      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
-                  }, 500);
-                });
-              },
-              error: (err) => {
-                console.error('Error Sent Mail:', err);
-
-                this.notificationService.error('Error Sent Mail');
-              }
-            });
-          }
-        });
-
-      },
-      error: (err) => {
-        console.error('Get Email Template Error:', err);
-      }
-    });
-  }
-
-  // ---------- Carousel ----------
-  onPrevClick(index: number) {
-    const carousel = this.carousels.get(index);
-    carousel?.slickPrev();
-  }
-
-  onNextClick(index: number) {
-    const carousel = this.carousels.get(index);
-    carousel?.slickNext();
-  }
-
-  onCarouselInit(e: any, index: number) {
-    this.totalSlides[index] = e.slick.slideCount;
-    this.currentSlide[index] = 0;
-    this.updateArrowState(index);
-
-    this.cdr.detectChanges();
-  }
-
-  onSlideChanged(e: any, index: number) {
-    this.currentSlide[index] = e.currentSlide;
-    this.updateArrowState(index);
-  }
-
-  updateArrowState(index: number) {
-    const visibleSlides = this.getVisibleSlides();
-    const maxStartIndex = this.totalSlides[index] - visibleSlides;
-
-    this.canGoPrev[index] = this.currentSlide[index] > 0;
-    this.canGoNext[index] = this.currentSlide[index] < maxStartIndex;
-  }
-
-  getVisibleSlides(): number {
-    const width = window.innerWidth;
-
-    if (width < 1800) {
-      return 3;
-    }
-    return 4;
-  }
-
   // ---------- Helpers ----------
   getTeamNameById(teamId: number): string {
     const team = this.teamList?.find((t: { value: number; }) => t.value === teamId);
     return team?.label ?? '';
   }
 
-  getButtonClass(resultText: string): string {
-    switch (resultText?.toLowerCase()) {
-      case 'pending':
-        return 'tw-bg-[#FAFBC8] tw-text-[#AAAA00]';
-      case 'in process':
-        return 'tw-bg-[#F9E9C8] tw-text-[#AA5500]';
-      case 'scheduled':
-        return 'tw-bg-[#E0EEFA] tw-text-[#0085FF]';
+  getButtonClass(resultCode: number): string {
+    switch (resultCode) {
+      case 12:
+        return 'tw-bg-[#FAFBC8] tw-text-[#AAAA00]'; // pending
+      case 15:
+        return 'tw-bg-[#F9E9C8] tw-text-[#AA5500]'; // in process
+      case 16:
+        return 'tw-bg-[#E0EEFA] tw-text-[#0085FF]'; // scheduled
       default:
         return 'tw-bg-[#e9e9e9] tw-text-[#373737]';
     }
@@ -1327,47 +581,61 @@ export class OfferEmploymentComponent {
     this.loading = true;
     this.currentFilterParams.page++;
 
-    const params: any = {
-      page: this.currentFilterParams.page,
-      pageSize: this.currentFilterParams.pageSize,
-      InterviewResult: this.selectedTab === 'total' ? undefined : this.selectedTab,
+    const updatedParams = {
+      ...this.currentFilterParams,
       month: this.monthData,
       year: this.yearData,
+      page: this.currentFilterParams.page ?? 1,
+      search: this.currentFilterParams.search,
     };
 
-    this.appointmentsService.getAppointments<any>(params).subscribe({
+    this.appointmentsService.getInterviewOffer<any>(updatedParams).subscribe({
       next: (res) => {
         const newItems = res.items || [];
 
-        this.appointments = [...this.appointments, ...newItems];
+        const mappedItems = newItems.map((item: any) => {
+          const interview1Text = item.result.offerResult;
+          const interview2Text = item.result.statusResult.statusText;
 
+          const interview1Hidden = !interview1Text;
+          const interview2Hidden = !interview2Text;
+
+          return {
+            ...item,
+            userID: item.profile.userId,
+            fullName: item.profile.fullName,
+            interview1ResultText: {
+              label: interview1Text,
+              class: [
+                ...(item.result.offerResult.toLowerCase().trim() === 'offer'
+                  ? ['tw-bg-green-500', 'tw-text-white', 'tw-ring-green-500/10']
+                  : ['tw-bg-red-500', 'tw-text-white', 'tw-ring-red-500/10']),
+                ...(interview1Hidden ? ['tw-hidden'] : []),
+              ],
+            },
+            statusDate: {
+              label: interview2Text,
+              class: [
+                ...(this.getStatusClasses(interview2Text)),
+                ...(interview2Hidden ? ['tw-hidden'] : []),
+              ],
+            },
+            gradeCandidate: this.formatCreateDateTimeDMY(item.interview.date).formattedDate,
+            OfferResult: item.result.offerResult ? item.result.offerResult : undefined,
+            HireResult: item.result.hireResult ? item.result.hireResult : undefined,
+            position: item.jobPosition.jobList?.map((pos: { jobId?: number; jobName: string; }) => pos.jobName) || [],
+          };
+        });
+
+        // ✅ ต่อข้อมูลใหม่เข้า rows เดิม
+        this.rows = [...this.rows, ...mappedItems];
+
+        // ✅ เช็คว่าไม่มีข้อมูลเพิ่มแล้ว
         if (newItems.length < Number(this.currentFilterParams.pageSize)) {
           this.hasMoreData = false;
         }
 
         this.loading = false;
-
-        this.appointments = this.appointments.map((item: any) => {
-          const revision = Number(item.interview?.revision || 1);
-
-          const revisionList = Array.from({ length: revision }, (_, i) => ({
-            label: i + 1,
-            value: i + 1
-          })).reverse();
-
-          return {
-            ...item,
-            revisionList
-          };
-        });
-
-        this.appointments = this.appointments.map(appointment => {
-          const offeredCount = appointment.jobPosition.jobList.filter((job: any) => job.isOffered === true).length;
-          return {
-            ...appointment,
-            isHidden: offeredCount >= 2
-          };
-        });
       },
       error: (err) => {
         console.error('Load more failed:', err);
@@ -1376,11 +644,28 @@ export class OfferEmploymentComponent {
     });
   }
 
-  onFilterButtonClick(key: string) {
-    switch (key) {
-      case 'history':
-        this.router.navigate(['/interview-scheduling/interview-round-1/history']);
-        break;
+  // table
+  ColumnClicked: any;
+
+  handleColumnRowClick(event: { column: any; row: any }) {
+    this.ColumnClicked = event.column;
+    this.onViewRowClicked(event.row);
+  }
+
+  onViewRowClicked(row: any) {
+    if (this.ColumnClicked === 'OfferResult') {
+      const queryParams = {
+        id: row.userID
+      };
+
+      this.router.navigate(['/offer-employment/offer-result'], { queryParams });
+    } else if (this.ColumnClicked === 'HireResult') {
+      const queryParams = {
+        id: row.userID
+      };
+
+      this.router.navigate(['/offer-employment/hire-result'], { queryParams });
     }
   }
+
 }

@@ -13,6 +13,7 @@ export interface Positions {
 
 export interface CandidateTracking {
   userID: number;
+  roundID?: number;
   fullName: string;
   fullNameTH: string;
   gradeCandidate: string;
@@ -54,6 +55,7 @@ export interface TrackingRow {
   offer: IconConfig;
   hired: IconConfig;
   lastUpdate?: string;
+  roundID?: number;
 }
 
 export interface ICandidateFilterRequest {

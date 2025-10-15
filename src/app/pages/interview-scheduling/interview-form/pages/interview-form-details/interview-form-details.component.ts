@@ -1,6 +1,6 @@
 import { ChangeDetectorRef, Component, ElementRef, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { catchError, map, of, Subject, switchMap, takeUntil } from 'rxjs';
+import { catchError, map, Observable, of, Subject, switchMap, takeUntil } from 'rxjs';
 import { ApplicationService } from '../../../../../services/application/application.service';
 import { CandidatePagedResult } from '../../../../../interfaces/Application/application.interface';
 import {
@@ -28,6 +28,40 @@ type StepStatus = 'done' | 'pending';
 type Risk = 'Normal' | 'Warning';
 
 type ScreeningStatus = 'Accept' | 'Decline' | 'Hold';
+
+// --- เพิ่ม type ด้านบนไฟล์ ---
+type ResultGroupKey = 'accept' | 'decline';
+type ResultGroup = {
+  key: ResultGroupKey;
+  label: string;
+  regex: RegExp;
+  items: any[];
+};
+
+type CellType = 'text' | 'input' | 'select' | 'multiselect' | 'textarea';
+
+interface WarningRow {
+  no?: number | string;
+  warning?: string;
+
+  // ค่าที่จะเก็บ
+  result1?: any;
+  result2?: any;
+
+  // ชนิด control ของแต่ละคอลัมน์ (มาจาก API ต่อแถว)
+  result1Type?: CellType;
+  result2Type?: CellType;
+
+  // option ต่อแถว (ถ้าเป็น select/multiselect)
+  result1Options?: any;
+  result2Options?: any;
+  selectedIds?: []
+  result1SelectedIds?: any;
+  result1Readonly?: any;
+  result2SelectedIds?: any;
+  result2Readonly?: any;
+  questionId?: any;
+}
 
 interface Applicant {
   id: string;
@@ -179,6 +213,8 @@ export class InterviewFormDetailsComponent {
   applicantId: number = 0;
   appointmentId: number = 0;
   stageId: number = 0;
+  round: number = 0;
+  isLatestRound = true;
   interview1AppointmentId: string | undefined;
   interview2AppointmentId: string | undefined;
 
@@ -268,19 +304,6 @@ export class InterviewFormDetailsComponent {
 
   foundisSummary: any;
 
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private dialog: MatDialog,
-    private cdr: ChangeDetectorRef,
-    private fb: FormBuilder,
-    private interviewFormService: InterviewFormService,
-    private applicationService: ApplicationService,
-    private reasonService: ReasonService,
-    private notificationService: NotificationService,
-    private interviewDetailsFormService: InterviewDetailsFormService
-  ) { }
-
   // ---------- Carousel config ----------
   @ViewChildren(SlickItemDirective) slickItems!: QueryList<SlickItemDirective>;
 
@@ -311,26 +334,69 @@ export class InterviewFormDetailsComponent {
 
   // ====== Candidate Warning UI ======
   isRevOpen = true; // ปุ่ม chevron พับ/กาง
-  isWarnOpen = false;
-  warningRows: any[] = [];
-  warningColumns: any[] = [];
+  isDetailOpen = false;
+  isDetail1Open = false;
+  isDetail2Open = false;
+  detailRows: any[] = [];
+  detailColumns: any[] = [];
+  detail1Rows: any[] = [];
+  detail1Columns: any[] = [];
+  detail2Rows: any[] = [];
+  detail2Columns: any[] = [];
 
   reviewHistory: any[] = [];
   selectedCategoryId: number | null = null;
 
   editReview = false;
-  allowEditButton = false;
+  allowEditButton = true;
 
-  private initWarningColumns() {
-    this.warningColumns = [
+  private initdetailColumns() {
+    this.detailColumns = [
       { header: 'No', field: 'no', type: 'text', align: 'center', width: '56px', minWidth: '56px' },
-      { header: 'Question', field: 'warning', type: 'text', minWidth: '220px', wrapText: true, },
-      { header: 'Interview 1', field: 'result1', type: 'input', minWidth: '160px' },
-      { header: 'Interview 2', field: 'result2', type: 'select', minWidth: '160px' }
+      { header: 'Question', field: 'warning', type: 'text', minWidth: '220px', wrapText: true },
+      { header: 'Interview 1', field: 'result1', type: 'dynamic', typeKey: 'result1Type', options: 'result1Options', minWidth: '160px' },
+    ];
+  }
+
+  private initdetail1Columns() {
+    this.detail1Columns = [
+      { header: 'No', field: 'no', type: 'text', align: 'center', width: '56px', minWidth: '56px' },
+      { header: 'Question', field: 'warning', type: 'text', minWidth: '220px', wrapText: true },
+      { header: 'Interview 1', field: 'result1', type: 'dynamic', typeKey: 'result1Type', options: 'result1Options', minWidth: '160px' },
+      { header: 'Interview 2', field: 'result2', type: 'dynamic', typeKey: 'result2Type', options: 'result2Options', minWidth: '160px' },
+    ];
+  }
+
+  private initdetail2Columns() {
+    this.detail2Columns = [
+      { header: 'No', field: 'no', type: 'text', align: 'center', width: '56px', minWidth: '56px' },
+      { header: 'Question', field: 'warning', type: 'text', minWidth: '220px', wrapText: true },
+      { header: 'Interview 2', field: 'result2', type: 'dynamic', typeKey: 'result2Type', options: 'result2Options', minWidth: '160px' },
     ];
   }
 
   selectedTab: string = '';
+
+  snapshotInputForm: any;
+  // --- เพิ่ม state ใน class ---
+  selectedGroupKey: ResultGroupKey | null = null;
+  resultGroups: ResultGroup[] = [
+    { key: 'accept', label: 'Accept', regex: /(accept|on\s*hold)/i, items: [] },
+    { key: 'decline', label: 'Decline', regex: /(decline|no[\s-]?show)/i, items: [] },
+  ];
+
+  constructor(
+    private route: ActivatedRoute,
+    private router: Router,
+    private dialog: MatDialog,
+    private cdr: ChangeDetectorRef,
+    private fb: FormBuilder,
+    private interviewFormService: InterviewFormService,
+    private applicationService: ApplicationService,
+    private reasonService: ReasonService,
+    private notificationService: NotificationService,
+    private interviewDetailsFormService: InterviewDetailsFormService
+  ) { }
 
   // ===================== Lifecycle =====================
   ngOnInit() {
@@ -349,18 +415,21 @@ export class InterviewFormDetailsComponent {
       .subscribe((params) => {
         this.applicantId = Number(params['id'] || 0);
         this.stageId = Number(params['interview'] || 1);
+        this.round = Number(params['round'] || 0);
         this.selectedTab = 'tab' + params['interview'];
 
         this.fetchCandidateTracking();
         this.fetchRecruitmentStagesWithReasons(Number(params['interview']) + 1)
-        this.fetchFormById(this.stageId)
+        // this.fetchFormById(this.stageId)
 
         // ----- โหลด Comments -----
         this.loadComments(this.applicantId);
       });
 
     // ตาราง Warning
-    this.initWarningColumns();
+    this.initdetailColumns();
+    this.initdetail1Columns();
+    this.initdetail2Columns();
 
     const userString = sessionStorage.getItem('user');
     if (userString) {
@@ -374,13 +443,6 @@ export class InterviewFormDetailsComponent {
 
   ngAfterViewInit() {
     this.nextTick(() => this.setActionButtons('view'));
-      this.setInitialEditState();
-  }
-
-  ngOnChanges() {
-    if (this.applicant) {
-      this.setInitialEditState();
-    }
   }
 
   ngOnDestroy() {
@@ -421,42 +483,84 @@ export class InterviewFormDetailsComponent {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (res: CandidatePagedResult<CandidateTracking>) => {
-          const items = res?.items || [];
+          const items = res?.items ?? [];
           if (!items.length) {
             this.isNotFound = true;
             this.isLoading = false;
             return;
           }
 
-          const exact =
-            items.find((i) => Number(i.userID) === this.applicantId) ||
-            items[0];
+          // เฉพาะของ user นี้
+          const byUser = items.filter(i => Number(i.userID) === this.applicantId);
+          const pool = byUser.length ? byUser : items;
+
+          const roundParam = Number(this.round) || null;
+          const getRound = (x: any) => Number(x?.roundID ?? x?.round ?? 0);
+
+          let exact: CandidateTracking;
+
+          if (roundParam) {
+            // ถ้าส่ง round มา เลือกอันที่ round ตรงกันก่อน
+            const match = pool.find(x => getRound(x) === roundParam);
+            exact = match ?? pool.reduce((best, cur) =>
+              this.getLastTs(cur) > this.getLastTs(best) ? cur : best, pool[0]);
+          } else {
+            // ถ้าไม่ส่งมา เลือกรอบที่มากสุด (เท่ากันตัดสินด้วย timestamp)
+            exact = pool.reduce((best, cur) => {
+              const br = getRound(best);
+              const cr = getRound(cur);
+              if (cr !== br) return cr > br ? cur : best;
+              return this.getLastTs(cur) > this.getLastTs(best) ? cur : best;
+            }, pool[0]);
+            // อัปเดต this.round ให้เป็นรอบที่เลือกมา เพื่อให้หน้าอื่นใช้ต่อได้
+            this.round = getRound(exact) || 1;
+          }
+
+          const latestRound = pool.reduce((mx, cur) => Math.max(mx, getRound(cur)), 0);
+          const selectedRound = getRound(exact) || 1;
+          this.isLatestRound = selectedRound === latestRound;
+          if (!this.isLatestRound) {
+            this.allowEditButton = false;
+            this.editReview = false;
+          }
 
           this.mapTrackingToView(exact);
           this.isLoading = false;
+          this.setInitialEditState();
+
+          this.fetchFiles(Number(this.applicantId || 0));
+
+          this.fetchPreviewFormRound({ roundID: getRound(exact), userID: this.applicantId });
+          const appointmentIdKey = `interview${this.stageId}AppointmentId`;
+          (this as any)[appointmentIdKey] = (exact as any)?.[appointmentIdKey];
         },
         error: (err) => {
-          console.error(
-            '[ApplicationForm] getTrackingApplications error:',
-            err
-          );
+          console.error('[ApplicationForm] getTrackingApplications error:', err);
           this.isNotFound = true;
           this.isLoading = false;
         },
       });
+  }
 
-    this.interviewFormService.getApplicantTracking(this.applicantId).subscribe({
-      next: (res) => {
-        const appointmentIdKey = `interview${this.stageId}AppointmentId`;
-        const appointmentIdValue = res[appointmentIdKey];
+  disableWhenNotLatest(): string {
+    return this.isLatestRound ? '' : 'tw-pointer-events-none tw-bg-gray-100 tw-text-[#8b8b8b]';
+  }
 
-        (this as any)[appointmentIdKey] = appointmentIdValue;
-      },
-      error: (err) => {
-        console.error(err);
-      },
-    });
+  HideWhenNotLatest(): string {
+    return this.isLatestRound ? '' : 'tw-hidden';
+  }
 
+  private getLastTs(i: CandidateTracking): number {
+    const candidates = [
+      i?.interview2?.date,
+      i?.interview1?.date,
+      (i as any)?.updatedAt,
+      i?.submitDate,
+    ]
+      .map(d => (d ? Date.parse(String(d)) : 0))
+      .filter(n => Number.isFinite(n) && n > 0);
+
+    return candidates.length ? Math.max(...candidates) : 0;
   }
 
   fetchInterviewer() {
@@ -465,16 +569,11 @@ export class InterviewFormDetailsComponent {
       Number(this.stageId) + 1
     ).subscribe({
       next: (res) => {
+        // 0) เตรียม reviewHistory + slick
         this.reviewHistory = res.map((item: any) => ({
           ...item,
-          expandState: {
-            strength: false,
-            concern: false,
-          },
-          overflowState: {
-            strength: false,
-            concern: false,
-          }
+          expandState: { strength: false, concern: false },
+          overflowState: { strength: false, concern: false }
         }));
 
         const countIsSummaryFalse = this.reviewHistory.filter(item => item.isSummary === false).length;
@@ -484,74 +583,63 @@ export class InterviewFormDetailsComponent {
             ...this.slideConfig,
             dots: countIsSummaryFalse > 2,
             slidesToShow: countIsSummaryFalse === 1 ? 1 : 2,
-            responsive: [
-              {
-                breakpoint: 768,
-                settings: {
-                  slidesToShow: 1,
-                  dots: countIsSummaryFalse > 1
-                }
-              }
-            ]
+            responsive: [{ breakpoint: 768, settings: { slidesToShow: 1, dots: countIsSummaryFalse > 1 } }]
           };
-
-          // 👇 รี init slick
           setTimeout(() => {
-            this.carousels.forEach((carousel) => {
-              carousel.unslick();
+            this.carousels?.forEach((carousel) => {
+              try { carousel.unslick(); } catch { }
               carousel.initSlick();
             });
           }, 0);
-
-          // ✅ เช็ค overflow หลัง DOM update
-          // setTimeout(() => this.checkAllOverflow(), 0);
         }, 0);
 
         setTimeout(() => this.checkAllOverflow(), 0);
-        this.foundisSummary = this.reviewHistory.find(user => user.isSummary === true);
 
-        // const countIsSummaryTrue = this.reviewHistory.filter(item => item.isSummary === true).length;
-        // if (!countIsSummaryTrue) {
-        //   this.editReview = false;
-        //   this.allowEditButton = true;
-        // } else {
-        //   this.editReview = true;
-        //   this.allowEditButton = false;
-        // }
+        // 1) เลือก record ที่ใช้ (ของหน้านี้ใช้ summary=true)
+        this.foundisSummary = this.reviewHistory.find(user => user.isSummary === true) ?? null;
 
-        this.initializeForm()
+        // 2) ตั้งสถานะเริ่มต้น + ฟอร์ม
+        this.setInitialEditState();
+        this.initializeForm();
 
-        this.reasonsInterview1.forEach(category => {
-          category.rejectionReasons.forEach((reason: { reasonId: any; checked: boolean; }) => {
-            if (this.foundisSummary?.selectedReasonIds?.includes(reason.reasonId)) {
-              reason.checked = true;
-            } else {
-              reason.checked = false;
-            }
+        // 3) Restore เหตุผลจาก server (หน้านี้ไม่มี cache priority)
+        this.reasonsInterview1.forEach((category: any) => {
+          (category.rejectionReasons || []).forEach((reason: any) => {
+            const fromServer = this.foundisSummary?.selectedReasonIds?.includes(reason.reasonId);
+            reason.checked = !!fromServer;
           });
         });
 
-        this.selectedCategoryId = this.foundisSummary?.categoryId
+        // 4) ตั้ง category จาก server และคำนวณ group ที่ต้อง active
+        this.selectedCategoryId = this.foundisSummary?.categoryId ?? null;
+        this.selectedGroupKey = this.resolveGroupByCategoryId(this.selectedCategoryId);
       },
-
       error: (error) => {
         console.error('Error fetching applicant review:', error);
       }
     });
   }
 
+
   fetchRecruitmentStagesWithReasons(interview: number) {
     this.reasonService.getRecruitmentStagesWithReasons(interview).subscribe({
       next: (response) => {
-        this.reasonsInterview1 = response;
-
         this.reasonsInterview1 = response.map((category: any) => ({
           ...category,
-          rejectionReasons: category.rejectionReasons.map((reason: any) => ({
-            ...reason,
-            checked: false
-          }))
+          rejectionReasons: (category.rejectionReasons || []).map((r: any) => ({ ...r, checked: false }))
         }));
+
+        // ✅ build groups ให้มี items เพื่อใช้ resolveGroupByCategoryId
+        this.resultGroups = ([
+          { key: 'accept', label: 'Accept', regex: /(accept|on\s*hold)/i, items: [] },
+          { key: 'decline', label: 'Decline', regex: /(decline|no[\s-]?show)/i, items: [] },
+        ].map(g => ({
+          ...g,
+          items: this.reasonsInterview1.filter((c: any) =>
+            g.regex.test((c.categoryName || '').toLowerCase())
+          )
+        })) as ResultGroup[]);
+
 
         this.fetchInterviewer();
       },
@@ -560,6 +648,7 @@ export class InterviewFormDetailsComponent {
       },
     });
   }
+
 
   // ===================== Mapping =====================
   private mapTrackingToView(ct: CandidateTracking) {
@@ -614,6 +703,13 @@ export class InterviewFormDetailsComponent {
     this.historyLogs = [];
   }
 
+  private resolveGroupByCategoryId(catId: number | null): 'accept' | 'decline' | null {
+    if (!catId) return null;
+    const inAccept = this.resultGroups.find(g => g.key === 'accept')?.items.some(c => c.categoryId === catId);
+    const inDecline = this.resultGroups.find(g => g.key === 'decline')?.items.some(c => c.categoryId === catId);
+    return inAccept ? 'accept' : (inDecline ? 'decline' : null);
+  }
+
   // ===================== UI Events =====================
   onFilterButtonClick(key: string) {
     switch (key) {
@@ -627,6 +723,60 @@ export class InterviewFormDetailsComponent {
         this.onSaveClicked()
         break;
     }
+  }
+
+  likeState = {
+    count: 0,
+    liked: false,
+    loading: false
+  };
+
+  private fetchInterest(id: number) {
+    if (!id) return;
+    this.applicationService.getInterestByCandidateId(id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.likeState.count = Number(res?.countLike ?? 0);
+          this.likeState.liked = !!res?.isLikedByCurrentEmployee;
+        },
+        error: (e) => {
+          console.error('[ApplicationForm] fetchInterest error:', e);
+          // fallback เงียบ ๆ: ไม่เปลี่ยน state
+        }
+      });
+  }
+
+  onToggleLike() {
+    if (!this.applicantId || this.likeState.loading) return;
+
+    const wantLike = !this.likeState.liked;
+    const body = { candidateId: this.applicantId };
+
+    // optimistic update
+    const prev = { ...this.likeState };
+    this.likeState.loading = true;
+    this.likeState.liked = wantLike;
+    this.likeState.count = Math.max(0, this.likeState.count + (wantLike ? 1 : -1));
+
+    const req$ = wantLike
+      ? this.applicationService.addInterest(body)
+      : this.applicationService.deleteInterest(body);
+
+    req$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          // สำเร็จ — อาจ refresh จาก server อีกครั้งเพื่อความชัวร์:
+          this.fetchInterest(this.applicantId);
+          this.likeState.loading = false;
+        },
+        error: (e) => {
+          console.error('[ApplicationForm] toggle like error:', e);
+          // rollback
+          this.likeState = prev;
+        }
+      });
   }
 
   formatDateForInput(dateString: string | null | undefined): string {
@@ -673,8 +823,18 @@ export class InterviewFormDetailsComponent {
     return `${hours}:${minutes}`;
   }
 
+  formatDateDDMMYYYY(dateString: string | null | undefined): string {
+    if (!dateString || dateString === 'Invalid Date') return '';
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return '';
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  }
+
   toggleReasonCheck(reason: any) {
-    if (!this.foundisSummary) {
+    if (this.editReview) {
       reason.checked = !reason.checked;
     }
   }
@@ -765,44 +925,152 @@ export class InterviewFormDetailsComponent {
     const appointmentIdKey = `interview${this.stageId}AppointmentId`;
     const appointmentId = (this as any)[appointmentIdKey];
 
-    const transformedPayload = {
-      applicationId: this.applicantId,
-      stageId: this.stageId + 1,
-      categoryId: checkedCategoryIds[0],
-      isSummary: true,
-      stageDate: isoDate,
-      appointmentId: appointmentId,
-      satisfaction: null,
-      notes: payload.noteInterviewReview,
-      strength: "",
-      concern: "",
-      selectedReasonIds: checkedReasonIds
-    }
+    Promise.resolve().then(() => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.add('dimmed-overlay');
+    });
 
-    this.interviewFormService.postInterviewReview(transformedPayload).subscribe({
-      next: () => {
-        this.fetchInterviewer()
-        this.foundisSummary = this.reviewHistory.find(user => user.isSummary === true);
-        this.editReview = false;
-        this.allowEditButton = true;
-      },
-      error: (err) => {
-        console.error('Error Rescheduled:', err);
+    const dialogRef = this.dialog.open(AlertDialogComponent, {
+      width: '496px',
+      panelClass: ['custom-dialog-container', 'pp-rounded-dialog'],
+      autoFocus: false,
+      disableClose: true,
+      data: {
+        title: 'Confirmation',
+        message: 'Are you sure you want to save this data?',
+        confirm: true
+      }
+    });
+
+    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+      const container = document.querySelector('.cdk-overlay-container');
+      container?.classList.remove('dimmed-overlay');
+
+      if (confirmed) {
+        if (this.foundisSummary) {
+          const payloadHistory = {
+            categoryId: checkedCategoryIds[0],
+            stageDate: isoDate,
+            notes: payload.noteInterviewReview,
+            selectedReasonIds: checkedReasonIds
+          }
+
+          this.interviewFormService.updateCandidateStageHistory(this.foundisSummary.historyId, payloadHistory).subscribe({
+            next: () => {
+              this.fetchInterviewer()
+              this.foundisSummary = this.reviewHistory.find(user => user.isSummary === true);
+              this.editReview = false;
+              this.allowEditButton = true;
+            },
+            error: (err) => {
+              console.error('Error Rescheduled:', err);
+            }
+          });
+
+        } else {
+          const transformedPayload = {
+            applicationId: this.applicantId,
+            stageId: this.stageId + 1,
+            categoryId: checkedCategoryIds[0],
+            isSummary: true,
+            stageDate: isoDate,
+            appointmentId: (appointmentId ?? '').trim(),
+            satisfaction: 0,
+            notes: payload.noteInterviewReview,
+            strength: "",
+            concern: "",
+            selectedReasonIds: checkedReasonIds
+          }
+
+          this.interviewFormService.postInterviewReview(transformedPayload).subscribe({
+            next: () => {
+              this.fetchInterviewer()
+              this.foundisSummary = this.reviewHistory.find(user => user.isSummary === true);
+              this.editReview = false;
+              this.allowEditButton = true;
+            },
+            error: (err) => {
+              console.error('Error Rescheduled:', err);
+            }
+          });
+        }
       }
     });
   }
 
   onCancelReview() {
-    this.initializeForm()
-    this.selectedCategoryId = null;
-    this.editReview = false;
-    this.allowEditButton = true;
+    const payload = this.formDetails.value;
+
+    const isoDate = new Date(payload.dateInterviewReview).toISOString();
+    let checkedReasonIds = [];
+    checkedReasonIds = this.reasonsInterview1.flatMap((category: { rejectionReasons: any[]; }) =>
+      category.rejectionReasons
+        .filter(reason => reason.checked === true)
+        .map(reason => reason.reasonId)
+    );
+
+    const checkedCategoryIds = this.reasonsInterview1
+      .filter(category => category.rejectionReasons.some((reason: { checked: boolean; }) => reason.checked === true))
+      .map(category => category.categoryId);
+
+    const transformedPayload = {
+      categoryId: checkedCategoryIds[0],
+      stageDate: isoDate,
+      notes: payload.noteInterviewReview,
+      selectedReasonIds: checkedReasonIds
+    }
+
+    if (JSON.stringify(this.snapshotInputForm) !== JSON.stringify(transformedPayload)) {
+      this.fetchInterviewer()
+      this.foundisSummary = this.reviewHistory.find(user => user.isSummary === true);
+      this.editReview = false;
+      this.allowEditButton = true;
+    }
+
+    // this.initializeForm()
+    // this.selectedCategoryId = null;
+    // this.formDetails = this.fb.group({
+    //   userInterviewReview: [this.foundisSummary?.hrUserName || this.usernameLogin],
+    //   dateInterviewReview: [this.formatDateForInput(this.foundisSummary?.stageDate) || this.nowDate],
+    //   noteInterviewReview: [this.foundisSummary?.notes || '']
+    // });
+    const countIsSummaryTrue = this.reviewHistory.filter(item => item.isSummary === true).length;
+    if (!countIsSummaryTrue) {
+      this.editReview = true;
+      this.allowEditButton = false;
+    } else {
+      this.editReview = false;
+      this.allowEditButton = true;
+    }
   }
 
   onEditReview() {
     this.initializeForm()
     this.editReview = true;
     this.allowEditButton = false;
+
+    const payload = this.formDetails.value;
+
+    const isoDate = new Date(payload.dateInterviewReview).toISOString();
+    let checkedReasonIds = [];
+    checkedReasonIds = this.reasonsInterview1.flatMap((category: { rejectionReasons: any[]; }) =>
+      category.rejectionReasons
+        .filter(reason => reason.checked === true)
+        .map(reason => reason.reasonId)
+    );
+
+    const checkedCategoryIds = this.reasonsInterview1
+      .filter(category => category.rejectionReasons.some((reason: { checked: boolean; }) => reason.checked === true))
+      .map(category => category.categoryId);
+
+    const transformedPayload = {
+      categoryId: checkedCategoryIds[0],
+      stageDate: isoDate,
+      notes: payload.noteInterviewReview,
+      selectedReasonIds: checkedReasonIds
+    }
+
+    this.snapshotInputForm = transformedPayload;
   }
 
   setInitialEditState() {
@@ -810,7 +1078,7 @@ export class InterviewFormDetailsComponent {
     const result = this.applicant?.[resultKey];
 
     // ถ้าเป็น 21 → ให้โชว์ปุ่ม Edit (ยังไม่เข้าสู่โหมดแก้)
-    if (result === 21) {
+    if (result === 21 || result === 22) {
       this.allowEditButton = true;
       this.editReview = false;
     } else {
@@ -854,7 +1122,13 @@ export class InterviewFormDetailsComponent {
     this.newCommentText = '';
   }
 
+  hasSummary(): number {
+    const countIsSummaryTrue = this.reviewHistory.filter(item => item.isSummary === false).length;
+    return countIsSummaryTrue;
+  }
+
   onInterviewClick(tab: string) {
+    this.reviewHistory = []
     this.selectedTab = tab;
     const interviewNumber = tab === 'tab1' ? '1' : '2';
     this.stageId = Number(interviewNumber)
@@ -888,7 +1162,7 @@ export class InterviewFormDetailsComponent {
     const appointmentId = (this as any)[appointmentIdKey];
 
     const payload = {
-      appointmentId: appointmentId,
+      appointmentId: (appointmentId ?? '').trim(),
       interviewStartTime: dataPatch
     };
 
@@ -918,7 +1192,7 @@ export class InterviewFormDetailsComponent {
     const appointmentId = (this as any)[appointmentIdKey];
 
     const payload = {
-      appointmentId: appointmentId,
+      appointmentId: (appointmentId ?? '').trim(),
       interviewEndTime: dataPatch
     };
 
@@ -940,8 +1214,8 @@ export class InterviewFormDetailsComponent {
       case 12: return 'tw-bg-yellow-400 tw-text-black';           // Pending
       case 15: return 'tw-bg-blue-400 tw-text-white';            // Inprocess
       case 16: return 'tw-bg-indigo-400 tw-text-white';          // Scheduled
-      case 21: return 'tw-bg-[#005500] tw-text-white';           // Pass Interview (สีเขียว)
-      case 22: return 'tw-bg-red-500 tw-text-white';             // Not Pass Interview (สีแดง)
+      case 21: return 'btn-pass tw-bg-[#005500] tw-text-white';           // Pass Interview (สีเขียว)
+      case 22: return 'btn-notpass tw-bg-red-500 tw-text-white';             // Not Pass Interview (สีแดง)
       case 23: return 'tw-bg-gray-500 tw-text-white';            // No Show
       case 24: return 'tw-bg-purple-400 tw-text-white';          // Reschedule
       case 25: return 'tw-bg-pink-400 tw-text-white';            // Candidate Decline
@@ -957,8 +1231,8 @@ export class InterviewFormDetailsComponent {
       case 12: return 'tw-bg-yellow-400 tw-text-white';           // Pending
       case 15: return 'tw-bg-blue-400 tw-text-white';            // Inprocess
       case 16: return 'tw-bg-indigo-400 tw-text-white';          // Scheduled
-      case 21: return 'tw-bg-[#005500] tw-text-white';           // Pass Interview (สีเขียว)
-      case 22: return 'tw-bg-red-500 tw-text-white';             // Not Pass Interview (สีแดง)
+      case 21: return 'btn-pass tw-bg-[#005500] tw-text-white';           // Pass Interview (สีเขียว)
+      case 22: return 'btn-notpass tw-bg-red-500 tw-text-white';             // Not Pass Interview (สีแดง)
       case 23: return 'tw-bg-gray-500 tw-text-white';            // No Show
       case 24: return 'tw-bg-purple-400 tw-text-white';          // Reschedule
       case 25: return 'tw-bg-pink-400 tw-text-white';            // Candidate Decline
@@ -977,6 +1251,8 @@ export class InterviewFormDetailsComponent {
     switch (result) {
       case 21:
         return 'tw-pointer-events-none tw-bg-gray-100 tw-text-[#8b8b8b]'; // Pass Interview
+      case 22:
+        return 'tw-pointer-events-none tw-bg-gray-100 tw-text-[#8b8b8b]'; // Fail Interview
       default:
         return ''; // Default
     }
@@ -987,24 +1263,88 @@ export class InterviewFormDetailsComponent {
     const result = this.applicant?.[resultKey];
 
     this.editReview = result !== 21;
+    this.editReview = result !== 22;
   }
 
 
   getCategoryBtnClass(c: CategoryOption, selectedId?: number | null) {
     const isActive = c.categoryId === selectedId;
     const name = (c.categoryName || '').toLowerCase();
+
+    const tones = {
+      accept: {
+        fill: 'tw-bg-green-500 tw-text-white',
+      },
+      decline: {
+        fill: 'tw-bg-red-500 tw-text-white',
+      },
+      noshow: {
+        fill: 'tw-bg-gray-500 tw-text-white',
+      },
+      onhold: {
+        fill: 'tw-bg-amber-500 tw-text-white',
+      },
+      default: {
+        fill: 'tw-bg-white tw-text-gray-700',
+      },
+    };
+
     const tone =
-      name.includes('accept') ? 'tw-bg-green-500 tw-text-white tw-border-green-600' :
-        name.includes('decline') ? 'tw-bg-red-500 tw-text-white tw-border-red-600' :
-          name.includes('application decline') ? 'tw-bg-red-500 tw-text-white tw-border-red-600' :
-            name.includes('no-show') ? 'tw-bg-gray-200 tw-text-gray-800 tw-border-gray-300' :
-              name.includes('on hold') ? 'tw-bg-amber-500 tw-text-white tw-border-amber-600' :
-                'tw-bg-white tw-text-gray-700 tw-border-gray-300';
+      name.includes('accept') ? tones.accept :
+        name.includes('decline') ? tones.decline :
+          name.includes('no-show') || name.includes('no show') ? tones.noshow :
+            name.includes('on hold') ? tones.onhold :
+              tones.default;
 
-    const inactive = 'hover:tw-brightness-105';
-    const activeRing = 'tw-ring-2 tw-ring-white/40';
+    const base = 'tw-text-sm tw-rounded-lg tw-px-3 tw-py-1.5 tw-border tw-transition';
+    const ring = isActive ? ' tw-ring-2 tw-ring-white/40' : '';
 
-    return isActive ? `${tone} ${activeRing}` : `tw-bg-white tw-text-gray-700 tw-border-gray-300 ${inactive}`;
+    return base + ' ' + (isActive ? tone.fill : '') + ring;
+  }
+
+  // label บนปุ่ม group: เช่น "Accept (Accept / On Hold)"
+  groupDisplayLabel(g: ResultGroup) {
+    const subs = g.items.map(i => i.categoryName).join(' / ');
+    return subs ? `${g.label}` : g.label;
+  }
+
+  // เรียกตอนกดปุ่ม group
+  selectGroup(key: ResultGroupKey) {
+    this.selectedGroupKey = (this.selectedGroupKey === key) ? null : key;
+
+    // เคลียร์หมวดย่อยที่เคยเลือก
+    this.selectedCategoryId = null;
+
+    // เคลียร์ reason ที่เคยติ๊ก
+    this.reasonsInterview1 = this.reasonsInterview1.map((cat: any) => ({
+      ...cat,
+      rejectionReasons: (cat.rejectionReasons || []).map((r: any) => ({ ...r, checked: false }))
+    }));
+  }
+
+
+  // คืนรายการ category ภายใต้ group ที่เลือก (ไว้ใช้ใน html)
+  getCurrentGroupItems() {
+    if (!this.selectedGroupKey) return this.reasonsInterview1;
+    return (this.resultGroups.find(g => g.key === this.selectedGroupKey)?.items) ?? [];
+  }
+
+  // ปุ่ม group style
+  getGroupBtnClass(g: ResultGroup) {
+    const isActive = this.selectedGroupKey === g.key;
+    const base = 'tw-text-sm tw-rounded-lg tw-px-3 tw-py-1.5 tw-border tw-font-medium tw-transition';
+
+    const tones = {
+      accept: isActive
+        ? 'tw-bg-green-500 tw-text-white'
+        : '',
+      decline: isActive
+        ? 'tw-bg-red-500 tw-text-white'
+        : '',
+    };
+
+    const tone = tones[g.key] || 'tw-text-gray-700 tw-border-gray-300';
+    return `${base} ${tone}`;
   }
 
   generateQRCode(text: string): void {
@@ -1088,7 +1428,7 @@ export class InterviewFormDetailsComponent {
 
     const dialogRef = this.dialog.open(AlertDialogComponent, {
       width: '496px',
-      panelClass: 'custom-dialog-container',
+      panelClass: ['custom-dialog-container', 'pp-rounded-dialog'],
       autoFocus: false,
       disableClose: true,
       data: {
@@ -1463,61 +1803,293 @@ export class InterviewFormDetailsComponent {
     return !this.sameIsoSecond(createdAt, updatedAt);
   }
 
-
-
   // Form Interview Detail
   result1Type = '';
   result2Type = '';
-  fetchFormById(stageId: number) {
-    this.interviewDetailsFormService.getFormById(stageId).subscribe({
-      next: (response: any) => {
-        // สมมติ response.fields[0] สำหรับ Interview 1
-        // และ response.fields[1] สำหรับ Interview 2 (ถ้ามี)
-        if (response.fields.length > 0) {
-          this.result1Type = this.mapFieldType(response.fields[0].fieldType); // map fieldType ของ API ไปเป็น type ของ column
-        }
-        if (response.fields.length > 1) {
-          this.result2Type = this.mapFieldType(response.fields[1].fieldType);
-        }
+  currentFormId1?: number;
+  currentFormId2?: number;
+  canSave = false;
+  hideDetail1Section = false;
+  hideDetail2Section = false;
 
-        // สร้าง columns โดยใช้ type จากข้างบน
-        this.warningColumns = [
-          { header: 'No', field: 'no', type: 'text', align: 'center', width: '56px', minWidth: '56px' },
-          { header: 'Question', field: 'warning', type: 'text', minWidth: '220px', wrapText: true },
-          { header: 'Interview 1', field: 'result1', type: 'text', minWidth: '160px' },
-          { header: 'Interview 2', field: 'result2', type: 'text', minWidth: '160px' }
-        ];
+  fetchPreviewFormRound(items: any, opts?: { useRound1: boolean; useRound2: boolean }) {
+    (this.interviewDetailsFormService.previewFormRound(items.roundID, items.userID) as Observable<any[]>)
+      .subscribe((response: any[]) => {
+        this.currentFormId1 = Number(response?.[0]?.formId ?? this.currentFormId1 ?? 1);
+        this.currentFormId2 = Number(response?.[1]?.formId ?? this.currentFormId2 ?? 2);
 
-        // map ข้อมูล rows ตามเดิม
-        this.warningRows = response.fields.map((item: any, idx: number) => ({
-          no: idx + 1,
-          warning: item.questionName,
-          result1: '',
-          // result1Type: this.mapFieldType(item.fieldType),
-          result2: '',
-          // result2Type: 'input'
-        }));
 
-        // console.log(this.warningColumns, this.warningRows);
-        console.log(response.fields.map((f: any) => f.fieldType));
-      },
-      error: (error) => {
-        console.error(error);
-      }
-    });
+        const fields = Array.isArray(response[0]?.fields) ? response[0].fields : [];
+        this.detailRows = fields
+          .filter((item: any) => this.hasRoundAnswer(item, 1))
+          .map((item: any, idx: number) => {
+            const type = this.mapFieldType(item.fieldType);
+            const optsList = Array.isArray(item.options)
+              ? item.options.map((o: any) => ({ label: o.optionIdname, value: String(o.optionId) }))
+              : [];
+
+            const ansR1 = (item.answers || []).find((a: any) => Number(a.interviewRound) === 1);
+
+            const r1Sel = Array.isArray(ansR1?.existingOptionIds) ? ansR1.existingOptionIds.map((id: any) => String(id)) : [];
+
+            const r1Id = r1Sel.length === 1 ? r1Sel[0] : null;
+
+            const r1Txt = ansR1?.existingAnswer ?? '';
+
+            const row: WarningRow = {
+              no: idx + 1,
+              warning: item.questionName ?? '-',
+              questionId: Number(item.questionId ?? item.id ?? idx + 1),
+
+              result1Type: type,
+              result1Options: optsList,
+
+              ...(type === 'multiselect' ? { result1SelectedIds: r1Sel } : {}),
+              ...(type === 'select' ? { result1Id: r1Id } : {}),
+              ...(type === 'input' || type === 'textarea' ? { result1: r1Txt } : {}),
+
+              result1Readonly: true,
+            };
+            return row;
+          });
+
+        // ===== Round 1 -> เก็บเฉพาะ field ที่มีคำตอบในรอบ 1 =====
+        const fields1 = Array.isArray(response[0]?.fields) ? response[0].fields : [];
+        this.detail1Rows = fields1
+          .filter((item: any) => this.hasRoundAnswer(item, 1))        // <<<<<< ตรงนี้
+          .map((item: any, idx: number) => {
+            const type = this.mapFieldType(item.fieldType);
+            const optsList = Array.isArray(item.options)
+              ? item.options.map((o: any) => ({ label: o.optionIdname, value: String(o.optionId) }))
+              : [];
+
+            const ansR1 = (item.answers || []).find((a: any) => Number(a.interviewRound) === 1);
+            const ansR2 = (item.answers || []).find((a: any) => Number(a.interviewRound) === 2);
+
+            const r1Sel = Array.isArray(ansR1?.existingOptionIds) ? ansR1.existingOptionIds.map((id: any) => String(id)) : [];
+            const r2Sel = Array.isArray(ansR2?.existingOptionIds) ? ansR2.existingOptionIds.map((id: any) => String(id)) : [];
+
+            const r1Id = r1Sel.length === 1 ? r1Sel[0] : null;
+            const r2Id = r2Sel.length === 1 ? r2Sel[0] : null;
+
+            const r1Txt = ansR1?.existingAnswer ?? '';
+            const r2Txt = ansR2?.existingAnswer ?? '';
+
+            const row: WarningRow = {
+              no: idx + 1,
+              warning: item.questionName ?? '-',
+              questionId: Number(item.questionId ?? item.id ?? idx + 1),
+
+              result1Type: type,
+              result2Type: type,
+              result1Options: optsList,
+              result2Options: optsList,
+
+              ...(type === 'multiselect' ? { result1SelectedIds: r1Sel, result2SelectedIds: r2Sel } : {}),
+              ...(type === 'select' ? { result1Id: r1Id, result2Id: r2Id } : {}),
+              ...(type === 'input' || type === 'textarea' ? { result1: r1Txt, result2: r2Txt } : {}),
+
+              result1Readonly: true,
+              result2Readonly: true,
+            };
+            return row;
+          });
+
+        // ===== Round 2 -> เก็บเฉพาะ field ที่มีคำตอบในรอบ 2 =====
+        const fields2 = Array.isArray(response[1]?.fields) ? response[1].fields : [];
+        this.detail2Rows = fields2
+          .filter((item: any) => this.hasRoundAnswer(item, 2))        // <<<<<< ตรงนี้
+          .map((item: any, idx: number) => {
+            const type = this.mapFieldType(item.fieldType);
+            const optsList = Array.isArray(item.options)
+              ? item.options.map((o: any) => ({ label: o.optionIdname, value: String(o.optionId) }))
+              : [];
+
+            const ansR2 = (item.answers || []).find((a: any) => Number(a.interviewRound) === 2);
+
+            const r2Sel = Array.isArray(ansR2?.existingOptionIds) ? ansR2.existingOptionIds.map((id: any) => String(id)) : [];
+            const r2Id = r2Sel.length === 1 ? r2Sel[0] : null;
+            const r2Txt = ansR2?.existingAnswer ?? '';
+
+            const row: WarningRow = {
+              no: idx + 1,
+              warning: item.questionName ?? '-',
+              questionId: Number(item.questionId ?? item.id ?? idx + 1),
+
+              result2Type: type,
+              result2Options: optsList,
+
+              ...(type === 'multiselect' ? { result2SelectedIds: r2Sel } : {}),
+              ...(type === 'select' ? { result2Id: r2Id } : {}),
+              ...(type === 'input' || type === 'textarea' ? { result2: r2Txt } : {}),
+
+              result2Readonly: true,
+            };
+            return row;
+          });
+
+        this.toDisplayOnly();
+      });
   }
 
-  mapFieldType(apiType: string): string {
-    switch (apiType) {
-      case 'checkbox':
-        return 'multiselect';
-      case 'dropdown':
-        return 'select';
-      case 'text':
-        return 'input';
-      default:
-        return 'text';
+  private hasRoundAnswer(item: any, round: 1 | 2): boolean {
+    const ans = (item.answers || []).find((a: any) => Number(a.interviewRound) === round);
+    if (!ans) return false;
+    const hasOpts = Array.isArray(ans.existingOptionIds) && ans.existingOptionIds.length > 0;
+    const hasText = !!String(ans.existingAnswer ?? '').trim();
+    return hasOpts || hasText;
+  }
+
+  private getOptionLabel(
+    opts: Array<{ label: string, value: string }> | undefined,
+    id?: string | null
+  ) {
+    if (!opts || !id) return '';
+    const found = opts.find(o => String(o.value) === String(id));
+    return found?.label ?? '';
+  }
+
+  private uniqStrings(a: any[]): string[] {
+    return Array.from(new Set((a || []).map((x: any) => String(x))));
+  }
+
+  private buildDisplayText(row: any, which: 'result1' | 'result2'): string {
+    const type = row[`${which}Type`];
+
+    if (type === 'multiselect') {
+      const ids: string[] = this.uniqStrings(row[`${which}SelectedIds`] || []);
+      const labels = ids
+        .map(id => this.getOptionLabel(row[`${which}Options`], id))
+        .filter(Boolean)
+        .filter((t, i, self) => self.indexOf(t) === i);
+
+      if (!labels.length) return '—';
+      return labels
+        .map((t, i) => `${i + 1}. ${String(t).trim()}`)
+        .join('\n');
+      // return labels.map(t => `• ${t}`).join('\n');
     }
+
+    if (type === 'select') {
+      return this.getOptionLabel(row[`${which}Options`], row[`${which}Id`]) || '—';
+    }
+
+    if (type === 'input' || type === 'textarea' || type === 'text') {
+      const v = (row[which] ?? '').toString().trim();
+      return v || '—';
+    }
+
+    return (row[which] ?? '').toString().trim() || '—';
+  }
+
+  private toDisplayOnly(): void {
+    this.detailRows = (this.detailRows || []).map(r => ({
+      ...r,
+      result1View: this.buildDisplayText(r, 'result1'),
+    }));
+    this.detail1Rows = (this.detail1Rows || []).map(r => ({
+      ...r,
+      result1View: this.buildDisplayText(r, 'result1'),
+      result2View: this.buildDisplayText(r, 'result2'),
+    }));
+    this.detail2Rows = (this.detail2Rows || []).map(r => ({
+      ...r,
+      result2View: this.buildDisplayText(r, 'result2'),
+    }));
+
+    this.detailColumns = [
+      { header: 'No', field: 'no', type: 'text', align: 'center', width: '56px', minWidth: '56px' },
+      { header: 'Question', field: 'warning', type: 'text', minWidth: '220px', wrapText: true },
+      { header: 'Interview 1', field: 'result1View', type: 'text', minWidth: '160px' },
+    ];
+
+    this.detail1Columns = [
+      { header: 'No', field: 'no', type: 'text', align: 'center', width: '56px', minWidth: '56px' },
+      { header: 'Question', field: 'warning', type: 'text', minWidth: '220px', wrapText: true },
+      { header: 'Interview 1', field: 'result1View', type: 'text', minWidth: '160px' },
+      { header: 'Interview 2', field: 'result2View', type: 'text', minWidth: '160px' },
+    ];
+
+    this.detail2Columns = [
+      { header: 'No', field: 'no', type: 'text', align: 'center', width: '56px', minWidth: '56px' },
+      { header: 'Question', field: 'warning', type: 'text', minWidth: '220px', wrapText: true },
+      { header: 'Interview 2', field: 'result2View', type: 'text', minWidth: '160px' },
+    ];
+  }
+
+  private fetchFiles(id: number) {
+    if (!id) return;
+    this.applicationService.getFileByCandidateId(id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res: any[]) => {
+          const files = Array.isArray(res) ? res : [];
+
+          // 1) Avatar จาก fileType = 'Profile'
+          const profile = files.find(f => String(f?.fileType).toLowerCase() === 'profile');
+
+          this.applicant.avatarUrl = profile?.filePath || '';
+
+        },
+        error: (e) => {
+          console.error('[ApplicationForm] getFileByCandidateId error:', e);
+          // ไม่เปลี่ยน state ถ้า error
+        }
+      });
+  }
+
+  mapFieldType(apiType: string): CellType {
+    switch ((apiType || '').toLowerCase()) {
+      case 'checkbox': return 'multiselect'; // checkbox หลายตัว => multiselect
+      case 'dropdown': return 'select';
+      case 'textarea': return 'textarea';
+      case 'text': return 'input';
+      default: return 'text';
+    }
+  }
+
+  get canOpenDatePicker(): boolean {
+    return !!this.editReview && this.isLatestRound;
+  }
+
+  onDateBoxMouseDown(picker: HTMLInputElement) {
+    if (!this.canOpenDatePicker) return;
+    this.openDatePicker(picker);
+  }
+
+  openDatePicker(picker: HTMLInputElement) {
+    try {
+      // ทำให้ interactive ชั่วคราว (กันบาง browser ไม่ยอมเปิด)
+      const prevPE = picker.style.pointerEvents;
+      const prevOpacity = picker.style.opacity;
+      picker.style.pointerEvents = 'auto';
+      picker.style.opacity = '0.001';
+
+      picker.focus(); // สำคัญกับ Safari/Firefox
+      if (typeof (picker as any).showPicker === 'function') {
+        (picker as any).showPicker();         // Chrome/Edge ใหม่ ๆ
+      } else {
+        // fallback
+        picker.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+        picker.click();
+      }
+
+      // คืนค่า style ใน next tick
+      setTimeout(() => {
+        picker.style.pointerEvents = prevPE;
+        picker.style.opacity = prevOpacity;
+      }, 0);
+    } catch {
+      // fallback สุดท้าย
+      picker.click();
+    }
+  }
+
+  /** ให้ Angular re-render ช่องแสดงผลหลังเลือกวันที่ */
+  onNativeDateChanged() {
+    // ไม่ต้อง set ค่าเอง เพราะ formControlName จับให้แล้ว
+    // แค่กระตุก change detection ถ้าจำเป็น
+    // this.cdr.markForCheck(); // ถ้าใช้ OnPush ค่อยเปิดบรรทัดนี้
   }
 }
 

@@ -10,6 +10,7 @@ export interface AlertDialogData {
   quality?: number;
   missCallCount?: number;
   dataMail?: any;
+  checkApprove?: boolean;
 }
 
 export interface FormDialogData {

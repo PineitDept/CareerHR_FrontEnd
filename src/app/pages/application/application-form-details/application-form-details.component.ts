@@ -65,6 +65,7 @@ export class ApplicationFormDetailsComponent {
 
   // ====== Routing ======
   applicantId: number = 0;
+  roundID: number = 0;
 
   private destroy$ = new Subject<void>();
 
@@ -105,7 +106,7 @@ export class ApplicationFormDetailsComponent {
   // ===== Family =====
   familyColumns: Columns = [
     { header: 'No', field: '__index', type: 'number', width: '6%',  align: 'center', sortable: false },
-    { header: 'Relationship', field: 'relationship', type: 'text',   width: '14%', minWidth: '140px' },
+    { header: 'Relationship', field: 'relationship', type: 'text',   width: '14%', minWidth: '140px', wrapText: true  },
     { header: 'Name',         field: 'name',         type: 'text',   width: '20%', minWidth: '180px', wrapText: true },
     { header: 'Occupation',   field: 'occupation',   type: 'text',   width: '14%', minWidth: '160px', wrapText: true },
     { header: 'Age',          field: 'age',          type: 'number', width: '8%',  align: 'center' },
@@ -119,7 +120,7 @@ export class ApplicationFormDetailsComponent {
   educationColumns: Columns = [
     { header: 'No',               field: '__index',        type: 'number', width: '6%',  align: 'center', sortable: false },
     { header: 'Graduation Year',  field: 'graduationYear', type: 'number', width: '14%', align: 'center' },
-    { header: 'Education Level',  field: 'levelName',      type: 'text',   width: '22%', minWidth: '220px' },
+    { header: 'Education Level',  field: 'levelName',      type: 'text',   width: '22%', minWidth: '220px', wrapText: true },
     { header: 'Institution/Location', field: 'institution', type: 'text',  width: '26%', minWidth: '260px', wrapText: true },
     { header: 'Major/Faculty',    field: 'majorFaculty',   type: 'text',   width: '22%', minWidth: '260px', wrapText: true },
     { header: 'GPA',              field: 'gpa',            type: 'number', width: '10%', align: 'center' },
@@ -156,9 +157,9 @@ export class ApplicationFormDetailsComponent {
   // ===== Work History =====
   workColumns: Columns = [
     { header: 'No', field: '__index',    type: 'number', width: '6%',  align: 'center', sortable: false },
-    { header: 'Date (From - To)',        field: 'date',     type: 'text',   width: '16%', minWidth: '220px' },
+    { header: 'Date (From - To)',        field: 'date',     type: 'text',   width: '16%', minWidth: '220px', wrapText: true },
     { header: 'Company Name and Address',field: 'company',  type: 'text',   width: '26%', minWidth: '260px', wrapText: true },
-    { header: 'Position / Job Description', field: 'position', type: 'text', width: '18%', minWidth: '200px' },
+    { header: 'Position / Job Description', field: 'position', type: 'text', width: '18%', minWidth: '200px', wrapText: true },
     { header: 'Salary', field: 'salary', type: 'text',   width: '10%', align: 'center' },
     { header: 'Reason for Leaving',      field: 'reason',  type: 'text',   width: '24%', minWidth: '220px', wrapText: true },
   ];
@@ -168,7 +169,7 @@ export class ApplicationFormDetailsComponent {
   // ===== Language Skills =====
   langColumns: Columns = [
     { header: 'No',        field: 'no',       type: 'number', width: '6%',  align: 'center', sortable: false },
-    { header: 'Language',  field: 'language', type: 'text',   width: '24%', minWidth: '160px' },
+    { header: 'Language',  field: 'language', type: 'text',   width: '24%', minWidth: '160px', wrapText: true },
     { header: 'Speaking',  field: 'speaking', type: 'badge',  width: '18%', align: 'center' },
     { header: 'Reading',   field: 'reading',  type: 'badge',  width: '18%', align: 'center' },
     { header: 'Writing',   field: 'writing',  type: 'badge',  width: '18%', align: 'center' },
@@ -179,7 +180,7 @@ export class ApplicationFormDetailsComponent {
   // ===== Computer / Bonus / Special Skills =====
   compColumns: Columns = [
     { header: 'No',          field: 'no',    type: 'number', width: '6%',  align: 'center', sortable: false },
-    { header: 'Skills Type', field: 'type',  type: 'text',   width: '16%' },
+    { header: 'Skills Type', field: 'type',  type: 'text',   width: '16%', wrapText: true },
     { header: 'Skills',      field: 'skill', type: 'text',   width: '44%', minWidth: '220px', wrapText: true },
     { header: 'Level',       field: 'level', type: 'badge',  width: '20%', align: 'center' },
     { header: 'Score',       field: 'score', type: 'number', width: '14%', align: 'center' },
@@ -227,7 +228,7 @@ export class ApplicationFormDetailsComponent {
   motivationColumns: Columns = [
     { header: 'Answer',   field: 'answer',   type: 'number', width: '10%', align: 'center' },
     { header: 'Question', field: 'question', type: 'text',   width: '70%', minWidth: '420px', wrapText: true },
-    { header: 'Motivation Type', field: 'type', type: 'text', width: '20%', align: 'center' },
+    { header: 'Motivation Type', field: 'type', type: 'text', width: '20%', align: 'center', wrapText: true },
   ];
   motivationRows: any[] = [];
   motivationStat = { intrinsic: 0, extrinsic: 0 };
@@ -268,6 +269,7 @@ export class ApplicationFormDetailsComponent {
       .pipe(takeUntil(this.destroy$))
       .subscribe((params) => {
         this.applicantId = Number(params['id'] || 0);
+        this.roundID = Number(params['round'] || 0);
         this.fetchApplicantDetails();
         this.fetchCandidateTracking();
 
@@ -285,7 +287,7 @@ export class ApplicationFormDetailsComponent {
     if (!this.applicantId) return;
 
     this.applicationService
-      .getApplicantDetailById(this.applicantId)
+      .getApplicantDetailById(this.applicantId, this.roundID)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (res) => {

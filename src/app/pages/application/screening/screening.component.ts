@@ -27,14 +27,14 @@ import { MatDialog } from '@angular/material/dialog';
 import { SortState } from '../../../shared/components/tables/tables.component';
 
 // Component-specific Configuration
-const SCREENING_CONFIG = {
-  STORAGE_KEYS: {
-    FILTER_SETTINGS: 'screeningFiterSettings',
-    CLICKED_ROWS: 'screeningClickedRowIndexes',
-    SORT_CONFIG: 'screeningSortConfig',
-    HEADER_SEARCH_FORM: 'screeningHeaderSearchForm',
-  },
-} as const;
+// const SCREENING_CONFIG = {
+  // STORAGE_KEYS: {
+  //   FILTER_SETTINGS: 'screeningFiterSettings',
+  //   CLICKED_ROWS: 'screeningClickedRowIndexes',
+  //   SORT_CONFIG: 'screeningSortConfig',
+  //   HEADER_SEARCH_FORM: 'screeningHeaderSearchForm',
+  // },
+// } as const;
 
 @Component({
   selector: 'app-screening',
@@ -63,8 +63,8 @@ export class ScreeningComponent extends BaseApplicationComponent {
       align: 'center'
     },
     {
-      header: 'Submit Date',
-      field: 'submitDate',
+      header: 'Screen Date',
+      field: 'employeeActionDate',
       type: 'date',
       align: 'center',
       sortable: true
@@ -156,19 +156,25 @@ export class ScreeningComponent extends BaseApplicationComponent {
       subColumn: 'totalCandidatePoint',
       sortable: true
     },
-    {
-      header: 'Bonus',
-      field: 'totalBonus',
-      type: 'text',
-      align: 'right',
-      sortable: true
-    },
+    // {
+    //   header: 'Bonus',
+    //   field: 'totalBonus',
+    //   type: 'text',
+    //   align: 'right',
+    //   sortable: true
+    // },
     {
       header: 'Screen By',
       field: 'employeeAction',
       type: 'text',
       align: 'center',
       sortable: true
+    },
+    {
+      header: 'Status',
+      field: 'submitStatusLabel',
+      type: 'badge',
+      align: 'center',
     },
   ] as const;
 
@@ -191,9 +197,9 @@ export class ScreeningComponent extends BaseApplicationComponent {
   }
 
   // Abstract method implementations
-  protected getStorageKeys() {
-    return SCREENING_CONFIG.STORAGE_KEYS;
-  }
+  // protected getStorageKeys() {
+  //   return SCREENING_CONFIG.STORAGE_KEYS;
+  // }
 
   protected createInitialFilter(): ICandidateFilterRequest {
     return {
@@ -220,8 +226,8 @@ export class ScreeningComponent extends BaseApplicationComponent {
     };
 
     // 2) persist UI ของ Header
-    const { HEADER_SEARCH_FORM } = this.getStorageKeys();
-    this.saveToStorage(HEADER_SEARCH_FORM, payload);
+    // const { HEADER_SEARCH_FORM } = this.getStorageKeys();
+    // this.saveToStorage(HEADER_SEARCH_FORM, payload);
 
     // 3) ส่งต่อไปยังสตรีมใน Base (จะผ่าน distinctUntilChanged ได้ถูกต้อง)
     super.onSearch(payload);
@@ -230,8 +236,8 @@ export class ScreeningComponent extends BaseApplicationComponent {
   override onClearSearch(): void {
     // เคลียร์ UI + storage
     this.searchForm = { searchBy: '', searchValue: '' };
-    const { HEADER_SEARCH_FORM } = this.getStorageKeys();
-    this.saveToStorage(HEADER_SEARCH_FORM, { searchBy: '', searchValue: '' });
+    // const { HEADER_SEARCH_FORM } = this.getStorageKeys();
+    // this.saveToStorage(HEADER_SEARCH_FORM, { searchBy: '', searchValue: '' });
 
     // ทำงานเดิม (ส่งสัญญาณ clear)
     super.onClearSearch();
@@ -275,14 +281,15 @@ export class ScreeningComponent extends BaseApplicationComponent {
     item: ICandidateWithPositionsDto
   ): ScreeningRow {
     const summary = item.summary;
-
+    const daySince = summary.daysSinceEmployeeActionDate  || -1;
+    const displayStaus = daySince > 0 ? this.displayStaus(daySince) : "pending";
     return {
-      id: summary.userID.toString(),
-      submitDate: summary.submitDate || '',
-      userID: summary.userID.toString(),
+      id: item.userID.toString(),
+      employeeActionDate: summary.employeeActionDate || '',
+      userID: item.userID.toString(),
       fullName: summary.fullName,
       position:
-        item.positions?.map((pos: IPositionDto) => pos.namePosition) || [],
+      item.positions?.map((pos: IPositionDto) => pos.namePosition) || [],
       university: summary.university,
       gpa: summary.gpa?.toString() || '',
       gradeCandidate: summary.gradeCandidate,
@@ -294,6 +301,7 @@ export class ScreeningComponent extends BaseApplicationComponent {
       totalBonus: summary.totalBonus,
       employeeAction: summary.employeeAction?.split(' ')[0] || '',
       screening: createStatusBadge(summary.screening),
+      submitStatusLabel: createStatusBadge(displayStaus),
     };
   }
 
@@ -303,9 +311,16 @@ export class ScreeningComponent extends BaseApplicationComponent {
 
     const queryParams = {
       id: id,
+      round: (row as any)?.roundID
     }
 
     this.router.navigate(['/applications/screening/application-form'], { queryParams });
+  }
+  private displayStaus(daySince:number):string{
+    if(daySince <=3) return 'New';
+    if(daySince <=7) return 'Over 3 Days';
+    if(daySince <=30) return 'Over Week';
+    return 'Over Month';
   }
 
   // เพิ่ม normalize + override load/persist state
@@ -330,50 +345,50 @@ export class ScreeningComponent extends BaseApplicationComponent {
     return cleaned as ICandidateFilterRequest;
   }
 
-  protected override loadPersistedState(): void {
-    const storageKeys = this.getStorageKeys();
+  // protected override loadPersistedState(): void {
+  //   const storageKeys = this.getStorageKeys();
 
-    // 1) Filter (มี normalize เหมือนที่คุณใส่ไว้แล้ว)
-    const persisted = this.loadFromStorage<ICandidateFilterRequest>(storageKeys.FILTER_SETTINGS);
-    if (persisted) {
-      const normalized = this.normalizeScreeningFilter(persisted);
-      this.filterRequest.set({ ...this.createInitialFilter(), ...normalized });
-      this.filterDateRange = {
-        month: normalized.month || '',
-        year: normalized.year || '',
-      };
-    }
+  //   // 1) Filter (มี normalize เหมือนที่คุณใส่ไว้แล้ว)
+  //   const persisted = this.loadFromStorage<ICandidateFilterRequest>(storageKeys.FILTER_SETTINGS);
+  //   if (persisted) {
+  //     const normalized = this.normalizeScreeningFilter(persisted);
+  //     this.filterRequest.set({ ...this.createInitialFilter(), ...normalized });
+  //     this.filterDateRange = {
+  //       month: normalized.month || '',
+  //       year: normalized.year || '',
+  //     };
+  //   }
 
-    // 2) Clicked rows
-    const clickedRows = this.loadFromStorage<string[]>(storageKeys.CLICKED_ROWS);
-    if (clickedRows) this.clickedRowIds.set(new Set(clickedRows));
+  //   // 2) Clicked rows
+  //   const clickedRows = this.loadFromStorage<string[]>(storageKeys.CLICKED_ROWS);
+  //   if (clickedRows) this.clickedRowIds.set(new Set(clickedRows));
 
-    // 3) Sort
-    const persistedSortConfig = this.loadFromStorage<SortState>(storageKeys.SORT_CONFIG);
-    if (persistedSortConfig) this.sortConfig.set(persistedSortConfig);
+  //   // 3) Sort
+  //   const persistedSortConfig = this.loadFromStorage<SortState>(storageKeys.SORT_CONFIG);
+  //   if (persistedSortConfig) this.sortConfig.set(persistedSortConfig);
 
-    // 4) Header Search UI 👇
-    const headerForm = this.loadFromStorage<{ searchBy: string; searchValue: string }>(storageKeys.HEADER_SEARCH_FORM);
-    if (headerForm) {
-      // กู้คืน UI ทั้งคู่
-      this.searchForm = { ...headerForm };
-    } else {
-      // กรณีไม่มี headerForm แต่มี filter.search → ตั้งค่า UI ให้พอใช้ได้
-      const f = this.filterRequest();
-      if (f.search) {
-        this.searchForm = {
-          searchBy: this.searchByOptions?.[0] || 'Application ID', // default ที่ทีมตกลงร่วมกัน
-          searchValue: f.search
-        };
-      }
-    }
-  }
+  //   // 4) Header Search UI 👇
+  //   const headerForm = this.loadFromStorage<{ searchBy: string; searchValue: string }>(storageKeys.HEADER_SEARCH_FORM);
+  //   if (headerForm) {
+  //     // กู้คืน UI ทั้งคู่
+  //     this.searchForm = { ...headerForm };
+  //   } else {
+  //     // กรณีไม่มี headerForm แต่มี filter.search → ตั้งค่า UI ให้พอใช้ได้
+  //     const f = this.filterRequest();
+  //     if (f.search) {
+  //       this.searchForm = {
+  //         searchBy: this.searchByOptions?.[0] || 'Application ID', // default ที่ทีมตกลงร่วมกัน
+  //         searchValue: f.search
+  //       };
+  //     }
+  //   }
+  // }
 
-  protected override persistFilterState(): void {
-    const storageKeys = this.getStorageKeys();
-    const normalized = this.normalizeScreeningFilter(this.filterRequest());
-    this.saveToStorage(storageKeys.FILTER_SETTINGS, normalized);
-  }
+  // protected override persistFilterState(): void {
+  //   const storageKeys = this.getStorageKeys();
+  //   const normalized = this.normalizeScreeningFilter(this.filterRequest());
+  //   this.saveToStorage(storageKeys.FILTER_SETTINGS, normalized);
+  // }
 
   override ngOnDestroy(): void {
     this.ro?.disconnect?.();
