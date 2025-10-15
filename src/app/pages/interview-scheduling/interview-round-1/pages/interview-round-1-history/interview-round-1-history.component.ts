@@ -13,7 +13,7 @@ import { SlickCarouselComponent } from 'ngx-slick-carousel';
 import { MailDialogComponent } from '../../../../../shared/components/dialogs/mail-dialog/mail-dialog.component';
 import { AppointmentsService } from '../../../../../services/interview-scheduling/appointment-interview/appointments.service';
 import { AlertDialogComponent } from '../../../../../shared/components/dialogs/alert-dialog/alert-dialog.component';
-import { catchError, finalize, forkJoin, map, Observable, of, tap } from 'rxjs';
+import { catchError, finalize, forkJoin, map, Observable, of, Subject, takeUntil, tap } from 'rxjs';
 import { NotificationService } from '../../../../../shared/services/notification/notification.service';
 
 const SEARCH_OPTIONS: string[] = [
@@ -143,6 +143,9 @@ export class InterviewRound1HistoryComponent {
   @ViewChildren('slickCarousel') carousels!: QueryList<SlickCarouselComponent>;
   @ViewChild('scrollContainer') scrollContainer!: ElementRef;
 
+  private destroy$ = new Subject<void>();
+  applicantId: number = 0;
+
   // ---------- Constructor ----------
   constructor(
     private interviewerService: InterviewerService,
@@ -153,6 +156,7 @@ export class InterviewRound1HistoryComponent {
     private jobPositionService: JobPositionService,
     private appointmentsService: AppointmentsService,
     private notificationService: NotificationService,
+    private route: ActivatedRoute,
   ) { }
 
   // ---------- Lifecycle ----------
@@ -176,6 +180,20 @@ export class InterviewRound1HistoryComponent {
       };
     }
 
+    this.route.queryParams
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((params) => {
+        this.applicantId = Number(params['id'] || 0);
+
+        if (this.applicantId) {
+          this.currentFilterParams = {
+            ...this.currentFilterParams,
+            search: String(this.applicantId),
+            page: 1,
+          };
+        }
+      });
+
     this.fetchLocationDetails();
     this.fetchJobPosition();
     this.fetchTeamID();
@@ -183,7 +201,7 @@ export class InterviewRound1HistoryComponent {
     this.fetchStatusCall();
 
     this.filterButtons = [{
-      label: 'Scheduled', key: 'back', outlineBtn: true, 
+      label: 'Scheduled', key: 'back', outlineBtn: true,
       color: '#FFFFFF',
       textColor: '#000000',
       borderColor: '#000000',
@@ -308,7 +326,7 @@ export class InterviewRound1HistoryComponent {
       month: this.monthData,
       year: this.yearData,
       page: this.currentFilterParams.page ?? 1,
-      search: this.currentFilterParams.search,
+      search: this.applicantId ? String(this.applicantId) : this.currentFilterParams.search,
     };
 
     const obs$ = this.appointmentsService.getAppointmentsHistory<any>(updatedParams).pipe(

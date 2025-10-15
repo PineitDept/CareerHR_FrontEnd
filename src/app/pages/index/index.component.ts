@@ -475,10 +475,16 @@ export class IndexComponent {
     this.ColumnClicked = event.column;
     this.onViewRowClicked(event.row);
   }
+
   onViewRowClicked(row: any) {
     const queryParams = {
       id: row.userID
     };
-    this.router.navigate(['/applications/screening/application-form'], { queryParams });
+
+    if (this.selectedTab === 'pending') this.router.navigate(['/applications/screening/application-form'], { queryParams });
+    else if (this.selectedTab === 'pending1') this.router.navigate(['/interview-scheduling/interview-round-1'], { queryParams });
+    else if (this.selectedTab === 'pending2') this.router.navigate(['/interview-scheduling/interview-round-2'], { queryParams });
+    else if (this.selectedTab === 'pendingOffer') this.router.navigate(['/offer-employment'], { queryParams });
+    ;
   }
 }

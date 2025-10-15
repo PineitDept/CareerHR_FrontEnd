@@ -54,6 +54,7 @@ export interface SendEmailRequest {
 export interface SendReviewInterview {
   applicationId: number,
   stageId: number,
+  roundID: number,
   categoryId: number,
   isSummary: boolean,
   stageDate: any,
