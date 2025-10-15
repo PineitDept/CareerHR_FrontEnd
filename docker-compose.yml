@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  career-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: career-web:latest
+    container_name: career-web-app
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    networks:
+      - career-network
+
+networks:
+  career-network:
+    driver: bridge
