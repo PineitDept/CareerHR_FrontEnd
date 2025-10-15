@@ -6,6 +6,7 @@ import { COMPOSITION_BUFFER_MODE, FormBuilder, FormControl, FormGroup } from '@a
 
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
 
 import { ApplicationService } from '../../../../services/application/application.service';
 import { CandidatePagedResult } from '../../../../interfaces/Application/application.interface';
@@ -21,7 +22,7 @@ import { SelectDialogComponent, SelectOption } from '../../../../shared/componen
 import { MailDialogComponent } from '../../../../shared/components/dialogs/mail-dialog/mail-dialog.component';
 import { IBenefitsFilterRequest } from '../../../../interfaces/admin-setting/general-benefits.interface';
 
-dayjs.extend(utc);
+dayjs.extend(timezone);
 
 // ===== Types (view) =====
 type ResultGroupKey = 'accept' | 'decline'; // kept only if needed later (no UI usage now)
@@ -363,7 +364,6 @@ export class OfferResultComponent {
           // this.selectedPositionId2 = o.positionId;
           // this.isActiveManager = false;
           setPositionFromId()
-          console.log(this.positionsRaw, '=>this.positionsRaw')
 
           // if (this.positionsRaw?.length) setPositionFromId();
           // else {
@@ -632,8 +632,6 @@ export class OfferResultComponent {
         const collator = new Intl.Collator('en', { sensitivity: 'base', numeric: true });
         const options = Array.from(map.values()).sort((a, b) => collator.compare(a.label, b.label));
         this.positionOptions2 = options as unknown as DropdownOption[];
-
-        console.log(this.positionOptions2, '=>this.positionOptions2')
       },
       error: (error) => console.error('Error fetching positions:', error),
     });
@@ -1514,8 +1512,6 @@ export class OfferResultComponent {
     }));
 
     const defaultSelected = historyOptions.slice(0, 2).map(opt => opt.value);
-
-    console.log(defaultSelected, '=>defaultSelected')
 
     this.dropdownConfigs = [
       {

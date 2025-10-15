@@ -11,6 +11,7 @@ export interface IBenefitsFilterRequest {
   TypeScoreMin?: number;
   TypeScoreMax?: number;
   InterviewResult?: string;
+  status?: string;
 }
 
 export interface IBenefitsWithPositionsDto {

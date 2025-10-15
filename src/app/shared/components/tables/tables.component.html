@@ -273,10 +273,10 @@
 
                     <!-- Date Content -->
                     <span *ngSwitchCase="'date'">
-                      {{ getCellValue(row, column.field) | date: 'dd/MM/yyyy':'UTC' }}
+                      {{ getCellValue(row, column.field) | date: 'dd/MM/yyyy':'' }}
                     </span>
                     <span *ngSwitchCase="'dateWithTime'">
-                      {{ getCellValue(row, column.field) | date: 'dd/MM/yyyy HH:mm':'UTC' }}
+                      {{ getCellValue(row, column.field) | date: 'dd/MM/yyyy HH:mm':'' }}
                     </span>
 
                     <!-- List Content -->

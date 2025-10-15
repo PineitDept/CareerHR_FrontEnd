@@ -1243,39 +1243,41 @@ export class InterviewReviewComponent {
     }
   }
 
+  toneFor(nameRaw: string): string {
+    const s = (nameRaw ?? '').toLowerCase().trim();
+
+    if (/(accept|accepted|pass|offer|onboarded)/.test(s)) {
+      return 'tw-bg-green-500 tw-text-white';
+    }
+    if (/(decline|rejected|not\s?pass|offer_decline)/.test(s)) {
+      return 'tw-bg-red-500 tw-text-white';
+    }
+    if (/(no[-\s]?show|noshow)/.test(s)) {
+      return 'tw-bg-gray-500 tw-text-white';
+    }
+    if (/(on[-\s]?hold|hold)/.test(s)) {
+      return 'tw-bg-amber-500 tw-text-white';
+    }
+    return 'tw-bg-white tw-text-gray-700';
+  }
+
   getCategoryBtnClass(c: CategoryOption, selectedId?: number | null) {
     const isActive = c.categoryId === selectedId;
-    const name = (c.categoryName || '').toLowerCase();
+    const name = (c.categoryName || '');
 
-    const tones = {
-      accept: {
-        fill: 'tw-bg-green-500 tw-text-white',
-      },
-      decline: {
-        fill: 'tw-bg-red-500 tw-text-white',
-      },
-      noshow: {
-        fill: 'tw-bg-gray-500 tw-text-white',
-      },
-      onhold: {
-        fill: 'tw-bg-amber-500 tw-text-white',
-      },
-      default: {
-        fill: 'tw-bg-white tw-text-gray-700',
-      },
-    };
+    const base =
+      'tw-text-sm tw-rounded-lg tw-px-3 tw-py-1.5 tw-border tw-transition';
+    const activeTone = this.toneFor(name);
+    const inactive =
+      'tw-bg-white tw-text-gray-700 tw-border-gray-300 hover:tw-bg-gray-50';
 
-    const tone =
-      name.includes('accept') ? tones.accept :
-        name.includes('decline') ? tones.decline :
-          name.includes('no-show') || name.includes('no show') ? tones.noshow :
-            name.includes('on hold') ? tones.onhold :
-              tones.default;
-
-    const base = 'tw-text-sm tw-rounded-lg tw-px-3 tw-py-1.5 tw-border tw-transition';
     const ring = isActive ? ' tw-ring-2 tw-ring-white/40' : '';
 
-    return base + ' ' + (isActive ? tone.fill : '') + ring;
+    return [
+      base,
+      isActive ? activeTone : inactive,
+      ring,
+    ].join(' ');
   }
 
   generateQRCode(text: string): void {
@@ -1445,7 +1447,7 @@ export class InterviewReviewComponent {
   // --- เพิ่ม state ใน class ---
   selectedGroupKey: ResultGroupKey | null = null;
   resultGroups: ResultGroup[] = [
-    { key: 'accept', label: 'Accept', regex: /(accept|on\s*hold)/i, items: [] },
+    { key: 'accept', label: 'Accept', regex:/(accept|on\s*hold|pass)/i, items: [] },
     { key: 'decline', label: 'Decline', regex: /(decline|no[\s-]?show)/i, items: [] },
   ];
 

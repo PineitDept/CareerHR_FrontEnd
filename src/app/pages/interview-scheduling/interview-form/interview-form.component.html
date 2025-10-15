@@ -11,7 +11,7 @@
 
 <app-loading></app-loading>
 
-<div class="tw-max-h-[calc(100vh-380px)] tw-overflow-y-auto tw-mt-6" #scrollArea 
+<div class="tw-max-h-[calc(100vh-410px)] tw-overflow-y-auto tw-mt-6" #scrollArea 
   (scroll)="onScroll($event)">
   <app-tables
     [columns]="columns"
@@ -25,6 +25,10 @@
 </div>
 
 <p class="tw-px-6 tw-pb-2 tw-pt-6 tw-text-sm"><strong>คำอธิบาย (Application Interview Result)</strong></p>
+<div class="tw-flex tw-gap-1 tw-px-6 tw-text-sm">
+  <span>Scheduled Interview : </span>
+  <span>Passed screening and invited to interview.<br> ใบนัดสัมภาษณ์ถูกสร้างแล้ว (ผ่านการคัดกรองเบื้องต้น)</span>
+</div>
 <div class="tw-flex tw-gap-1 tw-px-6 tw-text-sm">
   <span>Pass Interview : </span>
   <span>The application has passed the screening process and is qualified for the next step. <br>ใบสมัครผ่านการคัดกรองเบื้องต้น และมีคุณสมบัติเหมาะสมสำหรับขั้นตอนถัดไป</span>

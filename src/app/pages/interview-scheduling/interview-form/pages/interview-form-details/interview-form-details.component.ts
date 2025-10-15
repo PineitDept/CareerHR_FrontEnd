@@ -381,7 +381,7 @@ export class InterviewFormDetailsComponent {
   // --- เพิ่ม state ใน class ---
   selectedGroupKey: ResultGroupKey | null = null;
   resultGroups: ResultGroup[] = [
-    { key: 'accept', label: 'Accept', regex: /(accept|on\s*hold)/i, items: [] },
+    { key: 'accept', label: 'Accept', regex: /(accept|on\s*hold|pass)/i, items: [] },
     { key: 'decline', label: 'Decline', regex: /(decline|no[\s-]?show)/i, items: [] },
   ];
 
@@ -631,7 +631,7 @@ export class InterviewFormDetailsComponent {
 
         // ✅ build groups ให้มี items เพื่อใช้ resolveGroupByCategoryId
         this.resultGroups = ([
-          { key: 'accept', label: 'Accept', regex: /(accept|on\s*hold)/i, items: [] },
+          { key: 'accept', label: 'Accept', regex: /(accept|on\s*hold|pass)/i, items: [] },
           { key: 'decline', label: 'Decline', regex: /(decline|no[\s-]?show)/i, items: [] },
         ].map(g => ({
           ...g,
@@ -1077,12 +1077,15 @@ export class InterviewFormDetailsComponent {
     const resultKey = `interview${this.stageId}Result` as keyof typeof this.applicant;
     const result = this.applicant?.[resultKey];
 
-    // ถ้าเป็น 21 → ให้โชว์ปุ่ม Edit (ยังไม่เข้าสู่โหมดแก้)
-    if (result === 21 || result === 22) {
-      this.allowEditButton = true;
-      this.editReview = false;
+    if (result) {
+      if (this.foundisSummary) {
+        this.allowEditButton = true;
+        this.editReview = false;
+      } else {
+        this.allowEditButton = false;
+        this.editReview = true;
+      }
     } else {
-      // ถ้าไม่ใช่ 21 ก็เข้าโหมดแก้ไขได้เลย
       this.allowEditButton = false;
       this.editReview = true;
     }
@@ -1253,6 +1256,10 @@ export class InterviewFormDetailsComponent {
         return 'tw-pointer-events-none tw-bg-gray-100 tw-text-[#8b8b8b]'; // Pass Interview
       case 22:
         return 'tw-pointer-events-none tw-bg-gray-100 tw-text-[#8b8b8b]'; // Fail Interview
+      case 23:
+        return 'tw-pointer-events-none tw-bg-gray-100 tw-text-[#8b8b8b]'; // Fail Interview
+      case 25:
+        return 'tw-pointer-events-none tw-bg-gray-100 tw-text-[#8b8b8b]'; // Fail Interview
       default:
         return ''; // Default
     }
@@ -1266,40 +1273,41 @@ export class InterviewFormDetailsComponent {
     this.editReview = result !== 22;
   }
 
+  toneFor(nameRaw: string): string {
+    const s = (nameRaw ?? '').toLowerCase().trim();
+
+    if (/(accept|accepted|pass|offer|onboarded)/.test(s)) {
+      return 'tw-bg-green-500 tw-text-white';
+    }
+    if (/(decline|rejected|not\s?pass|offer_decline)/.test(s)) {
+      return 'tw-bg-red-500 tw-text-white';
+    }
+    if (/(no[-\s]?show|noshow)/.test(s)) {
+      return 'tw-bg-gray-500 tw-text-white';
+    }
+    if (/(on[-\s]?hold|hold)/.test(s)) {
+      return 'tw-bg-amber-500 tw-text-white';
+    }
+    return 'tw-bg-white tw-text-gray-700';
+  }
 
   getCategoryBtnClass(c: CategoryOption, selectedId?: number | null) {
     const isActive = c.categoryId === selectedId;
-    const name = (c.categoryName || '').toLowerCase();
+    const name = (c.categoryName || '');
 
-    const tones = {
-      accept: {
-        fill: 'tw-bg-green-500 tw-text-white',
-      },
-      decline: {
-        fill: 'tw-bg-red-500 tw-text-white',
-      },
-      noshow: {
-        fill: 'tw-bg-gray-500 tw-text-white',
-      },
-      onhold: {
-        fill: 'tw-bg-amber-500 tw-text-white',
-      },
-      default: {
-        fill: 'tw-bg-white tw-text-gray-700',
-      },
-    };
+    const base =
+      'tw-text-sm tw-rounded-lg tw-px-3 tw-py-1.5 tw-border tw-transition';
+    const activeTone = this.toneFor(name);
+    const inactive =
+      'tw-bg-white tw-text-gray-700 tw-border-gray-300 hover:tw-bg-gray-50';
 
-    const tone =
-      name.includes('accept') ? tones.accept :
-        name.includes('decline') ? tones.decline :
-          name.includes('no-show') || name.includes('no show') ? tones.noshow :
-            name.includes('on hold') ? tones.onhold :
-              tones.default;
-
-    const base = 'tw-text-sm tw-rounded-lg tw-px-3 tw-py-1.5 tw-border tw-transition';
     const ring = isActive ? ' tw-ring-2 tw-ring-white/40' : '';
 
-    return base + ' ' + (isActive ? tone.fill : '') + ring;
+    return [
+      base,
+      isActive ? activeTone : inactive,
+      ring,
+    ].join(' ');
   }
 
   // label บนปุ่ม group: เช่น "Accept (Accept / On Hold)"
