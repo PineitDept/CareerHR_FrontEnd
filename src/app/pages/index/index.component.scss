@@ -23,18 +23,26 @@
 
 ::ng-deep .fc-view,
 ::ng-deep .fc-list-empty {
-    height: 75dvh;
+    height: calc(100dvh - 170px);
     display: block;
     border-radius: 0;
     overflow: hidden;
 }
 
 .career-page {
-    height: 75dvh;
+    height: 74dvh;
     display: block;
     border-radius: 16px 16px 0 0;
     overflow: hidden;
     border: 1px solid #e8e8e8;
+}
+
+::ng-deep .fc-view-harness,
+::ng-deep .fc-listDay-view,
+::ng-deep full-calendar {
+    height: 100% !important;
+    width: 100% !important;
+    display: block;
 }
 
 ::ng-deep .fc-theme-standard .fc-list {
@@ -51,6 +59,32 @@
 ::ng-deep .fc .fc-button.fc-today-button {
     font-family: "Sarabun", sans-serif;
     text-transform: capitalize;
+}
+
+::ng-deep .fc .fc-list-empty {
+    background: #fafafa;
+}
+
+::ng-deep .fc .fc-list-empty .fc-list-empty-cushion::before {
+  content: "";
+  display: block;
+  width: 48px;
+  height: 48px;
+  background: currentColor;
+  -webkit-mask: url("/assets/icons/icon-event-busy.svg") no-repeat center / contain;
+          mask: url("/assets/icons/icon-event-busy.svg") no-repeat center / contain;
+}
+
+::ng-deep .fc .fc-list-empty .fc-list-empty-cushion {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 18px;
+    font-family: "Sarabun", sans-serif;
+    // font-weight: 600;
+    color: #a8a8a8;
 }
 
 .btn-calendar {
@@ -77,11 +111,11 @@
 }
 
 .grid-list {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: 1fr;
 }
 
 @media screen and (min-width:1025px) {
     .grid-list {
-        grid-column: span 2 / span 2;
+        grid-template-columns: repeat(3, 1fr);
     }
 }
