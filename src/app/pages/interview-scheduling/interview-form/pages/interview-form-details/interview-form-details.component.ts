@@ -823,6 +823,16 @@ export class InterviewFormDetailsComponent {
     return `${hours}:${minutes}`;
   }
 
+  formatDateDDMMYYYY(dateString: string | null | undefined): string {
+    if (!dateString || dateString === 'Invalid Date') return '';
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return '';
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  }
+
   toggleReasonCheck(reason: any) {
     if (this.editReview) {
       reason.checked = !reason.checked;
@@ -2044,6 +2054,50 @@ export class InterviewFormDetailsComponent {
       case 'text': return 'input';
       default: return 'text';
     }
+  }
+
+  get canOpenDatePicker(): boolean {
+    return !!this.editReview && this.isLatestRound;
+  }
+
+  onDateBoxMouseDown(picker: HTMLInputElement) {
+    if (!this.canOpenDatePicker) return;
+    this.openDatePicker(picker);
+  }
+
+  openDatePicker(picker: HTMLInputElement) {
+    try {
+      // ทำให้ interactive ชั่วคราว (กันบาง browser ไม่ยอมเปิด)
+      const prevPE = picker.style.pointerEvents;
+      const prevOpacity = picker.style.opacity;
+      picker.style.pointerEvents = 'auto';
+      picker.style.opacity = '0.001';
+
+      picker.focus(); // สำคัญกับ Safari/Firefox
+      if (typeof (picker as any).showPicker === 'function') {
+        (picker as any).showPicker();         // Chrome/Edge ใหม่ ๆ
+      } else {
+        // fallback
+        picker.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+        picker.click();
+      }
+
+      // คืนค่า style ใน next tick
+      setTimeout(() => {
+        picker.style.pointerEvents = prevPE;
+        picker.style.opacity = prevOpacity;
+      }, 0);
+    } catch {
+      // fallback สุดท้าย
+      picker.click();
+    }
+  }
+
+  /** ให้ Angular re-render ช่องแสดงผลหลังเลือกวันที่ */
+  onNativeDateChanged() {
+    // ไม่ต้อง set ค่าเอง เพราะ formControlName จับให้แล้ว
+    // แค่กระตุก change detection ถ้าจำเป็น
+    // this.cdr.markForCheck(); // ถ้าใช้ OnPush ค่อยเปิดบรรทัดนี้
   }
 }
 
