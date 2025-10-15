@@ -3,7 +3,7 @@ import { Component, EventEmitter, Input, Output, OnInit } from '@angular/core';
 export interface GroupedCheckboxOption {
   groupKey: string;
   groupLabel: string;
-  options: { key: string; label: string }[];
+  options: { key: string; label: string; color?: string }[]; // เพิ่ม color property
 }
 
 export interface FilterConfig {
@@ -43,22 +43,14 @@ export class FilterCheckBoxComponent implements OnInit {
     }
   }
 
-// toggleGroup(groupKey: string) {
-//   const shouldExpand = !this.expandedGroups.has(groupKey);
+  toggleGroup(groupKey: string) {
+    const shouldExpand = !this.expandedGroups.has(groupKey);
 
-//   this.expandedGroups.clear(); // ยุบทั้งหมดก่อน
-//   if (shouldExpand) {
-//     // ขยายทั้งหมด
-//     this.items.forEach(item => this.expandedGroups.add(item.groupKey));
-//   }
-// }
-toggleGroup(groupKey: string) {
-  if (this.expandedGroups.has(groupKey)) {
-    this.expandedGroups.delete(groupKey); // ถ้าเปิดอยู่ให้หุบ
-  } else {
-    this.expandedGroups.add(groupKey); // ถ้ายังไม่เปิดให้เปิด
+    this.expandedGroups.clear();
+    if (shouldExpand) {
+      this.items.forEach(item => this.expandedGroups.add(item.groupKey));
+    }
   }
-}
 
   isExpanded(groupKey: string): boolean {
     return this.expandedGroups.has(groupKey);
