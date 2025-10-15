@@ -92,6 +92,8 @@ interface ViewComment {
 export class OfferResultComponent {
   // ===== Routing =====
   applicantId = 0;
+  round: number = 0;
+  isLatestRound = true;
   stageId = 0;
   idEmployee = 0;
   appointmentId: string | undefined;
@@ -263,11 +265,37 @@ export class OfferResultComponent {
           const items = res?.items ?? [];
           if (!items.length) return;
 
-          const exact = items.find(i => Number(i.userID) === this.applicantId) ?? items[0];
+          // เฉพาะของ user นี้
+          const byUser = items.filter(i => Number(i.userID) === this.applicantId);
+          const pool = byUser.length ? byUser : items;
+
+          const roundParam = Number(this.round) || null;
+          const getRound = (x: any) => Number(x?.roundID ?? x?.round ?? 0);
+
+          let exact: CandidateTracking;
+
+          exact = pool.reduce((best, cur) => {
+            const br = getRound(best);
+            const cr = getRound(cur);
+            if (cr !== br) return cr > br ? cur : best;
+            return this.getLastTs(cur) > this.getLastTs(best) ? cur : best;
+          }, pool[0]);
+          // อัปเดต this.round ให้เป็นรอบที่เลือกมา เพื่อให้หน้าอื่นใช้ต่อได้
+          this.round = getRound(exact) || 1;
+
+          const latestRound = pool.reduce((mx, cur) => Math.max(mx, getRound(cur)), 0);
+          const selectedRound = getRound(exact) || 1;
+          this.isLatestRound = selectedRound === latestRound;
+          if (!this.isLatestRound) {
+            this.allowEditButton = false;
+            this.editReview = false;
+          }
+
           this.mapTrackingToView(exact);
 
-          // Attachments (avatar)
-          this.fetchFiles(this.applicantId || 0);
+          this.fetchFiles(Number(this.applicantId || 0));
+          const appointmentIdKey = `interview${this.stageId}AppointmentId`;
+          (this as any)[appointmentIdKey] = (exact as any)?.[appointmentIdKey];
 
           // ✅ positions เป็น array ต้อง map ซ้อน
           this.positionOptions = (exact.positions ?? [])
@@ -296,6 +324,19 @@ export class OfferResultComponent {
       },
       error: (error) => console.error('Error fetching Recruitment Stages with reasons:', error),
     });
+  }
+
+  private getLastTs(i: CandidateTracking): number {
+    const candidates = [
+      i?.interview2?.date,
+      i?.interview1?.date,
+      (i as any)?.updatedAt,
+      i?.submitDate,
+    ]
+      .map(d => (d ? Date.parse(String(d)) : 0))
+      .filter(n => Number.isFinite(n) && n > 0);
+
+    return candidates.length ? Math.max(...candidates) : 0;
   }
 
   private fetchOfferEmploymentsByID() {
@@ -1084,6 +1125,7 @@ export class OfferResultComponent {
         const transformedPayload = {
           applicationId: this.applicantId,
           stageId: this.stageId + 1,
+          roundID: this.round,
           categoryId: checkedCategoryIds[0],
           isSummary: true,
           stageDate: isoDate,
@@ -1197,6 +1239,7 @@ export class OfferResultComponent {
     return {
       applicationId: this.applicantId,
       stageId: this.stageId + 1,
+      roundID: this.round,
       categoryId: checkedCategoryIds[0] ?? null,
       isSummary: true,
       stageDate: isoDate,
@@ -1228,6 +1271,7 @@ export class OfferResultComponent {
     return {
       applicationId: this.applicantId,
       stageId: this.stageId + 1,
+      roundID: this.round,
       categoryId: s.categoryId ?? null,
       isSummary: true,
       stageDate: iso,
@@ -1331,6 +1375,7 @@ export class OfferResultComponent {
       const current = {
         applicationId: this.applicantId,
         stageId: this.stageId + 1,
+        roundID: this.round,
         categoryId: s.categoryId ?? null,
         isSummary: true,
         stageDate: iso,
@@ -1854,5 +1899,50 @@ export class OfferResultComponent {
   isEditedAtSecond(createdAt?: string, updatedAt?: string): boolean {
     if (!updatedAt) return false;
     return !this.sameIsoSecond(createdAt, updatedAt);
+  }
+
+  // ===== Date helpers (UI แสดง DD/MM/YYYY) =====
+  get canOpenDatePicker(): boolean {
+    // เปิดปฏิทินของ Offer Result Date ได้เฉพาะตอนแก้ไข (เหมือนเดิมกับ logic editReview)
+    return !!this.editReview;
+  }
+
+  // Start Date อยากให้เปิดได้ตลอดเหมือนเดิม (ไม่ผูกกับ editReview)
+  get canOpenStartDatePicker(): boolean {
+    return true;
+  }
+
+  formatDateDDMMYYYY(v: any): string {
+    if (!v) return '';
+    // รองรับทั้ง ISO, 'YYYY-MM-DD', Date
+    const d = dayjs(v);
+    return d.isValid() ? d.format('DD/MM/YYYY') : '';
+  }
+
+  openDatePicker(inputEl: HTMLInputElement | null | undefined) {
+    if (!inputEl) return;
+    // เรียก native picker; fallback focus+click ถ้า browser ไม่รองรับ showPicker()
+    const anyEl = inputEl as any;
+    if (typeof anyEl.showPicker === 'function') {
+      anyEl.showPicker();
+    } else {
+      inputEl.focus();
+      inputEl.click();
+    }
+  }
+
+  onDateBoxMouseDown(inputEl: HTMLInputElement, ev?: MouseEvent, allowAlways = false) {
+    const canOpen = allowAlways ? this.canOpenStartDatePicker : this.canOpenDatePicker;
+    if (!canOpen) return;
+    // ป้องกัน selection/focus ไปที่ text แล้วสั่งเปิดปฏิทินแทน
+    ev?.preventDefault?.();
+    this.openDatePicker(inputEl);
+  }
+
+  // เมื่อ native <input type="date"> ของ Offer Result Date เปลี่ยนค่า
+  onNativeDateChanged() {
+    // คง workflow เดิมให้ครบ
+    this.onDateInput();
+    this.onDateChange();
   }
 }

@@ -92,6 +92,7 @@ export class TablesComponent
   @Input() scoreMax: number = 1;
   @Input() valueSelected: any;
   @Input() preferIdForSelect: boolean = false;
+ @Input() stickyHeader: boolean = false;
 
   @Output() selectionChanged = new EventEmitter<any[]>();
   @Output() rowClicked = new EventEmitter<any>();

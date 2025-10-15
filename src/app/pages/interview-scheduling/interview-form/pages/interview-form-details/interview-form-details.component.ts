@@ -618,6 +618,20 @@ export class InterviewFormDetailsComponent {
         console.error('Error fetching applicant review:', error);
       }
     });
+
+    this.interviewFormService.getApplicantTracking(this.applicantId).subscribe({
+      next: (res) => {
+        const appointmentIdKey = `interview${this.stageId}AppointmentId`;
+        const appointmentIdValue = res[appointmentIdKey];
+
+        (this as any)[appointmentIdKey] = appointmentIdValue;
+
+        this.appointmentId = appointmentIdValue
+      },
+      error: (err) => {
+        console.error(err);
+      },
+    });
   }
 
 
@@ -971,6 +985,7 @@ export class InterviewFormDetailsComponent {
           const transformedPayload = {
             applicationId: this.applicantId,
             stageId: this.stageId + 1,
+            roundID: this.round,
             categoryId: checkedCategoryIds[0],
             isSummary: true,
             stageDate: isoDate,

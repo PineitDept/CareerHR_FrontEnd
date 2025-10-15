@@ -88,6 +88,8 @@ export class HireResultComponent {
   applicantId = 0;
   stageId = 0;
   idEmployee = 0;
+  round: number = 0;
+  isLatestRound = true;
   interview2AppointmentId: string | undefined;
 
   // ===== Applicant (header) =====
@@ -205,15 +207,51 @@ export class HireResultComponent {
       })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
+        // next: (res: CandidatePagedResult<CandidateTracking>) => {
+        //   const items = res?.items || [];
+        //   if (!items.length) return;
+
+        //   const exact = items.find((i) => Number(i.userID) === this.applicantId) || items[0];
+        //   this.mapTrackingToView(exact);
+
+        //   // Attachments (avatar)
+        //   this.fetchFiles(Number(this.applicantId || 0));
+        // },
         next: (res: CandidatePagedResult<CandidateTracking>) => {
-          const items = res?.items || [];
+          const items = res?.items ?? [];
           if (!items.length) return;
 
-          const exact = items.find((i) => Number(i.userID) === this.applicantId) || items[0];
+          // เฉพาะของ user นี้
+          const byUser = items.filter(i => Number(i.userID) === this.applicantId);
+          const pool = byUser.length ? byUser : items;
+
+          const roundParam = Number(this.round) || null;
+          const getRound = (x: any) => Number(x?.roundID ?? x?.round ?? 0);
+
+          let exact: CandidateTracking;
+
+          exact = pool.reduce((best, cur) => {
+            const br = getRound(best);
+            const cr = getRound(cur);
+            if (cr !== br) return cr > br ? cur : best;
+            return this.getLastTs(cur) > this.getLastTs(best) ? cur : best;
+          }, pool[0]);
+          // อัปเดต this.round ให้เป็นรอบที่เลือกมา เพื่อให้หน้าอื่นใช้ต่อได้
+          this.round = getRound(exact) || 1;
+
+          const latestRound = pool.reduce((mx, cur) => Math.max(mx, getRound(cur)), 0);
+          const selectedRound = getRound(exact) || 1;
+          this.isLatestRound = selectedRound === latestRound;
+          if (!this.isLatestRound) {
+            this.allowEditButton = false;
+            this.editReview = false;
+          }
+
           this.mapTrackingToView(exact);
 
-          // Attachments (avatar)
           this.fetchFiles(Number(this.applicantId || 0));
+          const appointmentIdKey = `interview${this.stageId}AppointmentId`;
+          (this as any)[appointmentIdKey] = (exact as any)?.[appointmentIdKey];
         },
         error: (err) => {
           console.error('[ApplicationForm] getTrackingApplications error:', err);
@@ -228,6 +266,19 @@ export class HireResultComponent {
       },
       error: (err) => console.error(err),
     });
+  }
+
+  private getLastTs(i: CandidateTracking): number {
+    const candidates = [
+      i?.interview2?.date,
+      i?.interview1?.date,
+      (i as any)?.updatedAt,
+      i?.submitDate,
+    ]
+      .map(d => (d ? Date.parse(String(d)) : 0))
+      .filter(n => Number.isFinite(n) && n > 0);
+
+    return candidates.length ? Math.max(...candidates) : 0;
   }
 
   fetchRecruitmentStagesWithReasons(interview: number) {
@@ -482,6 +533,7 @@ export class HireResultComponent {
         const transformedPayload = {
           applicationId: this.applicantId,
           stageId: this.stageId + 1,
+          roundID: this.round,
           categoryId: checkedCategoryIds[0],
           isSummary: true,
           stageDate: isoDate,
@@ -648,6 +700,7 @@ export class HireResultComponent {
     return {
       applicationId: this.applicantId,
       stageId: this.stageId + 1,
+      roundID: this.round,
       categoryId: checkedCategoryIds[0] ?? null,
       isSummary: true,
       stageDate: isoDate || '',
@@ -670,6 +723,7 @@ export class HireResultComponent {
     return {
       applicationId: this.applicantId,
       stageId: this.stageId + 1,
+      roundID: this.round,
       categoryId: s.categoryId ?? null,
       isSummary: true,
       stageDate: iso,
@@ -913,5 +967,41 @@ export class HireResultComponent {
   isEditedAtSecond(createdAt?: string, updatedAt?: string): boolean {
     if (!updatedAt) return false;
     return !this.sameIsoSecond(createdAt, updatedAt);
+  }
+
+  // ===== Date helpers (UI แสดง DD/MM/YYYY) =====
+  get canOpenDatePicker(): boolean {
+    // เปิดปฏิทินได้เฉพาะตอนแก้ไข เหมือนพฤติกรรมฟอร์มเดิม
+    return !!this.editReview;
+  }
+
+  formatDateDDMMYYYY(v: any): string {
+    if (!v) return '';
+    const d = dayjs(v);
+    return d.isValid() ? d.format('DD/MM/YYYY') : '';
+  }
+
+  openDatePicker(inputEl: HTMLInputElement | null | undefined) {
+    if (!inputEl) return;
+    const anyEl = inputEl as any;
+    if (typeof anyEl.showPicker === 'function') {
+      anyEl.showPicker();
+    } else {
+      inputEl.focus();
+      inputEl.click();
+    }
+  }
+
+  onDateBoxMouseDown(inputEl: HTMLInputElement, ev?: MouseEvent) {
+    if (!this.canOpenDatePicker) return;
+    ev?.preventDefault?.();
+    this.openDatePicker(inputEl);
+  }
+
+  // เมื่อ native <input type="date"> เปลี่ยนค่า
+  onNativeDateChanged() {
+    // คง workflow เดิมไว้
+    this.onDateInput();
+    this.onDateChange();
   }
 }

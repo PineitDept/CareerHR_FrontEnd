@@ -15,6 +15,7 @@ export interface ICandidateFilterRequest {
   hasNextPage?: boolean;
   hasPreviousPage?: boolean;
   sortFields?: string;
+  isScreening?: boolean;
 }
 
 export interface ICandidateTrackingFilterRequest {
@@ -56,14 +57,14 @@ export interface ApplicationRow {
   readonly gpaScore: number;
   readonly eqScore: number;
   readonly ethicsScore: number;
-  readonly totalBonus: number;
+  // readonly totalBonus: number;
   readonly submitStatusLabel: BadgeConfig;
   readonly roundID?: number;
 }
 
 export interface ScreeningRow {
   readonly id: string;
-  readonly submitDate: string;
+  readonly employeeActionDate: string;
   readonly userID: string;
   readonly fullName: string;
   readonly position: string[];
@@ -79,6 +80,7 @@ export interface ScreeningRow {
   readonly employeeAction: string;
   readonly screening: BadgeConfig;
   readonly roundID?: number;
+  readonly submitStatusLabel: BadgeConfig;
 }
 
 export interface IconConfig {
@@ -134,8 +136,6 @@ export interface ICandidateWithPositionsDto {
 }
 
 export interface ICandidateSummaryDto {
-  userID?: number;
-
   statusCSD: number;
   screening: string;
   fullName: string;
@@ -144,7 +144,7 @@ export interface ICandidateSummaryDto {
   submitDate?: string;
   submitDateFormatted?: string;
   daysSinceSubmit?: number;
-  submitStatusLabel?: string;
+  submitStatusLabel: string;
 
   email?: string;
   phoneNumber?: string;

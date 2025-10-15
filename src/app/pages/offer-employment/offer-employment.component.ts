@@ -13,7 +13,7 @@ import { SlickCarouselComponent } from 'ngx-slick-carousel';
 import { MailDialogComponent } from '../../shared/components/dialogs/mail-dialog/mail-dialog.component';
 import { AppointmentsService } from '../../services/interview-scheduling/appointment-interview/appointments.service';
 import { AlertDialogComponent } from '../../shared/components/dialogs/alert-dialog/alert-dialog.component';
-import { catchError, distinctUntilChanged, filter, finalize, forkJoin, map, Observable, of, startWith, tap } from 'rxjs';
+import { catchError, distinctUntilChanged, filter, finalize, forkJoin, map, Observable, of, startWith, Subject, takeUntil, tap } from 'rxjs';
 import { NotificationService } from '../../shared/services/notification/notification.service';
 import { Columns } from '../../shared/interfaces/tables/column.interface';
 import { InterviewFormService } from '../../services/interview-scheduling/interview-form/interview-form.service';
@@ -179,6 +179,9 @@ export class OfferEmploymentComponent {
 
   @ViewChild('scrollContainer') scrollContainer!: ElementRef;
 
+  private destroy$ = new Subject<void>();
+  applicantId: number = 0;
+
   // ---------- Constructor ----------
   constructor(
     private interviewerService: InterviewerService,
@@ -214,6 +217,20 @@ export class OfferEmploymentComponent {
       };
     }
 
+    this.route.queryParams
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((params) => {
+        this.applicantId = Number(params['id'] || 0);
+
+        if (this.applicantId) {
+          this.currentFilterParams = {
+            ...this.currentFilterParams,
+            search: String(this.applicantId),
+            page: 1,
+          };
+        }
+      });
+
     // this.fetchAppointments(true);
 
     // this.loadInitialAppointments(true);
@@ -243,7 +260,7 @@ export class OfferEmploymentComponent {
       month: this.monthData,
       year: this.yearData,
       page: this.currentFilterParams.page ?? 1,
-      search: this.currentFilterParams.search,
+      search: this.applicantId ? String(this.applicantId) : this.currentFilterParams.search,
     };
 
     const obs$ = this.appointmentsService.getInterviewOffer<any>(updatedParams).pipe(
@@ -586,7 +603,7 @@ export class OfferEmploymentComponent {
       month: this.monthData,
       year: this.yearData,
       page: this.currentFilterParams.page ?? 1,
-      search: this.currentFilterParams.search,
+      search: this.applicantId ? String(this.applicantId) : this.currentFilterParams.search,
     };
 
     this.appointmentsService.getInterviewOffer<any>(updatedParams).subscribe({
