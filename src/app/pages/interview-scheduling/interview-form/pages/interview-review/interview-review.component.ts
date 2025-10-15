@@ -155,6 +155,8 @@ export class InterviewReviewComponent {
   applicantId: number = 0;
   appointmentId: number = 0;
   stageId: number = 0;
+  round: number = 0;
+  isLatestRound = true;
   idEmployee: number = 0;
   interview1AppointmentId: string | undefined;
   interview2AppointmentId: string | undefined;
@@ -398,22 +400,46 @@ export class InterviewReviewComponent {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (res: CandidatePagedResult<CandidateTracking>) => {
-          const items = res?.items || [];
+          const items = res?.items ?? [];
           if (!items.length) {
             this.isNotFound = true;
             this.isLoading = false;
             return;
           }
 
-          const exact =
-            items.find((i) => Number(i.userID) === this.applicantId) ||
-            items[0];
+          // เฉพาะของ user นี้
+          const byUser = items.filter(i => Number(i.userID) === this.applicantId);
+          const pool = byUser.length ? byUser : items;
+
+          const roundParam = Number(this.round) || null;
+          const getRound = (x: any) => Number(x?.roundID ?? x?.round ?? 0);
+
+          let exact: CandidateTracking;
+
+          exact = pool.reduce((best, cur) => {
+            const br = getRound(best);
+            const cr = getRound(cur);
+            if (cr !== br) return cr > br ? cur : best;
+            return this.getLastTs(cur) > this.getLastTs(best) ? cur : best;
+          }, pool[0]);
+          // อัปเดต this.round ให้เป็นรอบที่เลือกมา เพื่อให้หน้าอื่นใช้ต่อได้
+          this.round = getRound(exact) || 1;
+
+          const latestRound = pool.reduce((mx, cur) => Math.max(mx, getRound(cur)), 0);
+          const selectedRound = getRound(exact) || 1;
+          this.isLatestRound = selectedRound === latestRound;
+          if (!this.isLatestRound) {
+            this.allowEditButton = false;
+            this.editReview = false;
+          }
 
           this.mapTrackingToView(exact);
           this.isLoading = false;
           
           // Attachments
           this.fetchFiles(Number(this.applicantId || 0));
+          const appointmentIdKey = `interview${this.stageId}AppointmentId`;
+          (this as any)[appointmentIdKey] = (exact as any)?.[appointmentIdKey];
         },
         error: (err) => {
           console.error(
@@ -437,6 +463,19 @@ export class InterviewReviewComponent {
       },
     });
 
+  }
+
+  private getLastTs(i: CandidateTracking): number {
+    const candidates = [
+      i?.interview2?.date,
+      i?.interview1?.date,
+      (i as any)?.updatedAt,
+      i?.submitDate,
+    ]
+      .map(d => (d ? Date.parse(String(d)) : 0))
+      .filter(n => Number.isFinite(n) && n > 0);
+
+    return candidates.length ? Math.max(...candidates) : 0;
   }
 
   fetchInterviewer() {
@@ -992,6 +1031,7 @@ export class InterviewReviewComponent {
           const transformedPayload = {
             applicationId: this.applicantId,
             stageId: this.stageId + 1,
+            roundID: this.round,
             categoryId: checkedCategoryIds[0],
             isSummary: false,
             stageDate: isoDate,
@@ -1447,7 +1487,7 @@ export class InterviewReviewComponent {
   // --- เพิ่ม state ใน class ---
   selectedGroupKey: ResultGroupKey | null = null;
   resultGroups: ResultGroup[] = [
-    { key: 'accept', label: 'Accept', regex:/(accept|on\s*hold|pass)/i, items: [] },
+    { key: 'accept', label: 'Accept', regex: /(accept|on\s*hold|pass)/i, items: [] },
     { key: 'decline', label: 'Decline', regex: /(decline|no[\s-]?show)/i, items: [] },
   ];
 
@@ -1499,6 +1539,39 @@ export class InterviewReviewComponent {
     return `${base} ${tone}`;
   }
 
+  // แสดงผล DD/MM/YYYY เท่านั้น (ไม่กระทบค่าที่เก็บ)
+  formatDateDDMMYYYY(value: string | Date | null | undefined): string {
+    if (!value) return '';
+    const d = dayjs(value);
+    if (!d.isValid()) return '';
+    return d.format('DD/MM/YYYY');
+  }
+
+  // เปิด/ปิดปฏิทิน อิงสถานะแก้ไขเดิม
+  get canOpenDatePicker(): boolean {
+    return !!this.isEditing;
+  }
+
+  onDateBoxMouseDown(el: HTMLInputElement, e: MouseEvent) {
+    if (!this.canOpenDatePicker) return;
+    // กัน selection แล้วเรียกปฏิทิน
+    e.preventDefault();
+    this.openDatePicker(el);
+  }
+
+  openDatePicker(el: HTMLInputElement) {
+    try {
+      // รองรับเบราว์เซอร์ที่มี showPicker
+      (el as any).showPicker ? (el as any).showPicker() : el.click();
+    } catch {
+      el.click();
+    }
+  }
+
+  // ให้ flow เดิม onDateChange()/cache ทำงานเหมือนเดิม
+  onNativeDateChanged() {
+    this.onDateChange();
+  }
 
 }
 
