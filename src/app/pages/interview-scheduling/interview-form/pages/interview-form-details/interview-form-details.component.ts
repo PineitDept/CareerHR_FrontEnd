@@ -78,9 +78,11 @@ interface Applicant {
   program?: string;
   phone?: string;
   interview1Date?: string;
+  interview1DateFormat?: string;
   interview1Status?: string;
   interview1Result?: number;
   interview2Date?: string;
+  interview2DateFormat?: string;
   interview2Status?: string;
   interview2Result?: number;
 }
@@ -213,7 +215,7 @@ export class InterviewFormDetailsComponent {
   applicantId: number = 0;
   appointmentId: number = 0;
   stageId: number = 0;
-  round: number = 0;
+  round: number = 1;
   isLatestRound = true;
   interview1AppointmentId: string | undefined;
   interview2AppointmentId: string | undefined;
@@ -687,10 +689,12 @@ export class InterviewFormDetailsComponent {
       faculty: ct.faculty,
       program: ct.major,
       phone: ct.phoneNumber,
-      interview1Date: dayjs(ct.interview1.date).format('DD MMMM YYYY'),
+      interview1DateFormat: dayjs(ct.interview1.date).format('DD MMMM YYYY'),
+      interview1Date: ct.interview1.date,
       interview1Status: ct.interview1.status,
       interview1Result: ct.interview1.id,
-      interview2Date: dayjs(ct.interview2.date).format('DD MMMM YYYY'),
+      interview2DateFormat: dayjs(ct.interview2.date).format('DD MMMM YYYY'),
+      interview2Date: ct.interview2.date,
       interview2Status: ct.interview2.status,
       interview2Result: ct.interview2.id,
     };
@@ -1388,6 +1392,13 @@ export class InterviewFormDetailsComponent {
     this.router.navigate(['/applications/screening/application-form'], { queryParams });
   }
 
+  onInterview2Click() {
+    const queryParams = {
+      id: this.applicantId
+    }
+    this.router.navigate(['/interview-scheduling/interview-round-2'], { queryParams });
+  }
+
   onInterviewDetailClick() {
     const queryParams = {
       id: this.applicantId,
@@ -1876,18 +1887,42 @@ export class InterviewFormDetailsComponent {
             return row;
           });
 
-        // ===== Round 1 -> เก็บเฉพาะ field ที่มีคำตอบในรอบ 1 =====
+        // ===== Round 1 + Round 2 -> แสดงทุกรายการที่มีคำตอบ "อย่างน้อยหนึ่งรอบ"
+        // (ถ้ารอบ 1 ไม่มีคำตอบ ให้ขึ้นแถวและปล่อยคอลัมน์ Interview 1 ว่างไว้ => จะโชว์ "—")
         const fields1 = Array.isArray(response[0]?.fields) ? response[0].fields : [];
-        this.detail1Rows = fields1
-          .filter((item: any) => this.hasRoundAnswer(item, 1))        // <<<<<< ตรงนี้
-          .map((item: any, idx: number) => {
-            const type = this.mapFieldType(item.fieldType);
-            const optsList = Array.isArray(item.options)
-              ? item.options.map((o: any) => ({ label: o.optionIdname, value: String(o.optionId) }))
-              : [];
+        const fields1_2 = Array.isArray(response[0]?.fields) ? response[0].fields : [];
+        const byKey = new Map<string | number, { f1?: any; f2?: any }>();
 
-            const ansR1 = (item.answers || []).find((a: any) => Number(a.interviewRound) === 1);
-            const ansR2 = (item.answers || []).find((a: any) => Number(a.interviewRound) === 2);
+        const keyOf = (f: any, idx: number) =>
+          (f?.questionId ?? f?.id ?? f?.questionName ?? `q-${idx}`);
+
+        fields1.forEach((f: any, i: number) => {
+          const k = keyOf(f, i);
+          const cur = byKey.get(k) ?? {};
+          cur.f1 = f;
+          byKey.set(k, cur);
+        });
+        fields1_2.forEach((f: any, i: number) => {
+          const k = keyOf(f, i);
+          const cur = byKey.get(k) ?? {};
+          cur.f2 = f;
+          byKey.set(k, cur);
+        });
+
+        this.detail1Rows = Array.from(byKey.entries())
+          .filter(([_, pair]) => {
+            const hasR1 = pair.f1 ? this.hasRoundAnswer(pair.f1, 1) : false;
+            const hasR2 = pair.f2 ? this.hasRoundAnswer(pair.f2, 2) : false;
+            return hasR1 || hasR2;
+          })
+          .map(([_, pair], idx) => {
+            const baseField = pair.f1 ?? pair.f2 ?? {};
+            const type = this.mapFieldType(baseField.fieldType);
+            const optsList = Array.isArray(baseField.options)
+              ? baseField.options.map((o: any) => ({ label: o.optionIdname, value: String(o.optionId) }))
+              : [];
+            const ansR1 = pair.f1 ? (pair.f1.answers || []).find((a: any) => Number(a.interviewRound) === 1) : null;
+            const ansR2 = pair.f2 ? (pair.f2.answers || []).find((a: any) => Number(a.interviewRound) === 2) : null;
 
             const r1Sel = Array.isArray(ansR1?.existingOptionIds) ? ansR1.existingOptionIds.map((id: any) => String(id)) : [];
             const r2Sel = Array.isArray(ansR2?.existingOptionIds) ? ansR2.existingOptionIds.map((id: any) => String(id)) : [];
@@ -1900,8 +1935,8 @@ export class InterviewFormDetailsComponent {
 
             const row: WarningRow = {
               no: idx + 1,
-              warning: item.questionName ?? '-',
-              questionId: Number(item.questionId ?? item.id ?? idx + 1),
+              warning: baseField.questionName ?? '-',
+              questionId: Number(baseField.questionId ?? baseField.id ?? idx + 1),
 
               result1Type: type,
               result2Type: type,
@@ -1921,7 +1956,7 @@ export class InterviewFormDetailsComponent {
         // ===== Round 2 -> เก็บเฉพาะ field ที่มีคำตอบในรอบ 2 =====
         const fields2 = Array.isArray(response[1]?.fields) ? response[1].fields : [];
         this.detail2Rows = fields2
-          .filter((item: any) => this.hasRoundAnswer(item, 2))        // <<<<<< ตรงนี้
+          .filter((item: any) => this.hasRoundAnswer(item, 2))
           .map((item: any, idx: number) => {
             const type = this.mapFieldType(item.fieldType);
             const optsList = Array.isArray(item.options)
@@ -2114,46 +2149,6 @@ export class InterviewFormDetailsComponent {
     // แค่กระตุก change detection ถ้าจำเป็น
     // this.cdr.markForCheck(); // ถ้าใช้ OnPush ค่อยเปิดบรรทัดนี้
   }
-}
-
-// ====== Helpers ======
-function has(v: any): boolean {
-  return v !== undefined && v !== null && String(v).trim() !== '';
-}
-
-function formatDay(d?: string): string | undefined {
-  if (!has(d)) return undefined;
-  const m = dayjs.utc(String(d));
-  if (!m.isValid()) return undefined;
-  return m.format('DD MMM YYYY');
-}
-
-function isInProcess(status?: string | null): boolean {
-  if (!status) return false;
-  const s = String(status).trim().toLowerCase();
-  return [
-    'inprocess',
-    'in process',
-    'pending',
-    'scheduled',
-    'schedule',
-    'in schedule',
-    'awaiting',
-    'waiting',
-  ].includes(s);
-}
-
-function stepStatusFrom(
-  s?: CandidateTrackStatus,
-  fallbackDate?: string
-): StepStatus {
-  if (!s) return has(fallbackDate) ? 'done' : 'pending';
-  if (isInProcess(s.status)) return 'pending';
-  return has(s.status) || has(s.date) ? 'done' : 'pending';
-}
-
-function subFrom(s?: CandidateTrackStatus, fallback = ''): string {
-  return (s?.status && String(s.status)) || fallback;
 }
 
 // ===== Palette =====

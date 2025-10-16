@@ -599,10 +599,12 @@ export class TablesComponent
 
     switch (val) {
       case 'pending':
-      case 'in process':
         return 'tw-text-[#FFAA00] hover:tw-text-[#D5920A]';
       case 'inprocess':
+      case 'in process':
         return 'tw-text-[#5500FF] hover:tw-text-[#5f31bb]';
+      case 'scheduled':
+        return 'tw-text-indigo-400 hover:tw-text-indigo-500';
       case 'complete':
       case 'offer':
       case 'onboarded':

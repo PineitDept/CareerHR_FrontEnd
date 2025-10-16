@@ -25,8 +25,8 @@
 
         <!-- <ngx-slick-carousel #slickCarousel class="tw-grid grid-cols-auto tw-gap-8" [config]="slideConfig" (init)="onCarouselInit($event, i)" (afterChange)="onSlideChanged($event, i)"> -->
         <div class="tw-grid grid-cols-auto tw-gap-8">
-            <div
-                class="tw-border-1 tw-flex tw-rounded-lg tw-items-center !tw-bg-[#F8F9FA] box-shadow flex-box h-unset tw-overflow-hidden">
+            <div (click)="onInterviewDetailsClicked(item)"
+                class="tw-cursor-pointer tw-border-1 tw-flex tw-rounded-lg tw-items-center !tw-bg-[#F8F9FA] box-shadow flex-box h-unset tw-overflow-hidden">
                 <div class="tw-min-w-[45%] tw-h-full tw-w-full">
                     <img class="tw-object-cover tw-h-full tw-w-full" src="{{item.profile.pathImage}}" onerror="this.onerror=null; this.src='assets/image/user-mock.jpg';" alt="Applicant">
                 </div>
@@ -258,7 +258,6 @@
                         <div *ngIf="item.revisionList[0].value > 1">
                             <app-cdk-dropdown class="tw-block tw-w-fit" [options]="item.revisionList" [value]="item.interview.revision" (valueChange)="onRevisionChange($event, item)"></app-cdk-dropdown>
                         </div>
-
                     </div>
 
                     <div class="tw-flex tw-gap-2">
@@ -266,7 +265,7 @@
                             class="tw-w-fit tw-rounded-lg tw-bg-[#00AAFF] hover:tw-bg-[#028cd1] tw-text-white tw-text-sm tw-font-semibold tw-px-[10px] tw-py-1.5">
                             <span class="tw-font-semibold">Interview Form</span>
                         </button>
-                        <button type="button" *ngIf="item.interview.isEmailSent && (item.revisionList[0].value === item.interview.revision)" (click)="onInterviewDetailsClicked(item)"
+                        <button type="button" (click)="onInterviewDetailsClicked(item)"
                             class="tw-w-fit tw-rounded-lg tw-bg-[#4b0082] hover:tw-bg-[#3c0266] tw-text-white tw-text-sm tw-font-semibold tw-px-[10px] tw-py-1.5">
                             <span class="tw-font-semibold">View Details</span>
                         </button>

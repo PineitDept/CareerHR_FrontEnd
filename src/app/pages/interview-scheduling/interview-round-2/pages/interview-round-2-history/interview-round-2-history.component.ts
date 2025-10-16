@@ -1247,11 +1247,11 @@ export class InterviewRound2HistoryComponent {
                 this.currentFilterParams.page = 1;
                 this.hasMoreData = true;
 
-                const fetchCalls: Observable<any>[] = [this.fetchAppointments(false, false)];
+                const fetchCalls: Observable<any>[] = [this.fetchAppointments(true, false)];
 
                 for (let page = 2; page <= previousPage; page++) {
                   this.currentFilterParams.page = page;
-                  fetchCalls.push(this.fetchAppointments(false, false));
+                  fetchCalls.push(this.fetchAppointments(true, false));
                 }
 
                 forkJoin(fetchCalls).subscribe(() => {

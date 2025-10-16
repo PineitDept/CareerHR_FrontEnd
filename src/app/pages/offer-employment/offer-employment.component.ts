@@ -33,9 +33,9 @@ export class OfferEmploymentComponent {
   createInitialTabs(): TabMenu[] {
     return [
       { key: 'total', label: 'All Status', count: 0 },
-      { key: 'hire-offer', label: 'Hire Offer', count: 0 },
-      // { key: 'in-process', label: 'Not Hire', count: 0 },
-      { key: 'candidate-decline-offer', label: 'Candidate Decline Offer', count: 0 }
+      { key: 'hire offer', label: 'Offer', count: 0 },
+      { key: 'not offer', label: 'Not Offer', count: 0 },
+      // { key: 'candidate-decline-offer', label: 'Candidate Decline Offer', count: 0 }
     ];
   }
 
@@ -286,6 +286,10 @@ export class OfferEmploymentComponent {
                   ? ['tw-bg-green-500', 'tw-text-white', 'tw-ring-green-500/10']
                   : item.result.offerResult.toLowerCase().trim() === 'in process'
                     ? ['tw-bg-orange-500', 'tw-text-white', 'tw-ring-orange-500/10']
+                  : item.result.offerResult.toLowerCase().trim() === 'scheduled'
+                    ? ['tw-bg-indigo-400', 'tw-text-white', 'tw-ring-indigo-400/10']
+                  : item.result.offerResult.toLowerCase().trim() === 'onhold'
+                    ? ['tw-bg-gray-400', 'tw-text-white', 'tw-ring-gray-400/10']
                     : ['tw-bg-red-500', 'tw-text-white', 'tw-ring-red-500/10']),
                 ...(interview1Hidden ? ['tw-hidden'] : []),
               ],
@@ -500,7 +504,7 @@ export class OfferEmploymentComponent {
       if (tab.key === 'total') {
         count = groupCounts['All Status'] ?? 0;
       } else {
-        const labelMatch = tab.label.toLowerCase().trim();
+        const labelMatch = tab.key.toLowerCase().trim();
         const matchingKey = Object.keys(groupCounts).find(
           key => key.toLowerCase().trim() === labelMatch
         );

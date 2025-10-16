@@ -92,7 +92,7 @@ interface ViewComment {
 export class OfferResultComponent {
   // ===== Routing =====
   applicantId = 0;
-  round: number = 0;
+  round: number = 1;
   isLatestRound = true;
   stageId = 0;
   idEmployee = 0;
@@ -1096,54 +1096,51 @@ export class OfferResultComponent {
 
       if (!confirmed) return;
 
-      this.clearDraftsForCurrentType();
+      this.clearDraftsForCurrentType()
       this.setReviewEditing(false);
 
-      if (this.foundisSummary) {
-        const payloadHistory = {
-          categoryId: checkedCategoryIds[0],
-          stageDate: isoDate,
-          notes: payload.noteInterviewReview,
-          selectedReasonIds: checkedReasonIds,
-        };
+      const basePayload = {
+        categoryId: checkedCategoryIds[0],
+        stageDate: isoDate,
+        notes: payload.noteInterviewReview,
+        selectedReasonIds: checkedReasonIds,
+      };
 
-        this.interviewFormService.updateCandidateStageHistory(this.foundisSummary.historyId, payloadHistory).subscribe({
-          next: () => {
-            this.interviewFormService.postUpdateSelectPostion(this.payloadPositionChange).subscribe({
-              next: () => {
-                this.fetchInterviewer();
-                this.foundisSummary = this.reviewHistory.find((user) => user.isSummary === true);
-                this.editReview = false;
-                this.allowEditButton = true;
-              },
-              error: (err) => console.error('Error Rescheduled:', err),
-            });
-          },
-          error: (err) => console.error('Error Rescheduled:', err),
-        });
+      const handleSuccess = () => {
+        if (this.payloadPositionChange) {
+          this.interviewFormService.postUpdateSelectPostion(this.payloadPositionChange).subscribe({});
+        }
+
+        this.fetchInterviewer();
+        this.foundisSummary = this.reviewHistory.find((user) => user.isSummary === true);
+        this.editReview = false;
+        this.allowEditButton = true;
+
+        this.clearDraftsForCurrentType()
+      };
+
+      if (this.foundisSummary) {
+        this.interviewFormService
+          .updateCandidateStageHistory(this.foundisSummary.historyId, basePayload)
+          .subscribe({
+            next: handleSuccess,
+            error: (err) => console.error('Error Rescheduled:', err),
+          });
       } else {
         const transformedPayload = {
           applicationId: this.applicantId,
           stageId: this.stageId + 1,
           roundID: this.round,
-          categoryId: checkedCategoryIds[0],
           isSummary: true,
-          stageDate: isoDate,
           appointmentId: (appointmentId ?? '').trim(),
           satisfaction: 0,
-          notes: payload.noteInterviewReview,
           strength: '',
           concern: '',
-          selectedReasonIds: checkedReasonIds,
+          ...basePayload,
         };
 
         this.interviewFormService.postInterviewReview(transformedPayload).subscribe({
-          next: () => {
-            this.fetchInterviewer();
-            this.foundisSummary = this.reviewHistory.find((user) => user.isSummary === true);
-            this.editReview = false;
-            this.allowEditButton = true;
-          },
+          next: handleSuccess,
           error: (err) => console.error('Error Rescheduled:', err),
         });
       }
@@ -1662,11 +1659,11 @@ export class OfferResultComponent {
                 // this.currentFilterParams.page = 1;
                 // this.hasMoreData = true;
 
-                // const fetchCalls: Observable<any>[] = [this.fetchAppointments(false, false)];
+                // const fetchCalls: Observable<any>[] = [this.fetchAppointments(true, false)];
 
                 // for (let page = 2; page <= previousPage; page++) {
                 //   this.currentFilterParams.page = page;
-                //   fetchCalls.push(this.fetchAppointments(false, false));
+                //   fetchCalls.push(this.fetchAppointments(true, false));
                 // }
 
                 // forkJoin(fetchCalls).subscribe(() => {

@@ -16,8 +16,8 @@
     <div [id]="'appointment-' + item.profile.appointmentId" *ngFor="let item of appointments; let i = index" class="tw-relative group">
 
         <div class="tw-grid grid-cols-auto tw-gap-8">
-            <div
-                class="tw-border-1 tw-flex tw-rounded-lg tw-items-center !tw-bg-[#F8F9FA] box-shadow flex-box h-unset tw-overflow-hidden">
+            <div (click)="onInterviewDetailsClicked(item)"
+                class="tw-cursor-pointer tw-border-1 tw-flex tw-rounded-lg tw-items-center !tw-bg-[#F8F9FA] box-shadow flex-box h-unset tw-overflow-hidden">
                 <div class="tw-min-w-[45%] tw-h-full tw-w-full">
                     <img class="tw-object-cover tw-h-full tw-w-full" src="{{item.profile.pathImage}}" onerror="this.onerror=null; this.src='assets/image/user-mock.jpg';" alt="Applicant">
                 </div>
