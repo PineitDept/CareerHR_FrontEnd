@@ -435,7 +435,8 @@ export class InterviewReviewComponent {
 
           this.mapTrackingToView(exact);
           this.isLoading = false;
-
+          
+          // Attachments
           this.fetchFiles(Number(this.applicantId || 0));
           const appointmentIdKey = `interview${this.stageId}AppointmentId`;
           (this as any)[appointmentIdKey] = (exact as any)?.[appointmentIdKey];
@@ -1538,6 +1539,39 @@ export class InterviewReviewComponent {
     return `${base} ${tone}`;
   }
 
+  // แสดงผล DD/MM/YYYY เท่านั้น (ไม่กระทบค่าที่เก็บ)
+  formatDateDDMMYYYY(value: string | Date | null | undefined): string {
+    if (!value) return '';
+    const d = dayjs(value);
+    if (!d.isValid()) return '';
+    return d.format('DD/MM/YYYY');
+  }
+
+  // เปิด/ปิดปฏิทิน อิงสถานะแก้ไขเดิม
+  get canOpenDatePicker(): boolean {
+    return !!this.isEditing;
+  }
+
+  onDateBoxMouseDown(el: HTMLInputElement, e: MouseEvent) {
+    if (!this.canOpenDatePicker) return;
+    // กัน selection แล้วเรียกปฏิทิน
+    e.preventDefault();
+    this.openDatePicker(el);
+  }
+
+  openDatePicker(el: HTMLInputElement) {
+    try {
+      // รองรับเบราว์เซอร์ที่มี showPicker
+      (el as any).showPicker ? (el as any).showPicker() : el.click();
+    } catch {
+      el.click();
+    }
+  }
+
+  // ให้ flow เดิม onDateChange()/cache ทำงานเหมือนเดิม
+  onNativeDateChanged() {
+    this.onDateChange();
+  }
 
 }
 

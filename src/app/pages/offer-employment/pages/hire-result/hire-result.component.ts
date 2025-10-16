@@ -968,4 +968,40 @@ export class HireResultComponent {
     if (!updatedAt) return false;
     return !this.sameIsoSecond(createdAt, updatedAt);
   }
+
+  // ===== Date helpers (UI แสดง DD/MM/YYYY) =====
+  get canOpenDatePicker(): boolean {
+    // เปิดปฏิทินได้เฉพาะตอนแก้ไข เหมือนพฤติกรรมฟอร์มเดิม
+    return !!this.editReview;
+  }
+
+  formatDateDDMMYYYY(v: any): string {
+    if (!v) return '';
+    const d = dayjs(v);
+    return d.isValid() ? d.format('DD/MM/YYYY') : '';
+  }
+
+  openDatePicker(inputEl: HTMLInputElement | null | undefined) {
+    if (!inputEl) return;
+    const anyEl = inputEl as any;
+    if (typeof anyEl.showPicker === 'function') {
+      anyEl.showPicker();
+    } else {
+      inputEl.focus();
+      inputEl.click();
+    }
+  }
+
+  onDateBoxMouseDown(inputEl: HTMLInputElement, ev?: MouseEvent) {
+    if (!this.canOpenDatePicker) return;
+    ev?.preventDefault?.();
+    this.openDatePicker(inputEl);
+  }
+
+  // เมื่อ native <input type="date"> เปลี่ยนค่า
+  onNativeDateChanged() {
+    // คง workflow เดิมไว้
+    this.onDateInput();
+    this.onDateChange();
+  }
 }

@@ -143,6 +143,8 @@ export class InterviewRound1HistoryComponent {
   @ViewChildren('slickCarousel') carousels!: QueryList<SlickCarouselComponent>;
   @ViewChild('scrollContainer') scrollContainer!: ElementRef;
 
+  private dateSaveTimers: Record<string, any> = {};
+  private lastSubmittedDate: Record<string, string> = {};
   private destroy$ = new Subject<void>();
   applicantId: number = 0;
 
@@ -528,21 +530,48 @@ export class InterviewRound1HistoryComponent {
 
 
   onDateChange(event: Event, item: any) {
-    const input = event.target as HTMLInputElement;
-    const dateTime = input.value;
+    const el = event.target as HTMLInputElement;
+    const newValue = el.value;                 // yyyy-MM-ddTHH:mm
+    const prevValue = item?.interview?.date;
+    const appointmentId = item.profile.appointmentId;
 
-    const payload = {
-      appointmentId: item.profile.appointmentId,
-      interviewDate: dateTime
+    // อัปเดต UI ทันที
+    item.interview = { ...(item.interview || {}), date: newValue };
+    this.cdr?.markForCheck?.();
+
+    // input = debounce, change = ทันที
+    const isChange = event.type === 'change';
+    const delay = isChange ? 0 : 600;
+
+    // กันยิงถี่: เคลียร์อันเก่า
+    if (this.dateSaveTimers[appointmentId]) {
+      clearTimeout(this.dateSaveTimers[appointmentId]);
     }
 
-    this.appointmentsService.updateInterviewDate(payload).subscribe({
-      error: (err) => {
-        console.error('Error update date:', err);
+    this.dateSaveTimers[appointmentId] = setTimeout(() => {
+      // กันยิงค่าซ้ำ
+      if (this.lastSubmittedDate[appointmentId] === newValue) return;
 
-        this.notificationService.error('Error update date');
-      }
-    });
+      const payload = {
+        appointmentId,
+        interviewDate: newValue,
+      };
+
+      this.appointmentsService.updateInterviewDate(payload).subscribe({
+        next: () => {
+          this.lastSubmittedDate[appointmentId] = newValue;
+          this.notificationService.success('Interview date updated.');
+        },
+        error: (err) => {
+          console.error('Error update date:', err);
+          this.notificationService.error('Error update date');
+          // rollback UI + ค่าใน input
+          item.interview = { ...(item.interview || {}), date: prevValue };
+          el.value = this.toDateTimeLocalValue(prevValue);
+          this.cdr?.markForCheck?.();
+        }
+      });
+    }, delay);
   }
 
   onLocationChange(selectedValue: number, item: any) {
@@ -553,6 +582,9 @@ export class InterviewRound1HistoryComponent {
     }
 
     this.appointmentsService.updateInterviewLocation(payload).subscribe({
+      next: () => {
+        this.notificationService.success('Interview location updated.');
+      },
       error: (err) => {
         console.error('Error update location:', err);
 
@@ -1409,6 +1441,54 @@ export class InterviewRound1HistoryComponent {
       case 'back':
         this.router.navigate(['/interview-scheduling/interview-round-1']);
         break;
+    }
+  }
+
+  // เปิดได้เมื่อยังไม่ส่งอีเมล และ revision ปัจจุบันเท่ากับรายการล่าสุด
+  canOpenDateTimePicker(item: any): boolean {
+    return !(item?.interview?.isEmailSent || item?.revisionList?.[0]?.value !== item?.interview?.revision);
+  }
+
+  // แปลงเป็นค่า value สำหรับ <input type="datetime-local"> => yyyy-MM-ddTHH:mm
+  toDateTimeLocalValue(v?: string | Date): string {
+    if (!v) return '';
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return '';
+    const yyyy = d.getFullYear();
+    const MM = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${yyyy}-${MM}-${dd}T${hh}:${mm}`;
+  }
+
+  // แสดงผลเป็น DD/MM/YYYY HH:mm (ไม่อิง locale เครื่อง)
+  formatDateTimeDDMMYYYYHHmm(v?: string | Date): string {
+    if (!v) return '';
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return '';
+    const dd = String(d.getDate()).padStart(2, '0');
+    const MM = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${dd}/${MM}/${yyyy} ${hh}:${mm}`;
+  }
+
+  // เปิด native picker (มี fallback เผื่อ browser ไม่รองรับ showPicker)
+  openDateTimePicker(el: HTMLInputElement) {
+    try {
+      (el as any).showPicker ? (el as any).showPicker() : el.click();
+    } catch {
+      el.click();
+    }
+    el.focus();
+  }
+
+  // ให้คลิกที่กล่องมองเห็นแล้วเปิดปฏิทินทันที (ถ้าเปิดได้)
+  onDateTimeBoxMouseDown(el: HTMLInputElement, item: any) {
+    if (this.canOpenDateTimePicker(item)) {
+      setTimeout(() => this.openDateTimePicker(el), 0);
     }
   }
 }

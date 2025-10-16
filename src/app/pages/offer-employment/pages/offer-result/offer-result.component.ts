@@ -1900,4 +1900,49 @@ export class OfferResultComponent {
     if (!updatedAt) return false;
     return !this.sameIsoSecond(createdAt, updatedAt);
   }
+
+  // ===== Date helpers (UI แสดง DD/MM/YYYY) =====
+  get canOpenDatePicker(): boolean {
+    // เปิดปฏิทินของ Offer Result Date ได้เฉพาะตอนแก้ไข (เหมือนเดิมกับ logic editReview)
+    return !!this.editReview;
+  }
+
+  // Start Date อยากให้เปิดได้ตลอดเหมือนเดิม (ไม่ผูกกับ editReview)
+  get canOpenStartDatePicker(): boolean {
+    return true;
+  }
+
+  formatDateDDMMYYYY(v: any): string {
+    if (!v) return '';
+    // รองรับทั้ง ISO, 'YYYY-MM-DD', Date
+    const d = dayjs(v);
+    return d.isValid() ? d.format('DD/MM/YYYY') : '';
+  }
+
+  openDatePicker(inputEl: HTMLInputElement | null | undefined) {
+    if (!inputEl) return;
+    // เรียก native picker; fallback focus+click ถ้า browser ไม่รองรับ showPicker()
+    const anyEl = inputEl as any;
+    if (typeof anyEl.showPicker === 'function') {
+      anyEl.showPicker();
+    } else {
+      inputEl.focus();
+      inputEl.click();
+    }
+  }
+
+  onDateBoxMouseDown(inputEl: HTMLInputElement, ev?: MouseEvent, allowAlways = false) {
+    const canOpen = allowAlways ? this.canOpenStartDatePicker : this.canOpenDatePicker;
+    if (!canOpen) return;
+    // ป้องกัน selection/focus ไปที่ text แล้วสั่งเปิดปฏิทินแทน
+    ev?.preventDefault?.();
+    this.openDatePicker(inputEl);
+  }
+
+  // เมื่อ native <input type="date"> ของ Offer Result Date เปลี่ยนค่า
+  onNativeDateChanged() {
+    // คง workflow เดิมให้ครบ
+    this.onDateInput();
+    this.onDateChange();
+  }
 }
