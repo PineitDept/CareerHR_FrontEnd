@@ -98,6 +98,7 @@ export class OfferResultComponent {
   idEmployee = 0;
   appointmentId: string | undefined;
   resultName: string | undefined;
+  resultDate: string | undefined;
   appointmentsItem: any
   historyData: any[] = [];
   dropdownConfigs: any[] = [];
@@ -317,6 +318,7 @@ export class OfferResultComponent {
         this.appointmentsItem = response.items[0]
         
         this.resultName = response.items[0].result.offerResult.toLowerCase();
+        this.resultDate = response.items[0].result.offerDate.toLowerCase();
 
         const jobList = this.appointmentsItem?.jobPosition?.jobList ?? [];
         const activeJob = jobList.find((j: any) => j?.isActive === true);
@@ -331,7 +333,7 @@ export class OfferResultComponent {
   }
 
   isOffer() {
-    return this.resultName === 'offer'
+    return this.resultName === 'pending' && this.resultDate
   }
 
   private getLastTs(i: CandidateTracking): number {
