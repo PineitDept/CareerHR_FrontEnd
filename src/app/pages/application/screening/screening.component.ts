@@ -63,6 +63,13 @@ export class ScreeningComponent extends BaseApplicationComponent {
       align: 'center'
     },
     {
+      header: 'Submit Date',
+      field: 'submitDate',
+      type: 'date',
+      align: 'center',
+      sortable: true
+    },
+    {
       header: 'Screen Date',
       field: 'employeeActionDate',
       type: 'date',
@@ -211,7 +218,7 @@ export class ScreeningComponent extends BaseApplicationComponent {
   protected createInitialTabs(): TabMenu[] {
     return [
       { key: 'total', label: 'All Applications', count: 0 },
-      { key: 'pending', label: 'Pending', count: 0 },
+      // { key: 'pending', label: 'Pending', count: 0 },
       { key: 'accept', label: 'Accepted', count: 0 },
       { key: 'decline', label: 'Declined', count: 0 },
       { key: 'hold', label: 'On Hold', count: 0 },
@@ -285,6 +292,7 @@ export class ScreeningComponent extends BaseApplicationComponent {
     const displayStaus = daySince > 0 ? this.displayStaus(daySince) : "pending";
     return {
       id: item.userID.toString(),
+      submitDate: summary.submitDate || '',
       employeeActionDate: summary.employeeActionDate || '',
       userID: item.userID.toString(),
       fullName: summary.fullName,

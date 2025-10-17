@@ -194,7 +194,7 @@
 
                     <!-- Badge Content -->
                     <span *ngSwitchCase="'badge'"
-                      class="tw-inline-flex tw-items-center tw-justify-center tw-rounded-lg tw-px-2.5 tw-py-1 tw-text-xs tw-font-medium tw-ring-1 tw-ring-inset tw-transition-all tw-duration-200 tw-max-w-full tw-whitespace-nowrap tw-overflow-hidden tw-text-ellipsis"
+                      class="tw-w-full tw-inline-flex tw-items-center tw-justify-center tw-rounded-lg tw-px-2.5 tw-py-1 tw-text-xs tw-font-medium tw-ring-1 tw-ring-inset tw-transition-all tw-duration-200 tw-max-w-full tw-whitespace-nowrap tw-overflow-hidden tw-text-ellipsis"
                       [ngClass]="getCellValue(row, column.field)?.class || ['tw-bg-gray-100', 'tw-ring-gray-300']">
                       {{ getCellValue(row, column.field)?.label || 'Badge' }}
                     </span>
@@ -289,12 +289,13 @@
                     </div>
 
                     <!-- Icon Content -->
-                    <div *ngSwitchCase="'icon'" class="tw-flex tw-justify-center tw-items-center">
+                    <div *ngSwitchCase="'icon'" class="tw-flex tw-justify-center tw-items-center tw-flex-col">
                       <app-icon [name]="getCellValue(row, column.field)?.icon || 'default'"
                         [size]="getCellValue(row, column.field)?.size || 20"
                         [fill]="getCellValue(row, column.field)?.fill || 'currentColor'"
                         [extraClass]="getCellValue(row, column.field)?.extraClass || '' + 'tw-transition-colors tw-duration-200'">
                       </app-icon>
+                      <p *ngIf="IconHasDes" class="tw-text-[12px] tw-text-gray-600">{{getCellValue(row, column.field)?.textDes}}</p>
                     </div>
 
                     <!-- toggle Content -->

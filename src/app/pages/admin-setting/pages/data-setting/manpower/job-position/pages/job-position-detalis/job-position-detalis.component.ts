@@ -186,8 +186,7 @@ export class JobPositionDetalisComponent {
       // ใช้ auditTime/ debounceTime ได้ตามชอบ
     )
       .subscribe(() => {
-        this.saveCache(); // << เก็บทุกครั้ง
-        // ปุ่ม Save จะเปิด/ปิดตาม hasFormChanged เฉพาะตอนอยู่ในโหมดแก้
+        this.saveCache();
         if (this.isEditing) {
           this.nextTick(() => this.setButtonDisabled('save', !this.hasFormChanged()));
         }
@@ -365,7 +364,7 @@ export class JobPositionDetalisComponent {
         this.tryApplyPreselect(this.settingWelfareBenefits, 'item', this.preselectedbenefits, 'selectedIdsBenefits');
         this.tryApplyPreselect(this.settingLanguageSkills, 'idlanguage', this.preselectedlanguageSkills, 'selectedIdsLanguage');
         this.tryApplyPreselect(this.settingComputerSkills, 'idcpSkill', this.preselectedcomputerSkills, 'selectedIdsComputer');
-        this.tryApplyPreselect(this.settingBonusSkills, 'idcpSkill', this.preselectedbonusSkills, 'selectedIdsBonus');
+        this.tryApplyPreselect(this.settingBonusSkills, 'id', this.preselectedbonusSkills, 'selectedIdsBonus');
 
         this.initialSnapshot = {
           form: {
@@ -464,11 +463,10 @@ export class JobPositionDetalisComponent {
   }
 
   fetchBonusDetails() {
-    this.benefitsService.setBenefitType('computer-skills');
-    this.benefitsService.getBenefitsWeb<IComputerWithPositionsDto>(this.currentFilterParams).subscribe({
+    this.jobPositionService.getAllJobBonusDetails().subscribe({
       next: (res) => {
         const list = Array.isArray(res) ? res : ((res as any)?.items ?? (res as any)?.data ?? []);
-        this.settingBonusSkills = (list as any[]).filter(x => Number(x?.status) !== 2);
+        this.settingBonusSkills = (list as any[]).filter(x => x?.isActive !== false);
       },
       error: (error) => {
         console.error('Error fetching category types details:', error);

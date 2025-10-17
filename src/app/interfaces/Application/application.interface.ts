@@ -64,6 +64,7 @@ export interface ApplicationRow {
 
 export interface ScreeningRow {
   readonly id: string;
+  readonly submitDate: string;
   readonly employeeActionDate: string;
   readonly userID: string;
   readonly fullName: string;

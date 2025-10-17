@@ -97,6 +97,7 @@ export class OfferResultComponent {
   stageId = 0;
   idEmployee = 0;
   appointmentId: string | undefined;
+  resultName: string | undefined;
   appointmentsItem: any
   historyData: any[] = [];
   dropdownConfigs: any[] = [];
@@ -157,6 +158,7 @@ export class OfferResultComponent {
   isActiveLevel: boolean = true;
   isActivePosition: boolean = true;
   isActiveManager: boolean = true;
+  isActiveStartDate: boolean = true;
   isActiveProbation: boolean = true;
   positionOptions: DropdownOption[] = [];
   positionOptions2: DropdownOption[] = [];
@@ -245,7 +247,7 @@ export class OfferResultComponent {
     this.formDetails = this.fb.group(
       {
         userInterviewReview: [this.foundisSummary?.hrUserName || this.usernameLogin],
-        dateInterviewReview: [this.formatDateForInput(this.foundisSummary?.stageDate) || this.today],
+        dateInterviewReview: [this.today],
         noteInterviewReview: [this.foundisSummary?.notes || ''],
         confirmedStartDate: [this.formatDateForInput(this.foundisSummary?.confirmedStartDate) || null],
       },
@@ -313,6 +315,8 @@ export class OfferResultComponent {
       next: (response) => {
         this.appointmentId = response.items[0].profile.appointmentId
         this.appointmentsItem = response.items[0]
+        
+        this.resultName = response.items[0].result.offerResult.toLowerCase();
 
         const jobList = this.appointmentsItem?.jobPosition?.jobList ?? [];
         const activeJob = jobList.find((j: any) => j?.isActive === true);
@@ -324,6 +328,10 @@ export class OfferResultComponent {
       },
       error: (error) => console.error('Error fetching Recruitment Stages with reasons:', error),
     });
+  }
+
+  isOffer() {
+    return this.resultName === 'offer'
   }
 
   private getLastTs(i: CandidateTracking): number {
@@ -418,6 +426,7 @@ export class OfferResultComponent {
         if (o.managerId != null) {
           this.selectedManagerId = Number(o.managerId);
           this.managerValue = String(o.managerId);
+          this.isActiveStartDate = false;
         }
 
         // Start date
@@ -867,6 +876,7 @@ export class OfferResultComponent {
 
     this.selectedManagerId = selectedValue;
     this.managerValue = String(selectedValue);
+    this.isActiveStartDate = false;
 
     this.interviewFormService.updateManager(payload).subscribe({
       error: (err) => {
@@ -1117,6 +1127,7 @@ export class OfferResultComponent {
         this.allowEditButton = true;
 
         this.clearDraftsForCurrentType()
+        this.fetchCandidateTracking()
       };
 
       if (this.foundisSummary) {
@@ -1324,6 +1335,7 @@ export class OfferResultComponent {
     this.isActiveLevel = !(this.selectedDivisionId);
     this.isActivePosition = !(this.selectedLevelId);
     this.isActiveManager = !(this.selectedPositionId2);
+    this.isActiveStartDate = !(this.selectedManagerId);
 
     // โหลด options ตาม chain
     if (this.selectedCompanyId) {
@@ -1906,7 +1918,7 @@ export class OfferResultComponent {
 
   // Start Date อยากให้เปิดได้ตลอดเหมือนเดิม (ไม่ผูกกับ editReview)
   get canOpenStartDatePicker(): boolean {
-    return true;
+    return this.isActiveManager;
   }
 
   formatDateDDMMYYYY(v: any): string {

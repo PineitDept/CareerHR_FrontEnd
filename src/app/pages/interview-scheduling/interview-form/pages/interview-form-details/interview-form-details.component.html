@@ -125,7 +125,7 @@
 
             </div>
             <div class="tw-bg-black tw-w-full tw-rounded-[20px]"
-                [ngClass]="!applicant.interview2Status ? 'tw-pointer-events-none tw-opacity-40':''">
+                [ngClass]="!applicant.interview2Status || applicant.interview2Result === 23 ? 'tw-pointer-events-none tw-opacity-40':''">
                 <button type="button"
                     class="tw-h-full tw-w-full tw-rounded-2xl tw-px-6 tw-py-4 tw-text-left tw-shadow-[0_4px_8px_rgba(0,0,0,0.1)] tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-brightness-110 hover:tw-shadow-[0_8px_12px_rgba(0,0,0,0.1)] focus:tw-ring-2 focus:tw-ring-white/30"
                     (click)="applicant.interview2Status === 'Pending' ? onInterview2Click() : onInterviewClick('tab2')" [class.active]="selectedTab === 'tab2'"

@@ -4,6 +4,7 @@ import { OfferEmploymentComponent } from './offer-employment.component';
 import { HireResultComponent } from './pages/hire-result/hire-result.component';
 import { OfferResultComponent } from './pages/offer-result/offer-result.component';
 import { PendingDraftsGuard } from '../../guards/pending-draft.guard';
+import { OfferEmploymentHistoryComponent } from './pages/offer-employment-history/offer-employment-history.component';
 
 const routes: Routes = [
   {
@@ -19,6 +20,10 @@ const routes: Routes = [
         path: 'offer-result',
         component: OfferResultComponent,
         canDeactivate: [PendingDraftsGuard]
+      },
+      {
+        path: 'history',
+        component: OfferEmploymentHistoryComponent,
       },
     ]
   }

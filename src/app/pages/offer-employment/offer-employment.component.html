@@ -8,7 +8,7 @@
   </div>
 
   <app-filter [showAllYearOption]="true" [defaultYearAll]="true" [filterDate]="true" [filterDateRange]="filterDateRange"
-    (dateRangeSelected)="onDateRangeSelected($event)">
+    (dateRangeSelected)="onDateRangeSelected($event)" [actionButtons]="filterButtons" (buttonClicked)="onFilterButtonClick($event)">
   </app-filter>
 
   <app-tab-menus [tabs]="tabMenus" (tabChanged)="onTabChange($event)" [activeTab]="activeTab"></app-tab-menus>

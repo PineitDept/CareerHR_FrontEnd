@@ -275,6 +275,8 @@ export class InterviewFormComponent {
                   ? ['tw-bg-green-500', 'tw-text-white', 'tw-ring-green-500/10']
                   : item.interview1Result === 16
                     ? ['tw-bg-indigo-400', 'tw-text-white', 'tw-ring-indigo-400/10']
+                  : item.interview1Result === 20
+                    ? ['tw-bg-gray-400', 'tw-text-white', 'tw-ring-gray-400/10']
                     : ['tw-bg-red-500', 'tw-text-white', 'tw-ring-red-500/10']),
                 ...(interview1Hidden ? ['tw-hidden'] : []),
               ],
@@ -286,6 +288,8 @@ export class InterviewFormComponent {
                   ? ['tw-bg-green-500', 'tw-text-white', 'tw-ring-green-500/10']
                   : item.interview2Result === 16
                     ? ['tw-bg-indigo-400', 'tw-text-white', 'tw-ring-indigo-400/10']
+                  : item.interview1Result === 20
+                    ? ['tw-bg-gray-400', 'tw-text-white', 'tw-ring-gray-400/10']
                     : ['tw-bg-red-500', 'tw-text-white', 'tw-ring-red-500/10']),
                 ...(interview2Hidden ? ['tw-hidden'] : []),
               ],
@@ -601,6 +605,8 @@ export class InterviewFormComponent {
                   ? ['tw-bg-green-500', 'tw-text-white', 'tw-ring-green-500/10']
                   : item.interview1Result === 16
                     ? ['tw-bg-indigo-400', 'tw-text-white', 'tw-ring-indigo-400/10']
+                  : item.interview1Result === 20
+                    ? ['tw-bg-gray-400', 'tw-text-white', 'tw-ring-gray-400/10']
                     : ['tw-bg-red-500', 'tw-text-white', 'tw-ring-red-500/10']),
                 ...(interview1Hidden ? ['tw-hidden'] : []),
               ],
@@ -612,6 +618,8 @@ export class InterviewFormComponent {
                   ? ['tw-bg-green-500', 'tw-text-white', 'tw-ring-green-500/10']
                   : item.interview2Result === 16
                     ? ['tw-bg-indigo-400', 'tw-text-white', 'tw-ring-indigo-400/10']
+                  : item.interview1Result === 20
+                    ? ['tw-bg-gray-400', 'tw-text-white', 'tw-ring-gray-400/10']
                     : ['tw-bg-red-500', 'tw-text-white', 'tw-ring-red-500/10']),
                 ...(interview2Hidden ? ['tw-hidden'] : []),
               ],

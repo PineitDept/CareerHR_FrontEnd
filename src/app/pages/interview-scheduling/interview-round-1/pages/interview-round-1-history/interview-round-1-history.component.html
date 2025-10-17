@@ -10,7 +10,7 @@
 
 <app-tab-menus [tabs]="tabMenus" (tabChanged)="onTabChange($event)" [activeTab]="activeTab"></app-tab-menus>
 
-<div #scrollContainer class="tw-p-6 tw-flex tw-flex-col tw-gap-8 tw-overflow-y-auto tw-h-[calc(100vh-370px)]"
+<div #scrollContainer class="tw-p-6 tw-flex tw-flex-col tw-gap-8 tw-overflow-y-auto tw-h-[calc(100dvh-420px)]"
     (scroll)="onScroll($event)">
 
     <div [id]="'appointment-' + item.profile.appointmentId" *ngFor="let item of appointments; let i = index" class="tw-relative group">
@@ -24,11 +24,14 @@
                 <div
                     class="tw-min-w-[55%] tw-p-5 tw-relative tw-h-full tw-flex tw-flex-col tw-items-center tw-justify-center">
                     <div class="tw-w-full">
+                        <p class="tag tw-w-fit tw-mb-4" [ngClass]="getButtonClass(item.result.interviewResult)">
+                            {{item.result.interviewResultText}}</p>
+
                         <div class="tw-flex tw-items-start tw-gap-2">
-                            <p class="grade-tag"
+                            <!-- <p class="grade-tag"
                                 [ngClass]="[getTagClass(item.profile.candidateGrade), !item.profile.candidateGrade ? '!tw-w-[40px]' : '']">
                                 {{ item.profile.candidateGrade ? item.profile.candidateGrade : 'N/A' }}
-                            </p>
+                            </p> -->
                             <div>
                                 <p class="tw-font-semibold">{{ item.profile.fullName }}</p>
                                 <p class="tw-text-[10px] tw-mb-2">{{ item.profile.userId }}</p>
@@ -37,6 +40,9 @@
                         <p class="tw-text-[12px]">{{ item.profile.university }}</p>
 
                         <div class="tw-mt-2">
+                            <p class="tw-text-[12px] tw-flex tw-justify-between">
+                                <span>Grade</span><span>{{ item.profile.candidateGrade }}</span>
+                            </p>
                             <p class="tw-text-[12px] tw-flex tw-justify-between">
                                 <span>GPA</span><span>{{ item.profile.gpa }}</span>
                             </p>
@@ -54,8 +60,11 @@
                                 <span>Phone</span><span>{{ item.profile.phoneNumber }}</span>
                             </p>
                         </div>
-                        <p class="tag" [ngClass]="getButtonClass(item.result.interviewResult)">
-                            {{item.result.interviewResultText}}</p>
+                            
+                        <button type="button" (click)="onInterviewDetailsClicked(item)"
+                            class="tw-mt-4 tw-w-full tw-rounded-lg tw-bg-[#4b0082] hover:tw-bg-[#3c0266] tw-text-white tw-text-sm tw-font-semibold tw-px-[10px] tw-py-1.5">
+                            <span class="tw-font-semibold">View Details</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -237,10 +246,10 @@
                             class="tw-w-fit tw-rounded-lg tw-bg-[#00AAFF] hover:tw-bg-[#028cd1] tw-text-white tw-text-sm tw-font-semibold tw-px-[10px] tw-py-1.5">
                             <span class="tw-font-semibold">Interview Form</span>
                         </button>
-                        <button type="button" (click)="onInterviewDetailsClicked(item)"
+                        <!-- <button type="button" (click)="onInterviewDetailsClicked(item)"
                             class="tw-w-fit tw-rounded-lg tw-bg-[#4b0082] hover:tw-bg-[#3c0266] tw-text-white tw-text-sm tw-font-semibold tw-px-[10px] tw-py-1.5">
                             <span class="tw-font-semibold">View Details</span>
-                        </button>
+                        </button> -->
                     </div>
                 </div>
 

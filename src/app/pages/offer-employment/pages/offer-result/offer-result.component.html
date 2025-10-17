@@ -115,15 +115,13 @@
                                         class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100 tw-text-[#8b8b8b] tw-pointer-events-none"
                                         formControlName="userInterviewReview" />
                                 </div>
-                                <div>
+                                <!-- <div>
                                     <div class="tw-text-[13px] tw-font-medium">Offer Result Date</div>
-                                    <!-- กล่องแสดงผล DD/MM/YYYY + ปุ่มเปิดปฏิทิน + input type=date ที่ซ่อน -->
                                     <div
                                       class="tw-relative tw-mt-1"
                                       (mousedown)="onDateBoxMouseDown(resultDatePicker, $event)"
                                       [ngClass]="canOpenDatePicker ? 'tw-cursor-pointer' : ''"
                                     >
-                                      <!-- ช่องให้ผู้ใช้เห็น (อ่านอย่างเดียว) -->
                                       <input
                                         type="text"
                                         class="tw-w-full tw-h-10 tw-text-[14px] tw-rounded-md tw-border tw-border-gray-300 tw-pl-4 tw-pr-9 tw-appearance-none"
@@ -133,7 +131,6 @@
                                         title="Offer Result Date"
                                       />
 
-                                      <!-- ปุ่มไอคอนปฏิทิน -->
                                       <button
                                         type="button"
                                         class="tw-absolute tw-inset-y-0 tw-right-3 tw-flex tw-items-center tw-justify-center tw-w-6 tw-cursor-pointer"
@@ -145,7 +142,6 @@
                                         <app-icon name="calendar-days" [size]="18"></app-icon>
                                       </button>
 
-                                      <!-- ของจริง: คุมค่า + เปิดปฏิทิน -->
                                       <input
                                         #resultDatePicker
                                         type="date"
@@ -157,10 +153,8 @@
                                         tabindex="0"
                                       />
                                     </div>
-                                </div>
-                            </div>
-
-                            <div class="tw-grid tw-grid-cols-2 tw-gap-4 tw-my-4">
+                                </div> -->
+                            
                                 <div>
                                     <div class="tw-text-[13px] tw-font-medium tw-mb-1">Position Offer</div>
                                     <!-- <input
@@ -172,6 +166,15 @@
                                         (valueChange)="onPositionChange($event)"></app-cdk-dropdown>
                                 </div>
                             </div>
+
+                            <!-- <div class="tw-grid tw-grid-cols-2 tw-gap-4 tw-my-4">
+                                <div>
+                                    <div class="tw-text-[13px] tw-font-medium tw-mb-1">Position Offer</div>
+                                    <app-cdk-dropdown [options]="positionOptions" [value]="selectedPositionId"
+                                        placeholder="Select Position" [disabledSelected]="!editReview"
+                                        (valueChange)="onPositionChange($event)"></app-cdk-dropdown>
+                                </div>
+                            </div> -->
 
                             <!-- Result -->
                             <div class="tw-mb-4">
@@ -248,7 +251,7 @@
                 </div>
             </section>
 
-            <section class="tw-w-full">
+            <section class="tw-w-full" *ngIf="isOffer()">
                 <div class="tw-bg-[#FFFFFF]">
                     <div class="tw-bg-white tw-px-6 tw-py-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
                         <!-- Header + Chevron -->
@@ -315,7 +318,7 @@
                                     <div
                                       class="tw-relative tw-mt-1"
                                       (mousedown)="onDateBoxMouseDown(startDatePicker, $event, true)"
-                                      [ngClass]="canOpenStartDatePicker ? 'tw-cursor-pointer' : ''"
+                                      [ngClass]="!isActiveStartDate ? 'tw-cursor-pointer' : 'tw-pointer-events-none tw-opacity-6'"
                                     >
                                       <!-- ช่องให้ผู้ใช้เห็น (อ่านอย่างเดียว) -->
                                       <input
@@ -323,6 +326,7 @@
                                         class="tw-w-full tw-h-10 tw-text-[13px] tw-rounded-md tw-border tw-border-gray-300 tw-pl-4 tw-pr-9 tw-appearance-none"
                                         [value]="formatDateDDMMYYYY(formDetails.get('confirmedStartDate')?.value) || 'DD/MM/YYYY'"
                                         readonly
+                                        [ngClass]="isActiveStartDate ? 'tw-pointer-events-none tw-text-[#8b8b8b] tw-bg-gray-100':''"
                                         title="Confirmed Start Date"
                                       />
 
@@ -330,9 +334,8 @@
                                       <button
                                         type="button"
                                         class="tw-absolute tw-inset-y-0 tw-right-3 tw-flex tw-items-center tw-justify-center tw-w-6 tw-cursor-pointer"
-                                        [disabled]="!canOpenStartDatePicker"
                                         (click)="openDatePicker(startDatePicker)"
-                                        [ngClass]="canOpenStartDatePicker ? 'tw-text-gray-600 hover:tw-text-black' : 'tw-text-gray-400 tw-cursor-not-allowed'"
+                                        [ngClass]="!isActiveStartDate ? 'tw-text-gray-600 hover:tw-text-black' : 'tw-text-gray-400 tw-cursor-not-allowed'"
                                         aria-label="Open calendar"
                                       >
                                         <app-icon name="calendar-days" [size]="18"></app-icon>
@@ -388,8 +391,7 @@
                                         </div>
 
                                         <p class="tw-text-[10px] tw-mt-2" *ngIf="appt?.interview?.missCallCount">
-                                            {{ appt?.interview?.missCallHistory?.[0]?.missCallAt | date:'dd/MM/yyyy
-                                            hh:mm a' }}
+                                            {{ appt?.interview?.missCallHistory?.[0]?.missCallAt | date:'dd/MM/yyyy hh:mm a' }}
                                             {{ appt?.interview?.missCallHistory?.[0]?.missCallReason }}
                                         </p>
 

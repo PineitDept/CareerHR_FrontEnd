@@ -34,8 +34,8 @@ export class InterviewRound1HistoryComponent {
       { key: 'pass-interview', label: 'Pass Interview', count: 0 },
       { key: 'not-pass-interview', label: 'Not Pass Interview', count: 0 },
       { key: 'no-show', label: 'No Show', count: 0 },
-      { key: 'candidate-decline-interview', label: 'Candidate Decline', count: 0 },
-      // { key: 'hire-offer', label: 'Hire', count: 0 },
+      { key: 'candidate-decline-interview', label: 'Candidate Decline Interview', count: 0 },
+      { key: 'onHold', label: 'On Hold Interview', count: 0 },
       // { key: 'candidate-decline-offer', label: 'Not Hire', count: 0 },
     ];
   }
@@ -710,6 +710,8 @@ export class InterviewRound1HistoryComponent {
 
       if (tab.key === 'total') {
         count = groupCounts['All Status'] ?? 0;
+      } else if (tab.key === 'onHold') {
+        count = groupCounts['On Hold Interview'] ?? 0;
       } else {
         const labelMatch = tab.label.toLowerCase().trim();
         const matchingKey = Object.keys(groupCounts).find(

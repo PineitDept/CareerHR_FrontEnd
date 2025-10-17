@@ -422,6 +422,7 @@ export class InterviewFormDetailsComponent {
 
         this.fetchCandidateTracking();
         this.fetchRecruitmentStagesWithReasons(Number(params['interview']) + 1)
+        this.fetchInterviewer();
         // this.fetchFormById(this.stageId)
 
         // ----- โหลด Comments -----
@@ -655,9 +656,6 @@ export class InterviewFormDetailsComponent {
             g.regex.test((c.categoryName || '').toLowerCase())
           )
         })) as ResultGroup[]);
-
-
-        this.fetchInterviewer();
       },
       error: (error) => {
         console.error('Error fetching Recruitment Stages with reasons:', error);
@@ -993,7 +991,7 @@ export class InterviewFormDetailsComponent {
             categoryId: checkedCategoryIds[0],
             isSummary: true,
             stageDate: isoDate,
-            appointmentId: (appointmentId ?? '').trim(),
+            appointmentId: String(this.appointmentId).trim(),
             satisfaction: 0,
             notes: payload.noteInterviewReview,
             strength: "",
@@ -1003,7 +1001,8 @@ export class InterviewFormDetailsComponent {
 
           this.interviewFormService.postInterviewReview(transformedPayload).subscribe({
             next: () => {
-              this.fetchInterviewer()
+              this.fetchCandidateTracking();
+              this.fetchInterviewer();
               this.foundisSummary = this.reviewHistory.find(user => user.isSummary === true);
               this.editReview = false;
               this.allowEditButton = true;
@@ -1184,7 +1183,7 @@ export class InterviewFormDetailsComponent {
     const appointmentId = (this as any)[appointmentIdKey];
 
     const payload = {
-      appointmentId: (appointmentId ?? '').trim(),
+      appointmentId: String(this.appointmentId).trim(),
       interviewStartTime: dataPatch
     };
 
@@ -1214,7 +1213,7 @@ export class InterviewFormDetailsComponent {
     const appointmentId = (this as any)[appointmentIdKey];
 
     const payload = {
-      appointmentId: (appointmentId ?? '').trim(),
+      appointmentId: String(this.appointmentId).trim(),
       interviewEndTime: dataPatch
     };
 
@@ -1276,9 +1275,9 @@ export class InterviewFormDetailsComponent {
       case 22:
         return 'tw-pointer-events-none tw-bg-gray-100 tw-text-[#8b8b8b]'; // Fail Interview
       case 23:
-        return 'tw-pointer-events-none tw-bg-gray-100 tw-text-[#8b8b8b]'; // Fail Interview
+        return 'tw-pointer-events-none tw-bg-gray-100 tw-text-[#8b8b8b]'; // No show Interview
       case 25:
-        return 'tw-pointer-events-none tw-bg-gray-100 tw-text-[#8b8b8b]'; // Fail Interview
+        return 'tw-pointer-events-none tw-bg-gray-100 tw-text-[#8b8b8b]'; // Applicant Decline Interview
       default:
         return ''; // Default
     }
