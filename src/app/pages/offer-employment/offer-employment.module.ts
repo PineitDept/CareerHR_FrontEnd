@@ -7,12 +7,14 @@ import { HireResultComponent } from './pages/hire-result/hire-result.component';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { SharedModule } from '../../shared/shared.module';
 import { A11yModule } from '@angular/cdk/a11y';
+import { OfferEmploymentHistoryComponent } from './pages/offer-employment-history/offer-employment-history.component';
 
 
 @NgModule({
   declarations: [
     OfferResultComponent,
-    HireResultComponent
+    HireResultComponent,
+    OfferEmploymentHistoryComponent
   ],
   imports: [
     CommonModule,

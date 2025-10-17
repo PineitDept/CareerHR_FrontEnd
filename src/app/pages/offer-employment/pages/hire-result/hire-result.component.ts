@@ -88,7 +88,7 @@ export class HireResultComponent {
   applicantId = 0;
   stageId = 0;
   idEmployee = 0;
-  round: number = 0;
+  round: number = 1;
   isLatestRound = true;
   interview2AppointmentId: string | undefined;
 
@@ -484,7 +484,7 @@ export class HireResultComponent {
       .filter((category) => category.rejectionReasons.some((reason: { checked: boolean }) => reason.checked === true))
       .map((category) => category.categoryId);
 
-    const appointmentIdKey = `interview2AppointmentId`;
+    const appointmentIdKey = `interview3AppointmentId`;
     const appointmentId = (this as any)[appointmentIdKey];
 
     Promise.resolve().then(() => {

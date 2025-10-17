@@ -92,11 +92,12 @@ interface ViewComment {
 export class OfferResultComponent {
   // ===== Routing =====
   applicantId = 0;
-  round: number = 0;
+  round: number = 1;
   isLatestRound = true;
   stageId = 0;
   idEmployee = 0;
   appointmentId: string | undefined;
+  resultName: string | undefined;
   appointmentsItem: any
   historyData: any[] = [];
   dropdownConfigs: any[] = [];
@@ -157,6 +158,7 @@ export class OfferResultComponent {
   isActiveLevel: boolean = true;
   isActivePosition: boolean = true;
   isActiveManager: boolean = true;
+  isActiveStartDate: boolean = true;
   isActiveProbation: boolean = true;
   positionOptions: DropdownOption[] = [];
   positionOptions2: DropdownOption[] = [];
@@ -245,7 +247,7 @@ export class OfferResultComponent {
     this.formDetails = this.fb.group(
       {
         userInterviewReview: [this.foundisSummary?.hrUserName || this.usernameLogin],
-        dateInterviewReview: [this.formatDateForInput(this.foundisSummary?.stageDate) || this.today],
+        dateInterviewReview: [this.today],
         noteInterviewReview: [this.foundisSummary?.notes || ''],
         confirmedStartDate: [this.formatDateForInput(this.foundisSummary?.confirmedStartDate) || null],
       },
@@ -313,6 +315,8 @@ export class OfferResultComponent {
       next: (response) => {
         this.appointmentId = response.items[0].profile.appointmentId
         this.appointmentsItem = response.items[0]
+        
+        this.resultName = response.items[0].result.offerResult.toLowerCase();
 
         const jobList = this.appointmentsItem?.jobPosition?.jobList ?? [];
         const activeJob = jobList.find((j: any) => j?.isActive === true);
@@ -324,6 +328,10 @@ export class OfferResultComponent {
       },
       error: (error) => console.error('Error fetching Recruitment Stages with reasons:', error),
     });
+  }
+
+  isOffer() {
+    return this.resultName === 'offer'
   }
 
   private getLastTs(i: CandidateTracking): number {
@@ -418,6 +426,7 @@ export class OfferResultComponent {
         if (o.managerId != null) {
           this.selectedManagerId = Number(o.managerId);
           this.managerValue = String(o.managerId);
+          this.isActiveStartDate = false;
         }
 
         // Start date
@@ -867,6 +876,7 @@ export class OfferResultComponent {
 
     this.selectedManagerId = selectedValue;
     this.managerValue = String(selectedValue);
+    this.isActiveStartDate = false;
 
     this.interviewFormService.updateManager(payload).subscribe({
       error: (err) => {
@@ -1096,54 +1106,52 @@ export class OfferResultComponent {
 
       if (!confirmed) return;
 
-      this.clearDraftsForCurrentType();
+      this.clearDraftsForCurrentType()
       this.setReviewEditing(false);
 
-      if (this.foundisSummary) {
-        const payloadHistory = {
-          categoryId: checkedCategoryIds[0],
-          stageDate: isoDate,
-          notes: payload.noteInterviewReview,
-          selectedReasonIds: checkedReasonIds,
-        };
+      const basePayload = {
+        categoryId: checkedCategoryIds[0],
+        stageDate: isoDate,
+        notes: payload.noteInterviewReview,
+        selectedReasonIds: checkedReasonIds,
+      };
 
-        this.interviewFormService.updateCandidateStageHistory(this.foundisSummary.historyId, payloadHistory).subscribe({
-          next: () => {
-            this.interviewFormService.postUpdateSelectPostion(this.payloadPositionChange).subscribe({
-              next: () => {
-                this.fetchInterviewer();
-                this.foundisSummary = this.reviewHistory.find((user) => user.isSummary === true);
-                this.editReview = false;
-                this.allowEditButton = true;
-              },
-              error: (err) => console.error('Error Rescheduled:', err),
-            });
-          },
-          error: (err) => console.error('Error Rescheduled:', err),
-        });
+      const handleSuccess = () => {
+        if (this.payloadPositionChange) {
+          this.interviewFormService.postUpdateSelectPostion(this.payloadPositionChange).subscribe({});
+        }
+
+        this.fetchInterviewer();
+        this.foundisSummary = this.reviewHistory.find((user) => user.isSummary === true);
+        this.editReview = false;
+        this.allowEditButton = true;
+
+        this.clearDraftsForCurrentType()
+        this.fetchCandidateTracking()
+      };
+
+      if (this.foundisSummary) {
+        this.interviewFormService
+          .updateCandidateStageHistory(this.foundisSummary.historyId, basePayload)
+          .subscribe({
+            next: handleSuccess,
+            error: (err) => console.error('Error Rescheduled:', err),
+          });
       } else {
         const transformedPayload = {
           applicationId: this.applicantId,
           stageId: this.stageId + 1,
           roundID: this.round,
-          categoryId: checkedCategoryIds[0],
           isSummary: true,
-          stageDate: isoDate,
           appointmentId: (appointmentId ?? '').trim(),
           satisfaction: 0,
-          notes: payload.noteInterviewReview,
           strength: '',
           concern: '',
-          selectedReasonIds: checkedReasonIds,
+          ...basePayload,
         };
 
         this.interviewFormService.postInterviewReview(transformedPayload).subscribe({
-          next: () => {
-            this.fetchInterviewer();
-            this.foundisSummary = this.reviewHistory.find((user) => user.isSummary === true);
-            this.editReview = false;
-            this.allowEditButton = true;
-          },
+          next: handleSuccess,
           error: (err) => console.error('Error Rescheduled:', err),
         });
       }
@@ -1327,6 +1335,7 @@ export class OfferResultComponent {
     this.isActiveLevel = !(this.selectedDivisionId);
     this.isActivePosition = !(this.selectedLevelId);
     this.isActiveManager = !(this.selectedPositionId2);
+    this.isActiveStartDate = !(this.selectedManagerId);
 
     // โหลด options ตาม chain
     if (this.selectedCompanyId) {
@@ -1662,11 +1671,11 @@ export class OfferResultComponent {
                 // this.currentFilterParams.page = 1;
                 // this.hasMoreData = true;
 
-                // const fetchCalls: Observable<any>[] = [this.fetchAppointments(false, false)];
+                // const fetchCalls: Observable<any>[] = [this.fetchAppointments(true, false)];
 
                 // for (let page = 2; page <= previousPage; page++) {
                 //   this.currentFilterParams.page = page;
-                //   fetchCalls.push(this.fetchAppointments(false, false));
+                //   fetchCalls.push(this.fetchAppointments(true, false));
                 // }
 
                 // forkJoin(fetchCalls).subscribe(() => {
@@ -1909,7 +1918,7 @@ export class OfferResultComponent {
 
   // Start Date อยากให้เปิดได้ตลอดเหมือนเดิม (ไม่ผูกกับ editReview)
   get canOpenStartDatePicker(): boolean {
-    return true;
+    return this.isActiveManager;
   }
 
   formatDateDDMMYYYY(v: any): string {
