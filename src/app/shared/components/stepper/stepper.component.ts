@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 
-type Variant = 'green' | 'blue' | 'gray' | 'red' | 'white' | 'purple';
+type Variant = 'green' | 'blue' | 'gray' | 'red' | 'white' | 'purple' | 'yellow';
 type StepperTheme = 'default' | 'soft';
 
 export interface StepItem {
@@ -23,30 +23,30 @@ export class StepperComponent {
   @Input() theme: StepperTheme = 'default';
   @Output() stepChanged = new EventEmitter<number>();
 
-  /** palette เดิม */
   private PALETTE = {
-    green: '#0AAA2A',
-    blue:  '#0A57C3',
-    red:   '#DC2626',
-    purple:'#6B21A8',
-    gray:  '#F3F4F6',
-    white: '#FFFFFF',
+    green:  '#0AAA2A',
+    blue:   '#0A57C3',
+    red:    '#DC2626',
+    purple: '#6B21A8',
+    yellow: '#FFB020',
+    gray:   '#F3F4F6',
+    white:  '#FFFFFF',
     grayBorder: '#E5E7EB',
-    textGray: '#737373',
-    textDark: '#374151',
+    textGray:   '#737373',
+    textDark:   '#374151',
   };
 
-  /** palette โทน soft */
   private PALETTE_SOFT = {
-    green: '#00AA55',
-    blue:  '#4EA7F5',
-    red:   '#930000',
-    purple:'#7F56D9',
-    gray:  '#F5F7FA',
-    white: '#FFFFFF',
+    green:  '#00AA55',
+    blue:   '#4EA7F5',
+    red:    '#930000',
+    purple: '#7F56D9',
+    yellow: '#F4C15D',
+    gray:   '#F5F7FA',
+    white:  '#FFFFFF',
     grayBorder: '#E5E7EB',
-    textGray: '#6B7280',
-    textDark: '#374151',
+    textGray:   '#6B7280',
+    textDark:   '#374151',
   };
 
   private get P() {
@@ -72,17 +72,23 @@ export class StepperComponent {
     this.stepChanged.emit(index);
   }
 
-  /** ตรวจจับสถานะ "Didn't interview (PINE)" ให้เป็นสีม่วง */
-  private isPineNoInterview(sub?: string): boolean {
+  private isPurpleCase(sub?: string): boolean {
     if (!sub) return false;
     const s = sub.toLowerCase().replace(/\s+/g, ' ').trim();
-    // ครอบคลุม didn't / did't + ช่องว่างแปลก ๆ + (PINE)
-    return /(didn'?t|did'?t)\s*interview.*\(?\s*pine\s*\)?/.test(s);
+    const pineNoInterview = /(didn'?t|did'?t)\s*interview.*\(?\s*pine\s*\)?/.test(s);
+    const noShow          = /\bno[\s-]?show\b/.test(s);
+    return pineNoInterview || noShow;
   }
 
-  /** ให้ variant ที่ใช้จริง (รองรับ rule พิเศษ) */
+  private isHold(sub?: string): boolean {
+    if (!sub) return false;
+    const s = sub.toLowerCase();
+    return /\bon\s*hold\b|\bhold\b/.test(s);
+  }
+
   variantOf(it: StepItem): Variant {
-    if (this.isPineNoInterview(it.sub)) return 'purple';
+    if (this.isHold(it.sub))         return 'yellow';
+    if (this.isPurpleCase(it.sub))   return 'purple';
     return (it.variant ?? 'white') as Variant;
   }
 
@@ -92,6 +98,7 @@ export class StepperComponent {
       case 'blue':   return this.P.blue;
       case 'red':    return this.P.red;
       case 'purple': return this.P.purple;
+      case 'yellow': return this.P.yellow;
       case 'gray':   return this.P.gray;
       case 'white':
       default:       return this.P.white;
@@ -99,17 +106,17 @@ export class StepperComponent {
   }
 
   textOf(v?: Variant): string {
-    if (v === 'green' || v === 'blue' || v === 'red' || v === 'purple') return '#FFFFFF';
+    if (v === 'green' || v === 'blue' || v === 'red' || v === 'purple' || v === 'yellow') return '#FFFFFF';
     return this.P.textDark;
   }
 
   circleBorderOf(v?: Variant): string {
-    if (v === 'green' || v === 'blue' || v === 'red' || v === 'purple') return 'rgba(255,255,255,0.8)';
+    if (v === 'green' || v === 'blue' || v === 'red' || v === 'purple' || v === 'yellow') return 'rgba(255,255,255,0.8)';
     return this.P.grayBorder;
   }
 
   circleTextOf(v?: Variant): string {
-    if (v === 'green' || v === 'blue' || v === 'red' || v === 'purple') return '#FFFFFF';
+    if (v === 'green' || v === 'blue' || v === 'red' || v === 'purple' || v === 'yellow') return '#FFFFFF';
     return '#4B5563';
   }
 
@@ -127,12 +134,12 @@ export class StepperComponent {
   }
 
   dividerColorOf(v?: Variant): string {
-    if (v === 'green' || v === 'blue' || v === 'red' || v === 'purple') return 'rgba(255,255,255,0.82)';
+    if (v === 'green' || v === 'blue' || v === 'red' || v === 'purple' || v === 'yellow') return 'rgba(255,255,255,0.82)';
     return '#CBD5E1';
   }
 
   dividerShadowOf(v?: Variant): string {
-    if (v === 'green' || v === 'blue' || v === 'red' || v === 'purple') return 'rgba(0,0,0,0.15)';
+    if (v === 'green' || v === 'blue' || v === 'red' || v === 'purple' || v === 'yellow') return 'rgba(0,0,0,0.15)';
     return 'rgba(255,255,255,0.6)';
   }
 }
