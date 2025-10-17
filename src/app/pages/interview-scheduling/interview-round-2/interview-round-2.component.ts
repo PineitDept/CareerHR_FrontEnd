@@ -13,7 +13,7 @@ import { SlickCarouselComponent } from 'ngx-slick-carousel';
 import { MailDialogComponent } from '../../../shared/components/dialogs/mail-dialog/mail-dialog.component';
 import { AppointmentsService } from '../../../services/interview-scheduling/appointment-interview/appointments.service';
 import { AlertDialogComponent } from '../../../shared/components/dialogs/alert-dialog/alert-dialog.component';
-import { catchError, finalize, forkJoin, map, Observable, of, tap } from 'rxjs';
+import { catchError, finalize, forkJoin, map, Observable, of, Subject, takeUntil, tap } from 'rxjs';
 import { NotificationService } from '../../../shared/services/notification/notification.service';
 
 const SEARCH_OPTIONS: string[] = [
@@ -143,6 +143,8 @@ export class InterviewRound2Component {
 
   private dateSaveTimers: Record<string, any> = {};
   private lastSubmittedDate: Record<string, string> = {};
+  private destroy$ = new Subject<void>();
+  applicantId: number = 0;
 
   // ---------- Constructor ----------
   constructor(
@@ -154,6 +156,7 @@ export class InterviewRound2Component {
     private jobPositionService: JobPositionService,
     private appointmentsService: AppointmentsService,
     private notificationService: NotificationService,
+    private route: ActivatedRoute,
   ) { }
 
   // ---------- Lifecycle ----------
@@ -176,6 +179,20 @@ export class InterviewRound2Component {
       };
     }
 
+    this.route.queryParams
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((params) => {
+        this.applicantId = Number(params['id'] || 0);
+
+        if (this.applicantId) {
+          this.currentFilterParams = {
+            ...this.currentFilterParams,
+            search: String(this.applicantId),
+            page: 1,
+          };
+        }
+      });
+
     this.fetchLocationDetails();
     this.fetchJobPosition();
     this.fetchTeamID();
@@ -183,7 +200,7 @@ export class InterviewRound2Component {
     this.fetchStatusCall();
 
     this.filterButtons = [{
-      label: 'History', key: 'history', outlineBtn: true, 
+      label: 'History', key: 'history', outlineBtn: true,
       color: '#FFFFFF',
       textColor: '#000000',
       borderColor: '#000000',
@@ -310,7 +327,7 @@ export class InterviewRound2Component {
       month: this.monthData,
       year: this.yearData,
       page: this.currentFilterParams.page ?? 1,
-      search: this.currentFilterParams.search,
+      search: this.applicantId ? String(this.applicantId) : this.currentFilterParams.search,
     };
 
     const obs$ = this.appointmentsService.getAppointments<any>(updatedParams).pipe(
@@ -487,7 +504,7 @@ export class InterviewRound2Component {
     if (endY !== 'NaN') {
       this.yearData = Number(endY);
 
-      if(endM - startM !== 11) {
+      if (endM - startM !== 11) {
         this.monthData = endM;
       } else {
         this.monthData = undefined;
@@ -631,7 +648,7 @@ export class InterviewRound2Component {
         const payload = {
           appointmentId: appointmentid,
           userId: userId,
-          round : round,
+          round: round,
           revice: revision
         }
 
