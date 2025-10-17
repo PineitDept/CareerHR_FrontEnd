@@ -93,6 +93,7 @@ export class TablesComponent
   @Input() valueSelected: any;
   @Input() preferIdForSelect: boolean = false;
  @Input() stickyHeader: boolean = false;
+ @Input() IconHasDes: boolean = false;
 
   @Output() selectionChanged = new EventEmitter<any[]>();
   @Output() rowClicked = new EventEmitter<any>();
@@ -599,16 +600,19 @@ export class TablesComponent
 
     switch (val) {
       case 'pending':
-      case 'in process':
         return 'tw-text-[#FFAA00] hover:tw-text-[#D5920A]';
       case 'inprocess':
+      case 'in process':
         return 'tw-text-[#5500FF] hover:tw-text-[#5f31bb]';
+      case 'scheduled':
+        return 'tw-text-indigo-400 hover:tw-text-indigo-500';
       case 'complete':
       case 'offer':
       case 'onboarded':
         return 'tw-text-[#00AA00] hover:tw-text-[#068506]';
       case 'not offer job':
       case 'decline offer':
+      case 'not offer':
         return 'tw-text-[#FF0000] hover:tw-text-[#cb0b0b]';
       default:
         return 'tw-text-[#919191] hover:tw-text-[#656161]';

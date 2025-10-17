@@ -74,4 +74,11 @@ export class JobPositionService {
       loading: true
     });
   }
+
+  getAllJobBonusDetails(): Observable<any> {
+    return this.apiService.get<any>(`${this.base}/BonusSkill`, {
+      withAuth: true,
+      loading: true
+    });
+  }
 }

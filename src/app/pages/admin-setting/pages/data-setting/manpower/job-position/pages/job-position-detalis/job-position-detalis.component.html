@@ -347,6 +347,23 @@
             </div>
         </div>
 
+        <div class="tw-col-span-4">
+            <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-mt-2">
+
+                <div class="tw-flex tw-items-center tw-justify-between">
+                    <label class="tw-text-lg tw-font-bold">Setting Bonus Skills</label>
+                </div>
+                <hr class="tw--mx-6 tw-mt-4">
+                <div class="tw--mx-6 tw-rounded-b-xl tw-overflow-hidden tw-p-6">
+                    <app-dual-listbox [items]="settingBonusSkills" [valueField]="'id'"
+                        [displayField]="'nameBonusSkill'" [leftTitle]="'Available Options'"
+                        [rightTitle]="'Selected Actions'" [leftFilterPlaceholder]="'Search Available Options'"
+                        [rightFilterPlaceholder]="'Search Selected Options'" [height]="'350px'"
+                        [disabledBox]="!isEditing" formControlName="selectedIdsBonus"></app-dual-listbox>
+                </div>
+            </div>
+        </div>
+
     </div>
 </form>
 

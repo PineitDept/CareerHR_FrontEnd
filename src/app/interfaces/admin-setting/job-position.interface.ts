@@ -18,6 +18,7 @@ export interface JobPositionDetails {
   benefits?: number[] | null;
   computerSkills?: number[] | null;
   languageSkills?: number[] | null;
+  bonusSkills?: number[] | null;
 }
 
 export interface DropdownOverlay {

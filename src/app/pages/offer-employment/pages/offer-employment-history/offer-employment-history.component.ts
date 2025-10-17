@@ -1,22 +1,22 @@
 import { ChangeDetectorRef, Component, computed, ElementRef, QueryList, signal, ViewChild, ViewChildren } from '@angular/core';
-import { InterviewerService } from '../../services/admin-setting/interviewer/interviewer.service';
+import { InterviewerService } from '../../../../services/admin-setting/interviewer/interviewer.service';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
-import { DateRange, SearchForm } from '../../interfaces/interview-scheduling/interview.interface';
-import { ICandidateFilterRequest, IPositionDto, TabMenu } from '../../interfaces/Application/application.interface';
+import { DateRange, SearchForm } from '../../../../interfaces/interview-scheduling/interview.interface';
+import { ICandidateFilterRequest, IPositionDto, TabMenu } from '../../../../interfaces/Application/application.interface';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
-import { SelectDialogComponent, SelectOption } from '../../shared/components/dialogs/select-dialog/select-dialog.component';
-import { GeneralBenefitsService } from '../../services/admin-setting/general-benefits/general-benefits.service';
-import { IApiResponse, IBenefitsFilterRequest, IUniversityWithPositionsDto } from '../../interfaces/admin-setting/general-benefits.interface';
-import { JobPositionService } from '../../services/admin-setting/job-position/job-position.service';
+import { SelectDialogComponent, SelectOption } from '../../../../shared/components/dialogs/select-dialog/select-dialog.component';
+import { GeneralBenefitsService } from '../../../../services/admin-setting/general-benefits/general-benefits.service';
+import { IApiResponse, IBenefitsFilterRequest, IUniversityWithPositionsDto } from '../../../../interfaces/admin-setting/general-benefits.interface';
+import { JobPositionService } from '../../../../services/admin-setting/job-position/job-position.service';
 import { SlickCarouselComponent } from 'ngx-slick-carousel';
-import { MailDialogComponent } from '../../shared/components/dialogs/mail-dialog/mail-dialog.component';
-import { AppointmentsService } from '../../services/interview-scheduling/appointment-interview/appointments.service';
-import { AlertDialogComponent } from '../../shared/components/dialogs/alert-dialog/alert-dialog.component';
+import { MailDialogComponent } from '../../../../shared/components/dialogs/mail-dialog/mail-dialog.component';
+import { AppointmentsService } from '../../../../services/interview-scheduling/appointment-interview/appointments.service';
+import { AlertDialogComponent } from '../../../../shared/components/dialogs/alert-dialog/alert-dialog.component';
 import { catchError, distinctUntilChanged, filter, finalize, forkJoin, map, Observable, of, startWith, Subject, takeUntil, tap } from 'rxjs';
-import { NotificationService } from '../../shared/services/notification/notification.service';
-import { Columns } from '../../shared/interfaces/tables/column.interface';
-import { InterviewFormService } from '../../services/interview-scheduling/interview-form/interview-form.service';
+import { NotificationService } from '../../../../shared/services/notification/notification.service';
+import { Columns } from '../../../../shared/interfaces/tables/column.interface';
+import { InterviewFormService } from '../../../../services/interview-scheduling/interview-form/interview-form.service';
 
 const SEARCH_OPTIONS: string[] = [
   'Applicant ID',
@@ -24,18 +24,17 @@ const SEARCH_OPTIONS: string[] = [
 ] as const;
 
 @Component({
-  selector: 'app-offer-employment',
-  templateUrl: './offer-employment.component.html',
-  styleUrl: './offer-employment.component.scss'
+  selector: 'app-offer-employment-history',
+  templateUrl: './offer-employment-history.component.html',
+  styleUrl: './offer-employment-history.component.scss'
 })
-export class OfferEmploymentComponent {
+export class OfferEmploymentHistoryComponent {
 
   createInitialTabs(): TabMenu[] {
     return [
       { key: 'total', label: 'All Status', count: 0 },
-      { key: 'pending', label: 'Pending', count: 0 },
-      { key: 'offer', label: 'Offer', count: 0 },
-      { key: 'onhold-offer', label: 'On Hold', count: 0 },
+      { key: 'hire-offer', label: 'Offer', count: 0 },
+      { key: 'not-offer', label: 'Not Offer', count: 0 },
       // { key: 'candidate-decline-offer', label: 'Candidate Decline Offer', count: 0 }
     ];
   }
@@ -252,7 +251,7 @@ export class OfferEmploymentComponent {
     // this.loadInitialAppointments(true);
 
     this.filterButtons = [{
-      label: 'History', key: 'history', outlineBtn: true,
+      label: 'Offer', key: 'back', outlineBtn: true,
       color: '#FFFFFF',
       textColor: '#000000',
       borderColor: '#000000',
@@ -284,7 +283,7 @@ export class OfferEmploymentComponent {
       search: this.applicantId ? String(this.applicantId) : this.currentFilterParams.search,
     };
 
-    const obs$ = this.appointmentsService.getInterviewOffer<any>(updatedParams).pipe(
+    const obs$ = this.appointmentsService.getInterviewOfferHistory<any>(updatedParams).pipe(
       tap((res) => {
 
         this.hasMoreData = res.hasNextPage;
@@ -301,31 +300,31 @@ export class OfferEmploymentComponent {
             userID: item.profile.userId,
             fullName: item.profile.fullName,
             interview1ResultText: {
-              label: interview1Text === 'In Process' ? 'Offer' : interview1Text,
+              label: interview1Text,
               class: [
                 ...(item.result.offerResult.toLowerCase().trim() === 'offer'
                   ? ['tw-bg-green-500', 'tw-text-white', 'tw-ring-green-500/10']
                   : item.result.offerResult.toLowerCase().trim() === 'pending'
                     ? ['tw-bg-[#FFAA00]', 'tw-text-white', 'tw-ring-orange-500/10']
-                  : item.result.offerResult.toLowerCase().trim() === 'in process'
-                    ? ['tw-bg-green-500', 'tw-text-white', 'tw-ring-green-500/10']
-                    : item.result.offerResult.toLowerCase().trim() === 'scheduled'
-                      ? ['tw-bg-indigo-400', 'tw-text-white', 'tw-ring-indigo-400/10']
-                      : item.result.offerResult.toLowerCase().trim() === 'onhold'
-                        ? ['tw-bg-gray-400', 'tw-text-white', 'tw-ring-gray-400/10']
-                        : ['tw-bg-red-500', 'tw-text-white', 'tw-ring-red-500/10']),
+                    : item.result.offerResult.toLowerCase().trim() === 'in process'
+                      ? ['tw-bg-orange-500', 'tw-text-white', 'tw-ring-orange-500/10']
+                      : item.result.offerResult.toLowerCase().trim() === 'scheduled'
+                        ? ['tw-bg-indigo-400', 'tw-text-white', 'tw-ring-indigo-400/10']
+                        : item.result.offerResult.toLowerCase().trim() === 'onhold'
+                          ? ['tw-bg-gray-400', 'tw-text-white', 'tw-ring-gray-400/10']
+                          : ['tw-bg-red-500', 'tw-text-white', 'tw-ring-red-500/10']),
                 ...(interview1Hidden ? ['tw-hidden'] : []),
               ],
             },
             statusDate: {
-              label: interview2Text === 'In Process' ? 'Offer' : interview2Text,
+              label: interview2Text,
               class: [
                 ...(this.getStatusClasses(interview2Text)),
                 ...(interview2Hidden ? ['tw-hidden'] : []),
               ],
             },
             Interview2Date: this.formatCreateDateTimeDMY(item.result.statusResult.dateInterview2).formattedDate,
-            OfferDate: item.result.offerDate ? this.formatCreateDateTimeDMY(item.result.offerDate).formattedDate : '',
+            OfferDate: this.formatCreateDateTimeDMY(item.result.offerDate).formattedDate,
             OfferResult: item.result.offerResult ? item.result.offerResult : undefined,
             HireResult: item.result.hireResult ? item.result.hireResult : undefined,
             position: item.jobPosition.jobList?.map((pos: { jobId?: number; jobName: string; }) => pos.jobName) || [],
@@ -508,9 +507,9 @@ export class OfferEmploymentComponent {
   updateTabCounts(appointments: any[]) {
     const counts: { [key: string]: number } = {
       total: appointments.length,
-      'offer': appointments.filter(a => a.result.interviewResult === 'offer').length,
-      'onhold-offer': appointments.filter(a => a.result.interviewResult === 'OnHold Offer').length,
-      'pending': appointments.filter(a => a.result.interviewResult === 'pending').length
+      'hire-offer': appointments.filter(a => a.result.interviewResult === 'hire-offer').length,
+      'candidate-decline-offer': appointments.filter(a => a.result.interviewResult === 'candidate-decline-offer').length,
+      'in-process': appointments.filter(a => a.result.interviewResult === 'in-process').length
     };
 
     const newTabs = this.tabMenus().map(tab => ({
@@ -527,8 +526,10 @@ export class OfferEmploymentComponent {
 
       if (tab.key === 'total') {
         count = groupCounts['All Status'] ?? 0;
-      } else if (tab.key === 'onhold-offer') {
-        count = groupCounts['OnHold Offer'] ?? 0;
+      } else if (tab.key === 'hire-offer') {
+        count = groupCounts['Offer'] ?? 0;
+      } else if (tab.key === 'not-offer') {
+        count = groupCounts['Not Offer'] ?? 0;
       } else {
         const labelMatch = tab.key.toLowerCase().trim();
         const matchingKey = Object.keys(groupCounts).find(
@@ -636,7 +637,7 @@ export class OfferEmploymentComponent {
       search: this.applicantId ? String(this.applicantId) : this.currentFilterParams.search,
     };
 
-    this.appointmentsService.getInterviewOffer<any>(updatedParams).subscribe({
+    this.appointmentsService.getInterviewOfferHistory<any>(updatedParams).subscribe({
       next: (res) => {
         const newItems = res.items || [];
 
@@ -652,31 +653,31 @@ export class OfferEmploymentComponent {
             userID: item.profile.userId,
             fullName: item.profile.fullName,
             interview1ResultText: {
-              label: interview1Text === 'In Process' ? 'Offer' : interview1Text,
+              label: interview1Text,
               class: [
                 ...(item.result.offerResult.toLowerCase().trim() === 'offer'
                   ? ['tw-bg-green-500', 'tw-text-white', 'tw-ring-green-500/10']
                   : item.result.offerResult.toLowerCase().trim() === 'pending'
                     ? ['tw-bg-[#FFAA00]', 'tw-text-white', 'tw-ring-orange-500/10']
-                  : item.result.offerResult.toLowerCase().trim() === 'in process'
-                    ? ['tw-bg-green-500', 'tw-text-white', 'tw-ring-green-500/10']
-                    : item.result.offerResult.toLowerCase().trim() === 'scheduled'
-                      ? ['tw-bg-indigo-400', 'tw-text-white', 'tw-ring-indigo-400/10']
-                      : item.result.offerResult.toLowerCase().trim() === 'onhold'
-                        ? ['tw-bg-gray-400', 'tw-text-white', 'tw-ring-gray-400/10']
-                        : ['tw-bg-red-500', 'tw-text-white', 'tw-ring-red-500/10']),
+                    : item.result.offerResult.toLowerCase().trim() === 'in process'
+                      ? ['tw-bg-orange-500', 'tw-text-white', 'tw-ring-orange-500/10']
+                      : item.result.offerResult.toLowerCase().trim() === 'scheduled'
+                        ? ['tw-bg-indigo-400', 'tw-text-white', 'tw-ring-indigo-400/10']
+                        : item.result.offerResult.toLowerCase().trim() === 'onhold'
+                          ? ['tw-bg-gray-400', 'tw-text-white', 'tw-ring-gray-400/10']
+                          : ['tw-bg-red-500', 'tw-text-white', 'tw-ring-red-500/10']),
                 ...(interview1Hidden ? ['tw-hidden'] : []),
               ],
             },
             statusDate: {
-              label: interview2Text === 'In Process' ? 'Offer' : interview2Text,
+              label: interview2Text,
               class: [
                 ...(this.getStatusClasses(interview2Text)),
                 ...(interview2Hidden ? ['tw-hidden'] : []),
               ],
             },
             Interview2Date: this.formatCreateDateTimeDMY(item.result.statusResult.dateInterview2).formattedDate,
-            OfferDate: this.formatCreateDateTimeDMY(item.result.offerDate).formattedDate,
+            OfferDate: item.result.offerDate ? this.formatCreateDateTimeDMY(item.result.offerDate).formattedDate : '',
             OfferResult: item.result.offerResult ? item.result.offerResult : undefined,
             HireResult: item.result.hireResult ? item.result.hireResult : undefined,
             position: item.jobPosition.jobList?.map((pos: { jobId?: number; jobName: string; }) => pos.jobName) || [],
@@ -726,8 +727,8 @@ export class OfferEmploymentComponent {
 
   onFilterButtonClick(key: string) {
     switch (key) {
-      case 'history':
-        this.router.navigate(['/offer-employment/history']);
+      case 'back':
+        this.router.navigate(['/offer-employment']);
         break;
     }
   }
