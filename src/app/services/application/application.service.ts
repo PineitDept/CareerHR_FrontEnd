@@ -169,4 +169,40 @@ export class ApplicationService {
       withAuth: true,
     });
   }
+
+  addInterviewReview(payload: {
+    applicationId: number;
+    roundId: number;
+    stageId: number;
+    categoryId: number;
+    isSummary: boolean;
+    stageDate: string;          // ISO string
+    appointmentId?: string;
+    satisfaction?: number;
+    notes?: string;
+    strength?: string;
+    concern?: string;
+    selectedReasonIds: number[];
+  }) {
+
+    return this.apiService.post<any>('CandidateStageHistory', payload, {
+      loading: true,
+      withAuth: true,
+    });
+  }
+
+  updateInterviewReview(historyId: number, payload: {
+    categoryId: number;
+    stageDate: string;
+    notes?: string;
+    strength?: string;
+    concern?: string;
+    selectedReasonIds: number[];
+  }) {
+
+    return this.apiService.put<any>(`CandidateStageHistory/${historyId}`, payload, {
+      loading: true,
+      withAuth: true,
+    });
+  }
 }
