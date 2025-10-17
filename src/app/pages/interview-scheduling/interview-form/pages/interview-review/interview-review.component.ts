@@ -155,7 +155,7 @@ export class InterviewReviewComponent {
   applicantId: number = 0;
   appointmentId: number = 0;
   stageId: number = 0;
-  round: number = 0;
+  round: number = 1;
   isLatestRound = true;
   idEmployee: number = 0;
   interview1AppointmentId: string | undefined;

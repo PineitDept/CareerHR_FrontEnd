@@ -13,6 +13,7 @@ import { InterviewFormComponent } from './interview-form/interview-form.componen
 import { InterviewFormDetailsComponent } from './interview-form/pages/interview-form-details/interview-form-details.component';
 import { InterviewReviewComponent } from './interview-form/pages/interview-review/interview-review.component';
 import { InterviewDetailsComponent } from './interview-form/pages/interview-details/interview-details.component';
+import { CdkDragPlaceholder } from "@angular/cdk/drag-drop";
 
 @NgModule({
   declarations: [
@@ -32,7 +33,8 @@ import { InterviewDetailsComponent } from './interview-form/pages/interview-deta
     ReactiveFormsModule,
     SharedModule,
     InterviewSchedulingRoutingModule,
-    A11yModule
+    A11yModule,
+    CdkDragPlaceholder
 ],
   // exports: [
   //   AppointmentCalendarComponent,

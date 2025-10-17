@@ -110,13 +110,13 @@
                         <ng-container>
                             <div class="tw-grid tw-grid-cols-2 tw-gap-4 tw-my-4">
                                 <div>
-                                    <div class="tw-text-[13px] tw-font-medium">Screened By</div>
+                                    <div class="tw-text-[13px] tw-font-medium">Hire Result By</div>
                                     <input
                                         class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100 tw-text-[#8b8b8b] tw-pointer-events-none"
                                         formControlName="userInterviewReview" />
                                 </div>
                                 <div>
-                                    <div class="tw-text-[13px] tw-font-medium">Screening Date</div>
+                                    <div class="tw-text-[13px] tw-font-medium">Hire Result Date</div>
                                     <div
                                       class="tw-relative tw-mt-1"
                                       (mousedown)="onDateBoxMouseDown(nativePicker, $event)"
@@ -129,7 +129,7 @@
                                         [value]="formatDateDDMMYYYY(formDetails.get('dateInterviewReview')?.value) || 'DD/MM/YYYY'"
                                         readonly
                                         [ngClass]="!editReview ? 'tw-pointer-events-none tw-text-[#8b8b8b] tw-bg-gray-100' : ''"
-                                        title="Screening Date"
+                                        title="Hire Result Date"
                                       />
 
                                       <!-- ไอคอนปฏิทิน -->

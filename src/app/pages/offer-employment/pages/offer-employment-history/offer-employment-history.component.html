@@ -1,0 +1,22 @@
+<div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
+    <app-header-content [headerName]="'Offer Employment History'" [headerType]="'search'" (search)="onSearch()"
+        (clearSearch)="onClearSearch()" [searchByOptions]="searchByOptions" [searchForm]="searchForm">
+    </app-header-content>
+</div>
+
+<app-filter [showAllYearOption]="true" [defaultYearAll]="true" [filterDate]="true" [filterDateRange]="filterDateRange"
+    (dateRangeSelected)="onDateRangeSelected($event)" [actionButtons]="filterButtons"
+    (buttonClicked)="onFilterButtonClick($event)">
+</app-filter>
+
+<app-tab-menus [tabs]="tabMenus" (tabChanged)="onTabChange($event)" [activeTab]="activeTab"></app-tab-menus>
+
+<app-loading></app-loading>
+
+<ng-container>
+    <div class="tw-max-h-[calc(100vh-380px)] tw-overflow-y-auto" #scrollArea (scroll)="onScroll($event)">
+        <app-tables [columns]="columns" [rows]="rows" [showCheckbox]="false" [enableRowClick]="false"
+            (columnRowClicked)="handleColumnRowClick($event)" [hasOverflowY]="hasOverflowY"
+            [isToggleAlert]="true"></app-tables>
+    </div>
+</ng-container>

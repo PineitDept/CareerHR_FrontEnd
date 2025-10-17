@@ -194,7 +194,7 @@
 
                     <!-- Badge Content -->
                     <span *ngSwitchCase="'badge'"
-                      class="tw-inline-flex tw-items-center tw-justify-center tw-rounded-lg tw-px-2.5 tw-py-1 tw-text-xs tw-font-medium tw-ring-1 tw-ring-inset tw-transition-all tw-duration-200 tw-max-w-full tw-whitespace-nowrap tw-overflow-hidden tw-text-ellipsis"
+                      class="tw-w-full tw-inline-flex tw-items-center tw-justify-center tw-rounded-lg tw-px-2.5 tw-py-1 tw-text-xs tw-font-medium tw-ring-1 tw-ring-inset tw-transition-all tw-duration-200 tw-max-w-full tw-whitespace-nowrap tw-overflow-hidden tw-text-ellipsis"
                       [ngClass]="getCellValue(row, column.field)?.class || ['tw-bg-gray-100', 'tw-ring-gray-300']">
                       {{ getCellValue(row, column.field)?.label || 'Badge' }}
                     </span>
@@ -289,12 +289,13 @@
                     </div>
 
                     <!-- Icon Content -->
-                    <div *ngSwitchCase="'icon'" class="tw-flex tw-justify-center tw-items-center">
+                    <div *ngSwitchCase="'icon'" class="tw-flex tw-justify-center tw-items-center tw-flex-col">
                       <app-icon [name]="getCellValue(row, column.field)?.icon || 'default'"
                         [size]="getCellValue(row, column.field)?.size || 20"
                         [fill]="getCellValue(row, column.field)?.fill || 'currentColor'"
                         [extraClass]="getCellValue(row, column.field)?.extraClass || '' + 'tw-transition-colors tw-duration-200'">
                       </app-icon>
+                      <p *ngIf="IconHasDes" class="tw-text-[12px] tw-text-gray-600">{{getCellValue(row, column.field)?.textDes}}</p>
                     </div>
 
                     <!-- toggle Content -->
@@ -316,14 +317,14 @@
                     <div *ngSwitchCase="'textlink'" class="tw-flex tw-justify-center tw-gap-4"
                       (click)="$event.stopPropagation()">
                       <a *ngIf="getRowTextlinkActions(column, row).includes('view')" href="javascript:void(0)"
-                        class="tw-text-[#5500FF] hover:tw-text-[#5f31bb] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
+                        class="tw-text-[#5500FF] hover:tw-text-[#5f31bb] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold tw-underline"
                         (click)="onClickView($event, row)">
                         <app-icon name="eye" [size]="20"></app-icon>
                         <span>View</span>
                       </a>
 
                       <a *ngIf="getRowTextlinkActions(column, row).includes('edit-topopup')" href="javascript:void(0)"
-                        class="tw-text-[#D97706] hover:tw-text-[#a7671e] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
+                        class="tw-text-[#D97706] hover:tw-text-[#a7671e] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold tw-underline"
                         [class.tw-pointer-events-none]="isDisabledForm" [class.tw-opacity-50]="isDisabledForm"
                         (click)="onClickEditDialog($event, row)">
                         <app-icon name="pen-to-square" [size]="20"></app-icon>
@@ -331,7 +332,7 @@
                       </a>
 
                       <a *ngIf="getRowTextlinkActions(column, row).includes('edit-inrow') && editingRowId !== i+1 && !row._isNew"
-                        class="tw-text-[#D97706] hover:tw-text-[#a7671e] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
+                        class="tw-text-[#D97706] hover:tw-text-[#a7671e] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold tw-underline"
                         [class.tw-pointer-events-none]="isDisabledForm" [class.tw-opacity-50]="isDisabledForm"
                         (click)="onClickEdit($event, row, i+1)">
                         <app-icon name="pen-to-square" [size]="20"></app-icon>
@@ -340,13 +341,13 @@
 
                       <ng-container *ngIf="editingRowId === i+1 && editRow">
                         <a href="javascript:void(0)"
-                          class="tw-text-[#00AA00] hover:tw-text-[#148014] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
+                          class="tw-text-[#00AA00] hover:tw-text-[#148014] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold tw-underline"
                           (click)="onClickSave($event, row)">
                           <app-icon name="file-plus-circle" [size]="20"></app-icon>
                           <span>Save</span>
                         </a>
                         <a href="javascript:void(0)"
-                          class="tw-text-[#6C757D] hover:tw-text-[#404447] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
+                          class="tw-text-[#6C757D] hover:tw-text-[#404447] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold tw-underline"
                           (click)="onClickCancel($event, row)">
                           <app-icon name="xmark" [size]="20"></app-icon>
                           <span>Cancel</span>
@@ -355,7 +356,7 @@
 
                       <a *ngIf="getRowTextlinkActions(column, row).includes('delete') && editingRowId !== i+1 && !row._isNew"
                         href="javascript:void(0)"
-                        class="tw-text-[#F00] hover:tw-text-[#AA0000] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
+                        class="tw-text-[#F00] hover:tw-text-[#AA0000] tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold tw-underline"
                         [class.tw-pointer-events-none]="isDisabledForm" [class.tw-opacity-50]="isDisabledForm"
                         (click)="onClickDelete($event, row)">
                         <app-icon name="trash" [size]="20"></app-icon>
@@ -367,7 +368,7 @@
                       (click)="$event.stopPropagation()">
                       <div *ngIf="getCellValue(row, column.field)">
                         <a href="javascript:void(0)"
-                          class="tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold"
+                          class="tw-flex tw-justify-center tw-gap-1 tw-items-center tw-font-semibold tw-underline"
                           [ngClass]="dynamicClassBtn(getCellValue(row, column.field))"
                           (click)="onClickView($event, row, column.field)">
                           <app-icon *ngIf="column.iconLink" [name]="column.iconLink" [size]="20"></app-icon>

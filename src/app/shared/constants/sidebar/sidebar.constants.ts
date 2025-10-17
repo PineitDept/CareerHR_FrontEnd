@@ -36,7 +36,7 @@ export const SUB_MENUS: Partial<Record<string, MenuItem[]>> = {
             children: [
                 { label: 'User Candidates', icon: 'star-fat', path: 'admin-setting/permissions/user-candidates' },
                 { label: 'User Web', icon: 'user-multiple', path: 'admin-setting/permissions/user-web' },
-                { label: 'Management User', icon: 'crown', path: 'admin-setting/permissions/management-user' },
+                // { label: 'Management User', icon: 'crown', path: 'admin-setting/permissions/management-user' },
             ]
         },
         {
@@ -48,7 +48,7 @@ export const SUB_MENUS: Partial<Record<string, MenuItem[]>> = {
                     icon: 'user',
                     children: [
                         { label: 'Job Position', icon: 'target-user', path: 'admin-setting/data-setting/manpower/job-position' },
-                        { label: 'Reason Request', icon: 'pen-to-square', path: 'admin-setting/data-setting/manpower/reason-request' },
+                        // { label: 'Reason Request', icon: 'pen-to-square', path: 'admin-setting/data-setting/manpower/reason-request' },
                     ]
                 },
                 {
