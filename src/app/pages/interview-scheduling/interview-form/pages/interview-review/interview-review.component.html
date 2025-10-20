@@ -5,7 +5,7 @@
     <app-header-content [headerName]="'Interview Review'" [headerType]="''"></app-header-content>
 </div>
 
-<app-filter [filterDynamicButton]="true" [actionButtons]="filterButtons" (buttonClicked)="onFilterButtonClick($event)"
+<app-filter class="mb-hide" [filterDynamicButton]="true" [actionButtons]="filterButtons" (buttonClicked)="onFilterButtonClick($event)"
     [disabledKeys]="disabledKeys"></app-filter>
 
 <app-loading></app-loading>
@@ -16,10 +16,10 @@
     <div class="tw-col-span-4 tw-space-y-6">
         <!-- ===== Applicant Header Card ===== -->
         <section
-            class="tw-bg-white tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-flex tw-items-stretch overflow-hidden">
+            class="tw-bg-white tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)] tw-flex tw-items-stretch overflow-hidden mb-flex">
             <!-- Avatar -->
             <div
-                class="tw-w-[20%] tw-shrink-0 tw-overflow-hidden tw-rounded-l-xl tw-flex tw-items-center tw-justify-center tw-bg-gray-100">
+                class="mb-avatar tw-w-[20%] tw-shrink-0 tw-overflow-hidden tw-rounded-l-xl tw-flex tw-items-center tw-justify-center tw-bg-gray-100">
                 <ng-container *ngIf="applicant.avatarUrl; else noAvatar">
                     <img class="tw-w-full tw-h-full tw-object-cover" [src]="applicant.avatarUrl" alt="avatar" />
                 </ng-container>
@@ -109,7 +109,7 @@
                         <hr class="tw--mx-6 tw-mt-4" />
 
                         <ng-container>
-                            <div class="tw-grid tw-grid-cols-2 tw-gap-4 tw-my-4">
+                            <div class="tw-grid tw-grid-cols-2 tw-gap-4 tw-my-4 mb-grid">
                                 <div>
                                     <div class="tw-text-[13px] tw-font-medium">Interview Review By</div>
                                     <input

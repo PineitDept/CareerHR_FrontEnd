@@ -172,14 +172,7 @@
 
                             <div class="tw-flex tw-rounded-lg tw-w-full">
                                 <!-- ✅ SEND EMAIL BUTTON -->
-                                <!-- <button type="button" (click)="onSendMail()" class="tw-rounded-tl-lg tw-rounded-bl-lg tw-min-h-[40px] tw-w-full tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5"
-                                    [disabled]="item.interview.lastCalledAt === null || item.interview.isEmailSent"
-                                    [ngClass]="[item.interview.isEmailSent ? 'tw-bg-[#0A0]' : item.interview.lastCalledAt !== null ? 'tw-bg-[#FFC107] hover:tw-bg-[#e0a800]' : 'tw-bg-[#afafaf] hover:tw-bg-[#858585]']">
-                                    <app-icon [name]="'mail'" [size]="18"
-                                        extraClass="tw-text-white tw-relative tw-bottom-[1px] tw-mr-2"></app-icon>
-                                    <span class="tw-font-semibold">Send</span>
-                                </button> -->
-                                <button type="button" (click)="onSendMail(item)" class="tw-rounded-tl-lg tw-rounded-bl-lg tw-min-h-[40px] tw-w-full tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5 tw-pointer-events-none"
+                                <!-- <button type="button" (click)="onSendMail(item)" class="tw-rounded-tl-lg tw-rounded-bl-lg tw-min-h-[40px] tw-w-full tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5 tw-pointer-events-none"
                                     [ngClass]="[
                                         item.interview.isEmailSent ? 'tw-bg-[#0A0] tw-pointer-events-none' : 'tw-bg-[#afafaf] hover:tw-bg-[#858585]',
                                         item.interview.isCalled !== 'complete' ? 'tw-cursor-no-drop hover:tw-bg-[#afafaf]' : '',
@@ -188,7 +181,28 @@
                                     <app-icon [name]="'mail'" [size]="18"
                                         extraClass="tw-text-white tw-relative tw-bottom-[1px] tw-mr-2"></app-icon>
                                     <span class="tw-font-semibold">Send</span>
+                                </button> -->
+                                
+                                <button *ngIf="item.result.interviewResult === 22; else Sentmail" type="button" (click)="onSendMail(item)" class="tw-rounded-tl-lg tw-rounded-bl-lg tw-min-h-[40px] tw-w-full tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5 tw-pointer-events-none"
+                                    [ngClass]="[
+                                        item.result.isEmailDeclineSent ? 'tw-bg-[#0A0] tw-pointer-events-none' : 'tw-bg-[#afafaf] hover:tw-bg-[#858585]',
+                                        ]">
+                                    <app-icon [name]="'mail'" [size]="18"
+                                        extraClass="tw-text-white tw-relative tw-bottom-[1px] tw-mr-2"></app-icon>
+                                    <span class="tw-font-semibold">Send</span>
                                 </button>
+                                <ng-template #Sentmail>
+                                    <button type="button" (click)="onSendMail(item)" class="tw-rounded-tl-lg tw-rounded-bl-lg tw-min-h-[40px] tw-w-full tw-text-white tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5 tw-pointer-events-none"
+                                        [ngClass]="[
+                                            item.interview.isEmailSent ? 'tw-bg-[#0A0] tw-pointer-events-none' : 'tw-bg-[#afafaf] hover:tw-bg-[#858585]',
+                                            item.interview.isCalled !== 'complete' ? 'tw-cursor-no-drop hover:tw-bg-[#afafaf]' : '',
+                                            !item.interview.locationId || !item.interview.teamId || !item.interview.date ? 'tw-cursor-no-drop hover:tw-bg-[#afafaf]' : ''
+                                            ]">
+                                        <app-icon [name]="'mail'" [size]="18"
+                                            extraClass="tw-text-white tw-relative tw-bottom-[1px] tw-mr-2"></app-icon>
+                                        <span class="tw-font-semibold">Send</span>
+                                    </button>
+                                </ng-template>
 
                                 <!-- ✅ CALL BUTTON -->
                                 <div class="tw-relative tw-min-w-[30%] tw-text-white">
@@ -221,6 +235,9 @@
                             </p>
                             <p class="tw-text-[10px] tw-mt-2" *ngIf="item.interview.sendAt">
                                 {{ item.interview.sendAt | date:'dd/MM/yyyy hh:mm a' }} The email has been sent.
+                            </p>
+                            <p class="tw-text-[10px] tw-mt-2" *ngIf="item.result.isEmailDeclineSent && item.result.interviewResult === 22">
+                                {{ item.interview.sendAt | date:'dd/MM/yyyy hh:mm a' }} The email decline has been sent.
                             </p>
                         </div>
                     </div>

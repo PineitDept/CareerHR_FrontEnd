@@ -1,6 +1,6 @@
 import { ChangeDetectorRef, Component, ElementRef, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { catchError, map, Observable, of, Subject, switchMap, takeUntil } from 'rxjs';
+import { catchError, combineLatest, map, Observable, of, Subject, switchMap, takeUntil } from 'rxjs';
 import { ApplicationService } from '../../../../../services/application/application.service';
 import { CandidatePagedResult } from '../../../../../interfaces/Application/application.interface';
 import {
@@ -421,9 +421,11 @@ export class InterviewFormDetailsComponent {
         this.selectedTab = 'tab' + params['interview'];
 
         this.fetchCandidateTracking();
-        this.fetchRecruitmentStagesWithReasons(Number(params['interview']) + 1)
+        // this.fetchRecruitmentStagesWithReasons(this.stageId + 1);
         this.fetchInterviewer();
         // this.fetchFormById(this.stageId)
+
+        this.loadReasonsAndReview(this.stageId, this.applicantId);
 
         // ----- โหลด Comments -----
         this.loadComments(this.applicantId);
@@ -606,12 +608,12 @@ export class InterviewFormDetailsComponent {
         this.initializeForm();
 
         // 3) Restore เหตุผลจาก server (หน้านี้ไม่มี cache priority)
-        this.reasonsInterview1.forEach((category: any) => {
-          (category.rejectionReasons || []).forEach((reason: any) => {
-            const fromServer = this.foundisSummary?.selectedReasonIds?.includes(reason.reasonId);
-            reason.checked = !!fromServer;
-          });
-        });
+        // this.reasonsInterview1.forEach((category: any) => {
+        //   (category.rejectionReasons || []).forEach((reason: any) => {
+        //     const fromServer = this.foundisSummary?.selectedReasonIds?.includes(reason.reasonId);
+        //     reason.checked = !!fromServer;
+        //   });
+        // });
 
         // 4) ตั้ง category จาก server และคำนวณ group ที่ต้อง active
         this.selectedCategoryId = this.foundisSummary?.categoryId ?? null;
@@ -637,7 +639,6 @@ export class InterviewFormDetailsComponent {
     });
   }
 
-
   fetchRecruitmentStagesWithReasons(interview: number) {
     this.reasonService.getRecruitmentStagesWithReasons(interview).subscribe({
       next: (response) => {
@@ -661,6 +662,17 @@ export class InterviewFormDetailsComponent {
         console.error('Error fetching Recruitment Stages with reasons:', error);
       },
     });
+  }
+
+  private applySelectedReasons(selectedReasonIds: any[] | undefined) {
+    const ids = (selectedReasonIds ?? []).map((x: any) => Number(x));
+    this.reasonsInterview1 = (this.reasonsInterview1 || []).map((cat: any) => ({
+      ...cat,
+      rejectionReasons: (cat.rejectionReasons || []).map((r: any) => ({
+        ...r,
+        checked: ids.includes(Number(r.reasonId)),
+      })),
+    }));
   }
 
 
@@ -719,12 +731,114 @@ export class InterviewFormDetailsComponent {
     this.historyLogs = [];
   }
 
-  private resolveGroupByCategoryId(catId: number | null): 'accept' | 'decline' | null {
+  private buildGroups(categories: any[]): ResultGroup[] {
+    const groups: ResultGroup[] = [
+      { key: 'accept', label: 'Accept', regex: /(accept|on\s*hold|pass)/i, items: [] },
+      { key: 'decline', label: 'Decline', regex: /(decline|no[\s-]?show)/i, items: [] },
+    ];
+    return groups.map(g => ({
+      ...g,
+      items: (categories || []).filter((c: any) =>
+        g.regex.test(String(c?.categoryName || '').toLowerCase())
+      )
+    }));
+  }
+
+  private normalizeIds<T extends { reasonId?: any }>(cats: any[]): any[] {
+    return (cats || []).map((c: any) => ({
+      ...c,
+      rejectionReasons: (c.rejectionReasons || []).map((r: any) => ({
+        ...r,
+        reasonId: Number(r.reasonId),
+        checked: !!r.checked
+      }))
+    }));
+  }
+
+  private applySelectedReasonsToCategories(cats: any[], selectedIds: number[]): any[] {
+    const set = new Set((selectedIds || []).map(Number));
+    return (cats || []).map((c: any) => ({
+      ...c,
+      rejectionReasons: (c.rejectionReasons || []).map((r: any) => ({
+        ...r,
+        checked: set.has(Number(r.reasonId)),
+      }))
+    }));
+  }
+
+  private resolveGroupByCategoryId(catId: number | null): ResultGroupKey | null {
     if (!catId) return null;
-    const inAccept = this.resultGroups.find(g => g.key === 'accept')?.items.some(c => c.categoryId === catId);
-    const inDecline = this.resultGroups.find(g => g.key === 'decline')?.items.some(c => c.categoryId === catId);
+    const id = Number(catId);
+    const inAccept = (this.resultGroups.find(g => g.key === 'accept')?.items || []).some((c: any) => Number(c.categoryId) === id);
+    const inDecline = (this.resultGroups.find(g => g.key === 'decline')?.items || []).some((c: any) => Number(c.categoryId) === id);
     return inAccept ? 'accept' : (inDecline ? 'decline' : null);
   }
+
+  // โหลด reasons + review แล้ว apply ทีเดียว
+  private loadReasonsAndReview(stageId: number, applicantId: number): void {
+    const interviewStage = stageId + 1;
+
+    const reasons$ = this.reasonService.getRecruitmentStagesWithReasons(interviewStage)
+      .pipe(
+        map((res: any[]) => this.normalizeIds(
+          (res || []).map((c: any) => ({
+            ...c,
+            rejectionReasons: (c.rejectionReasons || []).map((r: any) => ({ ...r, checked: false }))
+          }))
+        ))
+      );
+
+    const review$ = this.interviewFormService.getApplicantReview(Number(applicantId), Number(interviewStage))
+      .pipe(
+        map((res: any[]) => (res || []).map((item: any) => ({
+          ...item,
+          expandState: { strength: false, concern: false },
+          overflowState: { strength: false, concern: false }
+        })))
+      );
+
+    // รวมสองสตรีม
+    combineLatest([reasons$, review$]).pipe(takeUntil(this.destroy$)).subscribe({
+      next: ([reasonsCats, reviews]) => {
+        // --- 1) เซ็ตรีวิว/คารูเซลตามเดิม ---
+        this.reviewHistory = reviews;
+        const countIsSummaryFalse = this.reviewHistory.filter(x => x.isSummary === false).length;
+        setTimeout(() => {
+          this.slideConfig = {
+            ...this.slideConfig,
+            dots: countIsSummaryFalse > 2,
+            slidesToShow: countIsSummaryFalse === 1 ? 1 : 2,
+            responsive: [{ breakpoint: 768, settings: { slidesToShow: 1, dots: countIsSummaryFalse > 1 } }]
+          };
+          setTimeout(() => {
+            this.carousels?.forEach((carousel) => { try { carousel.unslick(); } catch { } carousel.initSlick(); });
+          }, 0);
+        }, 0);
+        setTimeout(() => this.checkAllOverflow(), 0);
+
+        // --- 2) สรุปรีวิวตัวที่เป็น summary ---
+        this.foundisSummary = this.reviewHistory.find(u => u.isSummary === true) ?? null;
+
+        // --- 3) เซ็ต reasons + groups จาก reasonsCats ---
+        this.reasonsInterview1 = reasonsCats;
+        this.resultGroups = this.buildGroups(this.reasonsInterview1);
+
+        // --- 4) apply "ติ๊กเหตุผล" จากข้อมูล summary (ถ้ามี) ---
+        const selectedIds = (this.foundisSummary?.selectedReasonIds || []).map((x: any) => Number(x));
+        this.reasonsInterview1 = this.applySelectedReasonsToCategories(this.reasonsInterview1, selectedIds);
+
+        // --- 5) เซ็ต category + group ตาม summary (ถ้ามี) ---
+        this.selectedCategoryId = this.foundisSummary?.categoryId ?? null;
+        this.selectedGroupKey = this.resolveGroupByCategoryId(this.selectedCategoryId);
+
+        // --- 6) ฟอร์ม + ปุ่ม ---
+        this.setInitialEditState();
+        this.initializeForm();
+      },
+      error: (e: any) => console.error('[loadReasonsAndReview] error:', e)
+    });
+  }
+
 
   // ===================== UI Events =====================
   onFilterButtonClick(key: string) {
@@ -1149,12 +1263,15 @@ export class InterviewFormDetailsComponent {
   }
 
   onInterviewClick(tab: string) {
-    this.reviewHistory = []
+    this.reviewHistory = [];
     this.selectedTab = tab;
-    const interviewNumber = tab === 'tab1' ? '1' : '2';
-    this.stageId = Number(interviewNumber)
+    const interviewNumber = tab === 'tab1' ? 1 : 2;
+    this.stageId = interviewNumber;
 
-    this.setInitialEditState()
+    this.setInitialEditState();
+
+    // โหลด reasons + review สำหรับ stage ใหม่
+    this.loadReasonsAndReview(this.stageId, this.applicantId);
 
     this.router.navigate([], {
       relativeTo: this.route,

@@ -180,7 +180,12 @@ export class CalendarComponent implements AfterViewInit {
       id: eventUserID,
       interview: eventInterviewType
     }
-    this.router.navigate(['/interview-scheduling/interview-form/result'], { queryParams });
+
+    if (eventInterviewType === 3) {
+      this.router.navigate(['/offer-employment/offer-result'], { queryParams });
+    } else {
+      this.router.navigate(['/interview-scheduling/interview-form/result'], { queryParams });
+    }
   }
 
   gotoDate(dateStr: string) {
