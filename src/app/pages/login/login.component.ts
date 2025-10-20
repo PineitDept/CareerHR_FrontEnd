@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ILoginRequest } from '../../interfaces/login/login.interface';
 import { LoginService } from '../../services/login/login.service';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { NotificationService } from '../../shared/services/notification/notification.service';
 import { MatDialog } from '@angular/material/dialog';
 import { AlertDialogComponent } from '../../shared/components/dialogs/alert-dialog/alert-dialog.component';
@@ -22,6 +22,7 @@ export class LoginComponent {
     private router: Router,
     private notificationService: NotificationService,
     private dialog: MatDialog,
+    private route: ActivatedRoute
   ) {
     const rememberedId = sessionStorage.getItem('remember_employee_id') || '';
 
@@ -78,35 +79,31 @@ export class LoginComponent {
       password: password,
       rememberMe: rememberMe
     };
-    // this.router.navigate(['index']);
 
     this.loginService.login(payload).subscribe({
       next: (res) => {
-        // console.log('Login success', res);
         if (rememberMe) {
           sessionStorage.setItem('remember_employee_id', employeeId);
         } else {
           sessionStorage.removeItem('remember_employee_id');
         }
-        this.router.navigate(['index']);
+
+        const REDIRECT_KEY = 'redirect_url';
+        const fromQuery = this.route.snapshot.queryParamMap.get('redirectUrl');
+        const fromSession = sessionStorage.getItem(REDIRECT_KEY);
+        const target = fromQuery || fromSession;
+
+        sessionStorage.removeItem(REDIRECT_KEY);
+
+        if (target && target.startsWith('/')) {
+          this.router.navigateByUrl(target);
+        } else {
+          this.router.navigate(['index']);
+        }
       },
       error: (err) => {
-        // console.error('Login failed', err);
-        switch (err?.type) {
-          // case 'Unauthorized':
-          //   this.notificationService.error('Employee ID or Password is invalid');
-          //   break;
-
-          // case 'NotFound':
-          //   this.notificationService.error('User not found, please sign up');
-          //   break;
-
-          default:
-            this.notificationService.error('Login failed, please try again');
-            break;
-        }
+        this.notificationService.error('Login failed, please try again');
       }
     });
-
   }
 }

@@ -16,7 +16,7 @@ export interface JobPositionDetails {
   requirements?: string[] | null;
   preferredSkills?: string[] | null;
   benefits?: number[] | null;
-  computerSkills?: number[] | null;
+  computerSkills?: any[] | null;
   languageSkills?: number[] | null;
   bonusSkills?: number[] | null;
 }

@@ -35,7 +35,7 @@ export class InterviewRound1HistoryComponent {
       { key: 'not-pass-interview', label: 'Not Pass Interview', count: 0 },
       { key: 'no-show', label: 'No Show', count: 0 },
       { key: 'candidate-decline-interview', label: 'Candidate Decline Interview', count: 0 },
-      { key: 'onHold', label: 'On Hold Interview', count: 0 },
+      { key: 'on-hold', label: 'On Hold Interview', count: 0 },
       // { key: 'candidate-decline-offer', label: 'Not Hire', count: 0 },
     ];
   }
@@ -710,7 +710,7 @@ export class InterviewRound1HistoryComponent {
 
       if (tab.key === 'total') {
         count = groupCounts['All Status'] ?? 0;
-      } else if (tab.key === 'onHold') {
+      } else if (tab.key === 'on-hold') {
         count = groupCounts['On Hold Interview'] ?? 0;
       } else {
         const labelMatch = tab.label.toLowerCase().trim();

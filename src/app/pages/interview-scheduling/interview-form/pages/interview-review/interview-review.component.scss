@@ -1,0 +1,29 @@
+// responsive
+@media screen and (max-width:767px) {
+  ::ng-deep app-sidebar {
+    display: none;
+  }
+
+  ::ng-deep .mb-view {
+    margin-left: 0 !important;
+  }
+
+  ::ng-deep .mb-hide {
+    display: none;
+  }
+
+  ::ng-deep .mb-flex {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  ::ng-deep .mb-avatar {
+    width: 100%;
+    display: block;
+    border-radius: 8px 8px 0 0;
+  }
+
+  ::ng-deep .mb-grid {
+    grid-template-columns: 1fr;
+  }
+}

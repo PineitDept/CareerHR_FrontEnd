@@ -14,12 +14,12 @@ const routes: Routes = [
       {
         path: 'hire-result',
         component: HireResultComponent,
-        canDeactivate: [PendingDraftsGuard]
+        // canDeactivate: [PendingDraftsGuard]
       },
       {
         path: 'offer-result',
         component: OfferResultComponent,
-        canDeactivate: [PendingDraftsGuard]
+        // canDeactivate: [PendingDraftsGuard]
       },
       {
         path: 'history',
