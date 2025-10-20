@@ -6,7 +6,7 @@
   <!-- Sidebar -->
   <div
     [style.width]="sidebar?.sidebarWidth"
-    class="tw-fixed tw-top-20 tw-left-0 tw-h-[calc(100vh-5rem)] tw-z-40 tw-transition-[width] tw-duration-300 tw-ease-in-out"
+    class="tw-fixed tw-top-20 tw-left-0 tw-h-[calc(100dvh-5rem)] tw-z-40 tw-transition-[width] tw-duration-300 tw-ease-in-out"
   >
     <app-sidebar #sidebar></app-sidebar>
   </div>
@@ -14,7 +14,7 @@
   <!-- Content -->
   <div
     [style.marginLeft]="sidebar?.sidebarWidth"
-    class="tw-w-full tw-overflow-y-auto tw-h-[calc(100vh-5rem)]  tw-transition-[margin] tw-duration-300 tw-ease-in-out mb-view"
+    class="tw-w-full tw-overflow-y-auto tw-h-[calc(100dvh-5rem)]  tw-transition-[margin] tw-duration-300 tw-ease-in-out mb-view"
   >
     <router-outlet></router-outlet>
   </div>
