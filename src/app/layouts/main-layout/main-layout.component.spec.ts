@@ -66,7 +66,7 @@ describe('MainLayoutComponent', () => {
     const contentDiv = outlet.parent!;
     expect(contentDiv.styles['marginLeft']).toBe('200px');
     expect(contentDiv.nativeElement.className).toContain('tw-overflow-y-auto');
-    expect(contentDiv.nativeElement.className).toContain('tw-h-[calc(100vh-5rem)]');
+    expect(contentDiv.nativeElement.className).toContain('tw-h-[calc(100dvh-5rem)]');
   });
 
   it('should render router-outlet', () => {
