@@ -99,6 +99,7 @@ export class OfferResultComponent {
   appointmentId: string | undefined;
   resultName: string | undefined;
   resultDate: string | undefined;
+  resultTextStatus: string | undefined;
   appointmentsItem: any
   historyData: any[] = [];
   dropdownConfigs: any[] = [];
@@ -316,9 +317,16 @@ export class OfferResultComponent {
       next: (response) => {
         this.appointmentId = response.items[0].profile.appointmentId
         this.appointmentsItem = response.items[0]
-        
-        this.resultName = response.items[0].result.offerResult.toLowerCase();
-        this.resultDate = response.items[0].result.offerDate.toLowerCase();
+
+        // this.resultName = response.items[0].result.offerResult.toLowerCase();
+        // this.resultDate = response.items[0].result.offerDate.toLowerCase();
+        // this.resultTextStatus = response.items[0].profile.statusText.toLowerCase();
+
+        const item = response?.items?.[0];
+
+        this.resultName = String(item?.result?.offerResult ?? '').toLowerCase();
+        this.resultDate = item?.result?.offerDate ? String(item.result.offerDate) : '';
+        this.resultTextStatus = String(item?.profile?.statusText ?? '').toLowerCase();
 
         const jobList = this.appointmentsItem?.jobPosition?.jobList ?? [];
         const activeJob = jobList.find((j: any) => j?.isActive === true);
@@ -333,7 +341,11 @@ export class OfferResultComponent {
   }
 
   isOffer() {
-    return this.resultName === 'pending' && this.resultDate
+    const name = (this.resultName || '').toLowerCase();
+    const status = (this.resultTextStatus || '').toLowerCase();
+    const hasDate = !!this.resultDate;
+
+    return (name === 'pending' && hasDate) || name === 'offer' || status === 'offer job' || hasDate;
   }
 
   private getLastTs(i: CandidateTracking): number {

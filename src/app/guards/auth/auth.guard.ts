@@ -6,8 +6,9 @@ import {
   ActivatedRouteSnapshot,
   RouterStateSnapshot
 } from '@angular/router';
-import { Observable } from 'rxjs';
 import { AuthService } from '../../shared/services/auth/auth.service';
+
+const REDIRECT_KEY = 'redirect_url';
 
 @Injectable({
   providedIn: 'root'
@@ -22,14 +23,24 @@ export class AuthGuard implements CanActivate {
   canActivate(
     route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot
-  ): Observable<boolean | UrlTree> | Promise<boolean | UrlTree> | boolean | UrlTree {
+  ): boolean | UrlTree {
     const token = this.authService.getAccessToken();
 
-    if (token) {
-      return true;
+    // ✅ ถ้ามี token แล้ว ก็ผ่านได้เลย
+    if (token) return true;
+
+    // ✅ เช็กเฉพาะ path นี้เท่านั้น
+    if (state.url.startsWith('/interview-scheduling/interview-form/review')) {
+      // เก็บ URL เต็ม (รวม query) ไว้ใน sessionStorage
+      sessionStorage.setItem(REDIRECT_KEY, state.url);
+
+      // ส่งไปหน้า login พร้อมแนบ redirectUrl
+      return this.router.createUrlTree(['/login'], {
+        queryParams: { redirectUrl: state.url }
+      });
     }
 
-    // If there is no token, redirect to the login page
+    // ✅ ถ้าเป็นหน้าอื่น → แค่ส่งไป login เฉย ๆ ไม่เก็บ redirect
     return this.router.createUrlTree(['/login']);
   }
 }

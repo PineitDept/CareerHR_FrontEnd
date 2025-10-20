@@ -50,6 +50,7 @@ type JobPositionCache = {
     selectedIdsBenefits: number[];
     selectedIdsLanguage: number[];
     selectedIdsComputer: number[];
+    selectedIdsComputerSupport: number[];
     selectedIdsBonus: number[];
     locations: number[];
   };
@@ -97,13 +98,18 @@ export class JobPositionDetalisComponent {
   settingWelfareBenefits: any[] = [];
   settingLanguageSkills: any[] = [];
   settingComputerSkills: any[] = [];
+  settingComputerSkillsAll: any[] = [];
+  coreComputerPool: any[] = [];
+  supportComputerPool: any[] = [];
   settingBonusSkills: any[] = [];
 
   preselectedbenefits: number[] | null = null;
   preselectedlanguageSkills: number[] | null = null;
   preselectedcomputerSkills: number[] | null = null;
   preselectedbonusSkills: number[] | null = null;
-
+  preselectedCoreIds: number[] | null = null;
+  preselectedSupportIds: number[] | null = null;
+  computerSkill: any[] = [];
   categoryRows: any[] = [];
   categoryDetailsRows: any[] = [];
   previousData!: JobPositionDetails;
@@ -196,6 +202,7 @@ export class JobPositionDetalisComponent {
     this.watchArrayControlForCaching('selectedIdsBenefits');
     this.watchArrayControlForCaching('selectedIdsLanguage');
     this.watchArrayControlForCaching('selectedIdsComputer');
+    this.watchArrayControlForCaching('selectedIdsComputerSupport');
     this.watchArrayControlForCaching('selectedIdsBonus');
     this.watchArrayControlForCaching('locations');
 
@@ -254,6 +261,7 @@ export class JobPositionDetalisComponent {
       selectedIdsBenefits: [] as number[],
       selectedIdsLanguage: [] as number[],
       selectedIdsComputer: [] as number[],
+      selectedIdsComputerSupport: [] as number[],
       selectedIdsBonus: [] as number[],
       locations: new FormControl<number[]>([], { nonNullable: true }),
     });
@@ -358,13 +366,20 @@ export class JobPositionDetalisComponent {
         this.preselectedbenefits = Array.isArray(response.benefits) ? response.benefits.map(Number) : [];
         this.preselectedlanguageSkills = Array.isArray(response.languageSkills) ? response.languageSkills.map(Number) : [];
         // this.preselectedcomputerSkills = Array.isArray(response.computerSkills) ? response.computerSkills.map(Number) : [];
-        this.preselectedcomputerSkills = Array.isArray(response.computerSkills) ? response.computerSkills.map((skill: any) => Number(skill.id)) : [];
-        this.preselectedbonusSkills = Array.isArray(response.computerSkills) ? response.computerSkills.map((skill: any) => Number(skill.id)) : [];
+        // this.preselectedcomputerSkills = Array.isArray(response.computerSkills) ? response.computerSkills.map((skill: any) => Number(skill.id)) : [];
+        const computerSkills = Array.isArray(response.computerSkills) ? response.computerSkills : [];
+        this.preselectedCoreIds = computerSkills.filter((s: any) => +s.typeSkill === 1).map((s: any) => +s.id);
+        this.preselectedSupportIds = computerSkills.filter((s: any) => +s.typeSkill === 2).map((s: any) => +s.id);
+        this.preselectedbonusSkills = Array.isArray(response.bonusSkills) ? response.bonusSkills : [];
+
+        this.computerSkill = response.computerSkills
 
         this.tryApplyPreselect(this.settingWelfareBenefits, 'item', this.preselectedbenefits, 'selectedIdsBenefits');
         this.tryApplyPreselect(this.settingLanguageSkills, 'idlanguage', this.preselectedlanguageSkills, 'selectedIdsLanguage');
-        this.tryApplyPreselect(this.settingComputerSkills, 'idcpSkill', this.preselectedcomputerSkills, 'selectedIdsComputer');
+        this.tryApplyPreselect(this.settingComputerSkills, 'idcpSkill', this.preselectedCoreIds, 'selectedIdsComputer');
+        this.tryApplyPreselect(this.settingComputerSkills, 'idcpSkill', this.preselectedSupportIds, 'selectedIdsComputerSupport');
         this.tryApplyPreselect(this.settingBonusSkills, 'id', this.preselectedbonusSkills, 'selectedIdsBonus');
+        this.rebuildComputerPools();
 
         this.initialSnapshot = {
           form: {
@@ -382,6 +397,7 @@ export class JobPositionDetalisComponent {
             selectedIdsBenefits: this.preselectedbenefits,
             selectedIdsLanguage: this.preselectedlanguageSkills,
             selectedIdsComputer: this.preselectedcomputerSkills,
+            selectedIdsComputerSupport: this.preselectedcomputerSkills,
             selectedIdsBonus: this.preselectedbonusSkills,
             locations: this.toNumArr(response.locations),
           },
@@ -452,14 +468,29 @@ export class JobPositionDetalisComponent {
     this.benefitsService.getBenefitsWeb<IComputerWithPositionsDto>(this.currentFilterParams).subscribe({
       next: (res) => {
         const list = Array.isArray(res) ? res : ((res as any)?.items ?? (res as any)?.data ?? []);
-        this.settingComputerSkills = (list as any[]).filter(x => Number(x?.status) !== 2);
+        this.settingComputerSkillsAll = (list as any[]).filter(x => Number(x?.status) !== 2);
+        this.settingComputerSkills = this.settingComputerSkillsAll;
 
-        // this.tryApplyPreselect(this.settingComputerSkills, 'idcpSkill', this.preselectedcomputerSkills, 'selectedIdsComputer');
+        this.rebuildComputerPools();
       },
-      error: (error) => {
-        console.error('Error fetching category types details:', error);
-      },
+      error: (error) => console.error('Error fetching category types details:', error),
     });
+  }
+
+
+  private rebuildComputerPools() {
+    const coreSel = new Set(this.toNumArr(this.formDetails.get('selectedIdsComputer')?.value));
+    const supportSel = new Set(this.toNumArr(this.formDetails.get('selectedIdsComputerSupport')?.value));
+
+    this.coreComputerPool = this.settingComputerSkillsAll.filter(
+      x => !supportSel.has(Number(x.idcpSkill))
+    );
+
+    this.supportComputerPool = this.settingComputerSkillsAll.filter(
+      x => !coreSel.has(Number(x.idcpSkill))
+    );
+
+    this.cdr.markForCheck();
   }
 
   fetchBonusDetails() {
@@ -618,6 +649,7 @@ export class JobPositionDetalisComponent {
         selectedIdsBenefits: this.toNumArr(this.formDetails.get('selectedIdsBenefits')?.value),
         selectedIdsLanguage: this.toNumArr(this.formDetails.get('selectedIdsLanguage')?.value),
         selectedIdsComputer: this.toNumArr(this.formDetails.get('selectedIdsComputer')?.value),
+        selectedIdsComputerSupport: this.toNumArr(this.formDetails.get('selectedIdsComputer')?.value),
         selectedIdsBonus: this.toNumArr(this.formDetails.get('selectedIdsBonus')?.value),
         locations: this.toNumArr(this.locationsCtrl.value),
       },
@@ -639,6 +671,9 @@ export class JobPositionDetalisComponent {
   }
 
   private hasFormChanged(): boolean {
+    const raw = sessionStorage.getItem(this.cacheKey());
+    if (!raw) return false;
+
     if (!this.initialSnapshot) return false;
     if (this.isViewMode) return false;
     // if (this.restoreFromCacheIfAny?.()) return false;
@@ -692,6 +727,14 @@ export class JobPositionDetalisComponent {
 
         const previousData: JobPositionDetails = this.previousData;
 
+        const coreIds = this.toNumArr(this.formDetails.get('selectedIdsComputer')?.value);
+        const supportIds = this.toNumArr(this.formDetails.get('selectedIdsComputerSupport')?.value);
+
+        const computerSkills = [
+          ...coreIds.map(id => ({ id, typeSkill: 1 })),    // Core
+          ...supportIds.map(id => ({ id, typeSkill: 2 })), // Support
+        ];
+
         const payload: JobPositionDetails = {
           // idjobPst: +this.idjobPst,
           namePosition: formValue.namePosition ?? previousData.namePosition ?? '',
@@ -722,20 +765,16 @@ export class JobPositionDetalisComponent {
             ? formValue.selectedIdsBenefits
             : previousData.benefits ?? [],
 
-          computerSkills: formValue.selectedIdsComputer?.length
-            ? formValue.selectedIdsComputer
-            : previousData.computerSkills ?? [],
+          computerSkills,
 
           bonusSkills: formValue.selectedIdsBonus?.length
             ? formValue.selectedIdsBonus
-            : previousData.computerSkills ?? [],
+            : previousData.bonusSkills ?? [],
 
           languageSkills: formValue.selectedIdsLanguage?.length
             ? formValue.selectedIdsLanguage
             : previousData.languageSkills ?? [],
         };
-
-        console.log('🚀 ส่ง payload:', payload);
 
         if (this.idjobPst !== '') {
           this.jobPositionService.updateJobPosition(this.idjobPst, payload).subscribe({
@@ -892,7 +931,7 @@ export class JobPositionDetalisComponent {
         }
       }
 
-      (this as any)[prop] = next;              // ✅ เปลี่ยน reference
+      (this as any)[prop] = next;
       this.formDetails.markAsDirty();
       this.setButtonDisabled('save', !this.hasFormChanged());
       this.cdr.markForCheck();
@@ -939,6 +978,7 @@ export class JobPositionDetalisComponent {
         selectedIdsBenefits: this.toNumArr(this.formDetails.get('selectedIdsBenefits')?.value),
         selectedIdsLanguage: this.toNumArr(this.formDetails.get('selectedIdsLanguage')?.value),
         selectedIdsComputer: this.toNumArr(this.formDetails.get('selectedIdsComputer')?.value),
+        selectedIdsComputerSupport: this.toNumArr(this.formDetails.get('selectedIdsComputer')?.value),
         selectedIdsBonus: this.toNumArr(this.formDetails.get('selectedIdsBonus')?.value),
         locations: this.toNumArr(this.locationsCtrl.value),
       },
@@ -954,12 +994,15 @@ export class JobPositionDetalisComponent {
 
   private saveCache(): void {
     if (!this.formDetails || !this.initialSnapshot) return;
-    if (this.hasFormChanged()) {
-      const cache = this.buildCachePayload();
-      sessionStorage.setItem(this.cacheKey(), JSON.stringify(cache));
-    } else {
-      // sessionStorage.removeItem(this.cacheKey()); // กลับมาเท่า baseline → เคลียร์ cache
-    }
+    const cache = this.buildCachePayload();
+    sessionStorage.setItem(this.cacheKey(), JSON.stringify(cache));
+
+    // if (this.hasFormChanged()) {
+    //   const cache = this.buildCachePayload();
+    //   sessionStorage.setItem(this.cacheKey(), JSON.stringify(cache));
+    // } else {
+    //   // sessionStorage.removeItem(this.cacheKey()); // กลับมาเท่า baseline → เคลียร์ cache
+    // }
   }
 
   // public hasPendingDrafts(): boolean {
@@ -980,7 +1023,12 @@ export class JobPositionDetalisComponent {
       // selections
       this.formDetails.get('selectedIdsBenefits')?.setValue(cache.selections.selectedIdsBenefits ?? [], { emitEvent: false });
       this.formDetails.get('selectedIdsLanguage')?.setValue(cache.selections.selectedIdsLanguage ?? [], { emitEvent: false });
-      this.formDetails.get('selectedIdsComputer')?.setValue(cache.selections.selectedIdsComputer ?? [], { emitEvent: false });
+      this.formDetails.get('selectedIdsComputer')?.valueChanges
+        .pipe(distinctUntilChanged((a, b) => this.stableStringify(a) === this.stableStringify(b)))
+        .subscribe(() => this.rebuildComputerPools());
+      this.formDetails.get('selectedIdsComputerSupport')?.valueChanges
+        .pipe(distinctUntilChanged((a, b) => this.stableStringify(a) === this.stableStringify(b)))
+        .subscribe(() => this.rebuildComputerPools());
       this.formDetails.get('selectedIdsBonus')?.setValue(cache.selections.selectedIdsBonus ?? [], { emitEvent: false });
       this.locationsCtrl.setValue(cache.selections.locations ?? [], { emitEvent: false });
 
@@ -1004,6 +1052,7 @@ export class JobPositionDetalisComponent {
       this.reemitControl('selectedIdsBenefits');
       this.reemitControl('selectedIdsLanguage');
       this.reemitControl('selectedIdsComputer');
+      this.reemitControl('selectedIdsComputerSupport');
       this.reemitControl('selectedIdsBonus');
 
       this.cdr.markForCheck();
