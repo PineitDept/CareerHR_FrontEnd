@@ -13,7 +13,7 @@ import { SlickCarouselComponent } from 'ngx-slick-carousel';
 import { MailDialogComponent } from '../../../../../shared/components/dialogs/mail-dialog/mail-dialog.component';
 import { AppointmentsService } from '../../../../../services/interview-scheduling/appointment-interview/appointments.service';
 import { AlertDialogComponent } from '../../../../../shared/components/dialogs/alert-dialog/alert-dialog.component';
-import { catchError, finalize, forkJoin, map, Observable, of, Subject, takeUntil, tap } from 'rxjs';
+import { BehaviorSubject, catchError, finalize, forkJoin, map, Observable, of, Subject, takeUntil, tap } from 'rxjs';
 import { NotificationService } from '../../../../../shared/services/notification/notification.service';
 
 const SEARCH_OPTIONS: string[] = [
@@ -31,11 +31,11 @@ export class InterviewRound2HistoryComponent {
   createInitialTabs(): TabMenu[] {
     return [
       { key: 'total', label: 'All Status', count: 0 },
-      { key: 'pass-interview', label: 'Pass Interview', count: 0 },
-      { key: 'not-pass-interview', label: 'Not Pass Interview', count: 0 },
+      { key: 'pass-interview', label: 'Accept', count: 0 },
+      { key: 'not-pass-interview', label: 'Company Decline', count: 0 },
       { key: 'no-show', label: 'No Show', count: 0 },
-      { key: 'candidate-decline-interview', label: 'Candidate Decline Interview', count: 0 },
-      { key: 'on-hold', label: 'On Hold Interview', count: 0 },
+      { key: 'candidate-decline-interview', label: 'Applicants Decline', count: 0 },
+      { key: 'on-hold', label: 'On Hold', count: 0 },
       // { key: 'hire-offer', label: 'Hire Offer', count: 0 },
       // { key: 'candidate-decline-offer', label: 'Not Hire Offer', count: 0 },
     ];
@@ -269,17 +269,33 @@ export class InterviewRound2HistoryComponent {
     });
   }
 
+  allInterviewers: Array<{ label: string; value: number }> = [];
   fetchInterviewer() {
     this.interviewerService.getAllInterviewers().subscribe({
       next: (res) => {
-        const list = res ?? [];
+        const filtered = (res as any[])
+          .filter(x => x?.isActive !== false)
+          .map(loc => ({ label: loc.fullName, value: loc.idEmployee }));
 
-        const filteredInterviewer = (list as any[]).filter(x => x?.isActive !== false);
+        this.allInterviewers = filtered;
+        this.interviewerList = [...filtered];
+      },
+      error: (error) => {
+        console.error('Error fetching category types:', error);
+      }
+    });
+  }
 
-        this.interviewerList = filteredInterviewer.map(loc => ({
-          label: loc.fullName,
-          value: loc.idEmployee
-        }));
+  fetchInterviewerByTeam(id: number) {
+    this.interviewerService.getTeamById(id).subscribe({
+      next: (res) => {
+        this.interviewerList = this.allInterviewers.filter(
+          (opt: { value: any; }) => !res.members.some((ex: { interviewerId: any; }) => ex.interviewerId === opt.value)
+        );
+        const nextConfigs = this.dropdownConfigs.map(cfg =>
+          cfg.label === 'Interviewers' ? { ...cfg, options: [...this.interviewerList] } : cfg
+        );
+        this.dropdownConfigs$.next(nextConfigs);
       },
       error: (error) => {
         console.error('Error fetching category types:', error);
@@ -727,6 +743,12 @@ export class InterviewRound2HistoryComponent {
 
       if (tab.key === 'total') {
         count = groupCounts['All Status'] ?? 0;
+      } else if (tab.key === 'pass-interview') {
+        count = groupCounts['Pass Interview'] ?? 0;
+      } else if (tab.key === 'not-pass-interview') {
+        count = groupCounts['Not Pass Interview'] ?? 0;
+      } else if (tab.key === 'candidate-decline-interview') {
+        count = groupCounts['Candidate Decline Interview'] ?? 0;
       } else if (tab.key === 'on-hold') {
         count = groupCounts['On Hold Interview'] ?? 0;
       } else {
@@ -916,6 +938,27 @@ export class InterviewRound2HistoryComponent {
     return existingIdInterviewers.employees.length
   }
 
+  private async preloadInterviewersForDialog(teamId: number | null, appointmentId: string) {
+    if (!teamId) {
+      const appt = await this.fetchIDInterviewer(appointmentId);
+      const excluded = new Set(appt.employees.map((e: any) => e.employeeId));
+      this.interviewerList = this.allInterviewers.filter(opt => !excluded.has(opt.value));
+      return;
+    }
+
+    const [team, appt] = await Promise.all([
+      this.fetchTeamInterviewer(teamId),
+      this.fetchIDInterviewer(appointmentId),
+    ]);
+
+    const excluded = new Set<number>([
+      ...team.members.map((m: any) => m.interviewerId),
+      ...appt.employees.map((e: any) => e.employeeId)
+    ]);
+    this.interviewerList = this.allInterviewers.filter(opt => !excluded.has(opt.value));
+  }
+
+  dropdownConfigs$ = new BehaviorSubject<any[]>([]);
   async onAddTeamClick(item: any) {
     let TeamAppointmentIds = [];
     // let interviewerListMap = []
@@ -927,6 +970,7 @@ export class InterviewRound2HistoryComponent {
 
         // const teamIds = existingInterviewers.members.map((i: any) => i.interviewerId);
         TeamAppointmentIds = existingIdInterviewers.employees.map((i: any) => i.employeeId);
+        await this.preloadInterviewersForDialog(item.interview.teamId, item.profile.appointmentId);
 
         // const allExcludedIds = new Set([...teamIds, ...TeamAppointmentIds]);
 
@@ -962,6 +1006,7 @@ export class InterviewRound2HistoryComponent {
       document.querySelector('.cdk-overlay-pane')?.classList.add('pp-rounded-dialog');
     });
 
+    this.dropdownConfigs$.next(this.dropdownConfigs);
     const dialogRef = this.dialog.open(SelectDialogComponent, {
       width: '480px',
       data: {
@@ -969,6 +1014,13 @@ export class InterviewRound2HistoryComponent {
         quality: 0,
         confirm: true,
         dropdownConfigs: this.dropdownConfigs
+      }
+    });
+    dialogRef.componentInstance.dropdownConfigs$ = this.dropdownConfigs$;
+
+    dialogRef.componentInstance.teamChanged.subscribe(async (teamId: number) => {
+      if (Number.isFinite(teamId)) {
+        this.fetchInterviewerByTeam(teamId);
       }
     });
 
@@ -1003,6 +1055,8 @@ export class InterviewRound2HistoryComponent {
           teamInterviewId: Number(teamId),
           employeeIds: valuesOnly
         }
+
+        console.log(payload)
 
         this.appointmentsService.addMemberToTeam(payload).subscribe({
           next: () => {
