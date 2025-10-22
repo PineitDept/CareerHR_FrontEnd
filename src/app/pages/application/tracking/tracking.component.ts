@@ -518,6 +518,7 @@ export class TrackingComponent
     const trackingFilter: ICandidateTrackingFilterRequest = {
       ...filter,
       ...this.trackingFilterRequest(),
+      year: filter.year === '2001' ? undefined : filter.year ,
     };
 
     return this.applicationService.getTrackingApplications(trackingFilter).pipe(

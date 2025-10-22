@@ -279,9 +279,11 @@ export class ScreeningComponent extends BaseApplicationComponent {
   // screening.component.ts (เพิ่ม override สำหรับ updateFilterForSearch)
   protected override updateFilterForSearch(searchForm: SearchForm): ICandidateFilterRequest {
     const { statusGroup, ...rest } = this.filterRequest() as any;
-    const search = this.isValidSearchOption(searchForm.searchBy)
-      ? (searchForm.searchValue || undefined)
-      : undefined;
+    // const search = this.isValidSearchOption(searchForm.searchBy)
+    //   ? (searchForm.searchValue || undefined)
+    //   : undefined;
+      
+    const search = searchForm.searchValue ? searchForm.searchValue.trim() : undefined;
 
     return { ...rest, search, page: 1 };
   }

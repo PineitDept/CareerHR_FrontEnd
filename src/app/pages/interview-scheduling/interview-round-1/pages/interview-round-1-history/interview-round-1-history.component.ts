@@ -341,8 +341,8 @@ export class InterviewRound1HistoryComponent {
 
     const updatedParams = {
       ...this.currentFilterParams,
-      month: this.monthData,
-      year: this.yearData,
+      month: this.applicantId ? undefined : this.monthData,
+      year: this.applicantId ? undefined : this.yearData,
       page: this.currentFilterParams.page ?? 1,
       search: this.applicantId ? String(this.applicantId) : this.currentFilterParams.search,
     };

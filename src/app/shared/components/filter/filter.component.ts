@@ -245,7 +245,6 @@ export class FilterComponent {
     //   this.dateRangeSelected.emit({ startDate, endDate });
     // }
 
-    console.log(year)
     if (this.selectedMonth === 'All') {
       startDate = `${year}-01-01`;
 

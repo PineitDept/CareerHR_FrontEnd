@@ -153,8 +153,6 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
     this.filterDateRange = dateRange;
     const payload: DateRangeEvent = { ...dateRange, __nonce: this.nextNonce() };
     this.dateRangeSubject.next(payload);
-
-    console.log(event)
   }
 
   onTabChanged(tab: string): void {
@@ -276,6 +274,7 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
   // Protected Stream Handlers
   protected handleSearch(searchForm: SearchForm): Observable<void> {
     const updatedFilter = this.updateFilterForSearch(searchForm);
+    console.log(searchForm, '=>updatedFilter')
     return this.fetchData(updatedFilter, false);
   }
 
@@ -316,6 +315,11 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
 
     this.loadingState.set(true);
     this.filterRequest.set(filter);
+
+    filter = {
+      ... filter,
+      year: filter.year === '2001' ? undefined : filter.year ,
+    };
 
     return this.applicationService.getApplications(filter).pipe(
       tap((response) => this.handleApiResponse(response, append)),
@@ -378,9 +382,10 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
     searchForm: SearchForm
   ): ICandidateFilterRequest {
     const currentFilter = this.filterRequest();
-    const search = this.isValidSearchOption(searchForm.searchBy)
-      ? searchForm.searchValue || undefined
-      : undefined;
+    // const search = this.isValidSearchOption(searchForm.searchBy)
+    //   ? searchForm.searchValue || undefined
+    //   : undefined;
+    const search = searchForm.searchValue ? searchForm.searchValue.trim() : undefined;
 
     return { ...currentFilter, search, page: 1 };
   }
