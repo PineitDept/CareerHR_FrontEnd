@@ -4,14 +4,14 @@
         [searchForm]="searchForm"></app-header-content>
 </div>
 
-<!-- <app-filter [showAllYearOption]="true" [defaultYearAll]="true" [filterDate]="true" [filterDateRange]="filterDateRange"
-    (dateRangeSelected)="onDateRangeSelected($event)" (buttonClicked)="onFilterButtonClick($event)"></app-filter> -->
+<app-filter [showAllYearOption]="true" [defaultLastMonth]="true" [filterDate]="true" [filterDateRange]="filterDateRange" (dateRangeSelected)="onDateRangeSelected($event)"
+    [actionButtons]="filterButtons" (buttonClicked)="onFilterButtonClick($event)"></app-filter>
 
 <!-- <app-tab-menus [tabs]="tabMenus" (tabChanged)="onTabChange($event)" [activeTab]="activeTab"></app-tab-menus> -->
 
 <app-loading></app-loading>
 
-<div class="tw-max-h-[calc(100vh-210px)] tw-overflow-y-auto tw-mt-6" #scrollArea 
+<div class="tw-max-h-[calc(100vh-300px)] tw-overflow-y-auto tw-mt-6" #scrollArea 
   (scroll)="onScroll($event)">
   <app-tables
     [columns]="columns"

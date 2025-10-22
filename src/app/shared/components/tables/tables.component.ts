@@ -92,8 +92,15 @@ export class TablesComponent
   @Input() scoreMax: number = 1;
   @Input() valueSelected: any;
   @Input() preferIdForSelect: boolean = false;
- @Input() stickyHeader: boolean = false;
- @Input() IconHasDes: boolean = false;
+  @Input() stickyHeader: boolean = false;
+  @Input() IconHasDes: boolean = false;
+  @Input() rememberClick = true;
+  @Input() highlightOnInit = true;
+  @Input() singleUseHighlight = false;
+  @Input() idField: string = 'id';
+  @Input() storageNamespace = 'tables';
+  @Input() tableId = 'default';
+  @Input() highlightTTLms: number = 3 * 1000;
 
   @Output() selectionChanged = new EventEmitter<any[]>();
   @Output() rowClicked = new EventEmitter<any>();
@@ -179,6 +186,10 @@ export class TablesComponent
   ngOnInit() {
     this.preClickedRowIds().forEach((id) => this.clickedRows.add(id));
     this.updateAllSelectedState();
+
+    if (this.enableRowClick && this.highlightOnInit) {
+      this.loadLastClickedFromStorage();
+    }
   }
 
   ngAfterViewInit() {
@@ -390,8 +401,19 @@ export class TablesComponent
     }
 
     if (row?.id) {
-      this.clickedRows.add(String(row.id)); // ป้องกันไว้เป็น string
+      this.clickedRows.add(String(row.id));
       this.listClickedRows.emit(this.clickedRows);
+    }
+
+    const idVal = row?.[this.idField];
+    if (idVal != null) {
+      const idStr = String(idVal);
+      this.clickedRows.add(idStr);
+      this.listClickedRows.emit(this.clickedRows);
+
+      if (this.rememberClick) {
+        this.saveLastClickedToStorage(idStr);
+      }
     }
 
     this.rowClicked.emit(row);
@@ -1251,4 +1273,46 @@ export class TablesComponent
     const idx = this.rowsValue.findIndex(r => r._tempId === this.editingRowId);
     return idx >= 0 ? idx : -1;
   }
+
+  private getStorageKey(): string {
+    return `${this.storageNamespace}:lastClicked:${this.tableId}`;
+  }
+
+  private loadLastClickedFromStorage() {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = sessionStorage.getItem(this.getStorageKey());
+      if (!raw) return;
+      const obj = JSON.parse(raw) as { id: string; ts?: number };
+      if (!obj?.id) return;
+
+      // TTL
+      if (this.highlightTTLms > 0 && obj.ts && Date.now() - obj.ts > this.highlightTTLms) {
+        sessionStorage.removeItem(this.getStorageKey());
+        return;
+      }
+
+      // เติมเข้า clickedRows -> template คุณจะไฮไลท์ให้เอง
+      this.clickedRows.add(String(obj.id));
+      this.listClickedRows.emit(this.clickedRows);
+
+      if (this.singleUseHighlight) {
+        // ใช้ครั้งเดียวลบทิ้ง
+        sessionStorage.removeItem(this.getStorageKey());
+      }
+
+      this.cdr.markForCheck();
+    } catch { /* ignore */ }
+  }
+
+  private saveLastClickedToStorage(id: string | number) {
+    if (typeof window === 'undefined') return;
+    try {
+      sessionStorage.setItem(
+        this.getStorageKey(),
+        JSON.stringify({ id: String(id), ts: Date.now() })
+      );
+    } catch { /* ignore */ }
+  }
+
 }

@@ -5,12 +5,12 @@
 </div>
 <app-loading></app-loading>
 
-<app-filter [showAllYearOption]="true" [defaultYearAll]="true" [filterDate]="true" [filterDateRange]="filterDateRange" (dateRangeSelected)="onDateRangeSelected($event)"
+<app-filter [showAllYearOption]="true" [defaultLastMonth]="true" [filterDate]="true" [filterDateRange]="filterDateRange" (dateRangeSelected)="onDateRangeSelected($event)"
     [actionButtons]="filterButtons" (buttonClicked)="onFilterButtonClick($event)"></app-filter>
 
 <app-tab-menus [tabs]="tabMenus" (tabChanged)="onTabChange($event)" [activeTab]="activeTab"></app-tab-menus>
 
-<div #scrollContainer class="tw-p-6 tw-flex tw-flex-col tw-gap-8 tw-overflow-y-auto tw-h-[calc(100dvh-420px)]"
+<div #scrollContainer class="tw-p-6 tw-flex tw-flex-col tw-gap-8 tw-overflow-y-auto tw-h-[calc(100dvh-380px)]"
     (scroll)="onScroll($event)">
 
     <div [id]="'appointment-' + item.profile.appointmentId" *ngFor="let item of appointments; let i = index" class="tw-relative group">
