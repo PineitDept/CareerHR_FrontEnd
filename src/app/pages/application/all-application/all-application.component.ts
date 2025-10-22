@@ -193,11 +193,16 @@ export class AllApplicationComponent extends BaseApplicationComponent {
   // }
 
   protected createInitialFilter(): ICandidateFilterRequest {
+    const d = new Date();
+    d.setMonth(d.getMonth());
+
     return {
       page: 1,
       pageSize: 30,
       status: ALL_APPLICATION_CONFIG.DEFAULT_STATUS,
       isScreening: false,
+      month: String(d.getMonth() + 1),
+      year: String(d.getFullYear()),
     };
   }
 

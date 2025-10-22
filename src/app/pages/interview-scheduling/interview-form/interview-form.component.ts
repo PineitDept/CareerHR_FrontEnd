@@ -225,7 +225,7 @@ export class InterviewFormComponent {
       };
     }
 
-    this.fetchAppointments(true);
+    // this.fetchAppointments(true);
 
     // this.filterButtons = [{ label: 'History', key: 'history', color: 'transparent', outlineBtn: true }];
   }

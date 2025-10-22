@@ -436,10 +436,22 @@ export class TrackingComponent
   //   return TRACKING_CONFIG.STORAGE_KEYS;
   // }
 
+  // protected createInitialFilter(): ICandidateFilterRequest {
+  //   return {
+  //     page: 1,
+  //     pageSize: 30,
+  //   };
+  // }
+
   protected createInitialFilter(): ICandidateFilterRequest {
+    const d = new Date();
+    d.setMonth(d.getMonth());
+
     return {
       page: 1,
       pageSize: 30,
+      month: String(d.getMonth() + 1),
+      year: String(d.getFullYear()),
     };
   }
 
@@ -506,6 +518,7 @@ export class TrackingComponent
     const trackingFilter: ICandidateTrackingFilterRequest = {
       ...filter,
       ...this.trackingFilterRequest(),
+      year: filter.year === '2001' ? undefined : filter.year ,
     };
 
     return this.applicationService.getTrackingApplications(trackingFilter).pipe(

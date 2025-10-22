@@ -5,8 +5,8 @@
     <app-header-content [headerName]="'Interview Review'" [headerType]="''"></app-header-content>
 </div>
 
-<app-filter class="mb-hide" [filterDynamicButton]="true" [actionButtons]="filterButtons" (buttonClicked)="onFilterButtonClick($event)"
-    [disabledKeys]="disabledKeys"></app-filter>
+<app-filter [filterDynamicButton]="true" (buttonClicked)="onFilterButtonClick($event)"
+    [disabledKeys]="disabledKeys" class="mb-hide"></app-filter>
 
 <app-loading></app-loading>
 
@@ -231,6 +231,27 @@
                                 </ng-container>
                             </div>
 
+                            
+                            <div class="tw-flex tw-gap-3 tw-justify-end tw-pb-6" [ngClass]="HideWhenNotLatest()">
+                                <!-- ปุ่ม Edit: แสดงเมื่อยังไม่เข้าสู่โหมดแก้ -->
+                                <button *ngIf="allowEditButton" type="button" (click)="onEditReview()"
+                                    class="tw-rounded-lg tw-bg-[#00AAFF] tw-text-white tw-py-2 tw-px-4 tw-text-center tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-bg-[#0c95da]">
+                                    Edit
+                                </button>
+
+                                <!-- ปุ่ม Confirm / Cancel: แสดงเมื่อกำลังแก้ -->
+                                <ng-container *ngIf="editReview">
+                                    <button type="button" (click)="onComfirmReview()"
+                                        class="tw-rounded-lg tw-bg-[#D97706] tw-text-white tw-py-2 tw-px-4 tw-text-center tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-bg-[#c46b07]">
+                                        Confirm
+                                    </button>
+                                    <button type="button" (click)="onCancelReview()"
+                                        class="tw-rounded-lg tw-border tw-border-[#E5E5E5] tw-text-black tw-py-2 tw-px-4 tw-text-center tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-bg-[#E5E5E5]">
+                                        Cancel
+                                    </button>
+                                </ng-container>
+                            </div>
+
                             <!-- <div class="tw-flex tw-gap-3 tw-justify-end tw-pb-6" *ngIf="!foundisSummary">
                                 <button type="button" (click)="onComfirmReview()"
                                     class="tw-rounded-lg tw-bg-[#D97706] tw-text-white tw-py-2 tw-px-4 tw-text-center tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-bg-[#c46b07]">Confirm</button>
@@ -246,9 +267,9 @@
 </div>
 
 <!-- Floating Back-to-Top -->
-<app-back-to-top
+<!-- <app-back-to-top
   [sentinelSelector]="'#page-top-sentinel'"
   [buttonClass]="'tw-fixed tw-bottom-6 tw-right-6 tw-rounded-full tw-h-14 tw-w-14 tw-flex tw-items-center tw-justify-center tw-shadow-xl bg-red-blood hover:bg-maroon-1 tw-text-white tw-z-[60]'"
   [iconName]="'arrow-upward'"
   [iconSize]="26">
-</app-back-to-top>
+</app-back-to-top> -->

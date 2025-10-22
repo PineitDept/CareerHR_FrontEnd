@@ -39,6 +39,7 @@ export class FilterComponent {
   @Input() DateCalendar: boolean = false;
   @Input() showAllYearOption: boolean = false;
   @Input() defaultYearAll: boolean = false;
+  @Input() defaultLastMonth: boolean = false;
 
   @Output() buttonClicked = new EventEmitter<string>();
   @Output() dateRangeSelected = new EventEmitter<{ startDate: string; endDate: string }>();
@@ -83,6 +84,12 @@ export class FilterComponent {
   ngOnInit() {
     this.years = this.getYearsWithOptionalAll();
     this.selectedYear = this.defaultYearAll ? 'All' : String(this.currentYear);
+
+    if (this.defaultLastMonth) {
+      const today = new Date();
+      this.selectedYear = String(today.getFullYear());
+      this.selectedMonth = this.allMonths[today.getMonth()];
+    }
 
     if (!this.DateCalendar) {
       this.emitDateRange();
@@ -203,10 +210,11 @@ export class FilterComponent {
 
   onAllListClick() {
     this.selectedMonth = 'All';
+    this.selectedYear = 'All';
 
-    if (this.defaultYearAll) {
-      this.selectedYear = 'All';
-    }
+    // if (this.defaultYearAll) {
+    //   this.selectedYear = 'All';
+    // }
     this.emitDateRange(true);
   }
 
@@ -222,6 +230,11 @@ export class FilterComponent {
   }
 
   emitDateRange(isAllList = false) {
+    // if (this.selectedYear === 'All') {
+    //   this.dateRangeSelected.emit({ startDate: '', endDate: '' });
+    //   return;
+    // }
+
     const year = Number(this.selectedYear);
     let startDate: string;
     let endDate: string;
@@ -231,7 +244,6 @@ export class FilterComponent {
     //   endDate = `${year}-12-31`;
     //   this.dateRangeSelected.emit({ startDate, endDate });
     // }
-
 
     if (this.selectedMonth === 'All') {
       startDate = `${year}-01-01`;
@@ -270,7 +282,7 @@ export class FilterComponent {
     this.openActionKey = null;
     this.selectChanged.emit({ key: btn.key, value: opt.value, label: opt.label });
   }
-  
+
   onBackSave() {
     this.buttonClicked.emit('saveback');
   }

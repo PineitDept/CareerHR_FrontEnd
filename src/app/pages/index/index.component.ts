@@ -211,6 +211,7 @@ export class IndexComponent {
     this.currentFilterParams.page = 1;
 
     this.fetchStagePending(updateTabCounts);
+    this.fetchStageLastYear(true);
   }
 
   fetchStagePending(updateTabCounts = false, autoSubscribe = true): Observable<any> {
@@ -245,6 +246,28 @@ export class IndexComponent {
           this.updateTabCountsFromGroup(res.groupCounts);
         }
         
+      }),
+      catchError((err) => {
+        console.error('Error fetching appointments:', err);
+        return of(null);
+      }),
+      finalize(() => { this.loading = false; })
+    );
+
+    if (autoSubscribe) obs$.subscribe();
+    return obs$;
+  }
+
+  fetchStageLastYear(autoSubscribe = true) {
+    this.loading = true;
+    const lastY = new Date().getFullYear().toString();
+    const updatedParams = { ...this.currentFilterParams, year: lastY, status: '' };
+    const obs$ = this.applicationService.getTrackingApplications(updatedParams).pipe(
+      tap((res: any) => {
+        this.totalItems = res.groupCounts?.received ?? 0;
+        this.interview1 = res.groupCounts?.accept1 ?? 0;
+        this.interview2 = res.groupCounts?.accept2 ?? 0;
+        this.hired = res.groupCounts?.onboarded ?? 0;
       }),
       catchError((err) => {
         console.error('Error fetching appointments:', err);
