@@ -435,7 +435,7 @@ export class InterviewReviewComponent {
 
           this.mapTrackingToView(exact);
           this.isLoading = false;
-          
+
           // Attachments
           this.fetchFiles(Number(this.applicantId || 0));
           const appointmentIdKey = `interview${this.stageId}AppointmentId`;
@@ -463,6 +463,14 @@ export class InterviewReviewComponent {
       },
     });
 
+  }
+
+  disableWhenNotLatest(): string {
+    return this.isLatestRound ? '' : 'tw-pointer-events-none tw-bg-gray-100 tw-text-[#8b8b8b]';
+  }
+
+  HideWhenNotLatest(): string {
+    return this.isLatestRound ? '' : 'tw-hidden';
   }
 
   private getLastTs(i: CandidateTracking): number {
@@ -961,6 +969,146 @@ export class InterviewReviewComponent {
     });
   }
 
+  // onComfirmReview() {
+  //   const payload = this.formDetails.value;
+
+  //   const isoDate = new Date(payload.dateInterviewReview).toISOString();
+  //   let checkedReasonIds = []
+  //   checkedReasonIds = this.reasonsInterview1.flatMap((category: { rejectionReasons: any[]; }) =>
+  //     category.rejectionReasons
+  //       .filter(reason => reason.checked === true)
+  //       .map(reason => reason.reasonId)
+  //   );
+
+  //   const checkedCategoryIds = this.reasonsInterview1
+  //     .filter(category => category.rejectionReasons.some((reason: { checked: boolean; }) => reason.checked === true))
+  //     .map(category => category.categoryId);
+
+  //   const appointmentIdKey = `interview${this.stageId}AppointmentId`;
+  //   const appointmentId = (this as any)[appointmentIdKey];
+
+  //   Promise.resolve().then(() => {
+  //     const container = document.querySelector('.cdk-overlay-container');
+  //     container?.classList.add('dimmed-overlay');
+  //   });
+
+  //   const dialogRef = this.dialog.open(AlertDialogComponent, {
+  //     width: '496px',
+  //     panelClass: ['custom-dialog-container', 'pp-rounded-dialog'],
+  //     autoFocus: false,
+  //     disableClose: true,
+  //     data: {
+  //       title: 'Confirmation',
+  //       message: 'Are you sure you want to save this data?',
+  //       confirm: true
+  //     }
+  //   });
+
+  //   dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+  //     const container = document.querySelector('.cdk-overlay-container');
+  //     container?.classList.remove('dimmed-overlay');
+
+  //     if (confirmed) {
+
+  //       this.isEditing = false;
+  //       this.nextTick(() => this.setActionButtons('view'));
+  //       this.clearDraftsForCurrentType()
+
+  //       if (this.foundisSummary) {
+  //         const payloadHistory = {
+  //           categoryId: checkedCategoryIds[0],
+  //           stageDate: isoDate,
+  //           strength: payload.strengthInterviewReview,
+  //           concern: payload.concernInterviewReview,
+  //           selectedReasonIds: checkedReasonIds
+  //         }
+
+  //         this.interviewFormService.updateCandidateStageHistory(this.foundisSummary.historyId, payloadHistory).subscribe({
+  //           next: () => {
+  //             this.fetchInterviewer()
+  //             this.foundisSummary = this.reviewHistory.find(user => user.isSummary === true);
+  //             this.editReview = false;
+  //             this.allowEditButton = true;
+  //           },
+  //           error: (err) => {
+  //             console.error('Error Rescheduled:', err);
+  //           }
+  //         });
+
+  //       } else {
+  //         const transformedPayload = {
+  //           applicationId: this.applicantId,
+  //           stageId: this.stageId + 1,
+  //           roundID: this.round,
+  //           categoryId: checkedCategoryIds[0],
+  //           isSummary: false,
+  //           stageDate: isoDate,
+  //           appointmentId: (appointmentId ?? '').trim(),
+  //           satisfaction: 0,
+  //           notes: '',
+  //           strength: payload.strengthInterviewReview,
+  //           concern: payload.concernInterviewReview,
+  //           selectedReasonIds: checkedReasonIds
+  //         }
+
+  //         this.interviewFormService.postInterviewReview(transformedPayload).subscribe({
+  //           next: () => {
+  //             this.fetchInterviewer()
+  //             this.foundisSummary = this.reviewHistory.find(user => user.isSummary === true);
+  //             this.editReview = false;
+  //             this.allowEditButton = true;
+  //           },
+  //           error: (err) => {
+  //             console.error('Error Rescheduled:', err);
+  //           }
+  //         });
+  //       }
+  //     }
+  //   });
+  // }
+
+  // onCancelReview() {
+  //   const payload = this.formDetails.value;
+
+  //   const isoDate = new Date(payload.dateInterviewReview).toISOString();
+  //   let checkedReasonIds = [];
+  //   checkedReasonIds = this.reasonsInterview1.flatMap((category: { rejectionReasons: any[]; }) =>
+  //     category.rejectionReasons
+  //       .filter(reason => reason.checked === true)
+  //       .map(reason => reason.reasonId)
+  //   );
+
+  //   const checkedCategoryIds = this.reasonsInterview1
+  //     .filter(category => category.rejectionReasons.some((reason: { checked: boolean; }) => reason.checked === true))
+  //     .map(category => category.categoryId);
+
+  //   const transformedPayload = {
+  //     categoryId: checkedCategoryIds[0],
+  //     stageDate: isoDate,
+  //     strength: payload.strengthInterviewReview,
+  //     concern: payload.concernInterviewReview,
+  //     selectedReasonIds: checkedReasonIds
+  //   }
+
+  //   if (JSON.stringify(this.snapshotInputForm) !== JSON.stringify(transformedPayload)) {
+  //     this.fetchInterviewer()
+  //     this.foundisSummary = this.reviewHistory.find(user => user.isSummary === true);
+  //     this.editReview = false;
+  //     this.allowEditButton = true;
+  //   }
+
+  //   const countIsSummaryTrue = this.reviewHistory.filter(item => item.isSummary === true).length;
+  //   if (!countIsSummaryTrue) {
+  //     this.editReview = true;
+  //     this.allowEditButton = false;
+  //   } else {
+  //     this.editReview = false;
+  //     this.allowEditButton = true;
+  //   }
+  // }
+
+
+
   onComfirmReview() {
     const payload = this.formDetails.value;
 
@@ -1077,8 +1225,7 @@ export class InterviewReviewComponent {
     const transformedPayload = {
       categoryId: checkedCategoryIds[0],
       stageDate: isoDate,
-      strength: payload.strengthInterviewReview,
-      concern: payload.concernInterviewReview,
+      notes: payload.noteInterviewReview,
       selectedReasonIds: checkedReasonIds
     }
 
@@ -1089,6 +1236,13 @@ export class InterviewReviewComponent {
       this.allowEditButton = true;
     }
 
+    // this.initializeForm()
+    // this.selectedCategoryId = null;
+    // this.formDetails = this.fb.group({
+    //   userInterviewReview: [this.foundisSummary?.hrUserName || this.usernameLogin],
+    //   dateInterviewReview: [this.formatDateForInput(this.foundisSummary?.stageDate) || this.nowDate],
+    //   noteInterviewReview: [this.foundisSummary?.notes || '']
+    // });
     const countIsSummaryTrue = this.reviewHistory.filter(item => item.isSummary === true).length;
     if (!countIsSummaryTrue) {
       this.editReview = true;
@@ -1096,6 +1250,54 @@ export class InterviewReviewComponent {
     } else {
       this.editReview = false;
       this.allowEditButton = true;
+    }
+  }
+
+  onEditReview() {
+    this.initializeForm()
+    this.isEditing = true;
+    this.editReview = true;
+    this.allowEditButton = false;
+
+    const payload = this.formDetails.value;
+
+    const isoDate = new Date(payload.dateInterviewReview).toISOString();
+    let checkedReasonIds = [];
+    checkedReasonIds = this.reasonsInterview1.flatMap((category: { rejectionReasons: any[]; }) =>
+      category.rejectionReasons
+        .filter(reason => reason.checked === true)
+        .map(reason => reason.reasonId)
+    );
+
+    const checkedCategoryIds = this.reasonsInterview1
+      .filter(category => category.rejectionReasons.some((reason: { checked: boolean; }) => reason.checked === true))
+      .map(category => category.categoryId);
+
+    const transformedPayload = {
+      categoryId: checkedCategoryIds[0],
+      stageDate: isoDate,
+      notes: payload.noteInterviewReview,
+      selectedReasonIds: checkedReasonIds
+    }
+
+    this.snapshotInputForm = transformedPayload;
+  }
+
+  setInitialEditState() {
+    const resultKey = `interview${this.stageId}Result` as keyof typeof this.applicant;
+    const result = this.applicant?.[resultKey];
+
+    if (result) {
+      if (this.foundisSummary) {
+        this.allowEditButton = true;
+        this.editReview = false;
+      } else {
+        this.allowEditButton = false;
+        this.editReview = true;
+      }
+    } else {
+      this.allowEditButton = false;
+      this.editReview = true;
     }
   }
 

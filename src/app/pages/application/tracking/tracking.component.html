@@ -11,6 +11,8 @@
   </div>
 
   <app-filter
+    [showAllYearOption]="true" 
+    [defaultLastMonth]="true"
     [filterDateRange]="filterDateRange"
     (dateRangeSelected)="onDateRangeSelected($event)"
   ></app-filter>

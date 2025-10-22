@@ -1,7 +1,8 @@
-import { Component, Inject, Input, Output } from '@angular/core';
+import { ChangeDetectorRef, Component, EventEmitter, Inject, Input, Output } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { AlertDialogData } from '../../../interfaces/dialog/dialog.interface';
+import { BehaviorSubject } from 'rxjs';
 
 export interface SelectOption {
   value: string | number;
@@ -26,11 +27,15 @@ export class SelectDialogComponent {
   isNoShow: boolean = false;
 
   @Input() dataOption: any[] | undefined;
-  @Output() dataResult: any[] | undefined;
-
   @Input() dropdownConfigs: any[] | undefined;
+  @Input() dropdownConfigs$!: BehaviorSubject<any[]>;
+
+  @Output() dataResult: any[] | undefined;
+  @Output() selectionChanged = new EventEmitter<{ key: string; value: any }>();
+  @Output() teamChanged = new EventEmitter<number>();
 
   constructor(
+    public cdr: ChangeDetectorRef,
     private fb: FormBuilder,
     public dialogRef: MatDialogRef<SelectDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: AlertDialogData
@@ -61,6 +66,13 @@ export class SelectDialogComponent {
     });
   }
 
+  ngOnInit() {
+    this.dropdownConfigs$?.subscribe(cfgs => {
+      this.dropdownConfigs = cfgs;
+      this.cdr.markForCheck();
+    });
+  }
+
   onCancel(): void {
     this.dialogRef.close(false);
   }
@@ -82,6 +94,20 @@ export class SelectDialogComponent {
     this.selectionMap[label] = matched ?? { value: selectedValue, label: '' };
 
     this.statusValue = selectedValue;
+
+    if (label?.toLowerCase?.() === 'team') {
+      this.teamChanged.emit(Number(selectedValue));
+
+      // this.dropdownConfigs?.forEach(config => {
+      //   if (config.dynamicByToggle) {
+      //     if (!this.callMissed) {
+      //       config.options = config.optionsSecond
+      //     } else {
+      //       config.options = config.optionsFirst
+      //     }
+      //   }
+      // });
+    }
   }
 
   onMultiSelectChange(selectedValues: SelectOption[], label: string) {

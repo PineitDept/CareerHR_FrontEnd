@@ -58,7 +58,7 @@ export const SEARCH_OPTIONS: string[] = [
 export type SearchOption = (typeof SEARCH_OPTIONS)[number];
 
 type SearchFormEvent = SearchForm & { __nonce?: number; __marker?: number };
-type DateRangeEvent  = DateRange  & { __nonce?: number };
+type DateRangeEvent = DateRange & { __nonce?: number };
 
 @Directive()
 export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
@@ -274,6 +274,7 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
   // Protected Stream Handlers
   protected handleSearch(searchForm: SearchForm): Observable<void> {
     const updatedFilter = this.updateFilterForSearch(searchForm);
+    console.log(searchForm, '=>updatedFilter')
     return this.fetchData(updatedFilter, false);
   }
 
@@ -315,6 +316,11 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
     this.loadingState.set(true);
     this.filterRequest.set(filter);
 
+    filter = {
+      ... filter,
+      year: filter.year === '2001' ? undefined : filter.year ,
+    };
+
     return this.applicationService.getApplications(filter).pipe(
       tap((response) => this.handleApiResponse(response, append)),
       // tap(() => this.persistFilterState()),
@@ -347,6 +353,8 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
       ...currentFilter,
       page: response.page,
       hasNextPage: response.hasNextPage,
+      month: currentFilter.month ? currentFilter.month : undefined,
+      year: currentFilter.year ? currentFilter.year : undefined,
     });
   }
 
@@ -374,9 +382,10 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
     searchForm: SearchForm
   ): ICandidateFilterRequest {
     const currentFilter = this.filterRequest();
-    const search = this.isValidSearchOption(searchForm.searchBy)
-      ? searchForm.searchValue || undefined
-      : undefined;
+    // const search = this.isValidSearchOption(searchForm.searchBy)
+    //   ? searchForm.searchValue || undefined
+    //   : undefined;
+    const search = searchForm.searchValue ? searchForm.searchValue.trim() : undefined;
 
     return { ...currentFilter, search, page: 1 };
   }
@@ -387,8 +396,8 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
     const currentFilter = this.filterRequest();
     return {
       ...currentFilter,
-      month: dateRange.month || undefined,
-      year: dateRange.year || undefined,
+      month: dateRange.month ? String(dateRange.month) : undefined,
+      year: dateRange.year ? String(dateRange.year) : undefined,
       page: 1,
     };
   }
@@ -412,17 +421,18 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
     return statusGroupCount?.[key] ?? 0;
   }
 
-  protected extractDateRange(event: {
-    startDate: string;
-    endDate: string;
-  }): DateRange {
-    const startMonth = event.startDate.substring(5, 7);
-    const endMonth = event.endDate.substring(5, 7);
+  protected extractDateRange(event: { startDate: string; endDate: string }): DateRange {
+    const start = new Date(event.startDate);
+    const end = new Date(event.endDate);
 
-    return {
-      month: startMonth === endMonth ? endMonth : '',
-      year: event.endDate.substring(0, 4),
-    };
+    const sameMonth =
+      start.getFullYear() === end.getFullYear() &&
+      start.getMonth() === end.getMonth();
+
+    const month = sameMonth ? String(end.getMonth() + 1) : '';
+    const year = String(end.getFullYear());
+
+    return { month, year };
   }
 
   protected isValidSearchOption(searchBy: string): searchBy is SearchOption {
@@ -468,19 +478,19 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
   //     };
   //   }
 
-    // const clickedRows = this.loadFromStorage<string[]>(
-    //   storageKeys.CLICKED_ROWS
-    // );
-    // if (clickedRows) {
-    //   this.clickedRowIds.set(new Set(clickedRows));
-    // }
+  // const clickedRows = this.loadFromStorage<string[]>(
+  //   storageKeys.CLICKED_ROWS
+  // );
+  // if (clickedRows) {
+  //   this.clickedRowIds.set(new Set(clickedRows));
+  // }
 
-    // const persistedSortConfig = this.loadFromStorage<SortState>(
-    //   storageKeys.SORT_CONFIG
-    // );
-    // if (persistedSortConfig) {
-    //   this.sortConfig.set(persistedSortConfig);
-    // }
+  // const persistedSortConfig = this.loadFromStorage<SortState>(
+  //   storageKeys.SORT_CONFIG
+  // );
+  // if (persistedSortConfig) {
+  //   this.sortConfig.set(persistedSortConfig);
+  // }
   // }
 
   // protected persistCurrentState(): void {
@@ -491,17 +501,17 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
 
   // protected persistFilterState(): void {
   //   const storageKeys = this.getStorageKeys();
-    // this.saveToStorage(storageKeys.FILTER_SETTINGS, this.filterRequest());
+  // this.saveToStorage(storageKeys.FILTER_SETTINGS, this.filterRequest());
   // }
 
   // protected persistClickedRows(clickedRowIds: Set<string>): void {
   //   const storageKeys = this.getStorageKeys();
-    // this.saveToStorage(storageKeys.CLICKED_ROWS, Array.from(clickedRowIds));
+  // this.saveToStorage(storageKeys.CLICKED_ROWS, Array.from(clickedRowIds));
   // }
 
   // protected persistSortConfig(sortConfig: SortState): void {
   //   const storageKeys = this.getStorageKeys();
-    // this.saveToStorage(storageKeys.SORT_CONFIG, sortConfig);
+  // this.saveToStorage(storageKeys.SORT_CONFIG, sortConfig);
   // }
 
   // protected saveToStorage<T>(key: string, data: T): void {

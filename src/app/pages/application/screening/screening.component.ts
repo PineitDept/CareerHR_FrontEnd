@@ -28,12 +28,12 @@ import { SortState } from '../../../shared/components/tables/tables.component';
 
 // Component-specific Configuration
 // const SCREENING_CONFIG = {
-  // STORAGE_KEYS: {
-  //   FILTER_SETTINGS: 'screeningFiterSettings',
-  //   CLICKED_ROWS: 'screeningClickedRowIndexes',
-  //   SORT_CONFIG: 'screeningSortConfig',
-  //   HEADER_SEARCH_FORM: 'screeningHeaderSearchForm',
-  // },
+// STORAGE_KEYS: {
+//   FILTER_SETTINGS: 'screeningFiterSettings',
+//   CLICKED_ROWS: 'screeningClickedRowIndexes',
+//   SORT_CONFIG: 'screeningSortConfig',
+//   HEADER_SEARCH_FORM: 'screeningHeaderSearchForm',
+// },
 // } as const;
 
 @Component({
@@ -47,7 +47,7 @@ export class ScreeningComponent extends BaseApplicationComponent {
   hasOverflowY = false;
   private ro?: ResizeObserver;
 
-  constructor (
+  constructor(
     private dialog: MatDialog,
     private injector: Injector,
   ) {
@@ -208,10 +208,22 @@ export class ScreeningComponent extends BaseApplicationComponent {
   //   return SCREENING_CONFIG.STORAGE_KEYS;
   // }
 
+  // protected createInitialFilter(): ICandidateFilterRequest {
+  //   return {
+  //     page: 1,
+  //     pageSize: 30,
+  //   };
+  // }
+
   protected createInitialFilter(): ICandidateFilterRequest {
+    const d = new Date();
+    d.setMonth(d.getMonth());
+
     return {
       page: 1,
       pageSize: 30,
+      month: String(d.getMonth() + 1),
+      year: String(d.getFullYear()),
     };
   }
 
@@ -267,9 +279,11 @@ export class ScreeningComponent extends BaseApplicationComponent {
   // screening.component.ts (เพิ่ม override สำหรับ updateFilterForSearch)
   protected override updateFilterForSearch(searchForm: SearchForm): ICandidateFilterRequest {
     const { statusGroup, ...rest } = this.filterRequest() as any;
-    const search = this.isValidSearchOption(searchForm.searchBy)
-      ? (searchForm.searchValue || undefined)
-      : undefined;
+    // const search = this.isValidSearchOption(searchForm.searchBy)
+    //   ? (searchForm.searchValue || undefined)
+    //   : undefined;
+      
+    const search = searchForm.searchValue ? searchForm.searchValue.trim() : undefined;
 
     return { ...rest, search, page: 1 };
   }
@@ -277,18 +291,18 @@ export class ScreeningComponent extends BaseApplicationComponent {
   protected override updateTabCounts(response: ApiResponse): void {
     const updatedTabs = this.tabMenusData().map((tab) => ({
       ...tab,
-      count:this.safeGetStatusCount(response.statusCounts,tab.key),
+      count: this.safeGetStatusCount(response.statusCounts, tab.key),
     }));
     this.tabMenusData.set(updatedTabs);
   }
 
-   override readonly activeTab = computed(() => this.filterRequest().status || '');
+  override readonly activeTab = computed(() => this.filterRequest().status || '');
 
   private transformSingleItem(
     item: ICandidateWithPositionsDto
   ): ScreeningRow {
     const summary = item.summary;
-    const daySince = summary.daysSinceEmployeeActionDate  || -1;
+    const daySince = summary.daysSinceEmployeeActionDate || -1;
     const displayStaus = daySince > 0 ? this.displayStaus(daySince) : "pending";
     return {
       id: item.userID.toString(),
@@ -297,7 +311,7 @@ export class ScreeningComponent extends BaseApplicationComponent {
       userID: item.userID.toString(),
       fullName: summary.fullName,
       position:
-      item.positions?.map((pos: IPositionDto) => pos.namePosition) || [],
+        item.positions?.map((pos: IPositionDto) => pos.namePosition) || [],
       university: summary.university,
       gpa: summary.gpa?.toString() || '',
       gradeCandidate: summary.gradeCandidate,
@@ -324,10 +338,10 @@ export class ScreeningComponent extends BaseApplicationComponent {
 
     this.router.navigate(['/applications/screening/application-form'], { queryParams });
   }
-  private displayStaus(daySince:number):string{
-    if(daySince <=3) return 'New';
-    if(daySince <=7) return 'Over 3 Days';
-    if(daySince <=30) return 'Over Week';
+  private displayStaus(daySince: number): string {
+    if (daySince <= 3) return 'New';
+    if (daySince <= 7) return 'Over 3 Days';
+    if (daySince <= 30) return 'Over Week';
     return 'Over Month';
   }
 

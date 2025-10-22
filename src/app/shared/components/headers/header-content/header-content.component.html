@@ -14,7 +14,7 @@
     <!-- <span class="tw-text-sm">Search By</span> -->
 
     <!-- Dropdown: Search By -->
-    <div class="tw-relative tw-w-[180px] desktop:tw-w-[200px] dropdown-container-by">
+    <!-- <div class="tw-relative tw-w-[180px] desktop:tw-w-[200px] dropdown-container-by">
       <button
         (click)="toggleDropdown('by')"
         class="
@@ -42,12 +42,12 @@
           {{ option }}
         </li>
       </ul>
-    </div>
+    </div> -->
 
     <!-- Input: Search Value -->
     <div class="tw-relative desktop:tw-w-[200px]">
       <!-- <ng-container *ngIf="isTextInput; else dropdownSearch"> -->
-        <input
+        <!-- <input
           [(ngModel)]="searchForm.searchValue"
           placeholder="Search Value..."
           [disabled]="!searchForm.searchBy"
@@ -56,6 +56,11 @@
             'tw-text-[#495057] tw-bg-white': searchForm.searchBy
           }"
           class="tw-w-full tw-rounded-[8px] tw-border tw-border-[#ADB5BD] tw-px-4 tw-py-2 tw-text-sm tw-outline-none placeholder:tw-text-[#ADB5BD] tw-text-[#495057]"
+        /> -->
+        <input
+          [(ngModel)]="searchForm.searchValue"
+          placeholder="Search Value..."
+          class="tw-bg-white tw-w-full tw-rounded-[8px] tw-border tw-border-[#ADB5BD] tw-px-4 tw-py-2 tw-text-sm tw-outline-none placeholder:tw-text-[#ADB5BD] tw-text-[#495057]"
         />
       <!-- </ng-container> -->
       <!-- <ng-template #dropdownSearch>
@@ -100,7 +105,7 @@
     </div>
 
     <!-- Buttons -->
-    <button
+    <!-- <button
       class="tw-rounded-[8px] tw-border tw-border-[#ADB5BD] tw-text-sm tw-px-6 tw-py-2 tw-bg-white"
       (click)="onClearClick()"
       [disabled]="
@@ -124,6 +129,28 @@
       [ngClass]="{
         'tw-opacity-50 tw-cursor-not-allowed':
           !searchForm.searchBy || !searchForm.searchValue.trim(),
+        'hover:tw-bg-[#4e0506] hover:tw-shadow-md':
+          searchForm.searchBy && searchForm.searchValue.trim()
+      }"
+    >
+      Search
+    </button> -->
+    
+    <button
+      class="tw-rounded-[8px] tw-border tw-border-[#ADB5BD] tw-text-sm tw-px-6 tw-py-2 tw-bg-white hover:tw-bg-[#F1F3F5]"
+      (click)="onClearClick()"
+    >
+      Clear
+    </button>
+    <button
+      class="tw-rounded-[8px] tw-border tw-border-[#ADB5BD] tw-text-sm tw-text-white tw-bg-[#660708] tw-px-6 tw-py-2 tw-outline-none tw-transition-colors"
+      (click)="onSearchClick()"
+      [disabled]="
+        !searchForm.searchValue.trim()
+      "
+      [ngClass]="{
+        'tw-opacity-50 tw-cursor-not-allowed':
+          !searchForm.searchValue.trim(),
         'hover:tw-bg-[#4e0506] hover:tw-shadow-md':
           searchForm.searchBy && searchForm.searchValue.trim()
       }"

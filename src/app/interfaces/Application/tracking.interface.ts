@@ -35,6 +35,7 @@ export interface CandidateTracking {
   hired: CandidateTrackStatus;
   lastUpdate?: string;
   positions?: Positions[];
+  groupCounts?: any;
 }
 
 export interface TrackingRow {

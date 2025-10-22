@@ -34,7 +34,7 @@ export class OfferEmploymentComponent {
     return [
       { key: 'total', label: 'All Status', count: 0 },
       { key: 'pending', label: 'Pending', count: 0 },
-      { key: 'offer', label: 'Offer', count: 0 },
+      { key: 'offer', label: 'In Process', count: 0 },
       { key: 'onhold-offer', label: 'On Hold', count: 0 },
       // { key: 'candidate-decline-offer', label: 'Candidate Decline Offer', count: 0 }
     ];
