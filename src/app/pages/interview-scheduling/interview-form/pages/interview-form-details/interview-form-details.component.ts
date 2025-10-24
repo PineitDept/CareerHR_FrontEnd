@@ -837,6 +837,20 @@ export class InterviewFormDetailsComponent {
       },
       error: (e: any) => console.error('[loadReasonsAndReview] error:', e)
     });
+
+    this.interviewFormService.getApplicantTracking(this.applicantId).subscribe({
+      next: (res) => {
+        const appointmentIdKey = `interview${this.stageId}AppointmentId`;
+        const appointmentIdValue = res[appointmentIdKey];
+
+        (this as any)[appointmentIdKey] = appointmentIdValue;
+
+        this.appointmentId = appointmentIdValue
+      },
+      error: (err) => {
+        console.error(err);
+      },
+    });
   }
 
 
