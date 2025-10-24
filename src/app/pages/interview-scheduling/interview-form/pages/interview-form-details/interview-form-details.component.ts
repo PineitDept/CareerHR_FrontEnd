@@ -422,7 +422,7 @@ export class InterviewFormDetailsComponent {
 
         this.fetchCandidateTracking();
         // this.fetchRecruitmentStagesWithReasons(this.stageId + 1);
-        this.fetchInterviewer();
+        // this.fetchInterviewer();
         // this.fetchFormById(this.stageId)
 
         this.loadReasonsAndReview(this.stageId, this.applicantId);
