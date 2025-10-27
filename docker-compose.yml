@@ -9,7 +9,7 @@ services:
     container_name: career-web-app
     restart: unless-stopped
     ports:
-      - "8000:80"
+      - "8001:80"
     networks:
       - career-network
 
