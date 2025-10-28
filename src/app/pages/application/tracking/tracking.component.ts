@@ -497,13 +497,13 @@ export class TrackingComponent
   @ViewChild('scrollContainer') scrollContainer!: ElementRef<HTMLDivElement>;
 
   // แก้ไข scrollToTop method
-  protected override scrollToTop(): void {
-    requestAnimationFrame(() => {
-      if (this.scrollContainer?.nativeElement) {
-        this.scrollContainer.nativeElement.scrollTop = 0;
-      }
-    });
-  }
+  // protected override scrollToTop(): void {
+  //   requestAnimationFrame(() => {
+  //     if (this.scrollContainer?.nativeElement) {
+  //       this.scrollContainer.nativeElement.scrollTop = 0;
+  //     }
+  //   });
+  // }
   // Override for tracking-specific data fetching
   protected override fetchData(
     filter: ICandidateFilterRequest,
@@ -516,11 +516,10 @@ export class TrackingComponent
 
     // Convert to tracking filter request
     const trackingFilter: ICandidateTrackingFilterRequest = {
-      ...filter,
-      ...this.trackingFilterRequest(),
+      ...this.trackingFilterRequest(),  // ใจ page: 1
+      ...filter,                        // ✅ OVERWRITE ด้วย page: 2
       year: filter.year === '2001' ? undefined : filter.year ,
     };
-
     return this.applicationService.getTrackingApplications(trackingFilter).pipe(
       tap((response: any) => {
         this.handleApiResponse(response, append);

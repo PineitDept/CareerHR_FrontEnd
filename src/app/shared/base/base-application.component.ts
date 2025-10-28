@@ -268,7 +268,10 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
       debounceTime(100),
       exhaustMap((event) => this.handleInfiniteScroll(event)),
       takeUntilDestroyed(this.destroyRef)
-    ).subscribe();
+    ).subscribe({
+      next: () => console.log('Scroll handled'),
+      error: (err) => console.error('Scroll error:', err),
+    });
   }
 
   // Protected Stream Handlers
@@ -299,10 +302,10 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
 
     const currentFilter = this.filterRequest();
     if (currentFilter.hasNextPage && !this.isLoading()) {
+      
       const updatedFilter = { ...currentFilter, page: currentFilter.page + 1 };
       return this.fetchData(updatedFilter, true);
     }
-
     return EMPTY;
   }
 
