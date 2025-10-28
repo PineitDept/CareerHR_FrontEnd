@@ -201,7 +201,7 @@ export class AllApplicationComponent extends BaseApplicationComponent {
       pageSize: 30,
       status: ALL_APPLICATION_CONFIG.DEFAULT_STATUS,
       isScreening: false,
-      month: String(d.getMonth() + 1),
+      // month: String(d.getMonth() + 1),
       year: String(d.getFullYear()),
     };
   }

@@ -745,8 +745,8 @@ export class ApplicationFormDetailsComponent {
     const score = label === 'Very Good' ? 1 : label === 'Good' ? 0.5 : label === 'Fair' ? 0.25 : 0;
 
     const klass =
-      label === 'Very Good' ? ['tw-bg-green-50','tw-ring-green-300','tw-text-green-700'] :
-      label === 'Good'      ? ['tw-bg-green-100','tw-ring-green-300','tw-text-green-700'] :
+      label === 'Very Good' ? ['tw-bg-[#00aa0024]','tw-ring-[#68e817]','tw-text-[#007a00]'] :
+      label === 'Good'      ? ['tw-bg-green-50','tw-ring-green-300','tw-text-green-700'] :
       label === 'Fair'      ? ['tw-bg-amber-100','tw-ring-amber-300','tw-text-amber-700'] :
                               ['tw-bg-gray-100','tw-ring-gray-300','tw-text-gray-700'];
 

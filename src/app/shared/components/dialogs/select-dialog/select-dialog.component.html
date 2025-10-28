@@ -55,7 +55,7 @@
                     </div>
                     
                     <!-- Single Select Dropdown -->
-                    <app-cdk-dropdown *ngSwitchCase="'single'" [label]="config.label" [options]="config.options" 
+                    <app-cdk-dropdown *ngSwitchCase="'single'" [searchable]="searchSelect" [label]="config.label" [options]="config.options" 
                         (valueChange)="onSingleSelectChange($event, config.label, config.options)" [value]="config.defaultValue ? config.defaultValue : ''">
                     </app-cdk-dropdown>
 
