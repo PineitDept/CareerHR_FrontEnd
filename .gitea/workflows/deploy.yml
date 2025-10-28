@@ -1,25 +1,28 @@
-name: Auto Deploy Career Web
+name: Deploy to Production Server
+
 on:
   push:
-    branches: ["main"]
+    branches: ["develop"]
   workflow_dispatch:
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    
     steps:
-      - name: Deploy to Production Server
+      - name: Deploy to Develop Server
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          password: ${{ secrets.DEPLOY_PASSWORD }}
+          host: ${{ secrets.DEPLOY_HOST_PIM }}
+          username: ${{ secrets.DEPLOY_USER_PIM }}
+          password: ${{ secrets.DEPLOY_PASSWORD_PIM }}
           port: 22
-          envs: SUDO_PASS
           script: |
-            echo "Starting deployment Career Web..."
+            # Navigate to project directory
+            echo "Starting deployment..."
             export SUDO_PASS="${{ secrets.DEPLOY_PASSWORD }}"
-            cd /home/careerWeb/careerWeb
-            echo "$SUDO_PASS" | sudo -S git pull origin main
-            echo "$SUDO_PASS" | sudo -S docker compose up -d --build
-            echo "$SUDO_PASS" | sudo -S docker image prune -f
-            echo "Deployment completed!"
+            cd /home/FrontEnd
+            echo "$SUDO_PASS" | sudo -S git pull origin develop
+            echo "$SUDO_PASS" | sudo -S docker compose down --remove-orphans
+            echo "$SUDO_PASS" | sudo -S docker compose -f docker-compose.yml up -d --build
+            echo "$SUDO_PASS" | sudo -S docker ps --filter "name=api-career"
