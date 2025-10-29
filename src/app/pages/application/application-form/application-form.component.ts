@@ -578,7 +578,7 @@ export class ApplicationFormComponent {
       },
       details: {
         label: !noRecommend ? recommend : 'Recommend for Decline',
-        class: passRatio >= 0.5
+        class: passRatio >= 0.5 && !noRecommend
           ? ['tw-bg-green-50','tw-ring-green-300','tw-text-green-700']
           : ['tw-bg-red-50','tw-ring-red-300','tw-text-red-700'],
       },

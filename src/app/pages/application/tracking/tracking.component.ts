@@ -522,8 +522,6 @@ export class TrackingComponent
       year: filter.year === '2001' ? undefined : filter.year ,
     };
 
-    console.log(trackingFilter)
-
     return this.applicationService.getTrackingApplications(trackingFilter).pipe(
       tap((response: any) => {
         this.handleApiResponse(response, append);
@@ -636,6 +634,7 @@ export class TrackingComponent
       : undefined;
 
     this.trackingFilterRequest.set(updatedTrackingFilter);
+    console.log(updatedTrackingFilter, '=>updatedTrackingFilter')
     this.resetPagination();
     // this.fetchData(this.filterRequest(), false).subscribe();
     this.fetchData(this.trackingFilterRequest(), false).subscribe();

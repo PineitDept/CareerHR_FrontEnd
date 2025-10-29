@@ -47,7 +47,7 @@ export class KeepAliveRouteStrategy implements RouteReuseStrategy {
     const now = Date.now();
     for (const [key, entry] of this.cache) {
       if (entry.expiresAt <= now) {
-        console.log(`[reuse] expired: ${key}`);
+        // console.log(`[reuse] expired: ${key}`);
         this.cache.delete(key);
       }
     }
@@ -55,7 +55,7 @@ export class KeepAliveRouteStrategy implements RouteReuseStrategy {
 
   shouldDetach(route: ActivatedRouteSnapshot): boolean {
     const ok = !!route.routeConfig && this.isKeepAlive(route);
-    console.log('[reuse] shouldDetach', route.routeConfig?.path, ok);
+    // console.log('[reuse] shouldDetach', route.routeConfig?.path, ok);
     return ok;
   }
 
@@ -65,7 +65,7 @@ export class KeepAliveRouteStrategy implements RouteReuseStrategy {
     const ttl = this.getTTL(route);
     const expiresAt = Date.now() + ttl;
     this.cache.set(key, { handle, expiresAt });
-    console.log('[reuse] store', key, 'expires in', ttl / 1000 / 60, 'minutes');
+    // console.log('[reuse] store', key, 'expires in', ttl / 1000 / 60, 'minutes');
   }
 
   shouldAttach(route: ActivatedRouteSnapshot): boolean {
@@ -73,7 +73,7 @@ export class KeepAliveRouteStrategy implements RouteReuseStrategy {
     const key = this.getConfigPathKey(route);
     const entry = this.cache.get(key);
     const ok = !!entry && entry.expiresAt > Date.now();
-    console.log('[reuse] shouldAttach', key, ok);
+    // console.log('[reuse] shouldAttach', key, ok);
     return ok;
   }
 
@@ -82,7 +82,7 @@ export class KeepAliveRouteStrategy implements RouteReuseStrategy {
     const key = this.getConfigPathKey(route);
     const entry = this.cache.get(key);
     if (!entry) return null;
-    console.log('[reuse] retrieve', key, !!entry);
+    // console.log('[reuse] retrieve', key, !!entry);
     return entry.handle;
   }
 
