@@ -8,13 +8,15 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { SharedModule } from '../../shared/shared.module';
 import { A11yModule } from '@angular/cdk/a11y';
 import { OfferEmploymentHistoryComponent } from './pages/offer-employment-history/offer-employment-history.component';
+import { OfferEmploymentListComponent } from './pages/offer-employment-list/offer-employment-list.component';
 
 
 @NgModule({
   declarations: [
     OfferResultComponent,
     HireResultComponent,
-    OfferEmploymentHistoryComponent
+    OfferEmploymentHistoryComponent,
+    OfferEmploymentListComponent
   ],
   imports: [
     CommonModule,

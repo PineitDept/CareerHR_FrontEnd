@@ -15,38 +15,47 @@ const routes: Routes = [
       {
         path: 'all-applications',
         component: AllApplicationComponent,
+        data: { keepAlive: true }
       },
       {
         path: 'all-applications/application-form',
         component: ApplicationFormComponent,
+        data: { keepAlive: true }
       },
       {
         path: 'all-applications/application-form/details',
-        component: ApplicationFormDetailsComponent
+        component: ApplicationFormDetailsComponent,
+        data: { keepAlive: true }
       },
       {
         path: 'screening',
-       component: ScreeningComponent,
+        component: ScreeningComponent,
+        data: { keepAlive: true }
       },
       {
         path: 'screening/application-form',
-        component: ApplicationFormComponent
+        component: ApplicationFormComponent,
+        data: { keepAlive: true }
       },
       {
         path: 'screening/application-form/details',
-        component: ApplicationFormDetailsComponent
+        component: ApplicationFormDetailsComponent,
+        data: { keepAlive: true }
       },
       {
         path: 'tracking',
-         component: TrackingComponent,
+        component: TrackingComponent,
+        data: { keepAlive: true }
       },
       {
         path: 'tracking/application-form',
-        component: ApplicationFormComponent
+        component: ApplicationFormComponent,
+        data: { keepAlive: true }
       },
       {
         path: 'tracking/application-form/details',
-        component: ApplicationFormDetailsComponent
+        component: ApplicationFormDetailsComponent,
+        data: { keepAlive: true }
       },
     ]
   }

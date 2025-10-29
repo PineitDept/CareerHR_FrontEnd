@@ -518,8 +518,11 @@ export class TrackingComponent
     const trackingFilter: ICandidateTrackingFilterRequest = {
       ...filter,
       ...this.trackingFilterRequest(),
+      page: filter.page++,
       year: filter.year === '2001' ? undefined : filter.year ,
     };
+
+    console.log(trackingFilter)
 
     return this.applicationService.getTrackingApplications(trackingFilter).pipe(
       tap((response: any) => {
@@ -592,6 +595,9 @@ export class TrackingComponent
     const updatedTrackingFilter: ICandidateTrackingFilterRequest = {
       ...currentTrackingFilter,
       page: 1,
+      month: this.filterRequest().month ? this.filterRequest().month : undefined,
+      year: this.filterRequest().year ? this.filterRequest().year : undefined,
+      hasNextPage:  this.filterRequest().hasNextPage ? this.filterRequest().hasNextPage : undefined
     };
     // Handle status (screened)
     const screenedValues = filters['screened'];
@@ -631,7 +637,8 @@ export class TrackingComponent
 
     this.trackingFilterRequest.set(updatedTrackingFilter);
     this.resetPagination();
-    this.fetchData(this.filterRequest(), false).subscribe();
+    // this.fetchData(this.filterRequest(), false).subscribe();
+    this.fetchData(this.trackingFilterRequest(), false).subscribe();
   }
 
   // Private methods

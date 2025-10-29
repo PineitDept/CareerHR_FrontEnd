@@ -5,6 +5,7 @@ import { HireResultComponent } from './pages/hire-result/hire-result.component';
 import { OfferResultComponent } from './pages/offer-result/offer-result.component';
 import { PendingDraftsGuard } from '../../guards/pending-draft.guard';
 import { OfferEmploymentHistoryComponent } from './pages/offer-employment-history/offer-employment-history.component';
+import { OfferEmploymentListComponent } from './pages/offer-employment-list/offer-employment-list.component';
 
 const routes: Routes = [
   {
@@ -12,18 +13,26 @@ const routes: Routes = [
     component: OfferEmploymentComponent,
     children: [
       {
+        path: '',
+        component: OfferEmploymentListComponent,
+        data: { keepAlive: true }
+      },
+      {
         path: 'hire-result',
         component: HireResultComponent,
+        data: { keepAlive: true }
         // canDeactivate: [PendingDraftsGuard]
       },
       {
         path: 'offer-result',
         component: OfferResultComponent,
+        data: { keepAlive: true }
         // canDeactivate: [PendingDraftsGuard]
       },
       {
         path: 'history',
         component: OfferEmploymentHistoryComponent,
+        data: { keepAlive: true }
       },
     ]
   }
