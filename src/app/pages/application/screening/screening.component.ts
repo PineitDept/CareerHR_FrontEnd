@@ -222,7 +222,7 @@ export class ScreeningComponent extends BaseApplicationComponent {
     return {
       page: 1,
       pageSize: 30,
-      month: String(d.getMonth() + 1),
+      // month: String(d.getMonth() + 1),
       year: String(d.getFullYear()),
     };
   }

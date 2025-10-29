@@ -80,6 +80,7 @@ export class IndexComponent {
   hasOverflowY = false;
   rows: any[] = [];
   ColumnClicked: any;
+  countApplicant = false
 
   totalItems: number | undefined
   interview1: number | undefined
@@ -162,6 +163,7 @@ export class IndexComponent {
     this.appointmentsService.setAppointmentsType(3);
     // this.loadInitialStagePending(true);
     this.onTabChange('pending')
+    this.fetchStageLastYear(true);
   }
 
   fetchTeamID() {
@@ -211,7 +213,6 @@ export class IndexComponent {
     this.currentFilterParams.page = 1;
 
     this.fetchStagePending(updateTabCounts);
-    this.fetchStageLastYear(true);
   }
 
   fetchStagePending(updateTabCounts = false, autoSubscribe = true): Observable<any> {
@@ -237,15 +238,15 @@ export class IndexComponent {
           gradeCandidate: item.gradeCandidate,
         }));
 
-        this.totalItems = res.groupCounts?.received ?? 0;
-        this.interview1 = res.groupCounts?.accept1 ?? 0;
-        this.interview2 = res.groupCounts?.accept2 ?? 0;
-        this.hired = res.groupCounts?.onboarded ?? 0;
+        // this.totalItems = res.groupCounts?.received ?? 0;
+        // this.interview1 = res.groupCounts?.accept1 ?? 0;
+        // this.interview2 = res.groupCounts?.accept2 ?? 0;
+        // this.hired = res.groupCounts?.onboarded ?? 0;
 
         if (updateTabCounts && res.groupCounts) {
           this.updateTabCountsFromGroup(res.groupCounts);
         }
-        
+
       }),
       catchError((err) => {
         console.error('Error fetching appointments:', err);
@@ -382,7 +383,7 @@ export class IndexComponent {
 
       return { ...tab, count };
     });
-    
+
     this.tabMenus.set(newTabs);
   }
 

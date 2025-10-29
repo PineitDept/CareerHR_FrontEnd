@@ -18,6 +18,8 @@ import { SharedModule } from './shared/shared.module';
 import { ApplicationComponent } from './pages/application/application.component';
 import { InterviewSchedulingComponent } from './pages/interview-scheduling/interview-scheduling.component';
 import { OfferEmploymentComponent } from './pages/offer-employment/offer-employment.component';
+import { RouteReuseStrategy } from '@angular/router';
+import { KeepAliveRouteStrategy } from './shared/strategies/keep-alive-route.strategy';
 
 export function quillInitFactory() {
   return () =>
@@ -56,6 +58,7 @@ export function quillInitFactory() {
       withInterceptors([ApiInterceptorFn])
     ),
     { provide: APP_INITIALIZER, useFactory: quillInitFactory, multi: true },
+    { provide: RouteReuseStrategy, useClass: KeepAliveRouteStrategy },
   ],
   bootstrap: [AppComponent]
 })

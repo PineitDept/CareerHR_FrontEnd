@@ -5,7 +5,7 @@
 </div>
 <app-loading></app-loading>
 
-<app-filter [showAllYearOption]="true" [defaultLastMonth]="true" [filterDate]="true" [filterDateRange]="filterDateRange" (dateRangeSelected)="onDateRangeSelected($event)"
+<app-filter [showAllYearOption]="true" [filterDate]="true" [filterDateRange]="filterDateRange" (dateRangeSelected)="onDateRangeSelected($event)"
     [actionButtons]="filterButtons" (buttonClicked)="onFilterButtonClick($event)"></app-filter>
 
 <app-tab-menus [tabs]="tabMenus" (tabChanged)="onTabChange($event)" [activeTab]="activeTab"></app-tab-menus>

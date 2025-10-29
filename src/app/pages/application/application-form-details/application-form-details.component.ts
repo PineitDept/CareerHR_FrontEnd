@@ -540,7 +540,7 @@ export class ApplicationFormDetailsComponent {
 
           this.hasScreenedPending = String(it?.screened?.status || '').trim().toLowerCase() === 'pending';
           if (this.hasScreenedPending) {
-            this.screeningCardBg = '#000000';
+            this.screeningCardBg = '#FFAA00';
             this.screening.status = 'Pending';
           }
 
@@ -745,8 +745,8 @@ export class ApplicationFormDetailsComponent {
     const score = label === 'Very Good' ? 1 : label === 'Good' ? 0.5 : label === 'Fair' ? 0.25 : 0;
 
     const klass =
-      label === 'Very Good' ? ['tw-bg-green-50','tw-ring-green-300','tw-text-green-700'] :
-      label === 'Good'      ? ['tw-bg-green-100','tw-ring-green-300','tw-text-green-700'] :
+      label === 'Very Good' ? ['tw-bg-[#00be003b]','tw-ring-[#48bb00]','tw-text-[#124e12]'] :
+      label === 'Good'      ? ['tw-bg-green-50','tw-ring-green-300','tw-text-green-700'] :
       label === 'Fair'      ? ['tw-bg-amber-100','tw-ring-amber-300','tw-text-amber-700'] :
                               ['tw-bg-gray-100','tw-ring-gray-300','tw-text-gray-700'];
 

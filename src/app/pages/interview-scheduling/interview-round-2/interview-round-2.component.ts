@@ -791,6 +791,7 @@ export class InterviewRound2Component {
           label: 'Position',
           placeholder: 'Select Position',
           options: filteredJobPositionList,
+          searchSelect: true
         },
         {
           type: 'multi',
@@ -805,6 +806,7 @@ export class InterviewRound2Component {
 
       const dialogRef = this.dialog.open(SelectDialogComponent, {
         width: '480px',
+        autoFocus: false,
         data: {
           title: 'Job Position',
           quality: 0,
@@ -1233,7 +1235,7 @@ export class InterviewRound2Component {
     if (statusCall !== 'complete') return;
     if (!item.interview.locationId || !item.interview.teamId || !item.interview.date) return;
 
-    this.appointmentsService.getEmailTemplate(item.profile.appointmentId, 1).subscribe({
+    this.appointmentsService.getEmailTemplate(item.profile.appointmentId, 6).subscribe({
       next: (res) => {
         const container = document.querySelector('.cdk-overlay-container');
         container?.classList.add('dimmed-overlay');
