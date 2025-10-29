@@ -450,7 +450,7 @@ export class TrackingComponent
     return {
       page: 1,
       pageSize: 30,
-      month: String(d.getMonth() + 1),
+      // month: String(d.getMonth() + 1),
       year: String(d.getFullYear()),
     };
   }
@@ -518,6 +518,7 @@ export class TrackingComponent
     const trackingFilter: ICandidateTrackingFilterRequest = {
       ...filter,
       ...this.trackingFilterRequest(),
+      page: filter.page++,
       year: filter.year === '2001' ? undefined : filter.year ,
     };
 
@@ -592,6 +593,9 @@ export class TrackingComponent
     const updatedTrackingFilter: ICandidateTrackingFilterRequest = {
       ...currentTrackingFilter,
       page: 1,
+      month: this.filterRequest().month ? this.filterRequest().month : undefined,
+      year: this.filterRequest().year ? this.filterRequest().year : undefined,
+      hasNextPage:  this.filterRequest().hasNextPage ? this.filterRequest().hasNextPage : undefined
     };
     // Handle status (screened)
     const screenedValues = filters['screened'];
@@ -630,8 +634,10 @@ export class TrackingComponent
       : undefined;
 
     this.trackingFilterRequest.set(updatedTrackingFilter);
+    console.log(updatedTrackingFilter, '=>updatedTrackingFilter')
     this.resetPagination();
-    this.fetchData(this.filterRequest(), false).subscribe();
+    // this.fetchData(this.filterRequest(), false).subscribe();
+    this.fetchData(this.trackingFilterRequest(), false).subscribe();
   }
 
   // Private methods

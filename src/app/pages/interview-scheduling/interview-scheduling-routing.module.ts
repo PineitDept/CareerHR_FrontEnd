@@ -20,39 +20,48 @@ const routes: Routes = [
       {
         path: 'appointment-calendar',
         component: AppointmentCalendarComponent,
+        data: { keepAlive: true }
       },
       {
         path: 'interview-round-1',
         component: InterviewRound1Component,
+        data: { keepAlive: true }
       },
       {
         path: 'interview-round-1/history',
-        component: InterviewRound1HistoryComponent
+        component: InterviewRound1HistoryComponent,
+        data: { keepAlive: true }
       },
       {
         path: 'interview-round-2',
         component: InterviewRound2Component,
+        data: { keepAlive: true }
       },
       {
         path: 'interview-round-2/history',
-        component: InterviewRound2HistoryComponent
+        component: InterviewRound2HistoryComponent,
+        data: { keepAlive: true }
       },
       {
         path: 'interview-form',
         component: InterviewFormComponent,
+        data: { keepAlive: true }
       },
       {
         path: 'interview-form/result',
         component: InterviewFormDetailsComponent,
+        data: { keepAlive: true }
       },
       {
         path: 'interview-form/review',
         component: InterviewReviewComponent,
-        canDeactivate: [PendingDraftsGuard]
+        canDeactivate: [PendingDraftsGuard],
+        data: { keepAlive: true }
       },
       {
         path: 'interview-form/details',
         component: InterviewDetailsComponent,
+        data: { keepAlive: true }
       },
     ]
   }

@@ -784,6 +784,7 @@ export class InterviewRound1HistoryComponent {
           label: 'Position',
           placeholder: 'Select Position',
           options: filteredJobPositionList,
+          searchSelect: true
         },
         {
           type: 'multi',
@@ -798,6 +799,7 @@ export class InterviewRound1HistoryComponent {
 
       const dialogRef = this.dialog.open(SelectDialogComponent, {
         width: '480px',
+        autoFocus: false,
         data: {
           title: 'Job Position',
           quality: 0,

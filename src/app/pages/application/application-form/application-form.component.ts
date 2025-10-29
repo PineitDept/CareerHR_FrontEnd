@@ -436,7 +436,7 @@ export class ApplicationFormComponent {
 
     // ถ้า Pending → เข้าสู่โหมดแก้ไขทันที (Confirm/Cancel)
     if (this.hasScreenedPending) {
-      this.screeningCardBg = '#000000';
+      this.screeningCardBg = '#FFAA00';
       this.screening.status = 'Pending';
       this.screening.screenedBy = this.sessionUserName || '—';
       this.screening.screeningDate = this.today;
@@ -552,6 +552,14 @@ export class ApplicationFormComponent {
       } as AssessmentItem);
     });
 
+    const noRecommend = list.some(
+      (it: { columnName: string; columnValue: string; }) =>
+        (it.columnName === 'EQScore' && it.columnValue === '0') ||
+        (it.columnName === 'EthicsScore' && it.columnValue === '0')
+    );
+
+    console.log(noRecommend);
+
     const maxScore = rows.length;
     const sumScore = rows.reduce((acc, r) => acc + (Number(r.score) || 0), 0);
     const passRatio = maxScore > 0 ? sumScore / maxScore : 0;
@@ -569,8 +577,8 @@ export class ApplicationFormComponent {
         size: 18,
       },
       details: {
-        label: recommend,
-        class: passRatio >= 0.5
+        label: !noRecommend ? recommend : 'Recommend for Decline',
+        class: passRatio >= 0.5 && !noRecommend
           ? ['tw-bg-green-50','tw-ring-green-300','tw-text-green-700']
           : ['tw-bg-red-50','tw-ring-red-300','tw-text-red-700'],
       },
@@ -817,9 +825,9 @@ export class ApplicationFormComponent {
             const screenedSection = this.findScreeningSection();
             if (screenedSection) {
               // ถ้ายังไม่เคยเลือก category ให้เลือกตัวแรกจากรายการ categories ของการ์ดนั้น
-              if (!screenedSection.selectedCategoryId && (screenedSection.categories?.length)) {
-                screenedSection.selectedCategoryId = screenedSection.categories[0].categoryId;
-              }
+              // if (!screenedSection.selectedCategoryId && (screenedSection.categories?.length)) {
+              //   screenedSection.selectedCategoryId = screenedSection.categories[0].categoryId;
+              // }
               // โหลด reasons ของ category ที่ตั้งไว้ (กรองเฉพาะที่ active และไม่ถูกลบ)
               screenedSection.reasons = this.buildReasonsFor(screenedSection.stageId, screenedSection.selectedCategoryId);
 

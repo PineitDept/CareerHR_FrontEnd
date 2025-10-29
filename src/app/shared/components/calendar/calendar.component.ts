@@ -134,37 +134,42 @@ export class CalendarComponent implements AfterViewInit {
 
   getEventType(event: AppointmentEvent): { type: string, title: string } {
     const teamPart = event.teamName ? `(${event.teamName}) ` : '';
-    let title = `${teamPart}${event.time} ${event.userName}`;
+    let title = `${teamPart}${event.time ?? ''} ${event.userName ?? ''}`;
 
-    switch (Number(event.interview)) {
+    const status = event.status ?? '';
+    const interview = Number(event.interview);
+
+    switch (interview) {
       case 1:
-        if (event.status === "No Show") {
+        if (status === 'No Show') {
           return { type: 'event-interview1 strikethrough-dashed', title };
-        } else if (event.status.includes('Decline')) {
+        } else if (status?.includes('Decline')) {
           return { type: 'event-interview1 event-decline', title };
         } else {
           return { type: 'event-interview1', title };
         }
+
       case 2:
-        if (event.status === "No Show") {
+        if (status === 'No Show') {
           return { type: 'event-interview2 strikethrough-dashed', title };
-        } else if (event.status.includes('Decline')) {
+        } else if (status?.includes('Decline')) {
           return { type: 'event-interview2 event-decline', title };
         } else {
           return { type: 'event-interview2', title };
         }
-      case 3:
-        if (event.status === "No Show") {
-          return { type: 'event-onboard strikethrough-dashed', title: event.userName };
-        } else if (event.status.includes('Decline')) {
-          return { type: 'event-onboard event-decline', title: event.userName };
-        } else {
-          return { type: 'event-onboard', title: event.userName };
-        }
-        break;
-    }
 
-    return { type: '', title };
+      case 3:
+        if (status === 'No Show') {
+          return { type: 'event-onboard strikethrough-dashed', title: event.userName ?? '' };
+        } else if (status?.includes('Decline')) {
+          return { type: 'event-onboard event-decline', title: event.userName ?? '' };
+        } else {
+          return { type: 'event-onboard', title: event.userName ?? '' };
+        }
+
+      default:
+        return { type: '', title };
+    }
   }
 
 

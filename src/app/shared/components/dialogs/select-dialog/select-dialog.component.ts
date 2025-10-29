@@ -23,6 +23,7 @@ export class SelectDialogComponent {
   callMissed = false;
   statusValue: string | number | undefined;
   missCallCount = 0;
+  searchSelect = false;
   lenOptions = 0;
   isNoShow: boolean = false;
 
@@ -62,6 +63,10 @@ export class SelectDialogComponent {
 
       if (config.label === 'History') {
         this.lenOptions = config.options.length
+      }
+
+      if (config.searchSelect) {
+        this.searchSelect = config.searchSelect;
       }
     });
   }

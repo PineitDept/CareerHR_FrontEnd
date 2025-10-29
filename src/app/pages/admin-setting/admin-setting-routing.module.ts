@@ -104,7 +104,8 @@ const routes: Routes = [
       },
       {
         path: 'data-setting/application/university',
-        component: UniversityComponent
+        component: UniversityComponent,
+        data: { keepAlive: true }
       },
       {
         path: 'data-setting/application/email/email-template',

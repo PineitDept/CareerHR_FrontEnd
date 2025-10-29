@@ -1,7 +1,8 @@
 import {
   Component, Input, Output, EventEmitter, ChangeDetectionStrategy, ChangeDetectorRef,
   ViewChild, TemplateRef, ViewContainerRef, forwardRef,
-  HostListener
+  HostListener,
+  ElementRef
 } from '@angular/core';
 import { Overlay, OverlayRef, FlexibleConnectedPositionStrategy, ConnectedPosition, ScrollStrategyOptions } from '@angular/cdk/overlay';
 import { TemplatePortal } from '@angular/cdk/portal';
@@ -22,7 +23,7 @@ type Opt = string | { label: string; value: any };
   }],
 })
 export class CdkDropdownComponent implements ControlValueAccessor {
-  @Input() value: any;  
+  @Input() value: any;
   @Input() options: Opt[] = [];
   @Input() placeholder = 'Select';
   @Input() panelMaxHeight = 240;
@@ -32,9 +33,15 @@ export class CdkDropdownComponent implements ControlValueAccessor {
   // value: any = null;
   @Input() disabledSelected = false;
 
+  @Input() searchable = false;
+  @Input() searchPlaceholder = 'Select';
+  @Input() noMatchText = 'No results';
+  searchTerm = '';
+
   @Output() valueChange = new EventEmitter<any>();
 
   @ViewChild('panel', { static: true }) panelTpl!: TemplateRef<any>;
+  @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;
 
   isOpen = false;
   activeIndex = -1;
@@ -104,6 +111,13 @@ export class CdkDropdownComponent implements ControlValueAccessor {
     return (this.options ?? []).map(o => typeof o === 'string' ? { label: o, value: o } : o);
   }
 
+  get filteredItems() {
+    if (!this.searchable) return this.items;
+    const t = (this.searchTerm || '').trim().toLowerCase();
+    if (!t) return this.items;
+    return this.items.filter(i => String(i.label).toLowerCase().includes(t));
+  }
+
   get display(): string {
     const f = this.items.find(i => this.isEqual(i.value, this.value));
     return f ? String(f.label) : this.placeholder;
@@ -141,13 +155,23 @@ export class CdkDropdownComponent implements ControlValueAccessor {
     this.ro = new ResizeObserver(sync);
     this.ro.observe(triggerEl);
 
-    this.activeIndex = Math.max(0, this.items.findIndex(i => this.isEqual(i.value, this.value)));
+    if (this.searchable) {
+      // this.searchTerm = this.display;
+      setTimeout(() => {
+        const el = this.searchInput?.nativeElement;
+        if (el) {
+          el.focus();
+        }
+      }, 0);
+    }
+
+    setTimeout(() => this.searchInput?.nativeElement?.focus(), 0);
+
+    const idx = this.filteredItems.findIndex(i => this.isEqual(i.value, this.value));
+    this.activeIndex = Math.max(0, idx);
     this.isOpen = true;
-
-    // ✅ เก็บ element references สำหรับตรวจ outside click
     this._triggerEl = triggerEl;
-    this._overlayEl = this.overlayRef.overlayElement;
-
+    this._overlayEl = this.overlayRef!.overlayElement;
     this.cdr.markForCheck();
   }
 
@@ -167,13 +191,12 @@ export class CdkDropdownComponent implements ControlValueAccessor {
   }
 
   selectAt(idx: number) {
-    const it = this.items[idx];
+    const it = this.filteredItems[idx];
     if (!it) return;
-
     this.value = it.value;
+    this.searchTerm = it.label;
     this.onChange(this.value);
     this.valueChange.emit(this.value);
-
     this.close();
   }
 
@@ -192,7 +215,7 @@ export class CdkDropdownComponent implements ControlValueAccessor {
 
   onPanelKeydown(e: KeyboardEvent) {
     if (!this.isOpen) return;
-    const max = this.items.length - 1;
+    const max = this.filteredItems.length - 1;
 
     if (e.key === 'Escape') { this.close(); return; }
     if (e.key === 'Enter') { this.selectAt(this.activeIndex); return; }
@@ -208,8 +231,49 @@ export class CdkDropdownComponent implements ControlValueAccessor {
     }
   }
 
+  onSearchInput(ev: Event) {
+    this.searchTerm = (ev.target as HTMLInputElement).value || '';
+    const len = this.filteredItems.length;
+    if (len === 0) this.activeIndex = -1;
+    else if (this.activeIndex < 0 || this.activeIndex >= len) this.activeIndex = 0;
+    this.cdr.markForCheck();
+  }
+
+  // เรียกเมื่อคลิกที่ input
+  onInputClick(triggerEl: HTMLElement) {
+    // if (!this.isOpen && !this.disabledSelected) {
+    //   this.open(triggerEl);
+    // }
+
+    if (this.disabledSelected) return;
+    this.searchTerm = '';
+    if (!this.isOpen) this.open(triggerEl);
+  }
+
+  // เรียกเมื่อ input ได้โฟกัส (เช่น tab เข้ามา)
+  // onInputFocus(triggerEl: HTMLElement) {
+  //   if (!this.isOpen && !this.disabledSelected) {
+  //     this.open(triggerEl);
+  //   }
+  // }
+
+  onInputFocus() {
+    // ให้เป็นว่างเสมอ เพื่อให้ placeholder แสดง และไม่กาง
+    this.searchTerm = '';
+    this.cdr.markForCheck();
+  }
+
+  // กดคีย์บน input: เปิดด้วย ArrowDown/Enter
+  onInputKeydown(e: KeyboardEvent, triggerEl: HTMLElement) {
+    if (this.disabledSelected) return;
+    if (!this.isOpen && (e.key === 'ArrowDown' || e.key === 'Enter')) {
+      e.preventDefault();
+      this.open(triggerEl);
+    }
+  }
+
   private scrollActiveIntoView() {
-    const panel = document.querySelector('.cdk-dropdown-panel .dd-menu') as HTMLElement | null;
+    const panel = this._overlayEl?.querySelector('.dd-menu') as HTMLElement | null;
     const active = panel?.querySelector<HTMLElement>('[data-active="true"]');
     if (panel && active) {
       const aTop = active.offsetTop;
