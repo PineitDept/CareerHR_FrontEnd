@@ -734,10 +734,10 @@ export class InterviewDetailsComponent {
   private setActionButtons(mode: 'view' | 'edit') {
     if (mode === 'view') {
       this.filterButtons = [{ label: 'Edit', key: 'edit', color: '#000000' }];
-      this.disabledKeys = [];
+      // this.disabledKeys = [];
     } else {
       this.filterButtons = [{ label: 'Save', key: 'save', color: '#000055' }];
-      this.disabledKeys = this.canSave ? [] : ['save'];
+      // this.disabledKeys = this.canSave ? [] : ['save'];
     }
   }
 
@@ -1250,7 +1250,7 @@ export class InterviewDetailsComponent {
   }
 
   private enableSaveButton(): void {
-    this.disabledKeys = this.disabledKeys.filter(k => k !== 'save');
+    // this.disabledKeys = this.disabledKeys.filter(k => k !== 'save');
   }
 
   private applyEditingLocks(): void {
