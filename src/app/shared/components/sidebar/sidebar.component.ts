@@ -1,14 +1,15 @@
-import { Component, HostListener } from '@angular/core';
+import { Component, HostListener, inject } from '@angular/core';
 import { MenuItem } from '../../interfaces/menu/menu.interface';
 import { LoginService } from '../../../services/login/login.service';
 import { AuthService } from '../../services/auth/auth.service';
 import { MatDialog } from '@angular/material/dialog';
 import { AlertDialogComponent } from '../dialogs/alert-dialog/alert-dialog.component';
 import { NotificationService } from '../../services/notification/notification.service';
-import { NavigationEnd, Router } from '@angular/router';
+import { NavigationEnd, Router, RouteReuseStrategy } from '@angular/router';
 import { filter } from 'rxjs';
 import { SidebarService } from '../../services/sidebar/sidebar.service';
 import { BOTTOM_MENU, MAIN_MENU, SUB_MENUS } from '../../constants/sidebar/sidebar.constants';
+import { KeepAliveRouteStrategy } from '../../strategies/keep-alive-route.strategy';
 
 @Component({
   selector: 'app-sidebar',
@@ -38,8 +39,11 @@ export class SidebarComponent {
   bottomMenu = BOTTOM_MENU;
   subMenus = SUB_MENUS;
 
+  public router = inject(Router);
+  private reuse = inject(RouteReuseStrategy) as KeepAliveRouteStrategy;
+
   constructor(
-    public router: Router,
+    public routers: Router,
     private loginService: LoginService,
     private authService: AuthService,
     private dialog: MatDialog,
@@ -62,14 +66,14 @@ export class SidebarComponent {
   ngOnInit() {
     this.onResize();
 
-    if (this.router.url === '/index' || this.router.url.startsWith('/index?')) {
+    if (this.routers.url === '/index' || this.routers.url.startsWith('/index?')) {
       this.menuStack = [];
       this.selectedByDepth = [];
     } else {
-      this.syncFromUrl(this.router.url);
+      this.syncFromUrl(this.routers.url);
     }
 
-    this.router.events
+    this.routers.events
       .pipe(filter(e => e instanceof NavigationEnd))
       .subscribe((e: NavigationEnd) => this.syncFromUrl(e.urlAfterRedirects));
   }
@@ -144,7 +148,8 @@ export class SidebarComponent {
   navigateToSubPagePath(fullPath: string) {
     if (!fullPath) return;
     const segments = fullPath.split('/').filter(Boolean);
-    this.router.navigate(segments);
+    this.routers.navigate(segments);
+    this.reuse.clearAll();
   }
 
   // --------------------- helpers ---------------------
@@ -153,11 +158,11 @@ export class SidebarComponent {
   }
 
   isLeafActive(path?: string): boolean {
-    return !!path && this.router.url.startsWith('/' + path);
+    return !!path && this.routers.url.startsWith('/' + path);
   }
 
   isRouteActive(path?: string): boolean {
-    return !!path && this.router.url.startsWith('/' + path);
+    return !!path && this.routers.url.startsWith('/' + path);
   }
 
   isNodeActiveAtDepth(depth: number, label: string): boolean {

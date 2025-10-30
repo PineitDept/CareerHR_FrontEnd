@@ -342,6 +342,7 @@ export class InterviewRound1Component {
       month: this.applicantId ? undefined : this.monthData,
       year: this.applicantId ? undefined : this.yearData,
       page: this.currentFilterParams.page ?? 1,
+      positionId: this.selectedJobId ?? undefined,
       search: this.applicantId ? String(this.applicantId) : this.currentFilterParams.search,
     };
 
@@ -484,7 +485,22 @@ export class InterviewRound1Component {
     this.appointments = [];
     this.hasMoreData = true;
 
+    this.selectedJobId = null;
+
     this.loadInitialAppointments(true);
+  }
+
+  selectedJobId: number | null = null;
+  onJobSearch(jobId: number) {
+    this.selectedJobId = jobId;
+    
+    this.hasMoreData = true;
+    this.appointments = [];
+    this.currentFilterParams.page = 1;
+
+    if (this.selectedJobId !== null) {
+      this.fetchAppointments(true);
+    }
   }
 
   onTabChange(tabKey: string): void {

@@ -15,17 +15,14 @@ const routes: Routes = [
       {
         path: 'all-applications',
         component: AllApplicationComponent,
-        data: { keepAlive: true }
       },
       {
         path: 'all-applications/application-form',
         component: ApplicationFormComponent,
-        data: { keepAlive: true }
       },
       {
         path: 'all-applications/application-form/details',
         component: ApplicationFormDetailsComponent,
-        data: { keepAlive: true }
       },
       {
         path: 'screening',
