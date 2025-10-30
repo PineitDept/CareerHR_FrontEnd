@@ -1,5 +1,5 @@
 <div class="tw-sticky tw-top-0 tw-z-[30] tw-bg-white">
-    <app-header-content [headerName]="'Appointment Interview 2'" [headerType]="'search'" (search)="onSearch()"
+    <app-header-content [headerName]="'Appointment Interview 2'" [headerType]="'search'" (search)="onSearch()" [SearchJob]="true" [selectedJobId]="selectedJobId" (jobSearch)="onJobSearch($event)"
         (clearSearch)="onClearSearch()" [searchByOptions]="searchByOptions"
         [searchForm]="searchForm"></app-header-content>
 </div>

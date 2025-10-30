@@ -49,19 +49,16 @@ const routes: Routes = [
       },
       {
         path: 'interview-form/result',
-        component: InterviewFormDetailsComponent,
-        data: { keepAlive: true }
+        component: InterviewFormDetailsComponent
       },
       {
         path: 'interview-form/review',
         component: InterviewReviewComponent,
-        canDeactivate: [PendingDraftsGuard],
-        data: { keepAlive: true }
+        canDeactivate: [PendingDraftsGuard]
       },
       {
         path: 'interview-form/details',
-        component: InterviewDetailsComponent,
-        data: { keepAlive: true }
+        component: InterviewDetailsComponent
       },
     ]
   }

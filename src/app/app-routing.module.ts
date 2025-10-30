@@ -21,14 +21,14 @@ const routes: Routes = [
       {
         path: 'login',
         component: LoginComponent,
-        canActivate: [LoginGuard]
+        // canActivate: [LoginGuard]
       },
     ]
   },
   {
     path: '',
     component: MainLayoutComponent,
-    canActivate: [AuthGuard],
+    // canActivate: [AuthGuard],
     children: [
       {
         path: 'index',

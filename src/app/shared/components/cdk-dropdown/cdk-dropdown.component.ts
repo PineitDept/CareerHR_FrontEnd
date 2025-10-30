@@ -89,7 +89,7 @@ export class CdkDropdownComponent implements ControlValueAccessor {
 
   // ------------ CVA methods ------------
   writeValue(obj: any): void {
-    this.value = obj;
+    this.value = obj ?? null;
     this.cdr.markForCheck();
   }
 
@@ -190,6 +190,17 @@ export class CdkDropdownComponent implements ControlValueAccessor {
     this.cdr.markForCheck();
   }
 
+  @Input() allowClear = true;
+
+  clear(closePanel = false) {
+    this.value = null;
+    this.searchTerm = '';
+    this.onChange(this.value);
+    this.valueChange.emit(this.value);
+    if (closePanel) this.close();
+    this.cdr.markForCheck();
+  }
+
   selectAt(idx: number) {
     const it = this.filteredItems[idx];
     if (!it) return;
@@ -284,6 +295,8 @@ export class CdkDropdownComponent implements ControlValueAccessor {
   }
 
   isEqual(a: any, b: any) {
+    // ให้ null/undefined ถือว่าเท่ากัน (ยังไม่เลือก)
+    if (a == null && b == null) return true;
     return String(a) === String(b);
   }
 }
