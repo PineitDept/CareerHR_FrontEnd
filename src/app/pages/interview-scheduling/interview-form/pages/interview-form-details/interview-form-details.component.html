@@ -747,7 +747,7 @@
         </button>
 
         <button type="button" [ngClass]="!totalComments? HideWhenNotLatest():''"
-            class="tw-w-full tw-rounded-2xl tw-bg-[#5500FF] tw-text-white tw-px-6 tw-py-6 tw-text-left tw-shadow-[0_8px_16px_rgba(0,0,0,0.25)] tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-brightness-110 hover:tw-shadow-[0_12px_20px_rgba(0,0,0,0.35)] focus:tw-ring-2 focus:tw-ring-white/30"
+            class="tw-mb-6 tw-w-full tw-rounded-2xl tw-bg-[#5500FF] tw-text-white tw-px-6 tw-py-6 tw-text-left tw-shadow-[0_8px_16px_rgba(0,0,0,0.25)] tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-brightness-110 hover:tw-shadow-[0_12px_20px_rgba(0,0,0,0.35)] focus:tw-ring-2 focus:tw-ring-white/30"
             (click)="onCommentClick()">
             <div class="tw-flex tw-items-center tw-gap-6">
                 <app-icon name="comment-text" [size]="48" class="tw-opacity-90"></app-icon>
@@ -758,6 +758,19 @@
                     </div>
                     <div class="tw-text-[24px] tw-font-bold leading-none">
                         Comment
+                    </div>
+                </div>
+            </div>
+        </button>        
+
+        <button type="button" [ngClass]="ShowWhenOffer()"
+            class="tw-mb-6 tw-w-full tw-rounded-2xl tw-bg-[#f5c700] tw-text-white tw-px-6 tw-py-6 tw-text-left tw-shadow-[0_8px_16px_rgba(0,0,0,0.25)] tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-brightness-110 hover:tw-shadow-[0_12px_20px_rgba(0,0,0,0.35)] focus:tw-ring-2 focus:tw-ring-white/30"
+            (click)="onOfferEmploymentClick()">
+            <div class="tw-flex tw-items-center tw-gap-6">
+                <app-icon name="crown" [size]="48" class="tw-opacity-90"></app-icon>
+                <div class="tw-flex-1">
+                    <div class="tw-text-[24px] tw-font-bold leading-none">
+                        Offer Employment
                     </div>
                 </div>
             </div>
