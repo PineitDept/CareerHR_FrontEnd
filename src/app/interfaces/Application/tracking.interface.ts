@@ -17,6 +17,7 @@ export interface CandidateTracking {
   fullName: string;
   fullNameTH: string;
   gradeCandidate: string;
+  age: string;
   countLike?: number;
   submitDate?: string;
   email?: string;

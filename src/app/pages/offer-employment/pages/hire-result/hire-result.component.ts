@@ -25,6 +25,7 @@ interface Applicant {
   id: string;
   name: string;
   gpa: number;
+  age?: number;
   university: string;
   appliedDate: string | Date;
   email: string;
@@ -97,6 +98,7 @@ export class HireResultComponent {
     id: '',
     name: '',
     gpa: 0,
+    age: 0,
     university: '',
     appliedDate: '',
     email: '',
@@ -387,6 +389,7 @@ export class HireResultComponent {
       id: String(ct.userID ?? ''),
       name: ct.fullName || ct.fullNameTH || '—',
       gpa: Number(ct.gpa ?? 0),
+      age: Number(ct.age ?? 0),
       university: ct.university || '—',
       appliedDate: ct.submitDate || '',
       email: ct.email || '—',
