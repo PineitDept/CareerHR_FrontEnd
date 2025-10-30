@@ -43,14 +43,15 @@ export const SUB_MENUS: Partial<Record<string, MenuItem[]>> = {
             label: 'Data Setting',
             icon: 'sliders-horizontal-square',
             children: [
-                {
-                    label: 'Manpower',
-                    icon: 'user',
-                    children: [
-                        { label: 'Job Position', icon: 'target-user', path: 'admin-setting/data-setting/manpower/job-position' },
-                        // { label: 'Reason Request', icon: 'pen-to-square', path: 'admin-setting/data-setting/manpower/reason-request' },
-                    ]
-                },
+                // {
+                //     label: 'Manpower',
+                //     icon: 'user',
+                //     children: [
+                //         { label: 'Job Position', icon: 'target-user', path: 'admin-setting/data-setting/manpower/job-position' },
+                //         // { label: 'Reason Request', icon: 'pen-to-square', path: 'admin-setting/data-setting/manpower/reason-request' },
+                //     ]
+                // },
+                { label: 'Job Position', icon: 'target-user', path: 'admin-setting/data-setting/manpower/job-position' },
                 {
                     label: 'Application',
                     icon: 'hand-taking-user',

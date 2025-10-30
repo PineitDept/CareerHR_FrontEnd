@@ -219,6 +219,8 @@ export class InterviewFormDetailsComponent {
   isLatestRound = true;
   interview1AppointmentId: string | undefined;
   interview2AppointmentId: string | undefined;
+  resultId1: number = 0;
+  resultId2: number = 0;
 
   // ====== Data Model (View) ======
   applicant: Applicant = {
@@ -632,6 +634,9 @@ export class InterviewFormDetailsComponent {
         (this as any)[appointmentIdKey] = appointmentIdValue;
 
         this.appointmentId = appointmentIdValue
+
+        this.resultId1 = res.interview1Result;
+        this.resultId2 = res.interview2Result;
       },
       error: (err) => {
         console.error(err);
@@ -846,6 +851,9 @@ export class InterviewFormDetailsComponent {
         (this as any)[appointmentIdKey] = appointmentIdValue;
 
         this.appointmentId = appointmentIdValue
+
+        this.resultId1 = res.interview1Result;
+        this.resultId2 = res.interview2Result;
       },
       error: (err) => {
         console.error(err);
@@ -1535,6 +1543,18 @@ export class InterviewFormDetailsComponent {
       interview: this.stageId,
     }
     this.router.navigate(['/interview-scheduling/interview-form/details'], { queryParams });
+  }
+
+  onOfferEmploymentClick() {
+    const queryParams = {
+      id: this.applicantId,
+    }
+    this.router.navigate(['/offer-employment'], { queryParams });
+  }
+
+  ShowWhenOffer() {
+    if (this.resultId1 === 21 && this.resultId2 === 21) return;
+    return 'tw-hidden';
   }
 
   onReviewClick(idEmployee?: number) {
