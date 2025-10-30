@@ -28,6 +28,7 @@ interface Applicant {
   id: string;
   name: string;
   gpa: number;
+  age?: number;
   university: string;
   appliedDate: string | Date;
   email: string;
@@ -175,6 +176,7 @@ export class ApplicationFormComponent {
     id: '',
     name: '',
     gpa: 0,
+    age: 0,
     university: '',
     appliedDate: '',
     email: '',
@@ -411,6 +413,7 @@ export class ApplicationFormComponent {
       id: String(ct.userID ?? ''),
       name: ct.fullName || ct.fullNameTH || '—',
       gpa: Number(ct.gpa ?? 0),
+      age: Number(ct.age ?? 0),
       university: ct.university || '—',
       appliedDate: ct.submitDate || '',
       email: ct.email || '—',
@@ -1070,14 +1073,15 @@ export class ApplicationFormComponent {
     if (key === 'interview-1' || key === 'interview-2') {
       const sub = String(item?.sub || '').toLowerCase();
       const isFinal = /(pass|passed|fail|failed)/.test(sub);
-      console.log()
-      if (sub === 'hold') {
+      const isPending = /(pendding|inprocess|scheduled)/.test(sub);
+      console.log(isPending)
+      if (!isPending && sub && !isFinal) {
         const interview = key === 'interview-1' ? 1 : 2;
         this.router.navigate(['/interview-scheduling/interview-round-'+interview+'/history'], { queryParams: { id: this.applicantId } });
-      } else if (!this.applicantId || !isFinal) {
+      } else if (isPending && sub) {
         const interview = key === 'interview-1' ? 1 : 2;
         this.router.navigate(['/interview-scheduling/interview-round-'+interview], { queryParams: { id: this.applicantId } });
-      } else if (this.applicantId || isFinal) {
+      } else if (this.applicantId && isFinal && sub) {
         const interview = key === 'interview-1' ? 1 : 2;
         this.router.navigate(['/interview-scheduling/interview-form/result'], { queryParams: { id: this.applicantId, interview, round: this.roundID } });
       }
