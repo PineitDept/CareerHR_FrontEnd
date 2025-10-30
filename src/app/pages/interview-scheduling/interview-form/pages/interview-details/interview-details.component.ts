@@ -348,7 +348,7 @@ export class InterviewDetailsComponent {
       { header: 'No', field: 'no', type: 'text', align: 'center', width: '56px', minWidth: '56px' },
       { header: 'Question', field: 'warning', type: 'text', minWidth: '220px', wrapText: true },
       { header: 'Interview 1', field: 'result1', type: 'dynamic', typeKey: 'result1Type', options: 'result1Options', minWidth: '160px' },
-      { header: 'Interview 2', field: 'result2', type: 'dynamic', typeKey: 'result2Type', options: 'result2Options', minWidth: '160px' },
+      // { header: 'Interview 2', field: 'result2', type: 'dynamic', typeKey: 'result2Type', options: 'result2Options', minWidth: '160px' },
     ];
   }
 

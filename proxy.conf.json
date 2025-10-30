@@ -1,6 +1,6 @@
 {
   "/api": {
-    "target": "http://pineapi.pinepacific.com",
+    "target": "http://203.170.248.105:8080",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"

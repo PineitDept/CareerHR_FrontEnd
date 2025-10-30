@@ -20,13 +20,11 @@ const routes: Routes = [
       {
         path: 'hire-result',
         component: HireResultComponent,
-        data: { keepAlive: true }
         // canDeactivate: [PendingDraftsGuard]
       },
       {
         path: 'offer-result',
         component: OfferResultComponent,
-        data: { keepAlive: true }
         // canDeactivate: [PendingDraftsGuard]
       },
       {

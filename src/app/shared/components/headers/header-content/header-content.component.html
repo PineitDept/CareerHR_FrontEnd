@@ -43,6 +43,9 @@
         </li>
       </ul>
     </div> -->
+                    
+    <!-- Single Select Dropdown -->
+    <app-cdk-dropdown *ngIf="SearchJob" class="tw-relative desktop:tw-w-[280px]" [searchable]="true" [options]="jobpositionList" placeholder="Search Job Position" (valueChange)="onJobChange($event)"></app-cdk-dropdown>
 
     <!-- Input: Search Value -->
     <div class="tw-relative desktop:tw-w-[200px]">
