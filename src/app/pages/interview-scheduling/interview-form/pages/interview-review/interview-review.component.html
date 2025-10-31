@@ -41,9 +41,21 @@
 
                 <div class="tw-text-[22px] tw-font-semibold">{{ applicant.name }}</div>
 
-                <div class="tw-text-[14px] tw-font-medium">
-                    {{ applicant.university }} {{ applicant.faculty }}
-                    {{ applicant.program }}
+                <div class="tw-text-[14px] tw-font-medium tw-text-gray-800 tw-flex tw-flex-wrap">
+                  <span *ngIf="applicant.graduation_year as y">{{ y }}</span>
+                  <span
+                    *ngIf="(applicant.graduation_year != null) && (applicant.university || applicant.faculty || applicant.program)"
+                    class="tw-mx-2 tw-text-gray-400"
+                    aria-hidden="true"
+                  >|</span>
+
+                  <span *ngIf="applicant.university as u">{{ u }}</span>
+                  <span *ngIf="applicant.faculty as f" class="tw-mx-2 tw-text-gray-400" aria-hidden="true">|</span>
+
+                  <span *ngIf="applicant.faculty">{{ applicant.faculty }}</span>
+                  <span *ngIf="applicant.program as p" class="tw-mx-2 tw-text-gray-400" aria-hidden="true">|</span>
+
+                  <span *ngIf="applicant.program">{{ applicant.program }}</span>
                 </div>
 
                 <div class="tw-text-[14px] !tw-mt-0">
@@ -62,13 +74,26 @@
 
                 <div class="tw-space-y-2 tw-py-2 !tw-mb-2">
                     <div class="tw-text-[14px]">
-                        <div class="tw-text-gray-500 tw-font-medium">Applied Position</div>
-                        <div class="tw-whitespace-pre-line">
-                            <ng-container *ngFor="let pos of applicant.positions; let i = index">
-                                {{ pos
-                                }}<ng-container *ngIf="i < (applicant.positions.length || 0) - 1"><br /></ng-container>
-                            </ng-container>
-                        </div>
+                      <div class="tw-flex tw-items-center tw-gap-2 tw-font-semibold tw-text-[#0A57C3]">
+                        <app-icon name="briefcase" [size]="20" class="tw-text-[#0A57C3]"></app-icon>
+                        <span>Applied Position</span>
+                      </div>
+
+                      <div class="tw-mt-2 tw-flex tw-flex-col tw-gap-2">
+                        <ng-container *ngIf="(applicant.positions?.length || 0) > 0; else noPositions">
+                          <span
+                            *ngFor="let pos of applicant.positions"
+                            class="tw-self-start tw-inline-flex tw-items-center tw-gap-1.5 tw-px-2.5 tw-py-1
+                                  tw-rounded-full tw-bg-[#E8F0FE] tw-text-[#0A57C3] tw-text-[13px] tw-font-medium
+                                  tw-ring-1 tw-ring-[#BFD3FF]">
+                            {{ pos }}
+                          </span>
+                        </ng-container>
+
+                        <ng-template #noPositions>
+                          <span class="tw-text-gray-500">—</span>
+                        </ng-template>
+                      </div>
                     </div>
 
                     <div class="tw-pt-2">
@@ -238,7 +263,7 @@
                                 </ng-container>
                             </div>
 
-                            
+
                             <div class="tw-flex tw-gap-3 tw-justify-end tw-pb-6" [ngClass]="HideWhenNotLatest()">
                                 <!-- ปุ่ม Edit: แสดงเมื่อยังไม่เข้าสู่โหมดแก้ -->
                                 <button *ngIf="allowEditButton" type="button" (click)="onEditReview()"

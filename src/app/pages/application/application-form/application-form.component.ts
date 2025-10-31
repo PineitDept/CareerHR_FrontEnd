@@ -39,6 +39,7 @@ interface Applicant {
   faculty?: string;
   program?: string;
   phone?: string;
+  graduation_year?: number;
 }
 
 interface AssessmentItem {
@@ -184,6 +185,10 @@ export class ApplicationFormComponent {
     grade: '',
     views: 0,
     avatarUrl: '',
+    faculty: '',
+    program: '',
+    phone: '',
+    graduation_year: 0,
   };
 
   steps: { label: string; date?: string; status: StepStatus; sub?: string }[] = [];
@@ -424,6 +429,7 @@ export class ApplicationFormComponent {
       faculty: ct.faculty,
       program: ct.major,
       phone: ct.phoneNumber,
+      graduation_year: ct.graduation_year,
     };
 
     this.applicationFormSubmittedDate = ct.submitDate || '';
