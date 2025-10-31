@@ -603,7 +603,8 @@ export class ApplicationFormDetailsComponent {
   }
 
   private buildPrintUrl(userId: number, round = 1): string {
-    const base = 'https://career.pinepacific.com/WebFormApply/WebFormApply.aspx';
+    // const base = 'https://career.pinepacific.com/WebFormApply/WebFormApply.aspx';
+    const base = '/form-apply';
     const qs = new URLSearchParams({
       UserID: String(userId),
       Round: String(round),
