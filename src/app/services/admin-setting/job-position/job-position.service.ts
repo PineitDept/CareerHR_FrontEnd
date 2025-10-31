@@ -23,7 +23,13 @@ export class JobPositionService {
 
   // ดึงรายการทั้งหมด
   getAllJobTemplates(): Observable<any> {
+    const query = {
+      page: 1,
+      pageSize: 100,
+    };
+
     return this.apiService.get<any>(this.base, {
+      params: query,
       withAuth: true,
       loading: true
     });
