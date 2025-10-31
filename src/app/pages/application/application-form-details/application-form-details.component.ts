@@ -357,15 +357,27 @@ export class ApplicationFormDetailsComponent {
           // ----- Education Rows -----
           this.educationRows = (res?.educationInfo?.educationRecords ?? [])
             .filter((x: any) => (x.graduationYear ?? 0) !== 0 || (x.levelName ?? '') !== '')
+            .filter((x: any) => {
+              const isOtherUni = Number(x?.uniID) === 999;
+              const school = (x?.school ?? '').toString().trim();
+              return (!isOtherUni && true) || (isOtherUni && !!school);
+            })
             .sort((a: any, b: any) => (a.graduationYear ?? 0) - (b.graduationYear ?? 0))
-            .map((e: any, idx: number) => ({
-              __index: idx + 1,
-              graduationYear: e.graduationYear || '',
-              levelName: e.levelName || '',
-              institution: e.universityName || e.school || '',
-              majorFaculty: [e.major, e.faculty].filter(Boolean).join(' / ') || '',
-              gpa: e.gpa || '',
-            }));
+            .map((e: any, idx: number) => {
+              const isOtherUni = Number(e?.uniID) === 999;
+              const institution = isOtherUni
+                ? (e?.school?.toString().trim() || e?.universityName?.toString().trim() || '')
+                : (e?.universityName?.toString().trim() || e?.school?.toString().trim() || '');
+
+              return {
+                __index: idx + 1,
+                graduationYear: e?.graduationYear || '',
+                levelName: e?.levelName || '',
+                institution,
+                majorFaculty: [e?.major, e?.faculty].filter(Boolean).join(' / ') || '',
+                gpa: e?.gpa || '',
+              };
+            });
 
           // ====== GPA Analysis ======
           const ana = res?.gpaAnalysisInfo ?? null;
@@ -735,22 +747,18 @@ export class ApplicationFormDetailsComponent {
 
   // ===== helpers for badges/scores =====
   private langView(level?: string) {
-    const norm = (level || '').toLowerCase().trim();
-    // normalize label
-    const label =
-      norm === 'excellent' || norm === 'very good' ? 'Very Good' :
-      norm === 'good' ? 'Good' :
-      norm === 'fair' ? 'Fair' : 'Normal';
-    // score map (ปรับง่าย ๆ : VG=1, Good=0.5, Fair=0.25, Normal=0)
-    const score = label === 'Very Good' ? 1 : label === 'Good' ? 0.5 : label === 'Fair' ? 0.25 : 0;
+    const norm = level || '';
+
+    // score map (ปรับง่าย ๆ : Advanced=1, Intermediate=0.5, Beginner=0.25, None=0)
+    const score = norm === 'Advanced' ? 1 : norm === 'Intermediate' ? 0.5 : norm === 'Beginner' ? 0.25 : 0;
 
     const klass =
-      label === 'Very Good' ? ['tw-bg-[#00be003b]','tw-ring-[#48bb00]','tw-text-[#124e12]'] :
-      label === 'Good'      ? ['tw-bg-green-50','tw-ring-green-300','tw-text-green-700'] :
-      label === 'Fair'      ? ['tw-bg-amber-100','tw-ring-amber-300','tw-text-amber-700'] :
+      norm === 'Advanced' ? ['tw-bg-[#00be003b]','tw-ring-[#48bb00]','tw-text-[#124e12]'] :
+      norm === 'Intermediate'      ? ['tw-bg-green-50','tw-ring-green-300','tw-text-green-700'] :
+      norm === 'Beginner'      ? ['tw-bg-amber-100','tw-ring-amber-300','tw-text-amber-700'] :
                               ['tw-bg-gray-100','tw-ring-gray-300','tw-text-gray-700'];
 
-    return { badge: { label: score ? `${label} (${score})` : label, class: klass }, score };
+    return { badge: { label: score ? `${norm} (${score})` : norm, class: klass }, score };
   }
 
   private compView(level?: string) {
@@ -784,18 +792,22 @@ export class ApplicationFormDetailsComponent {
   }
 
   toBool(val?: any): boolean {
-    if (typeof val === 'boolean') return val;
     const s = String(val ?? '').trim().toLowerCase();
 
-    // สัญญาณเชิงลบมาก่อน
     if (
-      /(don'?t\s*have|donot\s*have|don'?t|no|ไม่มี|false|0|not)/.test(s)
+      /^(no|false|0|none|n\/a|-)?$/.test(s) ||               // ว่าง/none/เครื่องหมาย/ค่าเทียบเท่า
+      /(don'?t\s*have|do\s*not\s*have)/.test(s) ||           // don't have / do not have
+      /(unavailable|not\s*available)/.test(s) ||             // unavailable / not available
+      /(ไม่มี|ไม่พร้อม|ไม่ผ่าน)/.test(s)                    // ไทย
     ) return false;
 
-    // สัญญาณเชิงบวก
-    if (/(have|yes|มี|true|1|pass|passed)/.test(s)) return true;
+    if (
+      /^(yes|true|1)$/.test(s) ||                            // yes/true/1
+      /(have|available|pass(?:ed)?)/.test(s) ||              // have/available/pass/passed
+      /(มี|พร้อม|ผ่าน)/.test(s)                             // ไทย
+    ) return true;
 
-    return false; // ค่าอื่น ๆ ถือว่าไม่มีก่อน
+    return false;
   }
 
   private hiddenBadge() {
