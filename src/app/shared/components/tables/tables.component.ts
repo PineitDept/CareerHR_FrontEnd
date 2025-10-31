@@ -101,6 +101,7 @@ export class TablesComponent
   @Input() storageNamespace = 'tables';
   @Input() tableId = 'default';
   @Input() highlightTTLms: number = 3 * 1000;
+  @Input() noOuterPaddingBottom: boolean = false;
 
   @Output() selectionChanged = new EventEmitter<any[]>();
   @Output() rowClicked = new EventEmitter<any>();
