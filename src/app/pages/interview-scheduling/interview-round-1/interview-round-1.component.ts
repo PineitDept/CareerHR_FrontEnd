@@ -925,18 +925,47 @@ export class InterviewRound1Component {
   }
 
   onRemoveJobApplicant(jobToRemove: any, item: any) {
-    const candidateId = item.profile.userId;
-    const positionId = jobToRemove.jobId;
-    const applyRound = item.interview.round || 1;
-    const isPassed = !jobToRemove.isActive;
+    const candidateId = item?.profile?.userId;
+    const positionId = jobToRemove?.positionId ?? jobToRemove?.jobId ?? jobToRemove?.id;
+    const applyRound = item?.interview?.round ?? 1;
+
+    const isPassed = !jobToRemove?.isActive;
+
+    if (!candidateId || !positionId) {
+      console.error('Missing candidateId or positionId');
+      return;
+    }
+
+    const prevAppointments = this.appointments;
+
+    this.appointments = (this.appointments ?? []).map((appt: any) => {
+      if (appt?.profile?.userId !== candidateId) return appt;
+
+      return {
+        ...appt,
+        jobPosition: {
+          ...appt.jobPosition,
+          jobList: (appt?.jobPosition?.jobList ?? []).map((job: any) => {
+            const jid = job?.positionId ?? job?.jobId ?? job?.id;
+            if (jid !== positionId) return job;
+            return {
+              ...job,
+              isActive: isPassed
+            };
+          })
+        }
+      };
+    });
 
     this.appointmentsService.updateCandidateStatus(candidateId, {
       isPassed,
       positionId,
       applyRound
     }).subscribe({
+      next: () => {},
       error: (err) => {
         console.error('เกิดข้อผิดพลาดขณะอัปเดตสถานะผู้สมัคร', err);
+        this.appointments = prevAppointments;
       }
     });
   }

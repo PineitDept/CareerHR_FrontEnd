@@ -349,7 +349,6 @@ export abstract class BaseApplicationComponent implements OnInit, OnDestroy {
   // Protected State Updates
   protected updateFilterWithResponse(response: ApiResponse): void {
     const currentFilter = this.filterRequest();
-    console.log(currentFilter.month)
     this.filterRequest.set({
       ...currentFilter,
       page: response.page,

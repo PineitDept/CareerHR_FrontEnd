@@ -2,7 +2,7 @@ import { MenuItem } from "../../interfaces/menu/menu.interface";
 
 export const MAIN_MENU: MenuItem[] = [
     // { label: 'Manpower', icon: 'user', path: 'manpower' },
-    { label: 'Applications Form', icon: 'hand-taking-user', path: 'applications' },
+    { label: 'All Applications', icon: 'hand-taking-user', path: 'applications' },
     { label: 'Interview Scheduling', icon: 'calendar-days', path: 'interview-scheduling' },
     { label: 'Offer Employment', icon: 'dollar-circle', path: 'offer-employment' },
 ];
@@ -18,8 +18,8 @@ export const SUB_MENUS: Partial<Record<string, MenuItem[]>> = {
         { label: 'Manpower Planning', icon: 'ruler-pen', path: 'manpower/manpower-planning' },
         { label: 'Status Overview', icon: 'trend-up', path: 'manpower/status-overview' },
     ],
-    'Applications Form': [
-        { label: 'All Applications', icon: 'notebook', path: 'applications/all-applications' },
+    'All Applications': [
+        { label: 'Applications Form', icon: 'notebook', path: 'applications/all-applications' },
         { label: 'Application Screening', icon: 'search-plus', path: 'applications/screening' },
         { label: 'Application Tracking', icon: 'route', path: 'applications/tracking' },
     ],
