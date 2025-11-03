@@ -27,6 +27,7 @@ export interface CandidateTracking {
   uniID?: number;
   faculty?: string;
   major?: string;
+  graduation_year?: number;
   statusCSD: number;
   applied: CandidateTrackStatus;
   screened: CandidateTrackStatus;
