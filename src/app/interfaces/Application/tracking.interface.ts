@@ -9,6 +9,8 @@ export interface CandidateTrackStatus {
 export interface Positions {
   iDjobPST?: number;
   namePosition?: string;
+  locationId?: number | null;
+  locationName?: string | null;
 }
 
 export interface CandidateTracking {
