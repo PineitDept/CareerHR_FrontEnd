@@ -78,6 +78,7 @@ interface Applicant {
   faculty?: string;
   program?: string;
   phone?: string;
+  graduation_year?: number;
   interview1Date?: string;
   interview1DateFormat?: string;
   interview1Status?: string;
@@ -236,6 +237,10 @@ export class InterviewFormDetailsComponent {
     grade: '',
     views: 0,
     avatarUrl: '',
+    faculty: '',
+    program: '',
+    phone: '',
+    graduation_year: 0,
   };
 
   steps: { label: string; date?: string; status: StepStatus; sub?: string }[] =
@@ -707,6 +712,7 @@ export class InterviewFormDetailsComponent {
       faculty: ct.faculty,
       program: ct.major,
       phone: ct.phoneNumber,
+      graduation_year: ct.graduation_year,
       interview1DateFormat: dayjs(ct.interview1.date).format('DD MMMM YYYY'),
       interview1Date: ct.interview1.date,
       interview1Status: ct.interview1.status,

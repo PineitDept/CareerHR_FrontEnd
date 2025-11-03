@@ -89,6 +89,9 @@ export interface IconConfig {
   readonly fill?: string;
   readonly size?: string;
   readonly extraClass?: string;
+
+  readonly textDes?: string;
+  readonly subDes?: string;
 }
 
 export interface BadgeConfig {
