@@ -72,6 +72,7 @@ export class FormApplyComponent {
   siblings: any[] = [];
   emergencyInfo: any;
   educationRecords: any[] = [];
+  commentsTree: any;
 
   // ===== Skills =====
   skillsInfo: any;
@@ -99,6 +100,7 @@ export class FormApplyComponent {
         this.applicantId = Number(params['UserID'] || 0);
         this.roundID = Number(params['Round'] || 0);
         this.fetchApplicantDetails();
+        this.fetchComment();
         this.fetchFiles(Number(this.applicantId || 0));
       });
   }
@@ -153,6 +155,21 @@ export class FormApplyComponent {
           this.buildWMMap(wmList);
         },
         error: (err) => console.error(err)
+      });
+  }
+
+  private fetchComment() {
+    this.applicationService.getCommentsById(this.applicantId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          const items = Array.isArray(res?.items) ? res.items : [];
+          this.commentsTree = items;
+          console.log(this.commentsTree)
+        },
+        error: (e) => {
+          console.error('[ApplicationForm] loadComments error:', e);
+        }
       });
   }
 
