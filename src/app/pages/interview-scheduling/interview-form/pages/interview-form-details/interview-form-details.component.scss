@@ -4,7 +4,8 @@
 }
 
 ::ng-deep .slick-slider .slick-list {
-  margin: -24px;
+  margin: 0 -24px;
+  margin-bottom: 0;
   padding: 24px;
   padding-right: 0;
   overflow: hidden;
@@ -12,7 +13,7 @@
 
 ::ng-deep .slick-dots {
   position: relative;
-  bottom: -8px;
+  bottom: 16px;
 }
 
 ::ng-deep .slick-track {

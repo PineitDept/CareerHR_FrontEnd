@@ -532,7 +532,9 @@
               </div>
 
               <!-- Result -->
-              <div class="tw-mb-4">
+              <div class="tw-mb-4"
+                *ngIf="s.stageNameNormalized !== 'interview 1' && s.stageNameNormalized !== 'interview 2'"
+              >
                 <div class="tw-text-[13px] tw-font-medium">Result</div>
                 <div class="tw-flex tw-flex-wrap tw-gap-2 tw-mt-1">
                   <button type="button"
@@ -547,7 +549,10 @@
               </div>
 
               <!-- Reason -->
-              <div class="tw-mb-4" *ngIf="s.reasons?.length">
+              <div class="tw-mb-4" *ngIf="s.reasons?.length
+                            && s.stageNameNormalized !== 'interview 1'
+                            && s.stageNameNormalized !== 'interview 2'"
+              >
                 <div class="tw-text-[13px] tw-font-medium">Reason</div>
                 <div class="tw-grid md:tw-grid-cols-2 tw-gap-y-3 tw-gap-x-4 tw-mt-2">
                   <div class="tw-flex tw-items-start tw-gap-2"
@@ -596,12 +601,69 @@
 
                   <!-- Others: Strength & Concern -->
                   <ng-container *ngSwitchDefault>
+                    <!-- ===== Interview Result (Read-only) dynamic ===== -->
+                    <ng-container *ngIf="s.uiReadonly?.groups?.length">
+
+                      <!-- Row 1: Group type -->
+                      <div class="tw-mb-3">
+                        <div class="tw-text-[13px] tw-font-medium">Result</div>
+                        <div class="tw-flex tw-flex-wrap tw-gap-2 tw-mt-1">
+                          <span *ngFor="let g of ['Accept','Decline']"
+                                class="tw-text-sm tw-rounded-lg tw-px-3 tw-py-1.5 tw-border tw-cursor-default"
+                                [ngClass]="(s.uiReadonly?.topChoice === g)
+                                  ? (g==='Accept'
+                                      ? 'tw-bg-green-500 tw-text-white tw-border-green-600 tw-ring-2 tw-ring-white/40'
+                                      : 'tw-bg-red-500 tw-text-white tw-border-red-600 tw-ring-2 tw-ring-white/40')
+                                  : 'tw-bg-white tw-text-gray-700 tw-border-gray-300'">
+                            {{ g }}
+                          </span>
+                        </div>
+                      </div>
+
+                      <!-- Row 2: Sub Result -->
+                      <div class="tw-mb-4" *ngIf="s.uiReadonly?.groups?.length">
+                        <div class="tw-flex tw-flex-wrap tw-gap-2">
+                          <ng-container *ngFor="let g of s.uiReadonly?.groups">
+                            <span
+                              *ngIf="g.groupType === s.uiReadonly?.topChoice"
+                              class="tw-text-sm tw-rounded-lg tw-px-3 tw-py-1.5 tw-border tw-cursor-default"
+                              [ngClass]="g.isSelected
+                                ? (g.groupType === 'Accept'
+                                  ? 'tw-bg-green-500 tw-text-white tw-border-green-600 tw-ring-2 tw-ring-white/40'
+                                  : 'tw-bg-red-500 tw-text-white tw-border-red-600 tw-ring-2 tw-ring-white/40')
+                                : 'tw-bg-white tw-text-gray-700 tw-border-gray-300'"
+                            >
+                              {{ g.name }}
+                            </span>
+                          </ng-container>
+                        </div>
+                      </div>
+
+                      <!-- Row 3: Reason -->
+                      <div class="tw-mb-4" *ngIf="(s.uiReadonly?.reasons?.length || 0) > 0">
+                        <div class="tw-text-[13px] tw-font-medium">Reason</div>
+                        <div class="tw-grid md:tw-grid-cols-2 tw-gap-y-3 tw-gap-x-4 tw-mt-2">
+                          <div class="tw-flex tw-items-start tw-gap-2" *ngFor="let r of s.uiReadonly?.reasons">
+                            <span role="checkbox"
+                                  [attr.aria-checked]="r.checked"
+                                  class="tw-inline-flex tw-items-center tw-justify-center tw-rounded-[4px] tw-border tw-align-middle tw-mt-0.5 tw-cursor-default"
+                                  [ngClass]="r.checked ? 'tw-border-green-500 tw-bg-green-50' : 'tw-border-gray-300 tw-bg-white'"
+                                  style="width:18px;height:18px;min-width:18px;min-height:18px">
+                              <app-icon *ngIf="r.checked" name="check" [size]="14" class="tw-text-green-600"></app-icon>
+                            </span>
+                            <span class="tw-text-[14px]">{{ r.reasonText }}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </ng-container>
+
                     <div>
                       <div class="tw-text-[13px] tw-font-medium">Strength</div>
                       <textarea
                         class="tw-w-full tw-text-[14px] tw-h-28 tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
                         [value]="s.strength || '—'" disabled></textarea>
                     </div>
+
                     <div>
                       <div class="tw-text-[13px] tw-font-medium">Concern</div>
                       <textarea
