@@ -1080,7 +1080,7 @@ export class ApplicationFormComponent {
     if (key === 'interview-1' || key === 'interview-2') {
       const sub = String(item?.sub || '').toLowerCase();
       const isFinal = /(pass|passed|fail|failed)/.test(sub);
-      const isPending = /(pendding|inprocess|scheduled)/.test(sub);
+      const isPending = /(pending|inprocess|scheduled)/.test(sub);
       console.log(isPending)
       if (!isPending && sub && !isFinal) {
         const interview = key === 'interview-1' ? 1 : 2;
