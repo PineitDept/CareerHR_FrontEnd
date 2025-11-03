@@ -32,8 +32,9 @@
       </ng-container>
 
       <ng-template #levelView>
+        <li class="tw-pl-6 tw-py-2 tw-mb-2">{{this.menuStack.at(-1)}}</li>
         <li *ngFor="let n of currentNodes"
-          class="tw-flex tw-items-center tw-gap-x-2 tw-mb-2 tw-cursor-pointer tw-border-l-[4px] tw-pl-4 tw-py-2 hover:tw-bg-white/10"
+          class="tw-flex tw-items-center tw-gap-x-2 tw-mb-2 tw-cursor-pointer tw-border-l-[4px] tw-pl-6 tw-py-2 hover:tw-bg-white/10"
           [ngClass]="{
             'tw-border-[#AA0000] tw-bg-white/25': isActiveForCurrentLevel(n),
             'tw-border-transparent': !isActiveForCurrentLevel(n)
