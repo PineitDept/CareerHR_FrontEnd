@@ -429,7 +429,18 @@ export class ApplicationFormComponent {
       university: ct.university || '—',
       appliedDate: ct.submitDate || '',
       email: ct.email || '—',
-      positions: Array.from(new Set((ct.positions ?? []).map(p => p?.namePosition).filter(Boolean) as string[])),
+      positions: Array.from(
+        new Set(
+          (ct.positions ?? [])
+            .map(p => {
+              const name = (p?.namePosition ?? '').trim();
+              const loc  = (p?.locationName ?? '').trim();
+              if (!name) return null;
+              return loc ? `${name} - ${loc}` : name;
+            })
+            .filter((s): s is string => !!s)
+        )
+      ),
       grade: ct.gradeCandidate || '—',
       views: Number(ct.countLike ?? 0),
       avatarUrl: '',
