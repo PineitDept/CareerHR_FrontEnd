@@ -377,12 +377,14 @@
                                 </ng-container>
 
                                 <!-- เติมบรรทัดว่างให้ครบ 5 -->
-                                <ng-container *ngFor="let x of [].constructor(6 - computerSkillsDisplay.length)">
-                                    <li class="tw-flex tw-invisible">
-                                        <span class="tw-w-[60%]">-</span>
-                                        <span>-</span>
-                                    </li>
-                                </ng-container>
+                                <div *ngIf="computerSkillsDisplay.length < 6">
+                                    <ng-container *ngFor="let x of [].constructor(6 - computerSkillsDisplay.length)">
+                                        <li class="tw-flex tw-invisible">
+                                            <span class="tw-w-[60%]">-</span>
+                                            <span>-</span>
+                                        </li>
+                                    </ng-container>
+                                </div>
                             </ol>
 
                             <!-- </ng-container> -->
@@ -809,7 +811,8 @@
                     <div class="tw-text-center">วันที่สมัคร</div>
                 </td>
                 <td class="tw-w-[40%]">
-                    <div class="tw-border-b tw-border-black tw-border-dashed tw-text-center">{{formatDateToDDMMYY(jobApplications?.dateApply)}}</div>
+                    <div class="tw-border-b tw-border-black tw-border-dashed tw-text-center">
+                        {{formatDateToDDMMYY(jobApplications?.dateApply)}}</div>
                 </td>
                 <td class="tw-w-[20%]"></td>
             </tr>
@@ -819,7 +822,8 @@
                     <div class="tw-text-center">ตำแหน่ง</div>
                 </td>
                 <td class="tw-w-[40%]">
-                    <div class="tw-border-b tw-border-black tw-border-dashed tw-text-center">{{jobApplications?.namePosition}}</div>
+                    <div class="tw-border-b tw-border-black tw-border-dashed tw-text-center">
+                        {{jobApplications?.namePosition}}</div>
                 </td>
                 <td class="tw-w-[20%]"></td>
             </tr>
@@ -829,7 +833,8 @@
                     <div class="tw-text-center">เงินเดือนที่ต้องการ</div>
                 </td>
                 <td class="tw-w-[40%]">
-                    <div class="tw-border-b tw-border-black tw-border-dashed tw-text-center">{{jobApplications?.desiredSalaryMin}} - {{jobApplications?.desiredSalaryMax}} บาท</div>
+                    <div class="tw-border-b tw-border-black tw-border-dashed tw-text-center">
+                        {{jobApplications?.desiredSalaryMin}} - {{jobApplications?.desiredSalaryMax}} บาท</div>
                 </td>
                 <td class="tw-w-[20%]"></td>
             </tr>
@@ -1153,7 +1158,7 @@
     </div>
 
     <!-- Page 5: Comment -->
-    <!-- <div class="page-break tw-p-6 tw-min-h-screen tw-relative tw-m-0">
+    <div class="page-break tw-p-6 tw-min-h-screen tw-relative tw-m-0" *ngIf="commentsTree?.length">
         <table class="tw-w-full tw-border tw-border-black tw-border-collapse">
             <tr class="tw-h-[36pt]">
                 <td>
@@ -1165,27 +1170,13 @@
         </table>
 
         <table class="tw-w-full tw-border-x tw-border-b tw-border-black tw-border-collapse">
-            <tr>
+            <tr *ngFor="let comment of commentsTree;">
                 <td class="tw-pb-2">
-                    <span class="tw-font-medium tw-me-5 tw-mx-2">Name : </span>
+                    <span class="tw-font-medium tw-me-5 tw-mx-2">{{comment.commentByUserName}} : </span>
                     <span
-                        class="tw-underline tw-decoration-dashed tw-decoration-3 tw-underline-offset-4 tw-leading-[2]">aaaaaaaa</span>
-                </td>
-            </tr>
-            <tr>
-                <td class="tw-pb-2">
-                    <span class="tw-font-medium tw-me-5 tw-mx-2">Name : </span>
-                    <span
-                        class="tw-underline tw-decoration-dashed tw-decoration-3 tw-underline-offset-4 tw-leading-[2]">aaaaaaaa</span>
-                </td>
-            </tr>
-            <tr>
-                <td class="tw-pb-2">
-                    <span class="tw-font-medium tw-me-5 tw-mx-2">Name : </span>
-                    <span
-                        class="tw-underline tw-decoration-dashed tw-decoration-3 tw-underline-offset-4 tw-leading-[2]">aaaaaaaa</span>
+                        class="tw-underline tw-decoration-dashed tw-decoration-3 tw-underline-offset-4 tw-leading-[2]">{{comment.commentText}}</span>
                 </td>
             </tr>
         </table>
-    </div> -->
+    </div>
 </div>
