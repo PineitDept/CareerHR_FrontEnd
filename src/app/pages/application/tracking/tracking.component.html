@@ -11,7 +11,7 @@
   </div>
 
   <app-filter
-    [showAllYearOption]="true" 
+    [showAllYearOption]="true"
     [filterDateRange]="filterDateRange"
     (dateRangeSelected)="onDateRangeSelected($event)"
   ></app-filter>
@@ -27,21 +27,24 @@
 
   <app-loading></app-loading>
 
-  <div #tableContainer  >
-    <app-tables
-      [columns]="columns"
-      [rows]="rows()"
-      [resetKey]="resetCounter()"
-      [splitRows]="false"
-      [showCheckbox]="false"
-      [stickyHeader]="true"
-      [sortStates]="currentSort()"
-      (rowClicked)="onRowClick($event)"
-      (columnClicked)="onColumnClick($event)"
-      (listClickedRows)="onClickedRowsChanged($event)"
-      [hasOverflowY]="hasOverflowY"
-      [tableFixed]="false"
-      [IconHasDes]="true"
-    ></app-tables>
+  <div #tableContainer #hscroll class="tw-w-full tw-overflow-x-auto tw-mb-6" [class.tw-pb-3]="hasXScroll">
+    <div class="table-scroll-inner">
+      <app-tables
+        [columns]="columns"
+        [rows]="rows()"
+        [resetKey]="resetCounter()"
+        [splitRows]="false"
+        [showCheckbox]="false"
+        [stickyHeader]="false"
+        [sortStates]="currentSort()"
+        (rowClicked)="onRowClick($event)"
+        (columnClicked)="onColumnClick($event)"
+        (listClickedRows)="onClickedRowsChanged($event)"
+        [hasOverflowY]="hasOverflowY"
+        [tableFixed]="false"
+        [IconHasDes]="true"
+        [noOuterPaddingBottom]="true"
+      ></app-tables>
+    </div>
   </div>
 </div>

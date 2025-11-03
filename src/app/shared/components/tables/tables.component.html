@@ -2,7 +2,9 @@
 <div #tableWrapper class="tw-relative tw-bg-white tw-w-fit tw-min-w-full" [ngClass]="{
     'tw-pr-2': rowsValue.length > 0 && hasOverflowY,
     'tw-px-0 tw-py-0': withinCard,
-    'tw-px-6 tw-py-6 tw-pt-0': !withinCard,
+    'tw-px-6 tw-pt-0': !withinCard,
+    'tw-pb-6': !withinCard && !noOuterPaddingBottom,
+    'tw-pb-0': !withinCard &&  noOuterPaddingBottom
   }">
   <div class="tw-shadow-sm tw-border tw-border-gray-200" [ngClass]="withinCard ? '' : 'tw-overflow-clip tw-rounded-md'">
     <table class="tw-w-full tw-text-sm tw-text-left tw-border-separate tw-border-spacing-0"
@@ -296,6 +298,14 @@
                         [extraClass]="getCellValue(row, column.field)?.extraClass || '' + 'tw-transition-colors tw-duration-200'">
                       </app-icon>
                       <p *ngIf="IconHasDes" class="tw-text-[12px] tw-text-gray-600">{{getCellValue(row, column.field)?.textDes}}</p>
+                      <p *ngIf="IconHasDes"
+                        class="tw-text-[12px] tw-text-gray-400"
+                        [class.tw-invisible]="!getCellValue(row, column.field)?.subDes"
+                      >
+                        {{ getCellValue(row, column.field)?.subDes
+                            ? '(' + getCellValue(row, column.field)?.subDes + ')'
+                            : '\u00A0' }}
+                      </p>
                     </div>
 
                     <!-- toggle Content -->

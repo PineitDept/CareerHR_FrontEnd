@@ -43,6 +43,7 @@ interface Applicant {
   faculty?: string;
   program?: string;
   phone?: string;
+  graduation_year?: number;
   interview1Date?: string;
   interview1Status?: string;
   interview1Result?: number;
@@ -122,6 +123,10 @@ export class OfferResultComponent {
     grade: '',
     views: 0,
     avatarUrl: '',
+    faculty: '',
+    program: '',
+    phone: '',
+    graduation_year: 0,
   };
 
   // ===== Forms & basic state =====
@@ -1013,6 +1018,7 @@ export class OfferResultComponent {
       faculty: ct.faculty,
       program: ct.major,
       phone: ct.phoneNumber,
+      graduation_year: ct.graduation_year,
       interview1Date: dayjs(ct.interview1.date).format('DD MMMM YYYY'),
       interview1Status: ct.interview1.status,
       interview1Result: ct.interview1.id,

@@ -6,6 +6,7 @@ import { MainLayoutComponent } from './layouts/main-layout/main-layout.component
 import { IndexComponent } from './pages/index/index.component';
 import { AuthGuard } from './guards/auth/auth.guard';
 import { LoginGuard } from './guards/login/login.guard';
+import { FormApplyComponent } from './pages/application/form-apply/form-apply.component';
 
 
 const routes: Routes = [
@@ -13,6 +14,10 @@ const routes: Routes = [
     path: '',
     redirectTo: 'login',
     pathMatch: 'full'
+  },
+  {
+    path: 'form-apply',
+    component: FormApplyComponent,
   },
   {
     path: '',

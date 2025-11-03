@@ -94,8 +94,13 @@ export class TrackingComponent
   @ViewChild('filter', { static: false }) filterRef!: ElementRef;
   @ViewChild('tableContainer') tableContainerRef!: ElementRef<HTMLDivElement>;
   @ViewChild('scrollArea') scrollArea!: ElementRef<HTMLDivElement>;
+  @ViewChild('hscroll') hscrollRef!: ElementRef<HTMLDivElement>;
   hasOverflowY = false;
   private ro?: ResizeObserver;
+
+  // state ใหม่สำหรับแนวนอน
+  hasXScroll = false;
+  private roX?: ResizeObserver;
 
   // Tracking-specific state
   private readonly trackingFilterRequest =
@@ -556,6 +561,7 @@ export class TrackingComponent
             hired_noshow: response.groupCounts.hired_noshow
           });
         }
+        setTimeout(() => this.updateHasXScroll(), 0);
       }),
       // tap(() => this.persistFilterState()),
       catchError((error: any) => this.handleApiError(error)),
@@ -575,13 +581,36 @@ export class TrackingComponent
     super.ngOnInit();
     // this.updateTableHeight();
     // this.setupResizeObserver();
-    console.log('TrackingComponent initialized');
+    // console.log('TrackingComponent initialized');
+    // วัดครั้งแรกหลัง DOM พร้อม
+    setTimeout(() => this.updateHasXScroll(), 0);
+
+    // สังเกตการเปลี่ยนแปลงขนาดคอนเทนเนอร์แนวนอน
+    if (this.hscrollRef?.nativeElement) {
+      this.roX = new ResizeObserver(() => this.updateHasXScroll());
+      this.roX.observe(this.hscrollRef.nativeElement);
+    }
   }
 
   override ngOnDestroy(): void {
     this.ro?.disconnect?.();
+    this.roX?.disconnect?.();
     super.ngOnDestroy();
     this.disconnectResizeObserver();
+  }
+
+  @HostListener('window:resize')
+  onWindowResize() {
+    this.updateHasXScroll();
+  }
+
+  // ฟังก์ชันเช็คว่ามีสกรอลล์แนวนอนหรือไม่
+  private updateHasXScroll() {
+    const el = this.hscrollRef?.nativeElement;
+    if (!el) return;
+    this.hasXScroll = el.scrollWidth > el.clientWidth;
+    // ถ้าต้องการให้ Angular อัปเดตทันที สามารถ markForCheck ได้ถ้าใช้ OnPush + ChangeDetectorRef
+    // this.cdr.markForCheck();
   }
 
   // Tracking-specific methods
@@ -641,6 +670,9 @@ export class TrackingComponent
 
   // Private methods
   private transformSingleItem(item: any): TrackingRow {
+    const toDaysLabel = (n?: number) =>
+    (typeof n === 'number' && !isNaN(n)) ? `${n} day${n === 1 ? '' : 's'}` : undefined;
+
     return {
       id: item.userID.toString(),
       submitDate: item.submitDate || '',
@@ -652,13 +684,35 @@ export class TrackingComponent
       gpa: item.gpa?.toString() || '',
       gradeCandidate: item.gradeCandidate,
       applied: this.mapStatusIdToIcon(21, item.applied?.date) || STATUS_ICON_MAP[12],
-      statusCSD: this.mapStatusIdToIcon(item.statusCSD, item.screened?.date) || STATUS_ICON_MAP[12],
-      interview1:
-        this.mapStatusIdToIcon(item.interview1?.id, item.interview1?.date) || STATUS_ICON_MAP[12],
-      interview2:
-        this.mapStatusIdToIcon(item.interview2?.id, item.interview2?.date) || STATUS_ICON_MAP[12],
-      offer: this.mapStatusIdToIcon(item.offer?.id, item.offer?.date) || STATUS_ICON_MAP[12],
-      hired: this.mapStatusIdToIcon(item.hired?.id, item.hired?.date) || STATUS_ICON_MAP[12],
+      // statusCSD → submitAppyToScreening
+      statusCSD: {
+        ...(this.mapStatusIdToIcon(item.statusCSD, item.screened?.date) || STATUS_ICON_MAP[12]),
+        subDes: toDaysLabel(item.submitAppyToScreening),
+      },
+
+      // interview1 → screeningToInterview1Days
+      interview1: {
+        ...(this.mapStatusIdToIcon(item.interview1?.id, item.interview1?.date) || STATUS_ICON_MAP[12]),
+        subDes: toDaysLabel(item.screeningToInterview1Days),
+      },
+
+      // interview2 → interview1ToInterview2Days
+      interview2: {
+        ...(this.mapStatusIdToIcon(item.interview2?.id, item.interview2?.date) || STATUS_ICON_MAP[12]),
+        subDes: toDaysLabel(item.interview1ToInterview2Days),
+      },
+
+      // offer → interview2ToOfferDays
+      offer: {
+        ...(this.mapStatusIdToIcon(item.offer?.id, item.offer?.date) || STATUS_ICON_MAP[12]),
+        subDes: toDaysLabel(item.interview2ToOfferDays),
+      },
+
+      // hired → offerToHiredDays
+      hired: {
+        ...(this.mapStatusIdToIcon(item.hired?.id, item.hired?.date) || STATUS_ICON_MAP[12]),
+        subDes: toDaysLabel(item.offerToHiredDays),
+      },
       lastUpdate: item.lastUpdate,
       roundID: item.roundID,
     };
