@@ -675,7 +675,7 @@
               </div>
 
               <!-- Actions: Edit / Confirm / Cancel -->
-              <div *ngIf="s.stageNameNormalized==='screened' && (screening.status==='Pending' || allowEditButton || editReview)"
+              <div *ngIf="s.stageNameNormalized==='screened' && (screening.status==='Pending' || allowEditButton || editReview) && (historyLogs.length === 1)"
                   class="tw-flex tw-gap-3 tw-justify-end tw-pb-5">
                 <button *ngIf="allowEditButton && !editReview" type="button" (click)="onEditReview(s)"
                         class="tw-rounded-lg tw-bg-[#00AAFF] tw-text-white tw-py-2 tw-px-4 tw-transition-all hover:tw-bg-[#0c95da]">
