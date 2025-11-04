@@ -114,6 +114,13 @@ interface StageSection {
   concern?: string | null;
   isSummary?: boolean;
   open: boolean;
+
+  uiReadonly?: {
+    topChoice: 'Accept' | 'Decline' | null;
+    subChoice: string | null;
+    reasons: Array<{ reasonId?: number; reasonText: string; checked: boolean }>;
+    groups?: Array<{ id: number; name: string; groupType: string; isSelected: boolean }>;
+  };
 }
 
 interface ApiComment {
@@ -422,7 +429,18 @@ export class ApplicationFormComponent {
       university: ct.university || '—',
       appliedDate: ct.submitDate || '',
       email: ct.email || '—',
-      positions: Array.from(new Set((ct.positions ?? []).map(p => p?.namePosition).filter(Boolean) as string[])),
+      positions: Array.from(
+        new Set(
+          (ct.positions ?? [])
+            .map(p => {
+              const name = (p?.namePosition ?? '').trim();
+              const loc  = (p?.locationName ?? '').trim();
+              if (!name) return null;
+              return loc ? `${name} - ${loc}` : name;
+            })
+            .filter((s): s is string => !!s)
+        )
+      ),
       grade: ct.gradeCandidate || '—',
       views: Number(ct.countLike ?? 0),
       avatarUrl: '',
@@ -753,6 +771,25 @@ export class ApplicationFormComponent {
               isSummary: h.isSummary,
               open: true
             };
+          });
+
+          this.stageSections.forEach((s, idx) => {
+            const isI1 = s.stageNameNormalized === 'interview 1';
+            const isI2 = s.stageNameNormalized === 'interview 2';
+            if (!s.isSummary || (!isI1 && !isI2)) return;
+
+            // หา raw history ต้นทางของ section นี้ (ใช้ historyId จับคู่)
+            const h = (histories || []).find(x => Number(x.historyId) === Number(s.historyId));
+            const selectedIds   = Array.isArray(h?.selectedReasonIds) ? h!.selectedReasonIds as number[] : [];
+            const selectedTexts = Array.isArray(h?.selectedReasonTexts) ? h!.selectedReasonTexts as string[] : [];
+
+            // ประกอบ UI read-only
+            s.uiReadonly = this.buildInterviewReadonlyUI(
+              s.stageId,
+              s.selectedCategoryId,
+              selectedIds,
+              selectedTexts
+            );
           });
 
           // ===== จัดลำดับ =====
@@ -1549,6 +1586,55 @@ export class ApplicationFormComponent {
     // อื่น ๆ → เทา
     return 'tw-border-[#E5E7EB] tw-text-[#374151] tw-bg-[#F3F4F6]';
   }
+
+  private buildInterviewReadonlyUI(
+    stageId: number,
+    selectedCategoryId?: number,
+    selectedReasonIds?: number[] | null,
+    selectedReasonTexts?: string[] | null
+  ) {
+    const packs = this.reasonsByStage.get(stageId) || [];
+    const selectedCat = packs.find(c => Number(c.categoryId) === Number(selectedCategoryId));
+    if (!selectedCat) return { topChoice: null, subChoice: null, reasons: [], groups: [] };
+
+    const n = selectedCat.categoryName?.toLowerCase() || '';
+    const topChoice: 'Accept' | 'Decline' | null =
+      /(pass|on\s*hold)/.test(n)
+        ? 'Accept'
+        : /(decline|no\s*show)/.test(n)
+        ? 'Decline'
+        : null;
+
+    // กรอง reason จริงเฉพาะ active + !deleted
+    const ids = selectedReasonIds ?? [];
+    const txt = selectedReasonTexts ?? [];
+    const reasons = (selectedCat.rejectionReasons || [])
+      .filter((r: any) => r.isActive && !r.isDeleted)
+      .map((r: any) => ({
+        reasonId: r.reasonId,
+        reasonText: r.reasonText,
+        checked: ids.includes(r.reasonId) || txt.includes(r.reasonText),
+      }));
+
+    // สร้าง group dynamic สำหรับทุก category ใน stage นี้
+    const groups = packs.map(c => {
+      const name = c.categoryName;
+      const gtype = /(pass|on\s*hold)/i.test(name)
+        ? 'Accept'
+        : /(decline|no\s*show)/i.test(name)
+        ? 'Decline'
+        : 'Other';
+      return {
+        id: c.categoryId,
+        name,
+        groupType: gtype,
+        isSelected: Number(c.categoryId) === Number(selectedCategoryId),
+      };
+    });
+
+    return { topChoice, subChoice: selectedCat.categoryName, reasons, groups };
+  }
+
 }
 
 // ====== Helpers ======
