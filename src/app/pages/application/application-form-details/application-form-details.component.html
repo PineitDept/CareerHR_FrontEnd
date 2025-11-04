@@ -45,19 +45,42 @@
 
       <ng-container *ngIf="isPersonalOpen">
         <div class="tw-grid md:tw-grid-cols-2 tw-gap-4 tw-my-4 tw-pb-6">
+          <!-- First Name (English) -->
           <div>
-            <div class="tw-text-[13px] tw-font-medium">Full Name (English)</div>
+            <div class="tw-text-[13px] tw-font-medium">First Name (English)</div>
             <input
               class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
-              [value]="vm.fullNameEn"
+              [value]="vm.firstNameEn"
               disabled
             />
           </div>
+
+          <!-- Last Name (English) -->
           <div>
-            <div class="tw-text-[13px] tw-font-medium">Full Name (Thai)</div>
+            <div class="tw-text-[13px] tw-font-medium">Last Name (English)</div>
             <input
               class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
-              [value]="vm.fullNameTh"
+              [value]="vm.lastNameEn"
+              disabled
+            />
+          </div>
+
+          <!-- First Name (Thai) -->
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">First Name (Thai)</div>
+            <input
+              class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+              [value]="vm.firstNameTh"
+              disabled
+            />
+          </div>
+
+          <!-- Last Name (Thai) -->
+          <div>
+            <div class="tw-text-[13px] tw-font-medium">Last Name (Thai)</div>
+            <input
+              class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
+              [value]="vm.lastNameTh"
               disabled
             />
           </div>
@@ -691,12 +714,12 @@
           </div>
 
           <div>
-            <div class="tw-text-[13px] tw-font-medium">Smoking habits</div>
+            <div class="tw-text-[13px] tw-font-medium">Smoker</div>
             <input class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
                   [value]="general.smoking" disabled />
           </div>
           <div>
-            <div class="tw-text-[13px] tw-font-medium">Alcohol Consumption</div>
+            <div class="tw-text-[13px] tw-font-medium">Drinker</div>
             <input class="tw-w-full tw-text-[14px] tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100"
                   [value]="general.alcohol" disabled />
           </div>
