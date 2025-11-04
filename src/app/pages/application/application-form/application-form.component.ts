@@ -1439,7 +1439,7 @@ export class ApplicationFormComponent {
     }
     this.originalSnapshot = null;
     this.editReview = false;
-    this.allowEditButton = !this.hasScreenedPending && this.allowEditButton; // ให้กลับมาโชว์ปุ่ม Edit ถ้าเป็นกรณีย้อนหลัง
+    this.allowEditButton = true; // ให้กลับมาโชว์ปุ่ม Edit ถ้าเป็นกรณีย้อนหลัง
     this.syncNotesEditableByStatus();
   }
 
