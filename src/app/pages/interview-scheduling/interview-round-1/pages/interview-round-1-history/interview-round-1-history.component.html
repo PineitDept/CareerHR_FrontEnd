@@ -75,8 +75,12 @@
                     <div class="tw-flex tw-flex-col tw-w-full tw-gap-4 !tw-mt-0 tw-pointer-events-none">
                         <ng-container *ngFor="let job of item.jobPosition.jobList">
                             <label *ngIf="!job.isOffered" class="tw-flex tw-items-start" (click)="onRemoveJobApplicant(job, item)">
-                                <input type="checkbox" class="tw-accent-black/25 tw-relative tw-top-[7px]"
-                                    [checked]="job.isActive" (click)="$event.stopPropagation()" />
+                                <span role="checkbox" [attr.aria-checked]="job.isActive" class="tw-inline-flex tw-items-center tw-justify-center tw-rounded-[4px] tw-border tw-align-middle tw-mt-0.5"
+                                    [ngClass]="[job.isActive ? 'tw-border-green-500 tw-bg-green-50' : 'tw-border-gray-300 tw-bg-white'
+                                    ]" style="width:18px;height:18px;min-width:18px;min-height:18px">
+                                    <app-icon *ngIf="job.isActive" name="check" [size]="14"
+                                        class="tw-text-green-600"></app-icon>
+                                </span>
                                 <span class="tw-ml-2">{{ job.jobName }}</span>
                             </label>
                             <label *ngIf="job.isOffered" class="tw-flex tw-items-start hover:tw-text-red-600 hover:tw-cursor-pointer"
