@@ -15,7 +15,7 @@ const routes: Routes = [
       {
         path: '',
         component: OfferEmploymentListComponent,
-        data: { keepAlive: true }
+        // data: { keepAlive: true }
       },
       {
         path: 'hire-result',

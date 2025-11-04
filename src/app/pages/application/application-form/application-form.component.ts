@@ -867,36 +867,59 @@ export class ApplicationFormComponent {
           }
 
           // ===== Default สำหรับ Screened = Pending: ตั้ง Result อันแรก + โหลด Reasons อัตโนมัติ =====
-          if (this.hasScreenedPending) {
-            const screenedSection = this.findScreeningSection();
-            if (screenedSection) {
-              // ถ้ายังไม่เคยเลือก category ให้เลือกตัวแรกจากรายการ categories ของการ์ดนั้น
-              // if (!screenedSection.selectedCategoryId && (screenedSection.categories?.length)) {
-              //   screenedSection.selectedCategoryId = screenedSection.categories[0].categoryId;
-              // }
-              // โหลด reasons ของ category ที่ตั้งไว้ (กรองเฉพาะที่ active และไม่ถูกลบ)
-              screenedSection.reasons = this.buildReasonsFor(screenedSection.stageId, screenedSection.selectedCategoryId);
+          // if (this.hasScreenedPending) {
+          //   const screenedSection = this.findScreeningSection();
+          //   if (screenedSection) {
+          //     // ถ้ายังไม่เคยเลือก category ให้เลือกตัวแรกจากรายการ categories ของการ์ดนั้น
+          //     // if (!screenedSection.selectedCategoryId && (screenedSection.categories?.length)) {
+          //     //   screenedSection.selectedCategoryId = screenedSection.categories[0].categoryId;
+          //     // }
+          //     // โหลด reasons ของ category ที่ตั้งไว้ (กรองเฉพาะที่ active และไม่ถูกลบ)
+          //     screenedSection.reasons = this.buildReasonsFor(screenedSection.stageId, screenedSection.selectedCategoryId);
 
-              // เผื่อค่าฟอร์มว่าง → ตั้งวันที่วันนี้
-              if (!this.formDetails.get('dateInterviewReview')?.value) {
-                this.formDetails.get('dateInterviewReview')?.setValue(this.today);
-              }
+          //     // เผื่อค่าฟอร์มว่าง → ตั้งวันที่วันนี้
+          //     if (!this.formDetails.get('dateInterviewReview')?.value) {
+          //       this.formDetails.get('dateInterviewReview')?.setValue(this.today);
+          //     }
 
-              // เข้าสู่โหมดแก้ไขทันที (ให้มีปุ่ม Confirm/Cancel โผล่เลย)
-              this.editReview = true;
-              this.allowEditButton = false;
+          //     // เข้าสู่โหมดแก้ไขทันที (ให้มีปุ่ม Confirm/Cancel โผล่เลย)
+          //     this.editReview = true;
+          //     this.allowEditButton = false;
 
-              this.cdr.detectChanges();
-            }
-          }
+          //     this.cdr.detectChanges();
+          //   }
+          // }
 
           // ===== History log =====
           this.historyLogs = (histories || [])
             .map(h => ({ date: h.stageDate, action: `${h.stageName} ${h.categoryName} by ${h.hrUserName}` }))
             .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+          this.prefillScreeningFormFromHistory();
+          
+          if(this.historyLogs.length) {
+            this.allowEditButton = true;
+            this.editReview = false;
+          }
         },
         error: (e) => console.error('[ApplicationForm] stage history subscribe error:', e)
       });
+  }
+
+  private prefillScreeningFormFromHistory() {
+    const s = this.findScreeningSection();
+    if (!s) return;
+    const noteCtrl = this.formDetails.get('noteInterviewReview');
+    const dateCtrl = this.formDetails.get('dateInterviewReview');
+    
+    if (s.notes != null && noteCtrl?.value !== s.notes) {
+      noteCtrl?.setValue(s.notes, { emitEvent: false });
+    }
+    
+    const d = s.stageDate ? dayjs(s.stageDate).format('YYYY-MM-DD') : this.today;
+    if (d && dateCtrl?.value !== d) {
+      dateCtrl?.setValue(d, { emitEvent: false });
+    }
   }
 
   // ===================== UI Events =====================
@@ -1416,7 +1439,7 @@ export class ApplicationFormComponent {
     }
     this.originalSnapshot = null;
     this.editReview = false;
-    this.allowEditButton = !this.hasScreenedPending && this.allowEditButton; // ให้กลับมาโชว์ปุ่ม Edit ถ้าเป็นกรณีย้อนหลัง
+    this.allowEditButton = true; // ให้กลับมาโชว์ปุ่ม Edit ถ้าเป็นกรณีย้อนหลัง
     this.syncNotesEditableByStatus();
   }
 

@@ -605,7 +605,7 @@ export class OfferResultComponent {
         const companyMap = new Map<number, DropdownOption>(
           (res ?? []).map((x: any): [number, DropdownOption] => [
             x.companyId,
-            { label: x.companyNameEn, value: x.companyId },
+            { label: x.companyNameTh+' ('+x.companyNameEn+')', value: x.companyId },
           ])
         );
 
@@ -623,7 +623,7 @@ export class OfferResultComponent {
         const deptMap = new Map<number, DropdownOption>(
           (res ?? []).map((x: any): [number, DropdownOption] => [
             x.departmentId,
-            { label: x.departmentNameTh, value: x.departmentId },
+            { label: x.departmentNameTh+' ('+x.departmentNameEn+')', value: x.departmentId },
           ])
         );
 
@@ -641,7 +641,7 @@ export class OfferResultComponent {
         const divisionMap = new Map<number, DropdownOption>(
           (res ?? []).map((x: any): [number, DropdownOption] => [
             x.divisionId,
-            { label: x.divisionNameTh, value: x.divisionId },
+            { label: x.divisionNameTh+' ('+x.divisionNameEn+')', value: x.divisionId },
           ])
         );
 
@@ -660,7 +660,7 @@ export class OfferResultComponent {
         const levelMap = new Map<string, DropdownOption>(
           this.levelsRaw.map((x: any): [string, DropdownOption] => [
             x.levelId,
-            { label: x.levelNameTh, value: x.levelId },
+            { label: x.levelNameTh+' ('+x.levelNameEn+')', value: x.levelId },
           ])
         );
         this.LevelOptions = Array.from(levelMap.values());

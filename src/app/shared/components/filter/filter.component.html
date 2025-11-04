@@ -26,11 +26,65 @@
         {{ selectedYear }}
         <app-icon name="chevron-down" [size]="16" />
       </button>
+
       <ul *ngIf="isYearOpen"
-        class="tw-absolute tw-bg-white tw-shadow-md tw-rounded-lg tw-mt-1 tw-z-20 tw-w-full tw-min-w-[100px]">
-        <li *ngFor="let y of years" (click)="selectOption('year', y)"
-          class="tw-px-4 tw-py-2 tw-text-base tw-cursor-pointer hover:tw-bg-gray-100">
-          {{ y }}
+        class="tw-absolute tw-bg-white tw-shadow-md tw-rounded-lg tw-mt-1 tw-z-20 tw-w-full tw-min-w-[100px] tw-p-1"
+      >
+        <!-- รายการปีปกติ (ยกเว้น Other) -->
+        <li *ngFor="let y of years.slice(0, years.length - 1)"
+            (click)="selectOption('year', y)"
+            class="tw-px-4 tw-py-2 tw-text-base tw-cursor-pointer hover:tw-bg-gray-100"
+            [ngClass]="{ 'tw-bg-gray-200': isYearActive(y) }"
+            [attr.aria-selected]="isYearActive(y)">
+          <div class="tw-flex tw-items-center tw-justify-between">
+            <span>{{ y }}</span>
+            <app-icon *ngIf="isYearActive(y)" name="check" [size]="16"></app-icon>
+          </div>
+        </li>
+
+        <!-- แถว Other -->
+        <li class="tw-rounded hover:tw-bg-gray-100"
+            [ngClass]="{ 'tw-bg-gray-200': isOtherActive() }"
+            [attr.aria-selected]="isOtherActive()">
+          <!-- หัวข้อ Other -->
+          <div
+            class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer tw-px-4 tw-py-2"
+            (click)="onOtherHeaderClick()"
+            role="button"
+            aria-label="Other year"
+          >
+            <span class="tw-text-base">Other</span>
+
+            <!-- ไม่ขยาย = chevron-left + หมุน 180°, ขยายแล้ว = chevron-down -->
+            <app-icon
+              [name]="otherYearMode ? 'chevron-down' : 'chevron-left'"
+              [size]="16"
+              [ngClass]="!otherYearMode ? 'tw-transform tw-rotate-180 tw-transition-transform tw-duration-150' : ''"
+            ></app-icon>
+          </div>
+
+          <!-- กล่องกรอกเลข + ปุ่มยืนยัน -->
+          <div *ngIf="otherYearMode" class="tw-mt-2 tw-px-4 tw-pb-2" (click)="onOtherContainerClick($event)">
+            <div class="tw-flex tw-items-center tw-gap-2">
+              <input
+                #otherYearInputRef
+                type="number"
+                inputmode="numeric"
+                min="1900"
+                [max]="currentYear + 50"
+                class="tw-w-[110px] tw-border tw-border-gray-300 tw-rounded tw-px-2 tw-py-1 tw-text-base focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-black"
+                [(ngModel)]="otherYearInput"
+              />
+            </div>
+
+            <button
+              type="button"
+              class="tw-mt-2 tw-w-full tw-bg-black tw-text-white tw-rounded tw-px-3 tw-py-2 tw-text-sm"
+              (click)="onConfirmOtherYear($event)"
+            >
+              Confirm
+            </button>
+          </div>
         </li>
       </ul>
     </div>
@@ -45,9 +99,15 @@
       </button>
       <ul *ngIf="isMonthOpen"
         class="tw-absolute tw-bg-white tw-shadow-md tw-rounded-lg tw-mt-1 tw-z-20 tw-w-full tw-min-w-[100px]">
-        <li *ngFor="let m of months" (click)="selectOption('month', m)"
-          class="tw-px-4 tw-py-2 tw-text-base tw-cursor-pointer hover:tw-bg-gray-100">
-          {{ m }}
+        <li *ngFor="let m of months"
+            (click)="selectOption('month', m)"
+            class="tw-px-4 tw-py-2 tw-text-base tw-cursor-pointer hover:tw-bg-gray-100"
+            [ngClass]="{ 'tw-bg-gray-200': isMonthActive(m) }"
+            [attr.aria-selected]="isMonthActive(m)">
+          <div class="tw-flex tw-items-center tw-justify-between">
+            <span>{{ m }}</span>
+            <app-icon *ngIf="isMonthActive(m)" name="check" [size]="16"></app-icon>
+          </div>
         </li>
       </ul>
     </div>
