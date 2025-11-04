@@ -786,7 +786,7 @@ export class OfferResultComponent {
     this.selectedPositionId = selectedValue;
     this.payloadPositionChange = {
       userId: this.applicantId,
-      selectedPositionId: selectedValue
+      selectedPositionId: this.selectedPositionId
     };
     this.saveCache();
   }
@@ -1140,6 +1140,12 @@ export class OfferResultComponent {
       };
 
       const handleSuccess = () => {
+        
+        this.payloadPositionChange = {
+          userId: this.applicantId,
+          selectedPositionId: this.selectedPositionId
+        };
+        
         if (this.payloadPositionChange) {
           this.interviewFormService.postUpdateSelectPostion(this.payloadPositionChange).subscribe({});
         }
@@ -1380,16 +1386,16 @@ export class OfferResultComponent {
   }
 
   saveCache(): void {
-    const current = this.buildCurrentPayload();
-    if (!this.snapshotInputForm) this.snapshotInputForm = this.buildServerBaselinePayload();
+    // const current = this.buildCurrentPayload();
+    // if (!this.snapshotInputForm) this.snapshotInputForm = this.buildServerBaselinePayload();
 
-    const changed = JSON.stringify(current) !== JSON.stringify(this.snapshotInputForm);
-    if (changed) {
-      sessionStorage.setItem(this.cacheKey(), JSON.stringify(current));
-    } else {
-      sessionStorage.removeItem(this.cacheKey());
-      sessionStorage.removeItem(`${this.cacheKey()}:__editingReview`);
-    }
+    // const changed = JSON.stringify(current) !== JSON.stringify(this.snapshotInputForm);
+    // if (changed) {
+    //   sessionStorage.setItem(this.cacheKey(), JSON.stringify(current));
+    // } else {
+    //   sessionStorage.removeItem(this.cacheKey());
+    //   sessionStorage.removeItem(`${this.cacheKey()}:__editingReview`);
+    // }
   }
 
   public clearDraftsForCurrentType(): void {

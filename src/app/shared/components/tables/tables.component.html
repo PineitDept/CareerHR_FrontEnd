@@ -297,15 +297,20 @@
                         [fill]="getCellValue(row, column.field)?.fill || 'currentColor'"
                         [extraClass]="getCellValue(row, column.field)?.extraClass || '' + 'tw-transition-colors tw-duration-200'">
                       </app-icon>
-                      <p *ngIf="IconHasDes" class="tw-text-[12px] tw-text-gray-600">{{getCellValue(row, column.field)?.textDes}}</p>
-                      <p *ngIf="IconHasDes"
-                        class="tw-text-[12px] tw-text-gray-400"
-                        [class.tw-invisible]="!getCellValue(row, column.field)?.subDes"
-                      >
-                        {{ getCellValue(row, column.field)?.subDes
-                            ? '(' + getCellValue(row, column.field)?.subDes + ')'
-                            : '\u00A0' }}
-                      </p>
+
+                      <ng-container *ngIf="IconHasDes">
+                        <p class="tw-text-[12px] tw-text-gray-600 tw-h-4 tw-flex tw-items-center">
+                          {{ getCellValue(row, column.field)?.textDes || '\u00A0' }}
+                        </p>
+
+                        <p class="tw-text-[12px] tw-text-gray-400 tw-h-4 tw-flex tw-items-center">
+                          {{
+                            getCellValue(row, column.field)?.subDes
+                              ? '(' + getCellValue(row, column.field)?.subDes + ')'
+                              : '\u00A0'
+                          }}
+                        </p>
+                      </ng-container>
                     </div>
 
                     <!-- toggle Content -->

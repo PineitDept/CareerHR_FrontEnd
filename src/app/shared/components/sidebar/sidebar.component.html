@@ -32,7 +32,7 @@
       </ng-container>
 
       <ng-template #levelView>
-        <li class="tw-pl-6 tw-py-2 tw-mb-2">{{this.menuStack.at(-1)}}</li>
+        <li class="tw-pl-6 tw-py-2 tw-mb-2" *ngIf="!isUserCollapsed">{{this.menuStack.at(-1)}}</li>
         <li *ngFor="let n of currentNodes"
           class="tw-flex tw-items-center tw-gap-x-2 tw-mb-2 tw-cursor-pointer tw-border-l-[4px] tw-pl-6 tw-py-2 hover:tw-bg-white/10"
           [ngClass]="{

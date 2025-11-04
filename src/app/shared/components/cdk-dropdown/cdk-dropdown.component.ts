@@ -124,7 +124,15 @@ export class CdkDropdownComponent implements ControlValueAccessor {
   }
 
   open(triggerEl: HTMLElement) {
-    if (this.disabledSelected || this.isOpen) return;
+    if (this.disabledSelected) return;
+
+    if (this.isOpen) {
+      this.close();
+      return;
+    }
+
+    window.addEventListener('wheel', this.preventScroll, { passive: false });
+    window.addEventListener('touchmove', this.preventScroll, { passive: false });
 
     const w = triggerEl.getBoundingClientRect().width;
     this.positionStrategy = this.overlay.position()
@@ -178,6 +186,9 @@ export class CdkDropdownComponent implements ControlValueAccessor {
   close() {
     if (!this.isOpen) return;
 
+    window.removeEventListener('wheel', this.preventScroll);
+    window.removeEventListener('touchmove', this.preventScroll);
+
     this.ro?.disconnect();
     this.ro = undefined;
     this.overlayRef?.detach();
@@ -189,6 +200,15 @@ export class CdkDropdownComponent implements ControlValueAccessor {
     this.onTouched();
     this.cdr.markForCheck();
   }
+
+  private preventScroll = (e: Event) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('.cdk-overlay-pane')) {
+      return;
+    }
+
+    e.preventDefault();
+  };
 
   @Input() allowClear = true;
 
