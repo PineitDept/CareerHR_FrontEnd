@@ -327,7 +327,7 @@ export class OfferEmploymentHistoryComponent {
             OfferDate: this.formatCreateDateTimeDMY(item.result.offerDate).formattedDate,
             OfferResult: item.result.offerResult ? item.result.offerResult : undefined,
             HireResult: item.result.hireResult ? item.result.hireResult : undefined,
-            position: item.jobPosition.jobList?.map((pos: { jobId?: number; jobName: string; }) => pos.jobName) || [],
+            position: item.jobPosition.jobList ?.filter((pos: { isOffered?: boolean }) => pos.isOffered).map((pos: { jobName: string }) => pos.jobName) || [],
           };
         });
 
@@ -680,7 +680,7 @@ export class OfferEmploymentHistoryComponent {
             OfferDate: item.result.offerDate ? this.formatCreateDateTimeDMY(item.result.offerDate).formattedDate : '',
             OfferResult: item.result.offerResult ? item.result.offerResult : undefined,
             HireResult: item.result.hireResult ? item.result.hireResult : undefined,
-            position: item.jobPosition.jobList?.map((pos: { jobId?: number; jobName: string; }) => pos.jobName) || [],
+            position: item.jobPosition.jobList ?.filter((pos: { isOffered?: boolean }) => pos.isOffered).map((pos: { jobName: string }) => pos.jobName) || [],
           };
         });
 

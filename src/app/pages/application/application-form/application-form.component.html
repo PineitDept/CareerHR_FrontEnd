@@ -675,7 +675,7 @@
               </div>
 
               <!-- Actions: Edit / Confirm / Cancel -->
-              <div *ngIf="s.stageNameNormalized==='screened' && (screening.status==='Pending' || allowEditButton || editReview) && (historyLogs.length === 1)"
+              <!-- <div *ngIf="s.stageNameNormalized==='screened' && (screening.status==='Pending' || allowEditButton || editReview) && (interviewCount < 1)"
                   class="tw-flex tw-gap-3 tw-justify-end tw-pb-5">
                 <button *ngIf="allowEditButton && !editReview" type="button" (click)="onEditReview(s)"
                         class="tw-rounded-lg tw-bg-[#00AAFF] tw-text-white tw-py-2 tw-px-4 tw-transition-all hover:tw-bg-[#0c95da]">
@@ -689,6 +689,31 @@
                   </button>
                   <button type="button" (click)="onCancelReview()"
                           class="tw-rounded-lg tw-border tw-border-[#E5E5E5] tw-text-black tw-py-2 tw-px-4 tw-transition-all hover:tw-bg-[#E5E5E5]">
+                    Cancel
+                  </button>
+                </ng-container>
+              </div> -->
+
+              <!-- Actions -->
+              <div *ngIf="s.stageNameNormalized==='screened' && (interviewCount < 1)"
+                  class="tw-flex tw-gap-3 tw-justify-end tw-pb-5">
+                <button *ngIf="!s.isEditing"
+                        type="button"
+                        (click)="onEditReview(s)"
+                        class="tw-rounded-lg tw-bg-[#00AAFF] tw-text-white tw-py-2 tw-px-4 hover:tw-bg-[#0c95da]">
+                  Edit
+                </button>
+
+                <ng-container *ngIf="s.isEditing">
+                  <button type="button"
+                          (click)="onConfirmReview(s)"
+                          class="tw-rounded-lg tw-bg-[#D97706] tw-text-white tw-py-2 tw-px-4 hover:tw-bg-[#c46b07]">
+                    Confirm
+                  </button>
+                  <button type="button"
+                          (click)="onCancelReview(s)"
+                          [ngClass]="!screeningCount ? 'tw-pointer-events-none':''"
+                          class="tw-rounded-lg tw-border tw-border-[#E5E5E5] tw-text-black tw-py-2 tw-px-4 hover:tw-bg-[#E5E5E5]">
                     Cancel
                   </button>
                 </ng-container>

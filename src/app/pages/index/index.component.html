@@ -44,7 +44,8 @@
 
             <ng-container>
                 <div class="tw-max-h-[calc(100vh-410px)] tw-overflow-y-auto" #scrollArea (scroll)="onScroll($event)">
-                    <app-tables [columns]="columns" [rows]="rows" [showCheckbox]="false" [enableRowClick]="false"
+                    <app-tables [columns]="columns" [rows]="rows" [showCheckbox]="false" [enableRowClick]="true"
+                        (rowClicked)="onViewRowClicked($event)"
                         (columnRowClicked)="handleColumnRowClick($event)" [hasOverflowY]="hasOverflowY"
                         [isToggleAlert]="true"></app-tables>
                 </div>
