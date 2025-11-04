@@ -83,11 +83,25 @@
 
                 <div class="list-top">
                     <p class="tw-mb-3"><strong>Job Position Interviewed </strong><span class="text-red">*</span></p>
-                    <div class="tw-flex tw-flex-col tw-w-full tw-gap-4 !tw-mt-0">
+                    <div class="tw-flex tw-flex-col tw-w-full tw-gap-4 !tw-mt-0" [ngClass]="item.interview.isEmailSent ? 'tw-pointer-events-none' : ''">
                         <ng-container *ngFor="let job of item.jobPosition.jobList">
                             <label *ngIf="!job.isOffered" class="tw-flex tw-items-start" (click)="onRemoveJobApplicant(job, item)">
-                                <input type="checkbox" class="tw-accent-black/25 tw-relative tw-top-[7px]"
-                                    [checked]="job.isActive" (click)="$event.stopPropagation()" />
+                                <!-- <input type="checkbox" class="tw-accent-black/25 tw-relative tw-top-[7px]"
+                                    [checked]="job.isActive" (click)="$event.stopPropagation()" /> -->
+                                <span role="checkbox" [attr.aria-checked]="job.isActive" class="tw-inline-flex tw-items-center tw-justify-center tw-rounded-[4px] tw-border tw-align-middle tw-mt-0.5"
+                                    [ngClass]="[job.isActive ? 'tw-border-green-500 tw-bg-green-50' : 'tw-border-gray-300 tw-bg-white'
+                                    ]" style="width:18px;height:18px;min-width:18px;min-height:18px">
+                                    <app-icon *ngIf="job.isActive" name="check" [size]="14"
+                                        class="tw-text-green-600"></app-icon>
+                                </span>
+                                <!-- <span role="checkbox" [attr.aria-checked]="r.checked"
+                                            class="tw-inline-flex tw-items-center tw-justify-center tw-rounded-[4px] tw-border tw-align-middle tw-mt-0.5"
+                                            [ngClass]="[r.checked ? 'tw-border-green-500 tw-bg-green-50' : 'tw-border-gray-300 tw-bg-white',
+                                                !editReview ? 'tw-pointer-events-none':'', disableInputPass(), disableWhenNotLatest()
+                                            ]" style="width:18px;height:18px;min-width:18px;min-height:18px">
+                                            <app-icon *ngIf="r.checked" name="check" [size]="14"
+                                                class="tw-text-green-600"></app-icon>
+                                        </span> -->
                                 <span class="tw-ml-2">{{ job.jobName }}</span>
                             </label>
                             <label *ngIf="job.isOffered" class="tw-flex tw-items-start hover:tw-text-red-600 hover:tw-cursor-pointer"
@@ -122,7 +136,7 @@
                 </button> -->
 
                 <button type="button"
-                    *ngIf="!item.isHidden"
+                    *ngIf="!item.isHidden && !item.interview.isEmailSent"
                     (click)="onAddPoscitionClick(i)"
                     class="tw-w-fit tw-rounded-lg tw-border-[#e5e5e5] tw-border hover:tw-bg-[#f5f5f5] tw-text-black tw-text-sm tw-font-semibold tw-px-3 tw-py-1.5">
                     <span class="tw-font-semibold">Add Position</span>
