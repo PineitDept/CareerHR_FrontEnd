@@ -114,6 +114,8 @@ interface StageSection {
   concern?: string | null;
   isSummary?: boolean;
   open: boolean;
+  isEditing?: boolean;
+  canEdit?: boolean;
 
   uiReadonly?: {
     topChoice: 'Accept' | 'Decline' | null;
@@ -249,6 +251,8 @@ export class ApplicationFormComponent {
   private destroy$ = new Subject<void>();
 
   stageSections: StageSection[] = [];
+  interviewCount = 0;
+  screeningCount = 0;
 
   // ===== Comments state =====
   commentsLoading = false;
@@ -303,6 +307,8 @@ export class ApplicationFormComponent {
     liked: false,
     loading: false
   };
+
+  currentCandidateTracking: CandidateTracking | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -421,6 +427,8 @@ export class ApplicationFormComponent {
 
   // ===================== Mapping =====================
   private mapTrackingToView(ct: CandidateTracking) {
+    this.currentCandidateTracking = ct;
+
     this.applicant = {
       id: String(ct.userID ?? ''),
       name: ct.fullName || ct.fullNameTH || '—',
@@ -749,10 +757,15 @@ export class ApplicationFormComponent {
             const allReasons: ReasonOption[] = (selectedCat?.rejectionReasons || []).map((r: any) => ({
               reasonId: r.reasonId,
               reasonText: r.reasonText,
-              checked: Array.isArray(h.selectedReasonIds) ? h.selectedReasonIds.includes(r.reasonId)
-                : Array.isArray((h as any).selectedReasonTexts) ? (h as any).selectedReasonTexts.includes(r.reasonText)
+              checked: Array.isArray(h.selectedReasonIds)
+                ? h.selectedReasonIds.includes(r.reasonId)
                 : false
             }));
+
+            // 🔽🔽 จุดสำคัญ — ให้ใช้ shouldAllowEditForScreened กับข้อมูลเต็ม ct ล่าสุด
+            const canEdit =
+              this.isScreened(stageNameNorm) &&
+              this.shouldAllowEditForScreened(this.currentCandidateTracking || ({} as any));
 
             return {
               historyId: Number(h.historyId),
@@ -767,9 +780,11 @@ export class ApplicationFormComponent {
               reasons: allReasons,
               notes: h.notes ?? null,
               strength: h.strength ?? null,
-              concern:  h.concern ?? null,
+              concern: h.concern ?? null,
               isSummary: h.isSummary,
-              open: true
+              open: true,
+              isEditing: false,
+              canEdit, // ✅ ใช้ค่าที่คำนวณใหม่
             };
           });
 
@@ -897,10 +912,55 @@ export class ApplicationFormComponent {
 
           this.prefillScreeningFormFromHistory();
           
-          if(this.historyLogs.length) {
+          if(histories.length) {
             this.allowEditButton = true;
             this.editReview = false;
           }
+
+          this.screeningCount = this.stageSections.filter(item => item.stageId === 1).length;
+          this.interviewCount = this.stageSections.filter(item => item.stageId === 2).length;
+
+          // ถ้าไม่มี history เลย → สร้างการ์ด Screened เปล่า
+          if ((histories || []).length === 0) {
+            const screenCats = (this.reasonsByStage.get(SCREENED_STAGE_ID) || []).map(c => ({
+              categoryId: c.categoryId,
+              categoryName: c.categoryName
+            })) as CategoryOption[];
+
+            const stub: StageSection = {
+              historyId: 0,
+              stageId: SCREENED_STAGE_ID,
+              stageName: 'Screened',
+              stageNameNormalized: 'screened',
+              headerTitle: 'Application Screening',
+              hrUserName: this.sessionUserName || '—',
+              stageDate: this.today,
+              categories: screenCats,
+              selectedCategoryId: undefined,
+              reasons: [],
+              notes: '',
+              strength: null,
+              concern: null,
+              isSummary: true,
+              open: true,
+              // เปิดแก้ไขตั้งแต่แรก + โชว์ Confirm/Cancel
+              isEditing: true,
+              canEdit: true,
+            };
+
+            this.stageSections = [stub];
+
+            // ตั้งค่า form เริ่มต้น
+            if (!this.formDetails.get('dateInterviewReview')?.value) {
+              this.formDetails.get('dateInterviewReview')?.setValue(this.today);
+            }
+            this.syncNotesEditableByStatus(stub); // เปิด textarea
+            
+            this.screeningCount = 0;
+
+            return; // จบ flow ตรงนี้ได้เลย
+          }
+
         },
         error: (e) => console.error('[ApplicationForm] stage history subscribe error:', e)
       });
@@ -1407,6 +1467,8 @@ export class ApplicationFormComponent {
 
   // ===================== ปุ่ม Edit / Confirm / Cancel =====================
   onEditReview(s: StageSection) {
+    s.isEditing = true;
+    s.canEdit = false;
     this.originalSnapshot = {
       categoryId: s.selectedCategoryId,
       reasons: (s.reasons || []).map(r => ({ ...r })),
@@ -1424,10 +1486,12 @@ export class ApplicationFormComponent {
 
     this.allowEditButton = false;
     this.editReview = true;
-    this.syncNotesEditableByStatus();
+    this.syncNotesEditableByStatus(s);
   }
 
-  onCancelReview() {
+  onCancelReview(stage: StageSection) {
+    stage.isEditing = false;
+    stage.canEdit = true;
     const s = this.stageSections.find(x => this.isScreened(x.stageNameNormalized) && x.isSummary !== false);
     if (s && this.originalSnapshot) {
       s.selectedCategoryId = this.originalSnapshot.categoryId;
@@ -1461,7 +1525,7 @@ export class ApplicationFormComponent {
 
     // ========= แยกสองกรณี =========
     const isPendingFlow = this.hasScreenedPending || !s.historyId; // ถ้า Pending หรือยังไม่มี historyId → add
-    if (isPendingFlow) {
+    if (!this.screeningCount) {
       if (!s.stageId) {
         this.notify?.error?.('Missing stage ID for Screening.');
         return;
@@ -1483,6 +1547,8 @@ export class ApplicationFormComponent {
 
       this.applicationService.addInterviewReview(payloadAdd).subscribe({
         next: () => {
+          s.isEditing = false;
+          s.canEdit = true;
           this.notify?.success?.('Saved screening result.');
           this.editReview = false;
           this.allowEditButton = this.shouldAllowEditForScreened({ screened: { status: 'Accepted' } } as any) || false; // ปลอดภัยไว้ก่อน
@@ -1510,6 +1576,9 @@ export class ApplicationFormComponent {
 
       this.applicationService.updateInterviewReview(historyId, payloadUpdate).subscribe({
         next: () => {
+          s.isEditing = false;
+          s.canEdit = true;
+
           this.notify?.success?.('Updated screening result.');
           this.editReview = false;
           // อนุญาตให้กด Edit ได้ต่อไปถ้ากติกายังผ่าน
@@ -1564,11 +1633,10 @@ export class ApplicationFormComponent {
       }));
   }
 
-  private syncNotesEditableByStatus() {
+  private syncNotesEditableByStatus(s?: StageSection) {
     const notesCtrl = this.formDetails.get('noteInterviewReview');
-    const canEdit = this.editReview; // เดิมเช็ค === 'Pending'
-    if (canEdit) notesCtrl?.enable({ emitEvent: false });
-    else notesCtrl?.disable({ emitEvent: false });
+    const can = !!s?.isEditing;
+    can ? notesCtrl?.enable({ emitEvent: false }) : notesCtrl?.disable({ emitEvent: false });
   }
 
   private shouldAllowEditForScreened(ct: CandidateTracking): boolean {
@@ -1582,7 +1650,7 @@ export class ApplicationFormComponent {
   }
 
   isEditingScreened(s: StageSection): boolean {
-    return s?.stageNameNormalized === 'screened' && this.editReview;
+    return s?.stageNameNormalized === 'screened' && !!s.isEditing;
   }
 
   // ใช้กับ badge ผลลัพธ์ของ review ใน non-summary card
