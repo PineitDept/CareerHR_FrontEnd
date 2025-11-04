@@ -24,9 +24,12 @@ export const ApiInterceptorFn: HttpInterceptorFn = (
   const accessToken = auth.getAccessToken(); // 5. Get token from sessionStorage
 
   // 6. If withAuth = true AND token exists → attach Authorization header
-  const modifiedReq = withAuth && accessToken
-    ? req.clone({ setHeaders: { Authorization: `Bearer ${accessToken}` } })
-    : req;
+ const modifiedReq = withAuth && accessToken
+  ? req.clone({
+      setHeaders: { Authorization: `Bearer ${accessToken}` },
+      withCredentials: true, //  เพิ่มตรงนี้
+    })
+  : req.clone({ withCredentials: true }); //  ส่ง cookie ทุกกรณี
 
   return next(modifiedReq).pipe(
     catchError((error: any) => {
