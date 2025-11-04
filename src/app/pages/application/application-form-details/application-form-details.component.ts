@@ -79,6 +79,10 @@ export class ApplicationFormDetailsComponent {
 
   // ===== ViewModel (แสดงผลเท่านั้น) =====
   vm = {
+    firstNameEn: '—',
+    lastNameEn: '—',
+    firstNameTh: '—',
+    lastNameTh: '—',
     fullNameEn: '—',
     fullNameTh: '—',
     email: '—',
@@ -311,6 +315,10 @@ export class ApplicationFormDetailsComponent {
 
           this.vm = {
             ...this.vm,
+            firstNameEn: p.engFirstname || '—',
+            lastNameEn:  p.engLastname  || '—',
+            firstNameTh: p.thaiFirstname || '—',
+            lastNameTh:  p.thaiLastname  || '—',
             fullNameEn: fullEn || '—',
             fullNameTh: fullTh || '—',
             email: p.email || '—',
@@ -501,8 +509,8 @@ export class ApplicationFormDetailsComponent {
           this.general = {
             workRegular:    this.yesNo(byId(2)),     // Working in another province on a regular basis
             workOccasional: this.yesNo(byId(4)),     // Working in another province occasionally
-            smoking:        this.smokerLabel(byId(6)),
-            alcohol:        this.drinkerLabel(byId(8)),
+            smoking:        this.yesNo(byId(6)),
+            alcohol:        this.yesNo(byId(8)),
             disease:        this.yesNo(byId(10)),
             legalCase:      this.yesNo(byId(12)),
           };
