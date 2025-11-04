@@ -99,9 +99,15 @@
       </button>
       <ul *ngIf="isMonthOpen"
         class="tw-absolute tw-bg-white tw-shadow-md tw-rounded-lg tw-mt-1 tw-z-20 tw-w-full tw-min-w-[100px]">
-        <li *ngFor="let m of months" (click)="selectOption('month', m)"
-          class="tw-px-4 tw-py-2 tw-text-base tw-cursor-pointer hover:tw-bg-gray-100">
-          {{ m }}
+        <li *ngFor="let m of months"
+            (click)="selectOption('month', m)"
+            class="tw-px-4 tw-py-2 tw-text-base tw-cursor-pointer hover:tw-bg-gray-100"
+            [ngClass]="{ 'tw-bg-gray-200': isMonthActive(m) }"
+            [attr.aria-selected]="isMonthActive(m)">
+          <div class="tw-flex tw-items-center tw-justify-between">
+            <span>{{ m }}</span>
+            <app-icon *ngIf="isMonthActive(m)" name="check" [size]="16"></app-icon>
+          </div>
         </li>
       </ul>
     </div>

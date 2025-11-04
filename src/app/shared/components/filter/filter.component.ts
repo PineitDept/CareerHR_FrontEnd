@@ -429,4 +429,8 @@ export class FilterComponent {
       && /^\d{1,4}$/.test(this.selectedYear)
       && !this.isInYearOptionsList(this.selectedYear);
   }
+
+  isMonthActive(m: string): boolean {
+    return this.selectedMonth === m;
+  }
 }
