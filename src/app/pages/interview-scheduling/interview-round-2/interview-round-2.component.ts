@@ -1420,7 +1420,7 @@ export class InterviewRound2Component {
     return team?.label ?? '';
   }
 
-  getButtonClass(resultCode: number): string {
+  getButtonClass(resultCode: number, textLabel: string): string {
     switch (resultCode) {
       case 12:
         return 'tw-bg-[#FAFBC8] tw-text-[#AAAA00]'; // pending
@@ -1428,6 +1428,11 @@ export class InterviewRound2Component {
         return 'tw-bg-[#F9E9C8] tw-text-[#AA5500]'; // in process
       case 16:
         return 'tw-bg-[#E0EEFA] tw-text-[#0085FF]'; // scheduled
+    }
+
+    switch (textLabel.toLocaleLowerCase()) {
+      case 'pending':
+        return 'tw-bg-[#FAFBC8] tw-text-[#AAAA00]'; // pending
       default:
         return 'tw-bg-[#e9e9e9] tw-text-[#373737]';
     }

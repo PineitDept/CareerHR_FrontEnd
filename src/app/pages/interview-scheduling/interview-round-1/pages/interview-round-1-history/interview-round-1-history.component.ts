@@ -1415,14 +1415,18 @@ export class InterviewRound1HistoryComponent {
 
   getButtonClass(resultCode: number): string {
     switch (resultCode) {
+      // case 20:
+      //   return 'tw-bg-[#fff4b3] tw-text-[#dfa400]'; // on hold
       case 21:
         return 'tw-bg-[#AAFFAA] tw-text-[#00AA00]'; // pass
       case 22:
         return 'tw-bg-[#9300001A] tw-text-[#660708]'; // not pass
+      case 23:
+        return 'tw-bg-[#f2d4ff] tw-text-[#6e00be]'; // No Show
       case 25:
         return 'tw-bg-[#FF00551F] tw-text-[#FF0055]'; // candidate decline
       default:
-        return 'tw-bg-[#e9e9e9] tw-text-[#373737]'; // No Show
+        return 'tw-bg-[#e9e9e9] tw-text-[#373737]'; // default
     }
   }
 
