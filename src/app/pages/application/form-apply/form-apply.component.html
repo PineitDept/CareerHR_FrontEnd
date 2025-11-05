@@ -368,15 +368,14 @@
                                     <span class="tw-flex">{{ i + 1 }}. <span class="tw-line-clamp-1">{{ s.name }}</span></span>
                                     <span>{{ s.levelText }}</span>
                                 </div> -->
-                            <ol class="col3-count">
+                            <ol class="col3-count" [style.--rows]="rowsPerCol">
                                 <ng-container *ngFor="let s of computerSkillsDisplay; let i = index">
-                                    <li class="tw-flex">
+                                    <li class="tw-flex tw-w-[85%]">
                                         <span class="tw-line-clamp-1 tw-w-[60%]">{{ i + 1 }}. {{ s.name }}</span>
                                         <span>{{ s.levelText }}</span>
                                     </li>
                                 </ng-container>
 
-                                <!-- เติมบรรทัดว่างให้ครบ 5 -->
                                 <div *ngIf="computerSkillsDisplay.length < 6">
                                     <ng-container *ngFor="let x of [].constructor(6 - computerSkillsDisplay.length)">
                                         <li class="tw-flex tw-invisible">
