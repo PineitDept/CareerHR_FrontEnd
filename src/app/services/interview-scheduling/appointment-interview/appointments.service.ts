@@ -187,7 +187,7 @@ export class AppointmentsService {
   sendEmail(body: SendEmailRequest): Observable<any> {
     return this.api.post<any>('Email/send', body, {
       withAuth: true,
-      loading: false,
+      loading: true,
     });
   }
 
