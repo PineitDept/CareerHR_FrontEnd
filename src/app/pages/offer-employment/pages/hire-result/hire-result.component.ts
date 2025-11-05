@@ -166,6 +166,7 @@ export class HireResultComponent {
 
       this.fetchCandidateTracking();
       this.fetchRecruitmentStagesWithReasons(5); // hire state
+      if (this.applicantId) this.loadComments(this.applicantId);
     });
 
     const userString = sessionStorage.getItem('user');
