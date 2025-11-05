@@ -35,7 +35,7 @@
                     <!-- <span class="ribbon" [ngClass]="getTagClass(item.profile.candidateGrade)">Grade {{
                         item.profile.candidateGrade ? item.profile.candidateGrade : 'N/A' }}</span> -->
                     <div class="tw-w-full">
-                        <p class="tag tw-w-fit tw-mb-4" [ngClass]="getButtonClass(item.result.interviewResult)">
+                        <p class="tag tw-w-fit tw-mb-4" [ngClass]="getButtonClass(item.result.interviewResult, item.result.interviewResultText)">
                             {{item.result.interviewResultText}}</p>
                         <div class="tw-flex tw-items-start tw-gap-2 tw-justify-between">
                             <div>

@@ -1389,7 +1389,7 @@ export class InterviewFormDetailsComponent {
       case 16: return 'tw-bg-indigo-400 tw-text-white';          // Scheduled
       case 21: return 'btn-pass tw-bg-[#005500] tw-text-white';           // Pass Interview (สีเขียว)
       case 22: return 'btn-notpass tw-bg-red-500 tw-text-white';             // Not Pass Interview (สีแดง)
-      case 23: return 'tw-bg-gray-500 tw-text-white';            // No Show
+      case 23: return 'tw-bg-[#7f56d9] tw-text-white';            // No Show
       case 24: return 'tw-bg-purple-400 tw-text-white';          // Reschedule
       case 25: return 'tw-bg-pink-400 tw-text-white';            // Candidate Decline
       case 41: return 'tw-bg-green-700 tw-text-white';           // Hire
@@ -1406,7 +1406,7 @@ export class InterviewFormDetailsComponent {
       case 16: return 'tw-bg-indigo-400 tw-text-white';          // Scheduled
       case 21: return 'btn-pass tw-bg-[#005500] tw-text-white';           // Pass Interview (สีเขียว)
       case 22: return 'btn-notpass tw-bg-red-500 tw-text-white';             // Not Pass Interview (สีแดง)
-      case 23: return 'tw-bg-gray-500 tw-text-white';            // No Show
+      case 23: return 'tw-bg-[#7f56d9] tw-text-white';            // No Show
       case 24: return 'tw-bg-purple-400 tw-text-white';          // Reschedule
       case 25: return 'tw-bg-pink-400 tw-text-white';            // Candidate Decline
       case 41: return 'tw-bg-green-700 tw-text-white';           // Hire
@@ -1453,7 +1453,7 @@ export class InterviewFormDetailsComponent {
       return 'tw-bg-red-500 tw-text-white';
     }
     if (/(no[-\s]?show|noshow)/.test(s)) {
-      return 'tw-bg-gray-500 tw-text-white';
+      return 'tw-bg-[#7f56d9] tw-text-white';
     }
     if (/(on[-\s]?hold|hold)/.test(s)) {
       return 'tw-bg-amber-500 tw-text-white';

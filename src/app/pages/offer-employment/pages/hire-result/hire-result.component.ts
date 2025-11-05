@@ -439,7 +439,7 @@ export class HireResultComponent {
     const tones = {
       accept: { fill: 'tw-bg-green-500 tw-text-white' },
       decline: { fill: 'tw-bg-red-500 tw-text-white' },
-      noshow: { fill: 'tw-bg-gray-500 tw-text-white' },
+      noshow: { fill: 'tw-bg-[#7f56d9] tw-text-white' },
       onhold: { fill: 'tw-bg-amber-500 tw-text-white' },
       default: { fill: 'tw-bg-white tw-text-gray-700' },
     };
