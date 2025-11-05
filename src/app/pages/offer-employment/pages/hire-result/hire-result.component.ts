@@ -490,6 +490,8 @@ export class HireResultComponent {
       category.rejectionReasons.filter((reason) => reason.checked === true).map((reason) => reason.reasonId)
     );
 
+    const categoryId = this.selectedCategoryId ?? null;
+
     const checkedCategoryIds = this.reasonsInterview1
       .filter((category) => category.rejectionReasons.some((reason: { checked: boolean }) => reason.checked === true))
       .map((category) => category.categoryId);
@@ -524,7 +526,8 @@ export class HireResultComponent {
 
       if (this.foundisSummary) {
         const payloadHistory = {
-          categoryId: checkedCategoryIds[0],
+          // categoryId: checkedCategoryIds[0],
+          categoryId,
           stageDate: isoDate,
           notes: payload.noteInterviewReview,
           selectedReasonIds: checkedReasonIds,
@@ -544,7 +547,8 @@ export class HireResultComponent {
           applicationId: this.applicantId,
           stageId: this.stageId + 1,
           roundID: this.round,
-          categoryId: checkedCategoryIds[0],
+          // categoryId: checkedCategoryIds[0],
+          categoryId,
           isSummary: true,
           stageDate: isoDate,
           appointmentId: (appointmentId ?? '').trim(),
@@ -581,7 +585,7 @@ export class HireResultComponent {
       .map((category) => category.categoryId);
 
     const transformedPayload = {
-      categoryId: checkedCategoryIds[0],
+      categoryId: this.selectedCategoryId ?? null,
       stageDate: isoDate,
       notes: payload.noteInterviewReview,
       selectedReasonIds: checkedReasonIds,
@@ -624,7 +628,7 @@ export class HireResultComponent {
       .map((category) => category.categoryId);
 
     const transformedPayload = {
-      categoryId: checkedCategoryIds[0],
+      categoryId: this.selectedCategoryId ?? null,
       stageDate: isoDate,
       notes: payload.noteInterviewReview,
       selectedReasonIds: checkedReasonIds,

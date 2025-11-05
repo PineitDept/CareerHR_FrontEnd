@@ -27,6 +27,7 @@ import {
   GroupedCheckboxOption,
 } from '../../../shared/components/filter-check-box/filter-check-box.component';
 import { TrackingRow } from '../../../interfaces/Application/tracking.interface';
+import * as XLSX from 'xlsx-js-style';
 
 // Component-specific Configuration
 const TRACKING_CONFIG = {
@@ -101,6 +102,10 @@ export class TrackingComponent
   // state ใหม่สำหรับแนวนอน
   hasXScroll = false;
   private roX?: ResizeObserver;
+
+  filterButtons = [
+    { label: 'Export Excel', key: 'export', color: '#005500' },
+  ];
 
   // Tracking-specific state
   private readonly trackingFilterRequest =
@@ -236,6 +241,14 @@ export class TrackingComponent
       field: 'hired',
       type: 'icon',
       align: 'center',
+    },
+    {
+      header: 'Total',
+      field: 'totalDays',
+      type: 'text',
+      align: 'center',
+      sortable: true,
+      minWidth: '120px',
     },
     // {
     //   header: 'Last Update',
@@ -713,6 +726,7 @@ export class TrackingComponent
         ...(this.mapStatusIdToIcon(item.hired?.id, item.hired?.date) || STATUS_ICON_MAP[12]),
         subDes: toDaysLabel(item.offerToHiredDays),
       },
+      totalDays: toDaysLabel(item.totalDays) ?? '',
       lastUpdate: item.lastUpdate,
       roundID: item.roundID,
     };
@@ -871,4 +885,206 @@ export class TrackingComponent
     return cleaned as ICandidateFilterRequest;
   }
 
+  onFilterButtonClick(key: string) {
+    switch (key) {
+      case 'export':
+        this.onExportClicked();
+        break;
+    }
+  }
+
+  onExportClicked() {
+    console.log('Button clicked: Export Excel');
+    try {
+      const data = this.rows?.() ?? [];
+      if (!data.length) return;
+
+      // ลำดับหัวคอลัมน์ “ตามตารางบนหน้า”
+      const headers = this.columns.map(c => c.header);
+      const aoa: (string | number)[][] = [headers];
+
+      // map แถวให้ตรงคอลัมน์ (ปรับใช้ formatIconCellFull)
+      for (const r of data) {
+        aoa.push([
+          r.submitDate ? this.formatDate(r.submitDate) : '',
+          r.userID ?? '',
+          r.fullName ?? '',
+          this.formatPositions(r.position),
+          r.university ?? '',
+          (r.gpa ?? '') as any,
+          r.gradeCandidate ?? '',
+          this.formatIconCellFull(r.applied),     // Applied
+          this.formatIconCellFull(r.statusCSD),   // Screen
+          this.formatIconCellFull(r.interview1),  // Interview1
+          this.formatIconCellFull(r.interview2),  // Interview2
+          this.formatIconCellFull(r.offer),       // Offered
+          this.formatIconCellFull(r.hired),       // Hired
+          r.totalDays ?? '',                      // Total
+        ]);
+      }
+
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+      // ความกว้างคอลัมน์ใกล้เคียง UI
+      ws['!cols'] = [
+        { wch: 12 }, // Submit Date
+        { wch: 12 }, // Applicant ID
+        { wch: 24 }, // Applicant Name
+        { wch: 32 }, // Job Position
+        { wch: 28 }, // University
+        { wch: 6 },  // GPA
+        { wch: 8 },  // Grade
+        { wch: 16 }, // Applied
+        { wch: 16 }, // Screen
+        { wch: 16 }, // Interview1
+        { wch: 16 }, // Interview2
+        { wch: 16 }, // Offered
+        { wch: 16 }, // Hired
+        { wch: 12 }, // Total
+      ];
+
+      // freeze แถวหัวตาราง
+      (ws as any)['!freeze'] = { xSplit: 0, ySplit: 1 };
+
+      const range = XLSX.utils.decode_range(ws['!ref']!);
+
+      // ==== 1) สไตล์หัวตาราง (ขอบมีสี, พื้นหลังเทา, ตัวหนา) ====
+      for (let c = range.s.c; c <= range.e.c; c++) {
+        const addr = XLSX.utils.encode_cell({ r: 0, c });
+        const cell = ws[addr] || (ws[addr] = {});
+        cell.s = {
+          font: { bold: true, color: { rgb: '111827' } }, // gray-900
+          alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+          fill: { fgColor: { rgb: 'E5E7EB' } }, // gray-200
+          border: {
+            top:    { style: 'thin', color: { rgb: this.BORDER_RGB } },
+            left:   { style: 'thin', color: { rgb: this.BORDER_RGB } },
+            bottom: { style: 'thin', color: { rgb: this.BORDER_RGB } },
+            right:  { style: 'thin', color: { rgb: this.BORDER_RGB } },
+          },
+        };
+      }
+
+      // index คอลัมน์สถานะ (อิงจาก aoa ด้านบน)
+      const STATUS_COLS = {
+        applied: 7,
+        screen: 8,
+        interview1: 9,
+        interview2: 10,
+        offered: 11,
+        hired: 12,
+      };
+
+      // ==== 2) สไตล์ข้อมูล (ขอบมีสี + wrapText) + เติมสีพื้นหลังให้คอลัมน์สถานะ ====
+      for (let r = 1; r <= range.e.r; r++) {
+        const rowData = data[r - 1]; // mapping แถว aoa -> rows()
+
+        for (let c = range.s.c; c <= range.e.c; c++) {
+          const addr = XLSX.utils.encode_cell({ r, c });
+          const cell = ws[addr] || (ws[addr] = {});
+          const baseStyle: any = {
+            alignment: {
+              vertical: 'center',
+              horizontal: [0,1,5,6,7,8,9,10,11,12,13].includes(c) ? 'center' : 'left',
+              wrapText: true,
+            },
+            border: {
+              top:    { style: 'thin', color: { rgb: this.BORDER_RGB } },
+              left:   { style: 'thin', color: { rgb: this.BORDER_RGB } },
+              bottom: { style: 'thin', color: { rgb: this.BORDER_RGB } },
+              right:  { style: 'thin', color: { rgb: this.BORDER_RGB } },
+            },
+            font: { color: { rgb: '111827' } }, // default เทาเข้ม
+          };
+
+          // ถ้าเป็นคอลัมน์สถานะ -> ลงสีพื้นหลังตามสถานะ + ให้ font เป็นสีขาวอ่านง่าย
+          let bg: string | null = null;
+          if (c === STATUS_COLS.applied)     bg = this.getStatusBg(rowData?.applied);
+          else if (c === STATUS_COLS.screen) bg = this.getStatusBg(rowData?.statusCSD);
+          else if (c === STATUS_COLS.interview1) bg = this.getStatusBg(rowData?.interview1);
+          else if (c === STATUS_COLS.interview2) bg = this.getStatusBg(rowData?.interview2);
+          else if (c === STATUS_COLS.offered)    bg = this.getStatusBg(rowData?.offer);
+          else if (c === STATUS_COLS.hired)      bg = this.getStatusBg(rowData?.hired);
+
+          if (bg) {
+            baseStyle.fill = { fgColor: { rgb: bg } };
+            baseStyle.font = { color: { rgb: '111827' } }; // เทาเข้มอ่านง่ายบนพื้นหลังอ่อน
+            baseStyle.alignment.horizontal = 'center';
+          }
+
+          cell.s = baseStyle;
+        }
+      }
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Tracking');
+      const fileName = `applications-tracking_${new Date().toISOString().slice(0,10)}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+    } catch (e) {
+      console.error('Export failed:', e);
+    }
+  }
+
+  private readonly BORDER_RGB = '6B7280';
+
+  // map icon name -> unicode symbol (แทนไอคอนจริง)
+  private getIconSymbol(iconName?: string): string {
+    switch (iconName) {
+      case 'check-circle-solid': return '✔️'; // ผ่าน/Accept
+      case 'xmark-circle-solid': return '✖️'; // ไม่ผ่าน/Decline
+      case 'minus-circle-solid': return '●';  // Pending/Hold
+      default: return '●';
+    }
+  }
+
+  // สีพื้นหลังสำหรับคอลัมน์สถานะ: ใช้สีจาก icon.fill ถ้ามี ไม่งั้น fallback เป็นเทาอ่อน
+  private getStatusBg(icon?: { fill?: string } | null): string {
+    const base = icon?.fill?.replace('#', '').toUpperCase();
+    if (!base || base.length !== 6) return 'F3F4F6'; // gray-100 fallback
+    return this.lightenHex(base, 0.65); // ทำให้อ่อนลง ~65%
+  }
+
+  private lightenHex(hex: string, amount = 0.65): string {
+    // amount: 0..1 (0 = ไม่เปลี่ยน, 1 = ขาว)
+    const norm = hex.replace('#', '');
+    if (norm.length !== 6) return 'E5E7EB'; // fallback
+    const r = parseInt(norm.slice(0, 2), 16);
+    const g = parseInt(norm.slice(2, 4), 16);
+    const b = parseInt(norm.slice(4, 6), 16);
+
+    // mix with white: new = 255 - (255 - comp) * (1 - amount)
+    const mix = (comp: number) => Math.round(255 - (255 - comp) * (1 - amount));
+    const rr = mix(r);
+    const gg = mix(g);
+    const bb = mix(b);
+
+    const toHex = (v: number) => v.toString(16).padStart(2, '0').toUpperCase();
+    return `${toHex(rr)}${toHex(gg)}${toHex(bb)}`;
+  }
+
+  // ใช้ทั้งสามบรรทัด: icon (บรรทัด 1) / date (บรรทัด 2) / days (บรรทัด 3) — บังคับมีเสมอ
+  private formatIconCellFull(icon?: { icon?: string; textDes?: string; subDes?: string } | null): string {
+    const sym  = this.getIconSymbol(icon?.icon);                // บรรทัด 1: ไอคอน (unicode)
+    const date = (icon?.textDes ?? '').trim() || '\u00A0';      // บรรทัด 2: วันที่ หรือ NBSP
+    const days = (icon?.subDes  ?? '').trim() || '\u00A0';      // บรรทัด 3: days หรือ NBSP
+    return `${sym}\n${date}\n${days}`;
+  }
+
+  // เดิม (ใช้ฟอร์แมตวันที่ทั่วไป)
+  private formatDate(d?: string): string {
+    if (!d) return '';
+    const date = new Date(d);
+    if (isNaN(+date)) return '';
+    const dd = String(date.getDate()).padStart(2, '0');
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const yy = String(date.getFullYear()).slice(-2);
+    return `${dd}/${mm}/${yy}`;
+  }
+
+  private formatPositions(positions?: string[]): string {
+    const list = positions ?? [];
+    if (!list.length) return '';
+    // 1. xxx \n 2. yyy \n 3. zzz
+    return list.map((p, i) => `${i + 1}. ${p}`).join('\n');
+  }
 }

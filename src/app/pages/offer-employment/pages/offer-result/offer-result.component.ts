@@ -1101,6 +1101,8 @@ export class OfferResultComponent {
       category.rejectionReasons.filter((reason) => reason.checked === true).map((reason) => reason.reasonId)
     );
 
+    const categoryId = this.selectedCategoryId ?? null;
+
     const checkedCategoryIds = this.reasonsInterview1
       .filter((category) => category.rejectionReasons.some((reason: { checked: boolean }) => reason.checked === true))
       .map((category) => category.categoryId);
@@ -1134,7 +1136,8 @@ export class OfferResultComponent {
       this.setReviewEditing(false);
 
       const basePayload = {
-        categoryId: checkedCategoryIds[0],
+        // categoryId: checkedCategoryIds[0],
+        categoryId,
         stageDate: isoDate,
         notes: payload.noteInterviewReview,
         selectedReasonIds: checkedReasonIds,
@@ -1201,7 +1204,7 @@ export class OfferResultComponent {
       .map((category) => category.categoryId);
 
     const transformedPayload = {
-      categoryId: checkedCategoryIds[0],
+      categoryId: this.selectedCategoryId ?? null,
       stageDate: isoDate,
       notes: payload.noteInterviewReview,
       selectedReasonIds: checkedReasonIds,
@@ -1247,7 +1250,7 @@ export class OfferResultComponent {
       .map((category) => category.categoryId);
 
     const transformedPayload = {
-      categoryId: checkedCategoryIds[0],
+      categoryId: this.selectedCategoryId ?? null,
       stageDate: isoDate,
       notes: payload.noteInterviewReview,
       selectedReasonIds: checkedReasonIds,

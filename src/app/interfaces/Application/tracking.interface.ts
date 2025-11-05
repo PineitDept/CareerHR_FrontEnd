@@ -61,6 +61,7 @@ export interface TrackingRow {
   hired: IconConfig;
   lastUpdate?: string;
   roundID?: number;
+  totalDays?: string;
 }
 
 export interface ICandidateFilterRequest {
