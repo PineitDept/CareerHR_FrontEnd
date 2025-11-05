@@ -8,7 +8,7 @@ import {
 export const BADGE_STYLES = {
   // All Application statuses
   New: ['tw-bg-green-500', 'tw-text-white', 'tw-ring-green-500/10'],
-  'Over 3 Day': ['tw-bg-yellow-400', 'tw-text-black', 'tw-ring-yellow-500/10'],
+  'Over 3 Days': ['tw-bg-yellow-400', 'tw-text-black', 'tw-ring-yellow-500/10'],
   'Over Week': ['tw-bg-red-500', 'tw-text-white', 'tw-ring-red-500/10'],
   'Over Month': ['tw-bg-red-900', 'tw-text-white', 'tw-ring-red-900/10'],
 

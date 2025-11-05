@@ -2,7 +2,8 @@ import {
   Component, Input, Output, EventEmitter, ChangeDetectionStrategy, ChangeDetectorRef,
   ViewChild, TemplateRef, ViewContainerRef, forwardRef,
   HostListener,
-  ElementRef
+  ElementRef,
+  SimpleChanges
 } from '@angular/core';
 import { Overlay, OverlayRef, FlexibleConnectedPositionStrategy, ConnectedPosition, ScrollStrategyOptions } from '@angular/cdk/overlay';
 import { TemplatePortal } from '@angular/cdk/portal';
@@ -59,6 +60,7 @@ export class CdkDropdownComponent implements ControlValueAccessor {
   private ro?: ResizeObserver;
   private _triggerEl?: HTMLElement;
   private _overlayEl?: HTMLElement;
+  private _valueBeforeOpen: any = null;
 
   @HostListener('window:resize')
   onWindowResize() {
@@ -87,6 +89,13 @@ export class CdkDropdownComponent implements ControlValueAccessor {
     private sso: ScrollStrategyOptions,
   ) { }
 
+  ngOnChanges(changes: SimpleChanges) {
+    if (this.searchable && !this.isOpen && (changes['options'] || changes['value'])) {
+      this.searchTerm = this.display;
+      this.cdr.markForCheck();
+    }
+  }
+  
   // ------------ CVA methods ------------
   writeValue(obj: any): void {
     this.value = obj ?? null;
@@ -196,6 +205,10 @@ export class CdkDropdownComponent implements ControlValueAccessor {
     this.activeIndex = -1;
     this._triggerEl = undefined;
     this._overlayEl = undefined;
+
+    if (this.searchable) {
+      this.searchTerm = this.display;
+    }
 
     this.onTouched();
     this.cdr.markForCheck();

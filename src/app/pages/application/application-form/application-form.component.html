@@ -675,7 +675,7 @@
               </div>
 
               <!-- Actions: Edit / Confirm / Cancel -->
-              <div *ngIf="s.stageNameNormalized==='screened' && (screening.status==='Pending' || allowEditButton || editReview) && (historyLogs.length === 1)"
+              <!-- <div *ngIf="s.stageNameNormalized==='screened' && (screening.status==='Pending' || allowEditButton || editReview) && (interviewCount < 1)"
                   class="tw-flex tw-gap-3 tw-justify-end tw-pb-5">
                 <button *ngIf="allowEditButton && !editReview" type="button" (click)="onEditReview(s)"
                         class="tw-rounded-lg tw-bg-[#00AAFF] tw-text-white tw-py-2 tw-px-4 tw-transition-all hover:tw-bg-[#0c95da]">
@@ -689,6 +689,31 @@
                   </button>
                   <button type="button" (click)="onCancelReview()"
                           class="tw-rounded-lg tw-border tw-border-[#E5E5E5] tw-text-black tw-py-2 tw-px-4 tw-transition-all hover:tw-bg-[#E5E5E5]">
+                    Cancel
+                  </button>
+                </ng-container>
+              </div> -->
+
+              <!-- Actions -->
+              <div *ngIf="s.stageNameNormalized==='screened' && (interviewCount < 1)"
+                  class="tw-flex tw-gap-3 tw-justify-end tw-pb-5">
+                <button *ngIf="!s.isEditing"
+                        type="button"
+                        (click)="onEditReview(s)"
+                        class="tw-rounded-lg tw-bg-[#00AAFF] tw-text-white tw-py-2 tw-px-4 hover:tw-bg-[#0c95da]">
+                  Edit
+                </button>
+
+                <ng-container *ngIf="s.isEditing">
+                  <button type="button"
+                          (click)="onConfirmReview(s)"
+                          class="tw-rounded-lg tw-bg-[#D97706] tw-text-white tw-py-2 tw-px-4 hover:tw-bg-[#c46b07]">
+                    Confirm
+                  </button>
+                  <button type="button"
+                          (click)="onCancelReview(s)"
+                          [ngClass]="!screeningCount ? 'tw-pointer-events-none':''"
+                          class="tw-rounded-lg tw-border tw-border-[#E5E5E5] tw-text-black tw-py-2 tw-px-4 hover:tw-bg-[#E5E5E5]">
                     Cancel
                   </button>
                 </ng-container>
@@ -756,23 +781,48 @@
                         [value]="c.ui.editText"
                         (input)="c.ui.editText = $any($event.target).value"
                       ></textarea>
-                      <div class="tw-flex tw-items-center tw-gap-3 tw-mt-2">
-                        <button type="button"
-                                class="tw-bg-[#0A57C3] tw-text-white tw-text-[14px] tw-px-3 tw-py-1 tw-rounded-lg hover:tw-brightness-110"
-                                (click)="onSaveEdit(c)">
-                          Save
-                        </button>
-                        <button type="button"
-                                class="tw-text-gray-600 tw-text-[14px] hover:tw-text-gray-800"
-                                (click)="c.ui.isEditing = false">
-                          Cancel
-                        </button>
+                      <div class="tw-flex tw-justify-between">
+                        <div class="tw-flex tw-items-center tw-gap-3 tw-mt-2">
+                          <button type="button"
+                                  class="tw-bg-[#0A57C3] tw-text-white tw-text-[14px] tw-px-3 tw-py-1 tw-rounded-lg hover:tw-brightness-110"
+                                  (click)="onSaveEdit(c)">
+                            Save
+                          </button>
+                          <button type="button"
+                                  class="tw-text-gray-600 tw-text-[14px] hover:tw-text-gray-800"
+                                  (click)="c.ui.isEditing = false">
+                            Cancel
+                          </button>
+                        </div>
+                        <!-- Actions -->
+                        <div class="tw-flex tw-items-center tw-justify-end tw-gap-3 tw-pt-2">
+                          <button type="button"
+                                  class="tw-text-[13px] tw-inline-flex tw-items-center tw-gap-1 tw-rounded-md tw-border tw-border-indigo-200 tw-bg-indigo-50 tw-text-indigo-700 hover:tw-bg-indigo-100 hover:tw-border-indigo-300 focus:tw-ring-2 focus:tw-ring-indigo-200 focus:tw-outline-none tw-px-2 tw-py-0.5"
+                                  *ngIf="depth === 0"
+                                  (click)="toggleReply(c)">
+                            Reply
+                          </button>
+
+                          <button type="button"
+                                  class="tw-text-[13px] tw-text-[#D97706] hover:tw-text-[#a7671e] tw-inline-flex tw-items-center tw-gap-1"
+                                  *ngIf="c.isEdited"
+                                  (click)="startEdit(c)">
+                            <app-icon name="pen-to-square" [size]="20"></app-icon><span>Edit</span>
+                          </button>
+
+                          <button type="button"
+                                  class="tw-text-[13px] tw-text-[#F00] hover:tw-text-[#AA0000] tw-inline-flex tw-items-center tw-gap-1"
+                                  *ngIf="c.canDelete"
+                                  (click)="onDeleteComment(c)">
+                            <app-icon name="trash" [size]="20"></app-icon><span>Delete</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </ng-template>
-
+                  
                   <!-- Actions -->
-                  <div class="tw-flex tw-items-center tw-gap-3 tw-pt-2">
+                  <div *ngIf="!c.ui.isEditing;" class="tw-flex tw-items-center tw-justify-end tw-gap-3 tw-pt-2">
                     <button type="button"
                             class="tw-text-[13px] tw-inline-flex tw-items-center tw-gap-1 tw-rounded-md tw-border tw-border-indigo-200 tw-bg-indigo-50 tw-text-indigo-700 hover:tw-bg-indigo-100 hover:tw-border-indigo-300 focus:tw-ring-2 focus:tw-ring-indigo-200 focus:tw-outline-none tw-px-2 tw-py-0.5"
                             *ngIf="depth === 0"
@@ -803,22 +853,22 @@
                       [value]="c.ui.replyText"
                       (input)="c.ui.replyText = $any($event.target).value"
                     ></textarea>
-                    <div class="tw-flex tw-items-center tw-gap-3 tw-mt-2">
-                      <button type="button"
-                              class="tw-bg-indigo-600 tw-text-white tw-text-[14px] tw-px-3 tw-py-1 tw-rounded-lg hover:tw-bg-indigo-700 focus:tw-ring-2 focus:tw-ring-indigo-200"
-                              (click)="onSubmitReply(c)">
-                        Reply
-                      </button>
+                    <div class="tw-flex tw-items-center tw-justify-end tw-gap-3 tw-mt-2">
                       <button type="button"
                               class="tw-text-gray-600 tw-text-[14px] hover:tw-text-gray-800"
                               (click)="c.ui.isReplying = false">
                         Cancel
                       </button>
+                      <button type="button"
+                              class="tw-bg-indigo-600 tw-text-white tw-text-[14px] tw-px-3 tw-py-1 tw-rounded-lg hover:tw-bg-indigo-700 focus:tw-ring-2 focus:tw-ring-indigo-200"
+                              (click)="onSubmitReply(c)">
+                        Reply
+                      </button>
                     </div>
                   </div>
 
                   <!-- Children -->
-                  <div class="tw-ml-10 tw-mt-4" *ngIf="c.replies?.length">
+                  <div class="tw-ml-6 tw-mt-4" *ngIf="c.replies?.length">
                     <ng-container
                       *ngTemplateOutlet="renderCommentList; context: { $implicit: c.replies, depth: depth + 1 }">
                     </ng-container>
