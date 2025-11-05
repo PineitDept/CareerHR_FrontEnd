@@ -226,6 +226,7 @@ export class OfferResultComponent {
       this.fetchProbationDetails();
       this.fetchPositionDetails();
       this.fetchManagerDetails();
+      if (this.applicantId) this.loadComments(this.applicantId);
     });
 
     const userString = sessionStorage.getItem('user');

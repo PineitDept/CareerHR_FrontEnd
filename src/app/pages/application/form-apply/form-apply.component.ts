@@ -549,4 +549,9 @@ export class FormApplyComponent {
     }
     return '';
   }
+
+  get rowsPerCol(): number {
+    const N = this.computerSkillsDisplay?.length ?? 0;
+    return Math.max(7, Math.ceil(N / 3));
+  }
 }
