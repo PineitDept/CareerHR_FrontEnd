@@ -11,9 +11,12 @@
   </div>
 
   <app-filter
+    [actionButtons]="filterButtons"
+    [disabledKeys]="rows().length === 0 ? ['export'] : []"
     [showAllYearOption]="true"
     [filterDateRange]="filterDateRange"
     (dateRangeSelected)="onDateRangeSelected($event)"
+    (buttonClicked)="onFilterButtonClick($event)"
   ></app-filter>
 
   <div #filter>
