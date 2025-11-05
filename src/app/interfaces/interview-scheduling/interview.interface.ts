@@ -55,7 +55,7 @@ export interface SendReviewInterview {
   applicationId: number,
   stageId: number,
   roundID: number,
-  categoryId: number,
+  categoryId: number | null,
   isSummary: boolean,
   stageDate: any,
   appointmentId: string,
@@ -67,7 +67,7 @@ export interface SendReviewInterview {
 }
 
 export interface UpdateCandidateStageHistoryPayload {
-  categoryId: number;
+  categoryId: number | null,
   stageDate: string;
   notes?: string;
   strength?: string;
