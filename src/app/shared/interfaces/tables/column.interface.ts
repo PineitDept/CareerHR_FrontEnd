@@ -1,4 +1,4 @@
-type TableCellType = 'text' | 'badge' | 'number' | 'select' | 'button' | 'date' | 'dateWithTime' | 'list' | 'icon' | 'expandable' | 'toggle' | 'textlink' | 'textlink-custom' | 'input' | 'textarea' | 'multipleselect' | 'dynamic'; // Column type
+type TableCellType = 'text' | 'badge' | 'number' | 'select' | 'button' | 'date' | 'dateWithTime' | 'list' | 'icon' | 'expandable' | 'toggle' | 'textlink' | 'textlink-custom' | 'input' | 'textarea' | 'multipleselect' | 'dynamic' | 'list-bullet'; // Column type
 
 export interface Column {
   header: string;           // Displayed column header name

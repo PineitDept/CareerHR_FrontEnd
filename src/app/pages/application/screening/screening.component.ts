@@ -302,8 +302,8 @@ export class ScreeningComponent extends BaseApplicationComponent {
     item: ICandidateWithPositionsDto
   ): ScreeningRow {
     const summary = item.summary;
-    const daySince = summary.daysSinceEmployeeActionDate || -1;
-    const displayStaus = daySince > 0 ? this.displayStaus(daySince) : "pending";
+    const daySince = summary.daysSinceEmployeeActionDate ?? -1;
+    const displayStaus = daySince >= 0 ? this.displayStaus(daySince) : "pending";
     return {
       id: item.userID.toString(),
       submitDate: summary.submitDate || '',
