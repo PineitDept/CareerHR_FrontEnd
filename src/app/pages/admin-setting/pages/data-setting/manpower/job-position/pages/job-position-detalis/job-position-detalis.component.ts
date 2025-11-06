@@ -783,13 +783,13 @@ export class JobPositionDetalisComponent {
               this.formDetails.disable({ emitEvent: false });
               this.initialSnapshot = this.buildSnapshot();
               this.nextTick(() => this.setActionButtons('view'));
-
               this.clearDraftsForCurrentType();
             },
             error: (err) => {
-              this.notificationService.error(err.error.error.errors.NamePosition);
+              this.showValidationErrorsOnly(err);
             }
           });
+
         } else {
           this.jobPositionService.postJobPosition(payload).subscribe({
             next: () => {
@@ -801,13 +801,66 @@ export class JobPositionDetalisComponent {
               this.clearDraftsForCurrentType();
             },
             error: (err) => {
-              this.notificationService.error(err.error.error.errors.NamePosition);
+              this.showValidationErrorsOnly(err);
             }
           });
         }
       }
     });
 
+  }
+
+  // helpers.ts (หรือใส่ไว้ใน component ก็ได้)
+  private showValidationErrorsOnly(err: any) {
+    const notify = (errorsObj: Record<string, string[]> | null) => {
+      if (errorsObj && typeof errorsObj === 'object') {
+        console.group('🔴 Validation Errors');
+        Object.entries(errorsObj).forEach(([key, val]) => {
+          console.error(`${key}:`, (val ?? []).join(', '));
+        });
+        console.groupEnd();
+
+        const msg = Object.entries(errorsObj)
+          .map(([k, v]) => `${k}: ${(v ?? []).join(', ')}`)
+          .join('\n');
+
+        // this.notificationService.error(msg || 'Validation error.');
+        Object.entries(errorsObj).forEach(([k, v]) => {
+          this.notificationService.error(`${k}: ${(v ?? []).join(', ')}`);
+        });
+        return true;
+      }
+      return false;
+    };
+
+    // 1) รูปแบบปกติ (object)
+    if (notify(err?.error?.errors)) return;
+    if (notify(err?.error?.error?.errors)) return;
+
+    // 2) ถ้า backend ส่งเป็น JSON string
+    if (typeof err?.error === 'string') {
+      try {
+        const parsed = JSON.parse(err.error);
+        if (notify(parsed?.errors) || notify(parsed?.error?.errors)) return;
+      } catch { /* noop */ }
+    }
+
+    // 3) ถ้าส่งมาเป็น Blob (เช่น text/html, text/plain)
+    if (err?.error instanceof Blob) {
+      err.error.text().then((t: string) => {
+        try {
+          const parsed = JSON.parse(t);
+          if (notify(parsed?.errors) || notify(parsed?.error?.errors)) return;
+        } catch {
+          // ถ้า parse ไม่ได้ก็ fallback
+          this.notificationService.error('Unexpected error occurred.');
+        }
+      });
+      return; // ออกก่อน เพราะจะไปแสดงใน promise ข้างบน
+    }
+
+    // 4) fallback
+    this.notificationService.error('Unexpected error occurred.');
   }
 
   onRowClicked(row: any, action: 'view' | 'edit') {
