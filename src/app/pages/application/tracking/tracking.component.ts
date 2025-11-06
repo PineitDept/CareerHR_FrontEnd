@@ -426,7 +426,7 @@ export class TrackingComponent
         options: [
           {
             key: '12',
-            label: `Onboarded${counts.onboarded_pending !== undefined ? ` (${counts.onboarded_pending.toLocaleString()})` : ''}`,
+            label: `Pending${counts.onboarded_pending !== undefined ? ` (${counts.onboarded_pending.toLocaleString()})` : ''}`,
             color: STATUS_COLOR_MAP[12]
           },
           {
