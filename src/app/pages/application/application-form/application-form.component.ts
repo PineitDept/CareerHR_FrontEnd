@@ -266,6 +266,7 @@ export class ApplicationFormComponent {
   // ===== Non-summary reviews for Interview 1 & 2 =====
   interview1NonSummary: any[] = [];
   interview2NonSummary: any[] = [];
+  screeningNonSummary: any[] = [];
 
   // ===== สำหรับ Screened Pending =====
   allowEditButton = true;
@@ -287,6 +288,10 @@ export class ApplicationFormComponent {
     slidesToShow: 2, slidesToScroll: 1, dots: false, arrows: false, infinite: false,
     responsive: [{ breakpoint: 768, settings: { slidesToShow: 1, dots: false } }]
   };
+  slideConfigScreened: any = {
+    slidesToShow: 2, slidesToScroll: 1, dots: false, arrows: false, infinite: false,
+    responsive: [{ breakpoint: 768, settings: { slidesToShow: 1, dots: false } }]
+  };
 
   @ViewChildren('i1StrengthText') i1StrengthTexts!: QueryList<ElementRef>;
   @ViewChildren('i1ConcernText')  i1ConcernTexts!: QueryList<ElementRef>;
@@ -295,6 +300,7 @@ export class ApplicationFormComponent {
   @ViewChildren(SlickItemDirective) slickItems!: QueryList<SlickItemDirective>;
   @ViewChildren('i1Carousel') i1Carousels!: QueryList<SlickCarouselComponent>;
   @ViewChildren('i2Carousel') i2Carousels!: QueryList<SlickCarouselComponent>;
+  @ViewChildren('screeningCarousel') screeningCarousels!: QueryList<SlickCarouselComponent>;
 
   currentSlide: number[] = [];
   totalSlides: number[] = [];
@@ -711,6 +717,10 @@ export class ApplicationFormComponent {
           const i2 = (histories || []).filter(h =>
             String(h.stageName || '').trim().toLowerCase() === 'interview 2' && !h.isSummary
           );
+          const screened = (histories || []).filter(h =>
+            ['screened', 'screening'].includes(String(h.stageName || '').trim().toLowerCase()) &&
+            !h.isSummary
+          );
           const enrich = (arr: any[]) => arr.map(it => ({
             ...it,
             expandState: { strength: false, concern: false },
@@ -718,6 +728,7 @@ export class ApplicationFormComponent {
           }));
           this.interview1NonSummary = enrich(i1);
           this.interview2NonSummary = enrich(i2);
+          this.screeningNonSummary = enrich(screened);
 
           setTimeout(() => {
             const tune = (len: number) => ({ slidesToShow: len === 1 ? 1 : 2, dots: len > 2 });
@@ -731,10 +742,19 @@ export class ApplicationFormComponent {
               ...tune(this.interview2NonSummary.length),
               responsive: [{ breakpoint: 768, settings: { slidesToShow: 1, dots: this.interview2NonSummary.length > 1 } }]
             };
+            this.slideConfigScreened = { 
+              ...this.slideConfigScreened, 
+              ...tune(this.screeningNonSummary.length),
+              responsive: [{ breakpoint: 768, settings: { slidesToShow: 1, dots: this.screeningNonSummary.length > 1 } }]
+            };
+
+
+            console.log(this.slideConfigScreened , '=>this.screeningNonSummary.length')
 
             setTimeout(() => {
               this.i1Carousels?.forEach(c => { try { c.unslick(); c.initSlick(); } catch {} });
               this.i2Carousels?.forEach(c => { try { c.unslick(); c.initSlick(); } catch {} });
+              this.screeningCarousels?.forEach(c => { try { c.unslick(); c.initSlick(); } catch {} });
             }, 0);
             setTimeout(() => this.checkAllOverflowNonSummary(), 0);
           }, 0);
@@ -1336,25 +1356,36 @@ export class ApplicationFormComponent {
     return isActive ? `${tone} ${activeRing}` : `${tone.includes('tw-bg-white') ? tone : 'tw-bg-white tw-text-gray-700 tw-border-gray-300'} ${inactive}`;
   }
 
-  private stageLabel(which: 'i1'|'i2'): string {
-    return which === 'i1' ? 'interview 1' : 'interview 2';
+  stageLabel(which: 'screened' | 'i1' | 'i2'): string {
+    switch (which) {
+      case 'screened':
+        return 'screened';
+      case 'i1':
+        return 'interview 1';
+      case 'i2':
+        return 'interview 2';
+      default:
+        return '';
+    }
   }
 
-  hasStageSummary(which: 'i1'|'i2'): boolean {
+  hasStageSummary(which: 'screened' | 'i1'|'i2'): boolean {
     const label = this.stageLabel(which);
     return this.stageSections.some(s => s.stageNameNormalized === label && s.isSummary !== false);
   }
 
-  firstIndexOfStage(which: 'i1'|'i2'): number {
+  firstIndexOfStage(which: 'screened' | 'i1'|'i2'): number {
     const label = this.stageLabel(which);
     return this.stageSections.findIndex(s => s.stageNameNormalized === label);
   }
 
-  shouldInsertNonSummary(which: 'i1'|'i2', s: StageSection, idx: number): boolean {
+  shouldInsertNonSummary(which: 'screened' | 'i1' | 'i2', s: StageSection, idx: number): boolean {
     const label = this.stageLabel(which);
     if (s.stageNameNormalized !== label) return false;
     const hasSummary = this.hasStageSummary(which);
-    if (hasSummary) return s.isSummary !== false;
+    if (hasSummary) {
+      return s.isSummary !== false;
+    }
     return idx === this.firstIndexOfStage(which);
   }
 
@@ -1533,7 +1564,8 @@ export class ApplicationFormComponent {
 
     // ========= แยกสองกรณี =========
     const isPendingFlow = this.hasScreenedPending || !s.historyId; // ถ้า Pending หรือยังไม่มี historyId → add
-    if (!this.screeningCount || (s.hrUserId !== this.sessionUserId)) {
+    // if (!this.screeningCount || (s.hrUserId !== this.sessionUserId)) {
+    if (!this.screeningCount) {
       if (!s.stageId) {
         this.notify?.error?.('Missing stage ID for Screening.');
         return;
