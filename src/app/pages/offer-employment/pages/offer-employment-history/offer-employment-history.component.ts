@@ -146,7 +146,7 @@ export class OfferEmploymentHistoryComponent {
     {
       header: 'Job Position',
       field: 'position',
-      type: 'list',
+      type: 'list-bullet',
       width: '20%',
       wrapText: true,
     },
@@ -327,7 +327,7 @@ export class OfferEmploymentHistoryComponent {
             OfferDate: this.formatCreateDateTimeDMY(item.result.offerDate).formattedDate,
             OfferResult: item.result.offerResult ? item.result.offerResult : undefined,
             HireResult: item.result.hireResult ? item.result.hireResult : undefined,
-            position: item.jobPosition.jobList ?.filter((pos: { isOffered?: boolean }) => pos.isOffered).map((pos: { jobName: string }) => pos.jobName) || [],
+            position: item.jobPosition.jobList ?.filter((pos: { isActive?: boolean }) => pos.isActive).map((pos: { jobName: string }) => pos.jobName) || [],
           };
         });
 
@@ -680,7 +680,7 @@ export class OfferEmploymentHistoryComponent {
             OfferDate: item.result.offerDate ? this.formatCreateDateTimeDMY(item.result.offerDate).formattedDate : '',
             OfferResult: item.result.offerResult ? item.result.offerResult : undefined,
             HireResult: item.result.hireResult ? item.result.hireResult : undefined,
-            position: item.jobPosition.jobList ?.filter((pos: { isOffered?: boolean }) => pos.isOffered).map((pos: { jobName: string }) => pos.jobName) || [],
+            position: item.jobPosition.jobList ?.filter((pos: { isActive?: boolean }) => pos.isActive).map((pos: { jobName: string }) => pos.jobName) || [],
           };
         });
 

@@ -290,6 +290,15 @@
                       </ol>
                     </div>
 
+                    <!-- List bullet Content -->
+                    <div *ngSwitchCase="'list-bullet'">
+                      <ul class="tw-list-disc tw-pl-6">
+                        <li *ngFor="let item of getCellValue(row, column.field); let idx = index" class="tw-text-sm">
+                          {{ item }}
+                        </li>
+                      </ul>
+                    </div>
+
                     <!-- Icon Content -->
                     <div *ngSwitchCase="'icon'" class="tw-flex tw-justify-center tw-items-center tw-flex-col">
                       <app-icon [name]="getCellValue(row, column.field)?.icon || 'default'"

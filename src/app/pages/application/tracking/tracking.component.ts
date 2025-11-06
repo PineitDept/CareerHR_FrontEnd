@@ -115,6 +115,7 @@ export class TrackingComponent
     });
   private readonly filterHeight = signal<number>(0);
   private resizeObserver!: ResizeObserver;
+  rowsDataExport: any;
 
   // Computed properties for tracking
   readonly currentTrackingFilter = computed(() => this.trackingFilterRequest());
@@ -584,6 +585,31 @@ export class TrackingComponent
     );
   }
 
+  protected fetchDataExport(
+    filter: ICandidateFilterRequest,
+    append: boolean
+  ): Observable<void> {
+    if (this.isLoading()) return EMPTY;
+
+    this.loadingState.set(true);
+    this.filterRequest.set(filter);
+
+    // Convert to tracking filter request
+    const trackingFilter: ICandidateTrackingFilterRequest = {
+      ...filter,
+      ...this.trackingFilterRequest(),
+      page: 1,
+      pageSize: 5000,
+      year: filter.year === '2001' ? undefined : filter.year ,
+    };
+
+    return this.applicationService.getTrackingApplications(trackingFilter).pipe(
+      tap((response: any) => {
+        this.rowsDataExport = response.items
+      }),
+    );
+  }
+
   // protected override persistFilterState(): void {
   //   const storageKeys = this.getStorageKeys();
   //   const normalized = this.normalizeTrackingFilter(this.filterRequest());
@@ -676,7 +702,6 @@ export class TrackingComponent
       : undefined;
 
     this.trackingFilterRequest.set(updatedTrackingFilter);
-    console.log(updatedTrackingFilter, '=>updatedTrackingFilter')
     this.resetPagination();
     // this.fetchData(this.filterRequest(), false).subscribe();
     this.fetchData(this.trackingFilterRequest(), false).subscribe();
@@ -897,8 +922,13 @@ export class TrackingComponent
   onExportClicked() {
     console.log('Button clicked: Export Excel');
     try {
-      const data = this.rows?.() ?? [];
+      
+      this.fetchDataExport(this.trackingFilterRequest(), false).subscribe();
+
+      const data = this.rowsDataExport?.() ?? [];
       if (!data.length) return;
+
+      console.log(data)
 
       // ลำดับหัวคอลัมน์ “ตามตารางบนหน้า”
       const headers = this.columns.map(c => c.header);

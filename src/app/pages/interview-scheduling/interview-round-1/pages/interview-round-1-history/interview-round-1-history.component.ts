@@ -427,6 +427,7 @@ export class InterviewRound1HistoryComponent {
     const updatedParams = {
       ...this.currentFilterParams,
       page: this.currentFilterParams.page ?? 1,
+      positionId: this.selectedJobId ?? undefined,
       search: this.currentFilterParams.search,
     };
 
@@ -1498,6 +1499,7 @@ export class InterviewRound1HistoryComponent {
       page: this.currentFilterParams.page,
       pageSize: this.currentFilterParams.pageSize,
       InterviewResult: this.selectedTab === 'total' ? undefined : this.selectedTab,
+      positionId: this.selectedJobId ?? undefined,
       month: this.monthData,
       year: this.yearData,
     };
