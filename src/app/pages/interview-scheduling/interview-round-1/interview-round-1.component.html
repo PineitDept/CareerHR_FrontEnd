@@ -262,11 +262,11 @@
 
 
                             <p class="tw-text-[10px] tw-mt-2" *ngIf="item.interview.missCallCount">
-                                {{ item.interview.missCallHistory[0].missCallAt | date:'dd/MM/yyyy hh:mm a' }} {{
+                                {{ item.interview.missCallHistory[0].missCallAt | date:'dd/MM/yyyy hh:mm a' }} : {{
                                 item.interview.missCallHistory[0].missCallReason }}
                             </p>
                             <p class="tw-text-[10px] tw-mt-2" *ngIf="item.interview.sendAt">
-                                {{ item.interview.sendAt | date:'dd/MM/yyyy hh:mm a' }} The email has been sent.
+                                {{ item.interview.sendAt | date:'dd/MM/yyyy hh:mm a' }} : Interview invitation email sent.
                             </p>
                         </div>
                     </div>

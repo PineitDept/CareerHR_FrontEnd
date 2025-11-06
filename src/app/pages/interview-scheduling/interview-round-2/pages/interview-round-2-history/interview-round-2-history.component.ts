@@ -1287,11 +1287,11 @@ export class InterviewRound2HistoryComponent {
   }
 
   onSendMail(item: any) {
-    const statusCall = item.interview.isCalled;
-    if (statusCall !== 'complete') return;
-    if (!item.interview.locationId || !item.interview.teamId || !item.interview.date) return;
+    // const statusCall = item.interview.isCalled;
+    // if (statusCall !== 'complete') return;
+    // if (!item.interview.locationId || !item.interview.teamId || !item.interview.date) return;
 
-    this.appointmentsService.getEmailTemplate(item.profile.appointmentId, 1).subscribe({
+    this.appointmentsService.getEmailTemplate(item.profile.appointmentId, 4).subscribe({
       next: (res) => {
         const container = document.querySelector('.cdk-overlay-container');
         container?.classList.add('dimmed-overlay');
