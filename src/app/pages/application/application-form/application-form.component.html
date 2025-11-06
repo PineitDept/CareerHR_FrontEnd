@@ -265,192 +265,283 @@
 
     <!-- ===== Stage History (dynamic with non-summary insertion) ===== -->
     <section
-      class="tw-w-full"
       *ngFor="let s of stageSections; let k = index"
       [attr.id]="'section-' + slugify(s.stageNameNormalized) + '-' + k"
       [attr.data-stage]="s.stageNameNormalized"
     >
 
-      <!-- ===== Insert Interview 1 non-summary BEFORE its summary card ===== -->
-      <ng-container *ngIf="shouldInsertNonSummary('i1', s, k) && (interview1NonSummary?.length)">
-        <section class="tw-relative group" [ngClass]="{ 'tw-mb-6': hasStageSummary('i1') }">
-          <ngx-slick-carousel
-            #i1Carousel
-            class="tw-grid grid-cols-auto tw-gap-8"
-            [config]="slideConfigI1"
-            (init)="onCarouselInit($event, 0)"
-            (afterChange)="onSlideChanged($event, 0)"
-          >
-            <div ngxSlickItem *ngFor="let review of interview1NonSummary; let i = index">
-              <div
-                class="tw-col-span-2 tw-row-span-2 tw-space-y-4 tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]"
-                style="height:-webkit-fill-available;"
-              >
-                <div class="header-slide">
-                  <div class="tw-flex tw-items-center tw-justify-between tw-mb-3">
-                    <div>
-                      <span class="tw-text-[20px] tw-mr-3 tw-font-bold">{{ review.hrUserName }}</span>
+      <!-- ===== Insert Screening non-summary BEFORE its summary card ===== -->
+      <ng-container *ngIf="shouldInsertNonSummary('screened', s, k) && (screeningNonSummary?.length)">
+        <div class="tw-bg-[#FFFFFF]">
+          <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+            <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer">
+              <label class="tw-text-lg tw-font-bold">
+                Review Screening
+              </label>
+            </div>
+      
+            <hr class="tw--mx-6 tw-mt-4" />
+      
+            <div class="tw-relative group" [ngClass]="{ 'tw-mb-6': hasStageSummary('screened') }">
+              <ngx-slick-carousel #screeningCarousel class="tw-grid grid-cols-auto tw-gap-8" [config]="slideConfigScreened"
+                (init)="onCarouselInit($event, 2)" (afterChange)="onSlideChanged($event, 2)">
+                <div ngxSlickItem *ngFor="let review of screeningNonSummary; let i = index">
+                  <div
+                    class="tw-col-span-2 tw-row-span-2 tw-space-y-4 tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.1)] tw-h-full">
+                    <div class="header-slide">
+                      <div class="tw-flex tw-items-center tw-justify-between tw-mb-3">
+                        <div>
+                          <span class="tw-text-[20px] tw-mr-3 tw-font-bold">{{ review.hrUserName }}</span>
+                        </div>
+                        <div class="tw-p-1 tw-px-2 tw-border tw-rounded-lg tw-font-bold"
+                          [ngClass]="badgeClassForCategory(review.categoryName)">
+                          {{ review.categoryName }}
+                        </div>
+                      </div>
+                      <hr class="tw--mx-6 !tw-mt-4" />
                     </div>
-                    <div
-                      class="tw-p-1 tw-px-2 tw-border tw-rounded-lg tw-font-bold"
-                      [ngClass]="badgeClassForCategory(review.categoryName)"
-                    >
-                      {{ review.categoryName }}
-                    </div>
-                  </div>
-                  <hr class="tw--mx-6 !tw-mt-4" />
-                </div>
-
-                <div class="body-slide">
-                  <!-- Reason -->
-                  <div class="tw-mb-4">
-                    <div class="tw-mb-1.5"><label class="tw-text-sm tw-font-semibold">Reason</label></div>
-                    <div class="list-top">
-                      <div class="tw-flex tw-flex-col tw-w-full tw-gap-4 !tw-mt-0">
-                        <label *ngFor="let reason of (review.selectedReasonTexts || [])"
-                          class="tw-flex tw-items-start tw-pointer-events-none">
-                          <span
-                            role="checkbox"
-                            aria-checked="true"
-                            class="tw-inline-flex tw-items-center tw-justify-center tw-rounded-[4px] tw-border tw-align-middle tw-mt-0.5 tw-border-[#D97706] tw-bg-[#FFF7ED]"
-                            style="width:18px;height:18px;min-width:18px;min-height:18px">
-                            <app-icon name="check" [size]="14" class="tw-text-[#D97706]"></app-icon>
-                          </span>
-                          <span class="tw-ml-2 tw-text-sm">{{ reason }}</span>
-                        </label>
+      
+                    <div class="body-slide">
+                      <div class="tw-mb-4">
+                        <div><label class="tw-text-sm tw-font-semibold">Date</label></div>
+                        <div><label class="tw-text-sm">{{ review.stageDate | date:'dd/MM/yyyy  HH:mm' }}</label></div>
+                      </div>
+                      <div class="tw-mb-4">
+                        <div class="tw-mb-1.5"><label class="tw-text-sm tw-font-semibold">Reason</label></div>
+                        <div class="list-top">
+                          <div class="tw-flex tw-flex-col tw-w-full tw-gap-4 !tw-mt-0">
+                            <label *ngFor="let reason of (review.selectedReasonTexts || [])"
+                              class="tw-flex tw-items-start tw-pointer-events-none">
+                              <span role="checkbox" aria-checked="true"
+                                class="tw-inline-flex tw-items-center tw-justify-center tw-rounded-[4px] tw-border tw-align-middle tw-mt-0.5 tw-border-[#D97706] tw-bg-[#FFF7ED]"
+                                style="width:18px;height:18px;min-width:18px;min-height:18px">
+                                <app-icon name="check" [size]="14" class="tw-text-[#D97706]"></app-icon>
+                              </span>
+                              <span class="tw-ml-2 tw-text-sm">{{ reason }}</span>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+      
+                      <div>
+                        <div class="tw-text-[13px] tw-font-medium">Notes</div>
+                        <textarea
+                          class="tw-w-full tw-text-[14px] tw-h-28 tw-mt-1 tw-rounded-md tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-bg-gray-100 tw-pointer-events-none"
+                          [value]="review.notes || '—'" disabled></textarea>
                       </div>
                     </div>
                   </div>
+                </div>
+              </ngx-slick-carousel>
+            </div>
+          </div>
+        </div>
+      </ng-container>
 
-                  <!-- Strength -->
-                  <div class="tw-mb-4">
-                    <div class="tw-mb-1.5"><label class="tw-text-sm tw-font-semibold">Strength</label></div>
-                    <div class="review-card">
-                      <span #i1StrengthText
-                            [ngClass]="{ 'ellipsis-3-lines': !review.expandState?.strength }"
-                            class="tw-text-sm tw-text-gray-800">
-                        {{ review.strength || '-' }}
-                      </span>
-                      <a *ngIf="review.overflowState?.strength"
-                        (click)="toggleExpandNonSummary('i1', i, 'strength')"
-                        class="tw-text-black tw-font-bold tw-text-sm tw-mt-1 tw-underline tw-bg-transparent tw-border-0 tw-p-0 tw-cursor-pointer">
-                        {{ review.expandState?.strength ? 'ย่อลง' : 'อ่านต่อ' }}
-                      </a>
+      <!-- ===== Insert Interview 1 non-summary BEFORE its summary card ===== -->
+      <ng-container *ngIf="shouldInsertNonSummary('i1', s, k) && (interview1NonSummary?.length)">
+        <div class="tw-bg-[#FFFFFF]">
+          <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+            <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer">
+              <label class="tw-text-lg tw-font-bold">
+                Review Interview 1
+              </label>
+            </div>
+      
+            <hr class="tw--mx-6 tw-mt-4" />
+
+            <div class="tw-relative group" [ngClass]="{ 'tw-mb-6': hasStageSummary('i1') }">
+              <ngx-slick-carousel
+                #i1Carousel
+                class="tw-grid grid-cols-auto tw-gap-8"
+                [config]="slideConfigI1"
+                (init)="onCarouselInit($event, 0)"
+                (afterChange)="onSlideChanged($event, 0)"
+              >
+                <div ngxSlickItem *ngFor="let review of interview1NonSummary; let i = index">
+                  <div
+                    class="tw-col-span-2 tw-row-span-2 tw-space-y-4 tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.1)] tw-h-full"
+                    style="height:-webkit-fill-available;"
+                  >
+                    <div class="header-slide">
+                      <div class="tw-flex tw-items-center tw-justify-between tw-mb-3">
+                        <div>
+                          <span class="tw-text-[20px] tw-mr-3 tw-font-bold">{{ review.hrUserName }}</span>
+                        </div>
+                        <div
+                          class="tw-p-1 tw-px-2 tw-border tw-rounded-lg tw-font-bold"
+                          [ngClass]="badgeClassForCategory(review.categoryName)"
+                        >
+                          {{ review.categoryName }}
+                        </div>
+                      </div>
+                      <hr class="tw--mx-6 !tw-mt-4" />
                     </div>
-                  </div>
 
-                  <!-- Concern -->
-                  <div>
-                    <div class="tw-mb-1.5"><label class="tw-text-sm tw-font-semibold">Concern</label></div>
-                    <div class="review-card">
-                      <span #i1ConcernText
-                            [ngClass]="{ 'ellipsis-3-lines': !review.expandState?.concern }"
-                            class="tw-text-sm tw-text-gray-800">
-                        {{ review.concern || '-' }}
-                      </span>
-                      <a *ngIf="review.overflowState?.concern"
-                        (click)="toggleExpandNonSummary('i1', i, 'concern')"
-                        class="tw-text-black tw-font-bold tw-text-sm tw-mt-1 tw-underline tw-bg-transparent tw-border-0 tw-p-0 tw-cursor-pointer">
-                        {{ review.expandState?.concern ? 'ย่อลง' : 'อ่านต่อ' }}
-                      </a>
+                    <div class="body-slide">
+                      <!-- Reason -->
+                      <div class="tw-mb-4">
+                        <div class="tw-mb-1.5"><label class="tw-text-sm tw-font-semibold">Reason</label></div>
+                        <div class="list-top">
+                          <div class="tw-flex tw-flex-col tw-w-full tw-gap-4 !tw-mt-0">
+                            <label *ngFor="let reason of (review.selectedReasonTexts || [])"
+                              class="tw-flex tw-items-start tw-pointer-events-none">
+                              <span
+                                role="checkbox"
+                                aria-checked="true"
+                                class="tw-inline-flex tw-items-center tw-justify-center tw-rounded-[4px] tw-border tw-align-middle tw-mt-0.5 tw-border-[#D97706] tw-bg-[#FFF7ED]"
+                                style="width:18px;height:18px;min-width:18px;min-height:18px">
+                                <app-icon name="check" [size]="14" class="tw-text-[#D97706]"></app-icon>
+                              </span>
+                              <span class="tw-ml-2 tw-text-sm">{{ reason }}</span>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Strength -->
+                      <div class="tw-mb-4">
+                        <div class="tw-mb-1.5"><label class="tw-text-sm tw-font-semibold">Strength</label></div>
+                        <div class="review-card">
+                          <span #i1StrengthText
+                                [ngClass]="{ 'ellipsis-3-lines': !review.expandState?.strength }"
+                                class="tw-text-sm tw-text-gray-800">
+                            {{ review.strength || '-' }}
+                          </span>
+                          <a *ngIf="review.overflowState?.strength"
+                            (click)="toggleExpandNonSummary('i1', i, 'strength')"
+                            class="tw-text-black tw-font-bold tw-text-sm tw-mt-1 tw-underline tw-bg-transparent tw-border-0 tw-p-0 tw-cursor-pointer">
+                            {{ review.expandState?.strength ? 'ย่อลง' : 'อ่านต่อ' }}
+                          </a>
+                        </div>
+                      </div>
+
+                      <!-- Concern -->
+                      <div>
+                        <div class="tw-mb-1.5"><label class="tw-text-sm tw-font-semibold">Concern</label></div>
+                        <div class="review-card">
+                          <span #i1ConcernText
+                                [ngClass]="{ 'ellipsis-3-lines': !review.expandState?.concern }"
+                                class="tw-text-sm tw-text-gray-800">
+                            {{ review.concern || '-' }}
+                          </span>
+                          <a *ngIf="review.overflowState?.concern"
+                            (click)="toggleExpandNonSummary('i1', i, 'concern')"
+                            class="tw-text-black tw-font-bold tw-text-sm tw-mt-1 tw-underline tw-bg-transparent tw-border-0 tw-p-0 tw-cursor-pointer">
+                            {{ review.expandState?.concern ? 'ย่อลง' : 'อ่านต่อ' }}
+                          </a>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              </ngx-slick-carousel>
             </div>
-          </ngx-slick-carousel>
-        </section>
+          </div>
+        </div>
       </ng-container>
 
       <!-- ===== Insert Interview 2 non-summary BEFORE its summary card ===== -->
       <ng-container *ngIf="shouldInsertNonSummary('i2', s, k) && (interview2NonSummary?.length)">
-        <section class="tw-relative group" [ngClass]="{ 'tw-mb-6': hasStageSummary('i2') }">
-          <ngx-slick-carousel
-            #i2Carousel
-            class="tw-grid grid-cols-auto tw-gap-8"
-            [config]="slideConfigI2"
-            (init)="onCarouselInit($event, 1)"
-            (afterChange)="onSlideChanged($event, 1)"
-          >
-            <div ngxSlickItem *ngFor="let review of interview2NonSummary; let i = index">
-              <div
-                class="tw-col-span-2 tw-row-span-2 tw-space-y-4 tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]"
-                style="height:-webkit-fill-available;"
-              >
-                <div class="header-slide">
-                  <div class="tw-flex tw-items-center tw-justify-between tw-mb-3">
-                    <div>
-                      <span class="tw-text-[20px] tw-mr-3 tw-font-bold">{{ review.hrUserName }}</span>
-                    </div>
-                    <div
-                      class="tw-p-1 tw-px-2 tw-border tw-rounded-lg tw-font-bold"
-                      [ngClass]="badgeClassForCategory(review.categoryName)"
-                    >
-                      {{ review.categoryName }}
-                    </div>
-                  </div>
-                  <hr class="tw--mx-6 !tw-mt-4" />
-                </div>
+        <div class="tw-bg-[#FFFFFF]">
+          <div class="tw-bg-white tw-px-6 tw-pt-4 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.3)]">
+            <div class="tw-flex tw-items-center tw-justify-between tw-cursor-pointer">
+              <label class="tw-text-lg tw-font-bold">
+                Review Interview 1
+              </label>
+            </div>
+      
+            <hr class="tw--mx-6 tw-mt-4" />
 
-                <div class="body-slide">
-                  <!-- Reason -->
-                  <div class="tw-mb-4">
-                    <div class="tw-mb-1.5"><label class="tw-text-sm tw-font-semibold">Reason</label></div>
-                    <div class="list-top">
-                      <div class="tw-flex tw-flex-col tw-w-full tw-gap-4 !tw-mt-0">
-                        <label *ngFor="let reason of (review.selectedReasonTexts || [])"
-                          class="tw-flex tw-items-start tw-pointer-events-none">
-                          <span
-                            role="checkbox"
-                            aria-checked="true"
-                            class="tw-inline-flex tw-items-center tw-justify-center tw-rounded-[4px] tw-border tw-align-middle tw-mt-0.5 tw-border-[#D97706] tw-bg-[#FFF7ED]"
-                            style="width:18px;height:18px;min-width:18px;min-height:18px">
-                            <app-icon name="check" [size]="14" class="tw-text-[#D97706]"></app-icon>
+            <section class="tw-relative group" [ngClass]="{ 'tw-mb-6': hasStageSummary('i2') }">
+              <ngx-slick-carousel
+                #i2Carousel
+                class="tw-grid grid-cols-auto tw-gap-8"
+                [config]="slideConfigI2"
+                (init)="onCarouselInit($event, 1)"
+                (afterChange)="onSlideChanged($event, 1)"
+              >
+                <div ngxSlickItem *ngFor="let review of interview2NonSummary; let i = index">
+                  <div
+                    class="tw-col-span-2 tw-row-span-2 tw-space-y-4 tw-bg-white tw-px-6 tw-pt-4 tw-pb-6 tw-rounded-xl tw-shadow-[0_6px_12px_rgba(0,0,0,0.1)] tw-h-full"
+                    style="height:-webkit-fill-available;"
+                  >
+                    <div class="header-slide">
+                      <div class="tw-flex tw-items-center tw-justify-between tw-mb-3">
+                        <div>
+                          <span class="tw-text-[20px] tw-mr-3 tw-font-bold">{{ review.hrUserName }}</span>
+                        </div>
+                        <div
+                          class="tw-p-1 tw-px-2 tw-border tw-rounded-lg tw-font-bold"
+                          [ngClass]="badgeClassForCategory(review.categoryName)"
+                        >
+                          {{ review.categoryName }}
+                        </div>
+                      </div>
+                      <hr class="tw--mx-6 !tw-mt-4" />
+                    </div>
+
+                    <div class="body-slide">
+                      <!-- Reason -->
+                      <div class="tw-mb-4">
+                        <div class="tw-mb-1.5"><label class="tw-text-sm tw-font-semibold">Reason</label></div>
+                        <div class="list-top">
+                          <div class="tw-flex tw-flex-col tw-w-full tw-gap-4 !tw-mt-0">
+                            <label *ngFor="let reason of (review.selectedReasonTexts || [])"
+                              class="tw-flex tw-items-start tw-pointer-events-none">
+                              <span
+                                role="checkbox"
+                                aria-checked="true"
+                                class="tw-inline-flex tw-items-center tw-justify-center tw-rounded-[4px] tw-border tw-align-middle tw-mt-0.5 tw-border-[#D97706] tw-bg-[#FFF7ED]"
+                                style="width:18px;height:18px;min-width:18px;min-height:18px">
+                                <app-icon name="check" [size]="14" class="tw-text-[#D97706]"></app-icon>
+                              </span>
+                              <span class="tw-ml-2 tw-text-sm">{{ reason }}</span>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Strength -->
+                      <div class="tw-mb-4">
+                        <div class="tw-mb-1.5"><label class="tw-text-sm tw-font-semibold">Strength</label></div>
+                        <div class="review-card">
+                          <span #i2StrengthText
+                                [ngClass]="{ 'ellipsis-3-lines': !review.expandState?.strength }"
+                                class="tw-text-sm tw-text-gray-800">
+                            {{ review.strength || '-' }}
                           </span>
-                          <span class="tw-ml-2 tw-text-sm">{{ reason }}</span>
-                        </label>
+                          <a *ngIf="review.overflowState?.strength"
+                            (click)="toggleExpandNonSummary('i2', i, 'strength')"
+                            class="tw-text-black tw-font-bold tw-text-sm tw-mt-1 tw-underline tw-bg-transparent tw-border-0 tw-p-0 tw-cursor-pointer">
+                            {{ review.expandState?.strength ? 'ย่อลง' : 'อ่านต่อ' }}
+                          </a>
+                        </div>
+                      </div>
+
+                      <!-- Concern -->
+                      <div>
+                        <div class="tw-mb-1.5"><label class="tw-text-sm tw-font-semibold">Concern</label></div>
+                        <div class="review-card">
+                          <span #i2ConcernText
+                                [ngClass]="{ 'ellipsis-3-lines': !review.expandState?.concern }"
+                                class="tw-text-sm tw-text-gray-800">
+                            {{ review.concern || '-' }}
+                          </span>
+                          <a *ngIf="review.overflowState?.concern"
+                            (click)="toggleExpandNonSummary('i2', i, 'concern')"
+                            class="tw-text-black tw-font-bold tw-text-sm tw-mt-1 tw-underline tw-bg-transparent tw-border-0 tw-p-0 tw-cursor-pointer">
+                            {{ review.expandState?.concern ? 'ย่อลง' : 'อ่านต่อ' }}
+                          </a>
+                        </div>
                       </div>
                     </div>
                   </div>
-
-                  <!-- Strength -->
-                  <div class="tw-mb-4">
-                    <div class="tw-mb-1.5"><label class="tw-text-sm tw-font-semibold">Strength</label></div>
-                    <div class="review-card">
-                      <span #i2StrengthText
-                            [ngClass]="{ 'ellipsis-3-lines': !review.expandState?.strength }"
-                            class="tw-text-sm tw-text-gray-800">
-                        {{ review.strength || '-' }}
-                      </span>
-                      <a *ngIf="review.overflowState?.strength"
-                        (click)="toggleExpandNonSummary('i2', i, 'strength')"
-                        class="tw-text-black tw-font-bold tw-text-sm tw-mt-1 tw-underline tw-bg-transparent tw-border-0 tw-p-0 tw-cursor-pointer">
-                        {{ review.expandState?.strength ? 'ย่อลง' : 'อ่านต่อ' }}
-                      </a>
-                    </div>
-                  </div>
-
-                  <!-- Concern -->
-                  <div>
-                    <div class="tw-mb-1.5"><label class="tw-text-sm tw-font-semibold">Concern</label></div>
-                    <div class="review-card">
-                      <span #i2ConcernText
-                            [ngClass]="{ 'ellipsis-3-lines': !review.expandState?.concern }"
-                            class="tw-text-sm tw-text-gray-800">
-                        {{ review.concern || '-' }}
-                      </span>
-                      <a *ngIf="review.overflowState?.concern"
-                        (click)="toggleExpandNonSummary('i2', i, 'concern')"
-                        class="tw-text-black tw-font-bold tw-text-sm tw-mt-1 tw-underline tw-bg-transparent tw-border-0 tw-p-0 tw-cursor-pointer">
-                        {{ review.expandState?.concern ? 'ย่อลง' : 'อ่านต่อ' }}
-                      </a>
-                    </div>
-                  </div>
                 </div>
-              </div>
-            </div>
-          </ngx-slick-carousel>
-        </section>
+              </ngx-slick-carousel>
+            </section>
+          </div>
+        </div>
       </ng-container>
 
       <!-- ===== Stage History card (summary only) ===== -->
@@ -918,7 +1009,7 @@
   <!-- =============== RIGHT (1 col) =============== -->
   <aside class="tw-col-span-1 tw-space-y-6">
     <!-- Card: Application Screening -->
-    <button
+    <!-- <button
       type="button"
       [disabled]="true"
       class="tw-w-full tw-rounded-2xl tw-text-white tw-px-6 tw-py-6 tw-text-left tw-shadow-[0_8px_16px_rgba(0,0,0,0.25)] tw-transition-all tw-duration-200 tw-ease-in-out hover:tw-brightness-110 hover:tw-shadow-[0_12px_20px_rgba(0,0,0,0.35)] focus:tw-ring-2 focus:tw-ring-white/30 tw-cursor-default tw-pointer-events-none"
@@ -938,7 +1029,7 @@
           </div>
         </div>
       </div>
-    </button>
+    </button> -->
 
     <!-- Card: Application Form Submitted (Blue) -->
     <button
