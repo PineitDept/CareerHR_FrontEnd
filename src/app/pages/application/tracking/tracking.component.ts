@@ -145,6 +145,7 @@ export class TrackingComponent
     offer_accept?: number;
     offer_decline?: number;
     offer_onhold?: number;
+    onboarded_pending?: number;
     onboarded?: number;
     hired_decline?: number;
     hired_noshow?: number;
@@ -424,6 +425,11 @@ export class TrackingComponent
         groupLabel: 'Hired',
         options: [
           {
+            key: '12',
+            label: `Onboarded${counts.onboarded_pending !== undefined ? ` (${counts.onboarded_pending.toLocaleString()})` : ''}`,
+            color: STATUS_COLOR_MAP[12]
+          },
+          {
             key: '41',
             label: `Onboarded${counts.onboarded !== undefined ? ` (${counts.onboarded.toLocaleString()})` : ''}`,
             color: STATUS_COLOR_MAP[41]
@@ -569,6 +575,7 @@ export class TrackingComponent
             offer_accept: response.groupCounts.offer_accept,
             offer_decline: response.groupCounts.offer_decline,
             offer_onhold: response.groupCounts.offer_onhold,
+            onboarded_pending: response.groupCounts.onboarded_pending,
             onboarded: response.groupCounts.onboarded,
             hired_decline: response.groupCounts.hired_decline,
             hired_noshow: response.groupCounts.hired_noshow
