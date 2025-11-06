@@ -114,8 +114,8 @@
                     <div class="tw-flex tw-items-center tw-gap-4">
                         <app-icon [name]="'user-multiple'" [size]="48" extraClass="tw-text-white"></app-icon>
                         <div>
-                            <p class="tw-text-sm tw-text-white">Quality</p>
-                            <p class="tw-text-3xl tw-font-bold tw-text-white">{{ formDetails.get('qualityPst')?.value }}
+                            <p class="tw-text-sm tw-text-white">Quality <span class="text-red">*</span></p>
+                            <p class="tw-text-3xl tw-font-bold tw-text-white">{{ formDetails.get('qualityPst')?.value || '-' }}
                                 Position</p>
                         </div>
                     </div>

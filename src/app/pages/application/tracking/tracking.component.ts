@@ -589,10 +589,7 @@ export class TrackingComponent
     filter: ICandidateFilterRequest,
     append: boolean
   ): Observable<void> {
-    if (this.isLoading()) return EMPTY;
-
-    this.loadingState.set(true);
-    this.filterRequest.set(filter);
+    // this.filterRequest.set(filter);
 
     // Convert to tracking filter request
     const trackingFilter: ICandidateTrackingFilterRequest = {
@@ -600,12 +597,139 @@ export class TrackingComponent
       ...this.trackingFilterRequest(),
       page: 1,
       pageSize: 5000,
-      year: filter.year === '2001' ? undefined : filter.year ,
+      month: this.filterRequest().month ? this.filterRequest().month : undefined,
+      year: this.filterRequest().year ? this.filterRequest().year : undefined,
     };
 
     return this.applicationService.getTrackingApplications(trackingFilter).pipe(
       tap((response: any) => {
-        this.rowsDataExport = response.items
+
+        this.rowsDataExport = this.transformApiDataToRows(response.items)
+
+        const data = this.rowsDataExport ?? [];
+        if (!data.length) return;
+
+        // ลำดับหัวคอลัมน์ “ตามตารางบนหน้า”
+        const headers = this.columns.map(c => c.header);
+        const aoa: (string | number)[][] = [headers];
+
+        // map แถวให้ตรงคอลัมน์ (ปรับใช้ formatIconCellFull)
+        for (const r of data) {
+          aoa.push([
+            r.submitDate ? this.formatDate(r.submitDate) : '',
+            r.userID ?? '',
+            r.fullName ?? '',
+            this.formatPositions(r.position),
+            r.university ?? '',
+            (r.gpa ?? '') as any,
+            r.gradeCandidate ?? '',
+            this.formatIconCellFull(r.applied),     // Applied
+            this.formatIconCellFull(r.statusCSD),   // Screen
+            this.formatIconCellFull(r.interview1),  // Interview1
+            this.formatIconCellFull(r.interview2),  // Interview2
+            this.formatIconCellFull(r.offer),       // Offered
+            this.formatIconCellFull(r.hired),       // Hired
+            r.totalDays ?? '',                      // Total
+          ]);
+        }
+
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+        // ความกว้างคอลัมน์ใกล้เคียง UI
+        ws['!cols'] = [
+          { wch: 12 }, // Submit Date
+          { wch: 12 }, // Applicant ID
+          { wch: 24 }, // Applicant Name
+          { wch: 32 }, // Job Position
+          { wch: 28 }, // University
+          { wch: 6 },  // GPA
+          { wch: 8 },  // Grade
+          { wch: 16 }, // Applied
+          { wch: 16 }, // Screen
+          { wch: 16 }, // Interview1
+          { wch: 16 }, // Interview2
+          { wch: 16 }, // Offered
+          { wch: 16 }, // Hired
+          { wch: 12 }, // Total
+        ];
+
+        // freeze แถวหัวตาราง
+        (ws as any)['!freeze'] = { xSplit: 0, ySplit: 1 };
+
+        const range = XLSX.utils.decode_range(ws['!ref']!);
+
+        // ==== 1) สไตล์หัวตาราง (ขอบมีสี, พื้นหลังเทา, ตัวหนา) ====
+        for (let c = range.s.c; c <= range.e.c; c++) {
+          const addr = XLSX.utils.encode_cell({ r: 0, c });
+          const cell = ws[addr] || (ws[addr] = {});
+          cell.s = {
+            font: { bold: true, color: { rgb: '111827' } }, // gray-900
+            alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+            fill: { fgColor: { rgb: 'E5E7EB' } }, // gray-200
+            border: {
+              top:    { style: 'thin', color: { rgb: this.BORDER_RGB } },
+              left:   { style: 'thin', color: { rgb: this.BORDER_RGB } },
+              bottom: { style: 'thin', color: { rgb: this.BORDER_RGB } },
+              right:  { style: 'thin', color: { rgb: this.BORDER_RGB } },
+            },
+          };
+        }
+
+        // index คอลัมน์สถานะ (อิงจาก aoa ด้านบน)
+        const STATUS_COLS = {
+          applied: 7,
+          screen: 8,
+          interview1: 9,
+          interview2: 10,
+          offered: 11,
+          hired: 12,
+        };
+
+        // ==== 2) สไตล์ข้อมูล (ขอบมีสี + wrapText) + เติมสีพื้นหลังให้คอลัมน์สถานะ ====
+        for (let r = 1; r <= range.e.r; r++) {
+          const rowData = data[r - 1]; // mapping แถว aoa -> rows()
+
+          for (let c = range.s.c; c <= range.e.c; c++) {
+            const addr = XLSX.utils.encode_cell({ r, c });
+            const cell = ws[addr] || (ws[addr] = {});
+            const baseStyle: any = {
+              alignment: {
+                vertical: 'center',
+                horizontal: [0,1,5,6,7,8,9,10,11,12,13].includes(c) ? 'center' : 'left',
+                wrapText: true,
+              },
+              border: {
+                top:    { style: 'thin', color: { rgb: this.BORDER_RGB } },
+                left:   { style: 'thin', color: { rgb: this.BORDER_RGB } },
+                bottom: { style: 'thin', color: { rgb: this.BORDER_RGB } },
+                right:  { style: 'thin', color: { rgb: this.BORDER_RGB } },
+              },
+              font: { color: { rgb: '111827' } }, // default เทาเข้ม
+            };
+
+            // ถ้าเป็นคอลัมน์สถานะ -> ลงสีพื้นหลังตามสถานะ + ให้ font เป็นสีขาวอ่านง่าย
+            let bg: string | null = null;
+            if (c === STATUS_COLS.applied)     bg = this.getStatusBg(rowData?.applied);
+            else if (c === STATUS_COLS.screen) bg = this.getStatusBg(rowData?.statusCSD);
+            else if (c === STATUS_COLS.interview1) bg = this.getStatusBg(rowData?.interview1);
+            else if (c === STATUS_COLS.interview2) bg = this.getStatusBg(rowData?.interview2);
+            else if (c === STATUS_COLS.offered)    bg = this.getStatusBg(rowData?.offer);
+            else if (c === STATUS_COLS.hired)      bg = this.getStatusBg(rowData?.hired);
+
+            if (bg) {
+              baseStyle.fill = { fgColor: { rgb: bg } };
+              baseStyle.font = { color: { rgb: '111827' } }; // เทาเข้มอ่านง่ายบนพื้นหลังอ่อน
+              baseStyle.alignment.horizontal = 'center';
+            }
+
+            cell.s = baseStyle;
+          }
+        }
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Tracking');
+        const fileName = `applications-tracking_${(this.filterRequest().month !== undefined ? this.filterRequest().month+'_' : '')+this.filterRequest().year}.xlsx`;
+        XLSX.writeFile(wb, fileName);
       }),
     );
   }
@@ -922,135 +1046,20 @@ export class TrackingComponent
   onExportClicked() {
     console.log('Button clicked: Export Excel');
     try {
-      
-      this.fetchDataExport(this.trackingFilterRequest(), false).subscribe();
+      console.log('11111111');
+      const currentTrackingFilter = this.trackingFilterRequest();
 
-      const data = this.rowsDataExport?.() ?? [];
-      if (!data.length) return;
-
-      console.log(data)
-
-      // ลำดับหัวคอลัมน์ “ตามตารางบนหน้า”
-      const headers = this.columns.map(c => c.header);
-      const aoa: (string | number)[][] = [headers];
-
-      // map แถวให้ตรงคอลัมน์ (ปรับใช้ formatIconCellFull)
-      for (const r of data) {
-        aoa.push([
-          r.submitDate ? this.formatDate(r.submitDate) : '',
-          r.userID ?? '',
-          r.fullName ?? '',
-          this.formatPositions(r.position),
-          r.university ?? '',
-          (r.gpa ?? '') as any,
-          r.gradeCandidate ?? '',
-          this.formatIconCellFull(r.applied),     // Applied
-          this.formatIconCellFull(r.statusCSD),   // Screen
-          this.formatIconCellFull(r.interview1),  // Interview1
-          this.formatIconCellFull(r.interview2),  // Interview2
-          this.formatIconCellFull(r.offer),       // Offered
-          this.formatIconCellFull(r.hired),       // Hired
-          r.totalDays ?? '',                      // Total
-        ]);
-      }
-
-      const ws = XLSX.utils.aoa_to_sheet(aoa);
-
-      // ความกว้างคอลัมน์ใกล้เคียง UI
-      ws['!cols'] = [
-        { wch: 12 }, // Submit Date
-        { wch: 12 }, // Applicant ID
-        { wch: 24 }, // Applicant Name
-        { wch: 32 }, // Job Position
-        { wch: 28 }, // University
-        { wch: 6 },  // GPA
-        { wch: 8 },  // Grade
-        { wch: 16 }, // Applied
-        { wch: 16 }, // Screen
-        { wch: 16 }, // Interview1
-        { wch: 16 }, // Interview2
-        { wch: 16 }, // Offered
-        { wch: 16 }, // Hired
-        { wch: 12 }, // Total
-      ];
-
-      // freeze แถวหัวตาราง
-      (ws as any)['!freeze'] = { xSplit: 0, ySplit: 1 };
-
-      const range = XLSX.utils.decode_range(ws['!ref']!);
-
-      // ==== 1) สไตล์หัวตาราง (ขอบมีสี, พื้นหลังเทา, ตัวหนา) ====
-      for (let c = range.s.c; c <= range.e.c; c++) {
-        const addr = XLSX.utils.encode_cell({ r: 0, c });
-        const cell = ws[addr] || (ws[addr] = {});
-        cell.s = {
-          font: { bold: true, color: { rgb: '111827' } }, // gray-900
-          alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
-          fill: { fgColor: { rgb: 'E5E7EB' } }, // gray-200
-          border: {
-            top:    { style: 'thin', color: { rgb: this.BORDER_RGB } },
-            left:   { style: 'thin', color: { rgb: this.BORDER_RGB } },
-            bottom: { style: 'thin', color: { rgb: this.BORDER_RGB } },
-            right:  { style: 'thin', color: { rgb: this.BORDER_RGB } },
-          },
-        };
-      }
-
-      // index คอลัมน์สถานะ (อิงจาก aoa ด้านบน)
-      const STATUS_COLS = {
-        applied: 7,
-        screen: 8,
-        interview1: 9,
-        interview2: 10,
-        offered: 11,
-        hired: 12,
+      // Update tracking filter
+      const updatedTrackingFilter: ICandidateTrackingFilterRequest = {
+        ...currentTrackingFilter,
+        page: 1,
+        month: this.filterRequest().month ? this.filterRequest().month : undefined,
+        year: this.filterRequest().year ? this.filterRequest().year : undefined,
+        hasNextPage:  this.filterRequest().hasNextPage ? this.filterRequest().hasNextPage : undefined
       };
 
-      // ==== 2) สไตล์ข้อมูล (ขอบมีสี + wrapText) + เติมสีพื้นหลังให้คอลัมน์สถานะ ====
-      for (let r = 1; r <= range.e.r; r++) {
-        const rowData = data[r - 1]; // mapping แถว aoa -> rows()
-
-        for (let c = range.s.c; c <= range.e.c; c++) {
-          const addr = XLSX.utils.encode_cell({ r, c });
-          const cell = ws[addr] || (ws[addr] = {});
-          const baseStyle: any = {
-            alignment: {
-              vertical: 'center',
-              horizontal: [0,1,5,6,7,8,9,10,11,12,13].includes(c) ? 'center' : 'left',
-              wrapText: true,
-            },
-            border: {
-              top:    { style: 'thin', color: { rgb: this.BORDER_RGB } },
-              left:   { style: 'thin', color: { rgb: this.BORDER_RGB } },
-              bottom: { style: 'thin', color: { rgb: this.BORDER_RGB } },
-              right:  { style: 'thin', color: { rgb: this.BORDER_RGB } },
-            },
-            font: { color: { rgb: '111827' } }, // default เทาเข้ม
-          };
-
-          // ถ้าเป็นคอลัมน์สถานะ -> ลงสีพื้นหลังตามสถานะ + ให้ font เป็นสีขาวอ่านง่าย
-          let bg: string | null = null;
-          if (c === STATUS_COLS.applied)     bg = this.getStatusBg(rowData?.applied);
-          else if (c === STATUS_COLS.screen) bg = this.getStatusBg(rowData?.statusCSD);
-          else if (c === STATUS_COLS.interview1) bg = this.getStatusBg(rowData?.interview1);
-          else if (c === STATUS_COLS.interview2) bg = this.getStatusBg(rowData?.interview2);
-          else if (c === STATUS_COLS.offered)    bg = this.getStatusBg(rowData?.offer);
-          else if (c === STATUS_COLS.hired)      bg = this.getStatusBg(rowData?.hired);
-
-          if (bg) {
-            baseStyle.fill = { fgColor: { rgb: bg } };
-            baseStyle.font = { color: { rgb: '111827' } }; // เทาเข้มอ่านง่ายบนพื้นหลังอ่อน
-            baseStyle.alignment.horizontal = 'center';
-          }
-
-          cell.s = baseStyle;
-        }
-      }
-
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Tracking');
-      const fileName = `applications-tracking_${new Date().toISOString().slice(0,10)}.xlsx`;
-      XLSX.writeFile(wb, fileName);
+      this.trackingFilterRequest.set(updatedTrackingFilter);
+      this.fetchDataExport(this.trackingFilterRequest(), false).subscribe();
     } catch (e) {
       console.error('Export failed:', e);
     }
