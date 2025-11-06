@@ -104,6 +104,7 @@ interface StageSection {
   stageName: string;
   stageNameNormalized: string;
   headerTitle: string;
+  hrUserId: string;
   hrUserName: string;
   stageDate: string | Date;
   categories: CategoryOption[];
@@ -270,6 +271,7 @@ export class ApplicationFormComponent {
   allowEditButton = true;
   editReview = false;
   sessionUserName = '';
+  sessionUserId = '';
   today = dayjs().format('YYYY-MM-DD');
   private originalSnapshot: { categoryId?: number; reasons?: ReasonOption[]; notes?: string; date?: string } | null = null;
 
@@ -773,6 +775,7 @@ export class ApplicationFormComponent {
               stageName,
               stageNameNormalized: stageNameNorm,
               headerTitle,
+              hrUserId: h.hrUserId,
               hrUserName: h.hrUserName || '—',
               stageDate: h.stageDate || '',
               categories: cats,
@@ -838,6 +841,7 @@ export class ApplicationFormComponent {
               stageName: 'Screened',
               stageNameNormalized: 'screened',
               headerTitle: 'Application Screening',
+              hrUserId: this.sessionUserId,
               hrUserName: this.sessionUserName || '—',
               stageDate: this.today,
               categories: screenCats,     // <— เติม categories ให้ปุ่ม Result โชว์
@@ -933,6 +937,7 @@ export class ApplicationFormComponent {
               stageName: 'Screened',
               stageNameNormalized: 'screened',
               headerTitle: 'Application Screening',
+              hrUserId: this.sessionUserId,
               hrUserName: this.sessionUserName || '—',
               stageDate: this.today,
               categories: screenCats,
@@ -1445,6 +1450,7 @@ export class ApplicationFormComponent {
       const raw = sessionStorage.getItem('user');
       const obj = raw ? JSON.parse(raw) : null;
       this.sessionUserName = obj?.username || '';
+      this.sessionUserId = obj?.idEmployee || '';
       if (!this.currentUserName) this.currentUserName = this.sessionUserName || this.currentUserName;
     } catch {}
   }
@@ -1523,9 +1529,11 @@ export class ApplicationFormComponent {
       return;
     }
 
+    console.log(s.hrUserId, '=>>sssss')
+
     // ========= แยกสองกรณี =========
     const isPendingFlow = this.hasScreenedPending || !s.historyId; // ถ้า Pending หรือยังไม่มี historyId → add
-    if (!this.screeningCount) {
+    if (!this.screeningCount || (s.hrUserId !== this.sessionUserId)) {
       if (!s.stageId) {
         this.notify?.error?.('Missing stage ID for Screening.');
         return;

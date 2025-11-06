@@ -1121,6 +1121,7 @@ export class InterviewFormDetailsComponent {
 
           this.interviewFormService.updateCandidateStageHistory(this.foundisSummary.historyId, payloadHistory).subscribe({
             next: () => {
+              this.fetchCandidateTracking();
               this.fetchInterviewer()
               this.foundisSummary = this.reviewHistory.find(user => user.isSummary === true);
               this.editReview = false;
