@@ -1281,7 +1281,7 @@ export class InterviewRound2Component {
     if (statusCall !== 'complete') return;
     if (!item.interview.locationId || !item.interview.teamId || !item.interview.date) return;
 
-    this.appointmentsService.getEmailTemplate(item.profile.appointmentId, 6).subscribe({
+    this.appointmentsService.getEmailTemplate(item.profile.appointmentId, 2).subscribe({
       next: (res) => {
         const container = document.querySelector('.cdk-overlay-container');
         container?.classList.add('dimmed-overlay');
