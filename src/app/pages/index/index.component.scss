@@ -119,3 +119,7 @@
         grid-template-columns: repeat(3, 1fr);
     }
 }
+
+::ng-deep .strikethrough-dashed::before {
+    display: none !important;
+}
