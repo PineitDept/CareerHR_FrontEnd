@@ -145,7 +145,7 @@ export class OfferEmploymentListComponent {
     {
       header: 'Job Position',
       field: 'position',
-      type: 'list-bullet',
+      type: 'text',
       width: '20%',
       wrapText: true,
     },

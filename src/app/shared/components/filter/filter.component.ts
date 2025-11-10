@@ -303,7 +303,10 @@ export class FilterComponent {
 
   onAllListClick() {
     this.selectedMonth = 'All';
-    this.selectedYear = 'All';
+
+    if (this.showAllYearOption) {
+      this.selectedYear = 'All';
+    }
 
     // if (this.defaultYearAll) {
     //   this.selectedYear = 'All';
