@@ -41,21 +41,34 @@
                 <div class="tw-text-[22px] tw-font-semibold">{{ applicant.name }}</div>
 
                 <div class="tw-text-[14px] tw-font-medium tw-text-gray-800 tw-flex tw-flex-wrap">
-                  <span *ngIf="applicant.graduation_year as y">{{ y }}</span>
-                  <span
-                    *ngIf="(applicant.graduation_year != null) && (applicant.university || applicant.faculty || applicant.program)"
-                    class="tw-mx-2 tw-text-gray-400"
-                    aria-hidden="true"
-                  >|</span>
+                    <!-- university -->
+                    <span *ngIf="applicant.university as u">{{ u }}</span>
 
-                  <span *ngIf="applicant.university as u">{{ u }}</span>
-                  <span *ngIf="applicant.faculty as f" class="tw-mx-2 tw-text-gray-400" aria-hidden="true">|</span>
+                    <!-- faculty -->
+                    <span
+                        *ngIf="applicant.university && applicant.faculty"
+                        class="tw-mx-2 tw-text-gray-400"
+                        aria-hidden="true"
+                    >|</span>
+                    <span *ngIf="applicant.faculty">{{ applicant.faculty }}</span>
 
-                  <span *ngIf="applicant.faculty">{{ applicant.faculty }}</span>
-                  <span *ngIf="applicant.program as p" class="tw-mx-2 tw-text-gray-400" aria-hidden="true">|</span>
+                    <!-- program -->
+                    <span
+                        *ngIf="(applicant.faculty || applicant.university) && applicant.program"
+                        class="tw-mx-2 tw-text-gray-400"
+                        aria-hidden="true"
+                    >|</span>
+                    <span *ngIf="applicant.program">{{ applicant.program }}</span>
 
-                  <span *ngIf="applicant.program">{{ applicant.program }}</span>
-                </div>
+                    <!-- graduation year -->
+                    <span
+                        *ngIf="(applicant.university || applicant.faculty || applicant.program) && applicant.graduation_year"
+                        class="tw-mx-2 tw-text-gray-400"
+                        aria-hidden="true"
+                    >|</span>
+                    <span *ngIf="applicant.graduation_year as y">{{ y }}</span>
+                    </div>
+
 
                 <div class="tw-text-[14px] !tw-mt-0">
                     <ng-container *ngIf="applicant.gpa as gpa">
